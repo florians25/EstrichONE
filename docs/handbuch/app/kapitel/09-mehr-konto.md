@@ -27,8 +27,11 @@ bis zum nächsten Start aus. Unter **Mehr** → **Gerät, Server und App** steht
 suchen**.
 
 Ist Ihre App-Version zu alt für den Server, zeigt die App **Update erforderlich**. Ihre Daten und die Anmeldung bleiben
-erhalten; Änderungen, die noch nicht übertragen sind, sendet die App nach dem Update. Nach jedem Update zeigt die App
-einmal **Neu in dieser Version**.
+erhalten; Änderungen, die noch nicht übertragen sind, sendet die App nach dem Update.
+
+Nach einem Update der App oder des Servers zeigt die App nach der Anmeldung einmal **Was gibt’s Neues** – nur, wenn es
+Neuerungen für die App gibt. **Verstanden** schließt das Blatt; es erscheint dann auch auf Ihren anderen Geräten nicht
+erneut. Unter **Mehr** → **Gerät, Server und App** → **Was gibt’s Neues** lässt es sich jederzeit wieder öffnen.
 
 ## Abmelden
 

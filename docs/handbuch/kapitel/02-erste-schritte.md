@@ -66,7 +66,7 @@ Anmeldezeit und letzter Aktivität. Unbekannte Anmeldungen beenden Sie mit **Abm
 | 3 | **Glocke** | Benachrichtigungen mit Anzahl der ungelesenen (Abschnitt 8.3). |
 | 4 | **Chat** | Öffnet den Chat; eine Zahl zeigt ungelesene Nachrichten (Abschnitt 8.2). |
 | 5 | **Telefon** | Schnellerfassung eines Anrufs während des Gesprächs (Abschnitt 4.2). Die Zahl zeigt fällige Wiedervorlagen. |
-| 6 | **Benutzermenü** | Einstellungen, Benachrichtigungen, Passwort, Anmeldung und Sicherheit, Abmelden. |
+| 6 | **Benutzermenü** | Einstellungen, Benachrichtigungen, Passwort, Anmeldung und Sicherheit, Was gibt’s Neues, Abmelden. |
 | 7 | **Seitennavigation** | Alle Bereiche, gruppiert nach Auftragsbearbeitung, Planung, Material, Büro, Personal und – für die Verwaltung – Organisation, Benutzer & Geräte, Datensicherung & Archiv, System & Betrieb sowie Integrationen. |
 | 8 | **Cards** | Das Wichtigste für Sie auf einen Blick, jeweils mit Sprung in die passende Liste. |
 
@@ -98,6 +98,14 @@ und mit hohem Kontrast (Schwarz oder Weiß). **Systemeinstellung folgen** schalt
 Browser. Solange Sie nichts wählen, gilt die Vorgabe der Administration (Abschnitt 9.6, Darstellung und Karte).
 
 ![Einstellungen](bilder/einstellungen-dialog.png "Dichte und Farbschema der Oberfläche")
+
+### Was gibt’s Neues
+
+Nach einem Update des Servers zeigt EstrichONE bei der nächsten Anmeldung einmal das Fenster **Was gibt’s Neues in
+Version …** mit den wichtigsten Neuerungen. Haben Sie mehrere Versionen verpasst, stehen alle untereinander, die neueste
+oben; ältere sind eingeklappt. **Verstanden** schließt das Fenster – es erscheint dann auf keinem Gerät erneut, bis zur
+nächsten Version. Neue Benutzer sehen es beim ersten Anmelden nicht. Jederzeit wieder aufrufen: Benutzermenü →
+**Was gibt’s Neues**.
 
 Unter **Benachrichtigungen einrichten** legen Sie fest, welche Ereignisse ins Postfach kommen und welche zusätzlich als
 Pushnachricht im Browser oder in der App erscheinen (Abschnitt 8.3).

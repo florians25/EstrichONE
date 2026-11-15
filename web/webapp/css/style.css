@@ -1139,3 +1139,11 @@ li[data-dot] { display: flex; align-items: center; }
 @keyframes eoToastIn { from { opacity: 0; transform: translateX(0.75rem); } }
 @media (prefers-reduced-motion: reduce) { .eoToast { animation: none; transition: none; } }
 @media print { .eoToasts { display: none; } }
+
+/* „Was gibt’s Neues“ (util/whatsNew.ts): ruhige, gut lesbare Liste je Version. */
+.eoWhatsNew .eoWhatsNewVersion + .eoWhatsNewVersion,
+.eoWhatsNew .eoWhatsNewOlder { margin-top: 1rem; }
+.eoWhatsNewText { line-height: 1.5; }
+.eoWhatsNewText ul { margin: 0.25rem 0 0; padding-left: 1.25rem; }
+.eoWhatsNewText li + li { margin-top: 0.375rem; }
+.eoWhatsNewText p { margin: 0.75rem 0 0.25rem; }

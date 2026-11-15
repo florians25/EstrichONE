@@ -18,5 +18,9 @@ public sealed class AppUpdatesModule : IModule
         services.AddScoped<IAppUpdatePolicy>(provider => provider.GetRequiredService<AppUpdateService>());
     }
 
-    public void MapEndpoints(IEndpointRouteBuilder api) => AppUpdateEndpoints.Map(api);
+    public void MapEndpoints(IEndpointRouteBuilder api)
+    {
+        AppUpdateEndpoints.Map(api);
+        WhatsNewEndpoints.Map(api);
+    }
 }

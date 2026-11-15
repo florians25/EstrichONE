@@ -103,6 +103,33 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                     b.ToTable("user_roles", (string)null);
                 });
 
+            modelBuilder.Entity("EstrichOne.Api.Modules.AppUpdates.ReleaseNoteReceipt", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.Property<string>("Channel")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("channel");
+
+                    b.Property<DateTimeOffset>("SeenAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("seen_at");
+
+                    b.Property<string>("Version")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("version");
+
+                    b.HasKey("UserId", "Channel")
+                        .HasName("pk_release_note_receipts");
+
+                    b.ToTable("release_note_receipts", (string)null);
+                });
+
             modelBuilder.Entity("EstrichOne.Api.Modules.Archive.ArchiveConnection", b =>
                 {
                     b.Property<Guid>("Id")

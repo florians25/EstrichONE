@@ -56,6 +56,7 @@ import NotificationListItem from "sap/m/NotificationListItem";
 import { CATEGORY_ICONS, inbox, markAllRead, markRead, refreshWebPush, relativeTime, type NotificationItem } from "../util/notifications";
 import { openNotificationPreferences } from "../util/notificationPreferences";
 import { startInputHints } from "../util/inputHints";
+import { checkWhatsNew, openWhatsNew, resetWhatsNew } from "../util/whatsNew";
 
 interface Notice {
 	title: string;
@@ -369,7 +370,8 @@ export default class AppController extends BaseController {
 				new MenuItem({ text: this.t("inbox.preferences"), icon: "sap-icon://bell", press: () => openNotificationPreferences() }),
 				new MenuItem({ text: this.t("password.title"), icon: "sap-icon://key", press: () => this.nav("/konto/passwort") }),
 				new MenuItem({ text: this.t("security.title"), icon: "sap-icon://shield", press: () => this.nav("/konto/sicherheit") }),
-				new MenuItem({ text: this.t("shell.feedback"), icon: "sap-icon://quality-issue", startsSection: true, press: () => this.onFeedback(), visible: session.moduleOn("feedback") }),
+				new MenuItem({ text: this.t("shell.whatsNew"), icon: "sap-icon://hint", startsSection: true, press: () => void openWhatsNew() }),
+				new MenuItem({ text: this.t("shell.feedback"), icon: "sap-icon://quality-issue", press: () => this.onFeedback(), visible: session.moduleOn("feedback") }),
 				new MenuItem({ text: this.t("shell.myFeedback"), icon: "sap-icon://inbox", press: () => this.nav("/meine-meldungen"), visible: session.moduleOn("feedback") }),
 				new MenuItem({ text: this.t("shell.signOut"), icon: "sap-icon://log", startsSection: true, press: () => void this.signOut() }),
 			],
@@ -382,6 +384,7 @@ export default class AppController extends BaseController {
 
 	private async signOut(): Promise<void> {
 		await session.signOut().catch(() => undefined);
+		resetWhatsNew();
 		this.resetPages();
 		this.nav("/anmelden");
 	}
@@ -503,6 +506,8 @@ export default class AppController extends BaseController {
 		void refreshWebPush();
 		void this.loadNotices();
 		void this.loadChat();
+		// Nach der Anmeldung bzw. nach einem Server-Update einmal „Was gibt's Neues“.
+		void checkWhatsNew(session.userId ?? undefined);
 		this.noticeTimer = setInterval(() => void this.loadNotices(), 120_000);
 		this.chatTimer = setInterval(() => void this.loadChat(), 30_000);
 	}

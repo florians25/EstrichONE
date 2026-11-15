@@ -35,7 +35,10 @@ Anmeldung und alle nicht übertragenen Änderungen bleiben auf dem Gerät und we
 | Endpunkt | Zweck |
 |---|---|
 | `GET /api/v1/app-updates/check?platform=android&version=1.0.10` | Stand, neueste und Mindestversion, Hinweis, Bezugsquelle, Neuerungen (ohne Anmeldung) |
-| `GET /api/v1/app-updates/release-notes?platform=ios&from=1.0.10&to=1.0.13` | „Neu in dieser Version“ nach einem Update (ohne Anmeldung) |
+| `GET /api/v1/app-updates/release-notes?platform=ios&from=1.0.10&to=1.0.13` | Neuerungen zwischen zwei Versionen für den Update-Hinweis (ohne Anmeldung) |
+| `GET /api/v1/release-notes/whats-new?audience=web\|apps&platform=ios` | „Was gibt’s Neues“ nach der Anmeldung: Neuerungen seit der zuletzt gesehenen Version (angemeldet) |
+| `GET /api/v1/release-notes?audience=web\|apps&since=1.0.20&limit=5` | Neuerungen dieses Servers, neueste zuerst (Benutzermenü bzw. Mehr) |
+| `PUT /api/v1/release-notes/seen` `{"audience":"web","version":"1.0.27"}` | „Verstanden“: bis zu dieser Version gesehen (ohne `version`: Serverversion) |
 | `GET /api/v1/app-updates/android/package` | Android-App (APK) dieses Servers, `ETag` = SHA-256, `Range` für fortsetzbare Downloads (ohne Anmeldung) |
 | `GET /api/v1/app-updates/overview` | Verwaltung: Regeln je Plattform, Paket, alle Geräte mit App-Version und Stand (`devices.read`) |
 | `POST /api/v1/app-updates/devices/{id}/request-update` | Person des Geräts per Benachrichtigung zum Update auffordern (`devices.manage`) |
@@ -61,7 +64,7 @@ In der App:
 4. Beim ersten Mal fragt Android, ob EstrichONE Apps installieren darf („Aus dieser Quelle zulassen“). Nach der
    Rückkehr aus den Einstellungen geht es von selbst weiter.
 5. Installation über den PackageInstaller; ab Android 12 ohne weitere Rückfrage, wenn EstrichONE die App selbst
-   installiert hat. Die App startet danach neu und zeigt einmal **Neu in dieser Version**.
+   installiert hat. Die App startet danach neu und zeigt nach der Anmeldung einmal **Was gibt’s Neues**.
 
 **Signaturschlüssel:** Android installiert ein Update nur, wenn es mit demselben Schlüssel signiert ist wie die
 installierte App. Ohne die Secrets `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` (und
@@ -99,3 +102,19 @@ tatsächlich verfügbar ist (leer = Serverversion); daran orientieren sich Hinwe
 „Neu in dieser Version“ entsteht aus `docs/releases/v<version>.md` (im API-Image unter `/app/releases`). Abschnitte zu
 Server-Update, Installation und Befehle werden weggelassen. Gibt es Abschnitte wie `## Apps`, `## iPhone und iPad` oder
 `## Android`, zeigt die App nur diese (passend zur Plattform).
+
+### Was gibt’s Neues (Web und Apps)
+
+Nach der Anmeldung fragen Web und Apps `GET release-notes/whats-new`. Der Server speichert je Benutzer und Oberfläche
+(`web`, `apps`) die zuletzt gesehene Version (Tabelle `release_note_receipts`), damit es geräteübergreifend gilt:
+
+- **Web** zeigt nur `## Neu` (ältere Hinweise ohne diesen Abschnitt: alle Abschnitte für Benutzer außer denen für die
+  Apps), die **Apps** nur `## Apps` bzw. `## iPhone und iPad`/`## Android` – ohne diese Abschnitte erscheint in den Apps
+  nichts und der Stand wird still weitergezählt. Server-Update, Installation und Befehle fehlen immer.
+- Benutzer ohne Eintrag (neu angelegt, Neuinstallation) werden beim ersten Abruf still auf die Serverversion gesetzt.
+  Die Migration trägt für bestehende Benutzer 1.0.26 ein, sodass nach dem Update auf die erste Version mit dieser
+  Funktion deren Neuerungen einmal erscheinen.
+- Bei einem Sprung über viele Versionen liefert der Server höchstens 20, neueste zuerst; das Web zeigt fünf offen und
+  klappt ältere ein.
+- Punkte behalten nur `**fett**`; Links werden zu Text, Code-Zeichen entfallen. Web, iOS und Android maskieren alles
+  andere (kein HTML aus den Versionshinweisen).

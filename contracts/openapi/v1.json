@@ -3119,6 +3119,176 @@
         ]
       }
     },
+    "/api/v1/release-notes": {
+      "get": {
+        "tags": [
+          "Was gibt's Neues"
+        ],
+        "summary": "Neuerungen dieses Servers (Web: „## Neu“, Apps: „## Apps“), neueste zuerst; since = nach dieser Version",
+        "operationId": "ListReleaseNotes",
+        "parameters": [
+          {
+            "name": "since",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "audience",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "platform",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AppReleaseNote"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/release-notes/whats-new": {
+      "get": {
+        "tags": [
+          "Was gibt's Neues"
+        ],
+        "summary": "Nach der Anmeldung: Neuerungen seit der zuletzt gesehenen Version (neue Benutzer: still als gesehen markiert)",
+        "operationId": "GetWhatsNew",
+        "parameters": [
+          {
+            "name": "audience",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "platform",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WhatsNewResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/release-notes/seen": {
+      "put": {
+        "tags": [
+          "Was gibt's Neues"
+        ],
+        "summary": "„Verstanden“: Neuerungen bis zu dieser Version (Standard: Serverversion) als gesehen markieren",
+        "operationId": "MarkReleaseNotesSeen",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MarkReleaseNotesSeenRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/company": {
       "get": {
         "tags": [
@@ -36620,6 +36790,27 @@
           }
         }
       },
+      "MarkReleaseNotesSeenRequest": {
+        "required": [
+          "audience",
+          "version"
+        ],
+        "type": "object",
+        "properties": {
+          "audience": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "version": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "MaterialCategory": {
         "enum": [
           "screed",
@@ -48256,6 +48447,31 @@
           }
         }
       },
+      "WhatsNewResponse": {
+        "required": [
+          "serverVersion",
+          "lastSeenVersion",
+          "notes"
+        ],
+        "type": "object",
+        "properties": {
+          "serverVersion": {
+            "type": "string"
+          },
+          "lastSeenVersion": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "notes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AppReleaseNote"
+            }
+          }
+        }
+      },
       "WorkItemDto": {
         "required": [
           "id",
@@ -48422,6 +48638,9 @@
     },
     {
       "name": "App-Updates"
+    },
+    {
+      "name": "Was gibt's Neues"
     },
     {
       "name": "Firmendaten"
