@@ -44,6 +44,9 @@ struct BauakteDetailView: View {
     @State private var teamsLink: TeamsLink?
     /// Gruppenchat mit dem ganzen Bauakten-Team in Teams.
     @State private var teamChat: TeamsChatLink?
+    /// Selbst als Beteiligter eingetragen (online geladen) – dann „Austragen“ im Menü.
+    @State private var isMember = false
+    @State private var joining = false
 
     var body: some View {
         Group {
@@ -78,7 +81,10 @@ struct BauakteDetailView: View {
                     // Alles außer Foto und Video (unten) steckt im Menü „…“ – auch „In Teams öffnen“.
                     ToolbarItem(placement: .primaryAction) { moreMenu(content.bauakte) }
                 }
-                .task(id: bauakteId) { await loadTeams() }
+                .task(id: bauakteId) {
+                    await loadTeams()
+                    await loadMembership()
+                }
                 .alert("Bauakte stornieren?", isPresented: $cancelling) {
                     TextField("Grund (Pflicht)", text: $cancelReason)
                         .accessibilityIdentifier("cancelReasonField")
@@ -155,7 +161,7 @@ struct BauakteDetailView: View {
             .listStyle(.insetGrouped)
             .listSectionSpacing(.compact)
             .scrolledPastHeader($showsNavigationTitle)
-            .safeAreaInset(edge: .bottom) { captureBar }
+            .safeAreaInset(edge: .bottom) { if !content.viewOnly { captureBar } }
             .task(id: loaded) {
                 // Screenshot-Modus: Mitte (Kennwerte, offene Punkte, Fotos) bzw. unten (alle Bereiche).
                 guard loaded, let target = shotScene == "bauakte-unten" ? "areas" : shotScene == "bauakte-mitte" ? "keyData" : nil else { return }
@@ -199,6 +205,7 @@ struct BauakteDetailView: View {
                 SyncStateBadge(state: bauakte.syncState)
                 Spacer(minLength: Space.s)
                 statusMenu(bauakte)
+                    .disabled(content.viewOnly)
             }
             Text(bauakte.title)
                 .font(Typo.title)
@@ -216,9 +223,15 @@ struct BauakteDetailView: View {
         let warnings = Array(Set(content.todayAssignments.flatMap(\.warnings))).sorted()
         let inspectionMissing = InitialInspectionState.showsMissingHint(bauakte: bauakte, inspections: content.inspections,
                                                                         enabled: content.warnMissingInspection)
-        if bauakte.status == .cancelled || statusError != nil || !content.pinnedNotes.isEmpty || !warnings.isEmpty || inspectionMissing {
+        if content.viewOnly || bauakte.status == .cancelled || statusError != nil || !content.pinnedNotes.isEmpty || !warnings.isEmpty || inspectionMissing {
             Section {
                 Group {
+                    if content.viewOnly {
+                        // Nicht zugeteilt: ruhiger Hinweis, Eintragen schaltet das Bearbeiten frei.
+                        Callout(tone: .info, title: "Nur ansehen", message: BauakteViewOnly.banner, symbol: "eye",
+                                actionTitle: joining ? nil : BauakteViewOnly.join) { Task { await join() } }
+                            .accessibilityIdentifier("viewOnlyBanner")
+                    }
                     if bauakte.status == .cancelled {
                         Callout(tone: .danger, title: "Storniert", message: bauakte.cancellationReason ?? "ohne Angabe eines Grundes", symbol: "xmark.circle.fill")
                     }
@@ -533,6 +546,10 @@ struct BauakteDetailView: View {
 
     private func moreMenu(_ bauakte: Bauakte) -> some View {
         Menu {
+            if content?.viewOnly == true {
+                Button(BauakteViewOnly.join, systemImage: "person.badge.plus") { Task { await join() } }
+                    .accessibilityIdentifier("joinBauakteButton")
+            } else {
             // Erfassen (Foto und Video stehen unten als Hauptaktionen).
             Section {
                 captureItem(.scan, id: "scanDocumentButton")
@@ -553,6 +570,13 @@ struct BauakteDetailView: View {
                 }
                 Button("Basisdaten bearbeiten", systemImage: "pencil") { action = .project }
                 Button("Verlauf", systemImage: "clock.arrow.circlepath") { show(.notes) }
+            }
+            }
+            if isMember {
+                Section {
+                    Button(BauakteViewOnly.leave, systemImage: "person.badge.minus", role: .destructive) { Task { await leave() } }
+                        .accessibilityIdentifier("leaveBauakteButton")
+                }
             }
             if teamsLink != nil || teamChat != nil {
                 Section {
@@ -657,6 +681,44 @@ struct BauakteDetailView: View {
         }
     }
 
+    /// Ob man selbst als Beteiligter eingetragen ist (online; ohne Verbindung bleibt „Austragen“ verborgen).
+    private func loadMembership() async {
+        guard let active = model.active else { return }
+        let rows: [JSONValue]? = try? await active.client.get("bauakten/\(bauakteId.uuidString.lowercased())/members")
+        isMember = (rows ?? []).contains { $0["userId"]?.string?.lowercased() == active.user.id.uuidString.lowercased() && $0["role"]?.string == "member" }
+    }
+
+    /// „Mich als Beteiligten eintragen“: danach darf man die Bauakte bearbeiten (wird protokolliert, die Leitung erfährt es).
+    private func join() async {
+        guard let active = model.active, let sync = active.sync else { return }
+        joining = true
+        defer { joining = false }
+        do throws(APIError) {
+            try await active.client.assignToMe(bauakteId)
+            try? await sync.store.setViewOnly(bauakte: bauakteId, false)
+            _ = await sync.load(bauakte: bauakteId)
+            isMember = true
+            toast = "Als Beteiligter eingetragen – Bearbeiten ist freigeschaltet."
+            await reload()
+        } catch {
+            toast = error == .offline ? "Ohne Verbindung nicht möglich. Bitte später erneut versuchen." : error.message
+        }
+    }
+
+    /// „Als Beteiligter austragen“: Die Bauakte bleibt sichtbar; ohne andere Zuteilung verschwindet sie vom Gerät.
+    private func leave() async {
+        guard let active = model.active, let sync = active.sync else { return }
+        do throws(APIError) {
+            try await active.client.leaveBauakte(bauakteId)
+            isMember = false
+            await sync.run(includeScope: true)
+            toast = "Als Beteiligter ausgetragen."
+            await reload()
+        } catch {
+            toast = error == .offline ? "Ohne Verbindung nicht möglich. Bitte später erneut versuchen." : error.message
+        }
+    }
+
     /// Bauakte-PDF vom Server (alle Teile), angezeigt mit QuickLook (Teilen über QuickLook).
     private func openPDF(_ bauakte: Bauakte) async {
         guard let client = model.active?.client else { return }
@@ -681,8 +743,9 @@ struct BauakteDetailView: View {
     }
 }
 
-/// Bauakte fehlt auf dem Gerät (z. B. eingeplant, aber noch nicht übertragen, oder nicht zugewiesen): laden oder
-/// „Mir zuweisen“ statt einer leeren Seite.
+/// Bauakte liegt nicht auf dem Gerät – meist, weil man ihr nicht zugeteilt ist (offline liegen nur zugeteilte).
+/// Alle sehen alle Bauakten: Kopf online anzeigen („Nur ansehen“) und „Mich als Beteiligten eintragen“ anbieten;
+/// danach wird sie vollständig geladen und ist bearbeitbar.
 struct MissingBauakteView: View {
     let bauakteId: UUID
     let reload: () async -> Void
@@ -691,47 +754,104 @@ struct MissingBauakteView: View {
     @State private var working = false
     @State private var message: String?
     @State private var triedLoading = false
+    @State private var remote: RemoteBauakte?
 
     var body: some View {
-        ContentUnavailableView {
-            Label(triedLoading ? "Bauakte nicht verfügbar" : "Bauakte wird geladen …", systemImage: "folder.badge.questionmark")
-        } description: {
-            Text(message ?? (triedLoading
-                ? "Sie ist Ihnen nicht zugewiesen oder noch nicht übertragen. Sie können sie sich selbst zuweisen."
-                : "Die Bauakte liegt noch nicht auf diesem Gerät."))
-        } actions: {
-            if triedLoading {
-                Button {
-                    Task { await assignToMe() }
-                } label: {
-                    ActionLabel("Mir zuweisen", systemImage: "person.badge.plus", isBusy: working)
-                }
-                .estrichButton(.primary, size: .regular)
-                .disabled(working)
-                .accessibilityIdentifier("assignToMeButton")
-                Button {
-                    Task { await load() }
-                } label: {
-                    Label("Erneut laden", systemImage: "arrow.clockwise")
-                }
-                .estrichButton(.tertiary)
-                .disabled(working)
+        Group {
+            if let remote {
+                preview(remote)
             } else {
-                ProgressView()
+                ContentUnavailableView {
+                    Label(triedLoading ? "Bauakte nicht verfügbar" : "Bauakte wird geladen …", systemImage: "folder.badge.questionmark")
+                } description: {
+                    Text(message ?? (triedLoading
+                        ? "Die Bauakte konnte nicht geladen werden."
+                        : "Die Bauakte liegt noch nicht auf diesem Gerät."))
+                } actions: {
+                    if triedLoading {
+                        Button {
+                            Task { await load() }
+                        } label: {
+                            Label("Erneut laden", systemImage: "arrow.clockwise")
+                        }
+                        .estrichButton(.tertiary)
+                        .disabled(working)
+                    } else {
+                        ProgressView()
+                    }
+                }
             }
         }
         .background(Theme.canvas)
         .task { await load() }
     }
 
+    /// Kopf der Bauakte (online) mit Hinweis „Nur ansehen“ und Eintragen-Knopf.
+    private func preview(_ remote: RemoteBauakte) -> some View {
+        let bauakte = remote.bauakte
+        return List {
+            Section {
+                VStack(alignment: .leading, spacing: Space.xs) {
+                    HStack(spacing: Space.s) {
+                        Text(bauakte.number ?? "ohne Nummer")
+                            .font(Typo.subhead.monospacedDigit())
+                            .foregroundStyle(Theme.textSecondary)
+                        Spacer(minLength: Space.s)
+                        StatusDot(color: bauakte.status.tint)
+                        Text(bauakte.status.shortTitle).font(Typo.subhead)
+                    }
+                    Text(bauakte.title)
+                        .font(Typo.title)
+                        .foregroundStyle(Theme.textPrimary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .accessibilityAddTraits(.isHeader)
+                }
+                .padding(.vertical, Space.xs)
+                if let address = bauakte.addressLine {
+                    Label(address, systemImage: "mappin.and.ellipse")
+                }
+                if let contact = bauakte.siteContactName ?? bauakte.siteContactPhone {
+                    Label(contact, systemImage: "person.badge.shield.checkmark")
+                }
+            }
+            Section {
+                Callout(tone: .info, title: "Nur ansehen", message: message ?? BauakteViewOnly.banner, symbol: "eye")
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets(top: Space.xs, leading: 0, bottom: Space.xs, trailing: 0))
+                    .accessibilityIdentifier("viewOnlyBanner")
+                if bauakte.status != .cancelled {
+                    Button {
+                        Task { await assignToMe() }
+                    } label: {
+                        ActionLabel(LocalizedStringKey(BauakteViewOnly.join), systemImage: "person.badge.plus", isBusy: working)
+                            .frame(maxWidth: .infinity)
+                    }
+                    .estrichButton(.primary, size: .regular)
+                    .disabled(working)
+                    .listRowBackground(Color.clear)
+                    .accessibilityIdentifier("assignToMeButton")
+                }
+            } footer: {
+                Text("Auf dem Gerät liegen nur Bauakten, denen Sie zugeteilt sind. Nach dem Eintragen wird die Bauakte vollständig geladen – auch für unterwegs ohne Verbindung.")
+            }
+        }
+        .listStyle(.insetGrouped)
+        .navigationTitle(bauakte.number ?? "Bauakte")
+    }
+
     private func load() async {
-        guard let sync = model.active?.sync else { return }
+        guard let active = model.active, let sync = active.sync else { return }
         working = true
         defer { working = false }
+        // Zuerst versuchen, sie aufs Gerät zu laden (eingeplant oder gerade zugeteilt).
         let outcome = await sync.load(bauakte: bauakteId)
         await reload()
+        if outcome == .offline {
+            message = "Ohne Verbindung kann die Bauakte nicht geladen werden. Bitte später erneut versuchen."
+        } else if let fetched = try? await active.client.onlineBauakte(bauakteId) {
+            remote = fetched
+        }
         triedLoading = true
-        message = outcome == .offline ? "Ohne Verbindung kann die Bauakte nicht geladen werden. Bitte später erneut versuchen." : nil
     }
 
     private func assignToMe() async {
@@ -740,12 +860,13 @@ struct MissingBauakteView: View {
         defer { working = false }
         do throws(APIError) {
             try await active.client.assignToMe(bauakteId)
+            try? await sync.store.setViewOnly(bauakte: bauakteId, false)
             _ = await sync.load(bauakte: bauakteId)
             await reload()
         } catch {
             message = error == .offline
                 ? "Ohne Verbindung nicht möglich. Bitte später erneut versuchen."
-                : (error.status == 404 ? "Diese Bauakte können Sie sich nicht selbst zuweisen. Bitte im Büro melden." : error.message)
+                : error.message
         }
     }
 }

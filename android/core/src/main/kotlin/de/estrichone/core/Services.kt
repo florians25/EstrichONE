@@ -159,8 +159,23 @@ suspend fun EstrichOneApi.myPermissions(): List<String> = send("GET", "access/me
 suspend fun EstrichOneApi.warnMissingInspection(): Boolean =
     (send<JsonElement>("GET", "settings", null) as? JsonObject)?.obj("settings")?.obj("bauakte")?.bool("warnMissingInspection") ?: true
 
-/** Bauakte sich selbst zuweisen („Mir zuweisen“), danach per Snapshot laden. */
+/** „Mich als Beteiligten eintragen“: danach darf man die Bauakte bearbeiten; per Snapshot aufs Gerät laden. */
 suspend fun EstrichOneApi.assignToMe(bauakteId: String) = send<JsonElement>("POST", "bauakten/$bauakteId/members/me", JsonObject(emptyMap()))
+
+/** „Als Beteiligter austragen“ (nicht als zuständige Person). Danach mit `includeScope` abgleichen. */
+suspend fun EstrichOneApi.leaveBauakte(bauakteId: String) = send<JsonElement>("DELETE", "bauakten/$bauakteId/members/me", null)
+
+/** Bin ich selbst als Beteiligter (nicht zuständig) eingetragen? Nur online. */
+suspend fun EstrichOneApi.isMemberOf(bauakteId: String, userId: String): Boolean =
+    (send<JsonElement>("GET", "bauakten/$bauakteId/members", null) as? kotlinx.serialization.json.JsonArray).orEmpty()
+        .any { (it as? JsonObject)?.let { m -> m.str("userId").equals(userId, ignoreCase = true) && m.str("role") == "member" } == true }
+
+/**
+ * Alle Bauakten online (auch nicht zugeteilte). Auf dem Gerät liegen nur zugeteilte (Datenmenge, Offline-Speicher);
+ * die übrigen zeigt die App als Kopf mit „Nur ansehen“ und „Mich als Beteiligten eintragen“.
+ */
+suspend fun EstrichOneApi.onlineBauakten(search: String?, limit: Int = 50): List<BauakteListItem> =
+    bauakten(search = search?.trim()?.takeIf { it.isNotEmpty() }, limit = limit).items
 
 // Planung
 

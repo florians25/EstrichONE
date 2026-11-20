@@ -74,6 +74,11 @@ internal sealed class SiteRecordSync(EstrichOneDbContext db, IBauakteAccess acce
             return BauakteNotFound(op);
         }
 
+        if (!await access.CanWriteAsync(bauakteId, cancellationToken))
+        {
+            return SyncOperationResult.NotAssigned(op.OpId);
+        }
+
         var existing = await db.Set<DiaryEntry>().IgnoreQueryFilters([QueryFilters.NotDeleted]).SingleOrDefaultAsync(e => e.Id == op.EntityId, cancellationToken);
         if (existing is not null)
         {
@@ -102,6 +107,11 @@ internal sealed class SiteRecordSync(EstrichOneDbContext db, IBauakteAccess acce
         if (entry is null || !await access.CanReadAsync(entry.BauakteId, cancellationToken))
         {
             return SyncOperationResult.Rejected(op.OpId, "NOT_FOUND", "Der Eintrag existiert nicht (mehr) oder ist nicht sichtbar.");
+        }
+
+        if (!await access.CanWriteAsync(entry.BauakteId, cancellationToken))
+        {
+            return SyncOperationResult.NotAssigned(op.OpId);
         }
 
         if (entry.AuthorUserId != currentUser.UserId)
@@ -139,6 +149,11 @@ internal sealed class SiteRecordSync(EstrichOneDbContext db, IBauakteAccess acce
             return SyncOperationResult.Rejected(op.OpId, "NOT_FOUND", "Der Eintrag existiert nicht (mehr) oder ist nicht sichtbar.");
         }
 
+        if (!await access.CanWriteAsync(entry.BauakteId, cancellationToken))
+        {
+            return SyncOperationResult.NotAssigned(op.OpId);
+        }
+
         if (entry.AuthorUserId != currentUser.UserId)
         {
             return SyncOperationResult.Rejected(op.OpId, "NOT_AUTHOR", "Nur der Verfasser kann den Eintrag löschen.");
@@ -156,6 +171,11 @@ internal sealed class SiteRecordSync(EstrichOneDbContext db, IBauakteAccess acce
         if (!await access.CanReadAsync(bauakteId, cancellationToken))
         {
             return BauakteNotFound(op);
+        }
+
+        if (!await access.CanWriteAsync(bauakteId, cancellationToken))
+        {
+            return SyncOperationResult.NotAssigned(op.OpId);
         }
 
         var existing = await db.Set<Inspection>().SingleOrDefaultAsync(i => i.Id == op.EntityId, cancellationToken);

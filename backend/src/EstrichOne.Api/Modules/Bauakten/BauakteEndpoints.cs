@@ -15,7 +15,8 @@ namespace EstrichOne.Api.Modules.Bauakten;
 
 public sealed record BauakteListItem(
     Guid Id, string? Number, string Title, BauakteStatus Status, string? Street, string? PostalCode, string? City,
-    Guid? CustomerId, DateTimeOffset UpdatedAt, long Version, Guid? ResponsibleUserId, double? Latitude, double? Longitude);
+    Guid? CustomerId, DateTimeOffset UpdatedAt, long Version, Guid? ResponsibleUserId, double? Latitude, double? Longitude,
+    bool IsAssigned = false, bool CanEdit = false);
 
 /// <summary>Baustelle mit Standort für die Kartenansicht.</summary>
 public sealed record BauakteMapPoint(
@@ -31,7 +32,8 @@ public sealed record BauakteDetail(
     DateOnly? PlannedStart = null, DateOnly? PlannedEnd = null, string? SiteContactName = null, string? SiteContactPhone = null,
     string? SiteContactEmail = null, string? SiteNotes = null, string? CancellationReason = null, BauakteProject? Project = null,
     bool InitialInspectionWaived = false, string? InitialInspectionWaivedReason = null, Guid? InitialInspectionWaivedByUserId = null,
-    string? InitialInspectionWaivedByName = null, DateTimeOffset? InitialInspectionWaivedAt = null);
+    string? InitialInspectionWaivedByName = null, DateTimeOffset? InitialInspectionWaivedAt = null,
+    bool? IsAssigned = null, bool? CanEdit = null);
 
 /// <summary>„Erstbegehung nicht erforderlich“ setzen (<see cref="Waived"/> = true, Begründung optional) oder aufheben.</summary>
 public sealed record InitialInspectionWaiverRequest(bool Waived, [property: MaxLength(Bauakte.MaxWaiverReasonLength)] string? Reason = null);
@@ -87,7 +89,7 @@ internal static class BauakteEndpoints
         var group = api.MapGroup("/bauakten").WithTags("Bauakten");
 
         group.MapGet("/", ListAsync).WithName("ListBauakten")
-            .WithSummary("Sichtbare Bauakten, neueste Änderung zuerst; Filter: search, status (all|active|old|Status), responsibleUserId, customerId, postalCode")
+            .WithSummary("Alle Bauakten, neueste Änderung zuerst; Filter: search, status (all|active|old|Status), responsibleUserId, customerId, postalCode, assigned (nur zugeteilte). isAssigned/canEdit je Zeile")
             .RequirePermission(Permissions.BauaktenRead);
 
         group.MapGet("/map", MapPointsAsync).WithName("ListBauakteMapPoints")
@@ -95,6 +97,7 @@ internal static class BauakteEndpoints
             .RequirePermission(Permissions.BauaktenRead);
 
         group.MapGet("/{id:guid}", GetAsync).WithName("GetBauakte")
+            .WithSummary("Bauakte; isAssigned/canEdit: zugeteilt bzw. bearbeitbar (sonst nur ansehen)")
             .ProducesProblem(StatusCodes.Status404NotFound)
             .RequirePermission(Permissions.BauaktenRead);
 
@@ -106,6 +109,7 @@ internal static class BauakteEndpoints
 
         group.MapPut("/{id:guid}", UpdateAsync).WithName("UpdateBauakte")
             .WithSummary("Bauakte ändern; erfordert If-Match mit der bekannten Version")
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict)
             .ProducesProblem(StatusCodes.Status412PreconditionFailed)
@@ -114,6 +118,7 @@ internal static class BauakteEndpoints
 
         group.MapPut("/{id:guid}/initial-inspection-waiver", WaiveInitialInspectionAsync).WithName("SetInitialInspectionWaiver")
             .WithSummary("Erstbegehung als nicht erforderlich vermerken oder den Vermerk aufheben")
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
             .RequirePermission(Permissions.BauaktenEdit);
@@ -129,10 +134,13 @@ internal static class BauakteEndpoints
         EstrichOneDbContext db, IBauakteAccess access, CancellationToken cancellationToken,
         [FromQuery] string? search = null, [FromQuery] string? status = null,
         [FromQuery] string? cursor = null, [FromQuery] int? limit = null,
-        [FromQuery] Guid? responsibleUserId = null, [FromQuery] Guid? customerId = null, [FromQuery] string? postalCode = null)
+        [FromQuery] Guid? responsibleUserId = null, [FromQuery] Guid? customerId = null, [FromQuery] string? postalCode = null,
+        [FromQuery] bool? assigned = null)
     {
         var pageSize = Math.Clamp(limit ?? DefaultPageSize, 1, MaxPageSize);
-        var query = (await access.VisibleAsync(db.Set<Bauakte>().AsNoTracking(), cancellationToken));
+        var query = assigned == true
+            ? await access.AssignedAsync(db.Set<Bauakte>().AsNoTracking(), cancellationToken)
+            : await access.VisibleAsync(db.Set<Bauakte>().AsNoTracking(), cancellationToken);
 
         if (!string.IsNullOrWhiteSpace(search))
         {
@@ -206,6 +214,11 @@ internal static class BauakteEndpoints
 
         var hasMore = rows.Count > pageSize;
         var items = rows.Take(pageSize).ToList();
+        var ids = items.Select(i => i.Id).ToList();
+        var assignedIds = (await (await access.AssignedAsync(db.Set<Bauakte>().AsNoTracking(), cancellationToken))
+            .Where(b => ids.Contains(b.Id)).Select(b => b.Id).ToListAsync(cancellationToken)).ToHashSet();
+        var editAll = await access.CanEditAllAsync(cancellationToken);
+        items = items.Select(i => i with { IsAssigned = assignedIds.Contains(i.Id), CanEdit = editAll || assignedIds.Contains(i.Id) }).ToList();
         return TypedResults.Ok(new BauaktePage(items, hasMore ? EncodeCursor(items[^1].UpdatedAt, items[^1].Id) : null));
     }
 
@@ -239,11 +252,20 @@ internal static class BauakteEndpoints
         }
 
         SetETag(http, bauakte.Version);
-        return TypedResults.Ok(ToDetail(bauakte));
+        return TypedResults.Ok(await WithAccessAsync(ToDetail(bauakte), access, db, cancellationToken));
+    }
+
+    /// <summary>Ergänzt, ob der Benutzer zugeteilt ist und die Bauakte bearbeiten darf (nur in Antworten an ihn, nicht im Sync).</summary>
+    internal static async Task<BauakteDetail> WithAccessAsync(BauakteDetail detail, IBauakteAccess access, EstrichOneDbContext db,
+        CancellationToken cancellationToken)
+    {
+        var assigned = await (await access.AssignedAsync(db.Set<Bauakte>().AsNoTracking(), cancellationToken)).AnyAsync(b => b.Id == detail.Id, cancellationToken);
+        return detail with { IsAssigned = assigned, CanEdit = assigned || await access.CanEditAllAsync(cancellationToken) };
     }
 
     private static async Task<Results<Created<BauakteDetail>, Ok<BauakteDetail>, ProblemHttpResult>> CreateAsync(
-        CreateBauakteRequest request, BauakteCommands commands, BauakteProjectValidator projectValidator, HttpContext http, CancellationToken cancellationToken)
+        CreateBauakteRequest request, BauakteCommands commands, BauakteProjectValidator projectValidator, HttpContext http,
+        IBauakteAccess access, EstrichOneDbContext db, CancellationToken cancellationToken)
     {
         if (request.Id == Guid.Empty || string.IsNullOrWhiteSpace(request.Title))
         {
@@ -274,10 +296,10 @@ internal static class BauakteEndpoints
                 return Validation(CustomerAssignment.DeletedMessage, CustomerAssignment.DeletedCode);
             case CreateBauakteOutcome.AlreadyExists:
                 SetETag(http, bauakte!.Version);
-                return TypedResults.Ok(ToDetail(bauakte));
+                return TypedResults.Ok(await WithAccessAsync(ToDetail(bauakte), access, db, cancellationToken));
             default:
                 SetETag(http, bauakte!.Version);
-                return TypedResults.Created($"/api/v1/bauakten/{bauakte.Id}", ToDetail(bauakte));
+                return TypedResults.Created($"/api/v1/bauakten/{bauakte.Id}", await WithAccessAsync(ToDetail(bauakte), access, db, cancellationToken));
         }
     }
 
@@ -286,6 +308,11 @@ internal static class BauakteEndpoints
         BauakteProjectValidator projectValidator, Notifications.Exports.INotifier notifier, Teams.Exports.ITeamsIntegration teams,
         CancellationToken cancellationToken)
     {
+        if (BauakteWriteProblems.For(await access.CheckWriteAsync(id, cancellationToken)) is { } denied)
+        {
+            return denied;
+        }
+
         var bauakte = await (await access.VisibleAsync(db.Set<Bauakte>(), cancellationToken)).SingleOrDefaultAsync(b => b.Id == id, cancellationToken);
         if (bauakte is null)
         {
@@ -383,13 +410,18 @@ internal static class BauakteEndpoints
         }
 
         SetETag(http, bauakte.Version);
-        return TypedResults.Ok(ToDetail(bauakte));
+        return TypedResults.Ok(await WithAccessAsync(ToDetail(bauakte), access, db, cancellationToken));
     }
 
     private static async Task<Results<Ok<BauakteDetail>, ProblemHttpResult>> WaiveInitialInspectionAsync(
         Guid id, InitialInspectionWaiverRequest request, EstrichOneDbContext db, IBauakteAccess access, IBauakteHistory history,
         ICurrentUser currentUser, TimeProvider clock, HttpContext http, CancellationToken cancellationToken)
     {
+        if (BauakteWriteProblems.For(await access.CheckWriteAsync(id, cancellationToken)) is { } denied)
+        {
+            return denied;
+        }
+
         var bauakte = await (await access.VisibleAsync(db.Set<Bauakte>(), cancellationToken)).SingleOrDefaultAsync(b => b.Id == id, cancellationToken);
         if (bauakte is null)
         {
@@ -404,13 +436,18 @@ internal static class BauakteEndpoints
         await BauakteWaiver.ApplyAsync(db, bauakte, request.Waived, request.Reason, currentUser, clock, history, cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
         SetETag(http, bauakte.Version);
-        return TypedResults.Ok(ToDetail(bauakte));
+        return TypedResults.Ok(await WithAccessAsync(ToDetail(bauakte), access, db, cancellationToken));
     }
 
     private static async Task<Results<NoContent, ProblemHttpResult>> DeleteAsync(
         Guid id, DeleteBauakteRequest request, EstrichOneDbContext db, IBauakteAccess access, IBauakteHistory history, IUserAccounts accounts,
         ICurrentUser currentUser, TimeProvider clock, CancellationToken cancellationToken)
     {
+        if (BauakteWriteProblems.For(await access.CheckWriteAsync(id, cancellationToken)) is { } denied)
+        {
+            return denied;
+        }
+
         var bauakte = await (await access.VisibleAsync(db.Set<Bauakte>(), cancellationToken)).SingleOrDefaultAsync(b => b.Id == id, cancellationToken);
         if (bauakte is null)
         {

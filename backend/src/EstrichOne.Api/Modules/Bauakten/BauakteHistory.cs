@@ -138,6 +138,8 @@ internal static class BauakteHistoryEndpoints
             "bauakte.acceptance_customer_rejected" => $"Der Kunde ({Detail("name")}) hat die Abnahme abgelehnt: „{Detail("comment")}“.",
             "bauakte.acceptance_completed" => $"Abnahmeprotokoll abgeschlossen ({AcceptanceResult(Detail("result"))}) und als PDF unter „Abnahmen“ abgelegt.",
             "bauakte.members_changed" => $"{actor} hat die zugewiesenen Mitarbeiter geändert.",
+            "bauakte.member_joined" => $"{actor} hat sich als Beteiligter eingetragen.",
+            "bauakte.member_left" => $"{actor} hat sich als Beteiligter ausgetragen.",
             "bauakte.parties_changed" => Detail("change") switch
             {
                 "added" => $"{actor} hat „{Detail("name")}“ als {PartyRole(Detail("role"))} hinzugefügt.",

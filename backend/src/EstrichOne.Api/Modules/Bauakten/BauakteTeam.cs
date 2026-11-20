@@ -27,15 +27,22 @@ internal static class BauakteTeamEndpoints
         var group = api.MapGroup("/bauakten/{id:guid}").WithTags("Bauakten");
         group.MapGet("/members", ListMembersAsync).WithName("ListBauakteMembers").WithSummary("Zuständige Person und zugewiesene Mitarbeiter")
             .ProducesProblem(StatusCodes.Status404NotFound).RequirePermission(Permissions.BauaktenRead);
-        group.MapPut("/members", SetMembersAsync).WithName("SetBauakteMembers").WithSummary("Zugewiesene Mitarbeiter festlegen")
-            .ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status422UnprocessableEntity)
+        group.MapPut("/members", SetMembersAsync).WithName("SetBauakteMembers")
+            .WithSummary("Zugewiesene Mitarbeiter festlegen (zugeteilt, „Alle Bauakten bearbeiten“ oder Recht bauakten.assign)")
+            .ProducesProblem(StatusCodes.Status403Forbidden).ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
             .RequirePermission(Permissions.BauaktenEdit);
         group.MapPost("/members/me", AssignMeAsync).WithName("AssignBauakteToMe")
-            .WithSummary("„Mir zuweisen“: sich selbst als Mitarbeiter eintragen (sichtbar, eingeplant oder mit Recht bauakten.assign)")
-            .ProducesProblem(StatusCodes.Status404NotFound).RequirePermission(Permissions.BauaktenRead);
+            .WithSummary("„Mich als Beteiligten eintragen“: jede sichtbare Bauakte; danach darf man sie bearbeiten. Protokolliert, Leitung und Disposition werden benachrichtigt")
+            .ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status422UnprocessableEntity)
+            .RequirePermission(Permissions.BauaktenRead);
+        group.MapDelete("/members/me", LeaveAsync).WithName("LeaveBauakte")
+            .WithSummary("„Austragen“: sich selbst als Beteiligter austragen (nicht als zuständige Person)")
+            .ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status422UnprocessableEntity)
+            .RequirePermission(Permissions.BauaktenRead);
         group.MapPatch("/notes/{noteId:guid}", UpdateNoteAsync).WithName("UpdateNote").WithSummary("Notiz anheften, lösen oder einfärben")
             .ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status422UnprocessableEntity)
-            .RequirePermission(Permissions.NotesWrite);
+            .RequirePermission(Permissions.NotesWrite).RequireBauakteWrite();
         group.MapGet("/hints", HintsAsync).WithName("GetBauakteHints").WithSummary("Hinweiszeilen (Einsatz heute, Erstbegehung offen, Mängel …)")
             .ProducesProblem(StatusCodes.Status404NotFound).RequirePermission(Permissions.BauaktenRead);
     }
@@ -49,11 +56,22 @@ internal static class BauakteTeamEndpoints
     }
 
     private static async Task<Results<Ok<List<BauakteMemberResponse>>, ProblemHttpResult>> SetMembersAsync(
-        Guid id, SetMembersRequest request, IBauakteAccess access, IBauakteHistory history, EstrichOneDbContext db,
+        Guid id, SetMembersRequest request, IBauakteAccess access, IBauakteHistory history, EstrichOneDbContext db, IUserPermissions permissions,
         Notifications.Exports.INotifier notifier, Teams.Exports.ITeamsIntegration teams, CancellationToken cancellationToken)
     {
-        var bauakte = await (await access.VisibleAsync(db.Set<Bauakte>(), cancellationToken))
-            .Include(b => b.Members).SingleOrDefaultAsync(b => b.Id == id, cancellationToken);
+        // Andere eintragen: wer zugeteilt ist (oder alle Bauakten bearbeiten darf) – oder mit dem Recht „Kollegen zuordnen“.
+        var check = await access.CheckWriteAsync(id, cancellationToken);
+        if (check == BauakteWriteCheck.NotAssigned && await permissions.HasAsync(Permissions.BauaktenAssign, cancellationToken))
+        {
+            check = BauakteWriteCheck.Allowed;
+        }
+
+        if (BauakteWriteProblems.For(check) is { } denied)
+        {
+            return denied;
+        }
+
+        var bauakte = await db.Set<Bauakte>().Include(b => b.Members).SingleOrDefaultAsync(b => b.Id == id, cancellationToken);
         if (bauakte is null)
         {
             return NotFound();
@@ -95,45 +113,86 @@ internal static class BauakteTeamEndpoints
     }
 
     private static async Task<Results<Ok<List<BauakteMemberResponse>>, ProblemHttpResult>> AssignMeAsync(
-        Guid id, IBauakteAccess access, IBauakteHistory history, IUserPermissions permissions, ICurrentUser currentUser,
-        IEnumerable<IBauakteVisibilitySource> sources, EstrichOneDbContext db, CancellationToken cancellationToken)
+        Guid id, IBauakteAccess access, IBauakteHistory history, ICurrentUser currentUser, IRoleAssignments roles,
+        Notifications.Exports.INotifier notifier, Teams.Exports.ITeamsIntegration teams, EstrichOneDbContext db, CancellationToken cancellationToken)
     {
-        var bauakte = await db.Set<Bauakte>().Include(b => b.Members).SingleOrDefaultAsync(b => b.Id == id, cancellationToken);
+        // Jede sichtbare Bauakte – wer Bauakten sehen darf, sieht alle und kann sich selbst eintragen.
+        var bauakte = await (await access.VisibleAsync(db.Set<Bauakte>(), cancellationToken))
+            .Include(b => b.Members).SingleOrDefaultAsync(b => b.Id == id, cancellationToken);
         if (bauakte is null)
         {
             return NotFound();
         }
 
-        var granted = await permissions.GetAsync(cancellationToken);
-        var allowed = await access.CanReadAsync(id, cancellationToken) || granted.Contains(Permissions.BauaktenAssign);
-        if (!allowed && granted.Contains(Permissions.PlanningRead))
+        if (bauakte.Status == BauakteStatus.Cancelled)
         {
-            foreach (var source in sources)
-            {
-                if (await source.IsPlannedAsync(id, cancellationToken))
-                {
-                    allowed = true;
-                    break;
-                }
-            }
-        }
-
-        if (!allowed)
-        {
-            // Wie „nicht vorhanden“: keine Auskunft über fremde Bauakten.
-            return NotFound();
+            return Validation("In eine stornierte Bauakte kann man sich nicht eintragen.", "BAUAKTE_CANCELLED");
         }
 
         var userId = currentUser.UserId;
         if (bauakte.ResponsibleUserId != userId && bauakte.Members.All(m => m.UserId != userId))
         {
             bauakte.Members.Add(new BauakteMember(bauakte.Id, userId, BauakteMemberRole.Member));
-            history.Record(bauakte.Id, BauakteHistoryActions.MembersChanged,
-                new Dictionary<string, string?> { ["count"] = bauakte.Members.Count(m => m.UserId != bauakte.ResponsibleUserId).ToString(System.Globalization.CultureInfo.InvariantCulture) });
+            history.Record(bauakte.Id, BauakteHistoryActions.MemberJoined);
             await db.SaveChangesAsync(cancellationToken);
+            teams.BauakteTeamChanged(bauakte.Id);
+            await NotifyLeadAsync(bauakte, joined: true, currentUser, roles, notifier, db, cancellationToken);
         }
 
         return TypedResults.Ok(await MembersAsync(db, bauakte, cancellationToken));
+    }
+
+    private static async Task<Results<Ok<List<BauakteMemberResponse>>, ProblemHttpResult>> LeaveAsync(
+        Guid id, IBauakteAccess access, IBauakteHistory history, ICurrentUser currentUser, IRoleAssignments roles,
+        Notifications.Exports.INotifier notifier, Teams.Exports.ITeamsIntegration teams, EstrichOneDbContext db, CancellationToken cancellationToken)
+    {
+        var bauakte = await (await access.VisibleAsync(db.Set<Bauakte>(), cancellationToken))
+            .Include(b => b.Members).SingleOrDefaultAsync(b => b.Id == id, cancellationToken);
+        if (bauakte is null)
+        {
+            return NotFound();
+        }
+
+        var userId = currentUser.UserId;
+        if (bauakte.ResponsibleUserId == userId)
+        {
+            return Validation("Als zuständige Person können Sie sich nicht austragen. Bitte zuerst die Zuständigkeit übergeben.", "BAUAKTE_RESPONSIBLE");
+        }
+
+        if (bauakte.Members.RemoveAll(m => m.UserId == userId) > 0)
+        {
+            history.Record(bauakte.Id, BauakteHistoryActions.MemberLeft);
+            await db.SaveChangesAsync(cancellationToken);
+            teams.BauakteTeamChanged(bauakte.Id);
+            await NotifyLeadAsync(bauakte, joined: false, currentUser, roles, notifier, db, cancellationToken);
+        }
+
+        return TypedResults.Ok(await MembersAsync(db, bauakte, cancellationToken));
+    }
+
+    /// <summary>Projektleitung (zuständige Person) und Disposition (Recht „Einsätze planen“) erfahren vom Ein- oder Austragen.</summary>
+    private static async Task NotifyLeadAsync(Bauakte bauakte, bool joined, ICurrentUser currentUser, IRoleAssignments roles,
+        Notifications.Exports.INotifier notifier, EstrichOneDbContext db, CancellationToken cancellationToken)
+    {
+        var recipients = (await roles.GetUserIdsWithPermissionAsync(Permissions.PlanningManage, cancellationToken)).ToHashSet();
+        if (bauakte.ResponsibleUserId is { } lead)
+        {
+            recipients.Add(lead);
+        }
+
+        recipients.Remove(currentUser.UserId);
+        if (recipients.Count == 0)
+        {
+            return;
+        }
+
+        var name = await db.Set<User>().AsNoTracking().Where(u => u.Id == currentUser.UserId).Select(u => u.DisplayName).SingleOrDefaultAsync(cancellationToken)
+            ?? "Jemand";
+        var akte = $"{bauakte.Number} {bauakte.Title}".Trim();
+        await notifier.NotifyAsync(recipients, new Notifications.Exports.NotificationRequest(Notifications.Exports.NotificationCategory.Bauakte,
+            joined ? $"{name} hat sich eingetragen" : $"{name} hat sich ausgetragen",
+            joined ? $"Neu als Beteiligter: {akte}" : $"Nicht mehr Beteiligter: {akte}", $"/bauakten/{bauakte.Id}", "bauakte", bauakte.Id,
+            Event: Notifications.Exports.NotificationEvents.BauakteMemberJoined), cancellationToken);
     }
 
     private static async Task<List<BauakteMemberResponse>> MembersAsync(EstrichOneDbContext db, Bauakte bauakte, CancellationToken cancellationToken)
@@ -150,9 +209,9 @@ internal static class BauakteTeamEndpoints
     private static async Task<Results<Ok<NoteDto>, ProblemHttpResult>> UpdateNoteAsync(
         Guid id, Guid noteId, UpdateNoteRequest request, IBauakteAccess access, EstrichOneDbContext db, CancellationToken cancellationToken)
     {
-        if (!await access.CanReadAsync(id, cancellationToken))
+        if (BauakteWriteProblems.For(await access.CheckWriteAsync(id, cancellationToken)) is { } denied)
         {
-            return NotFound();
+            return denied;
         }
 
         var note = await db.Set<Note>().SingleOrDefaultAsync(n => n.Id == noteId && n.BauakteId == id, cancellationToken);
@@ -205,8 +264,9 @@ internal static class BauakteTeamEndpoints
     private static ProblemHttpResult NotFound() => TypedResults.Problem(statusCode: StatusCodes.Status404NotFound,
         title: "Bauakte nicht gefunden", extensions: new Dictionary<string, object?> { ["code"] = "BAUAKTE_NOT_FOUND" });
 
-    private static ProblemHttpResult Validation(string detail) => TypedResults.Problem(statusCode: StatusCodes.Status422UnprocessableEntity,
-        title: "Ungültige Angaben", detail: detail, extensions: new Dictionary<string, object?> { ["code"] = "VALIDATION_FAILED" });
+    private static ProblemHttpResult Validation(string detail, string code = "VALIDATION_FAILED") => TypedResults.Problem(
+        statusCode: StatusCodes.Status422UnprocessableEntity, title: "Ungültige Angaben", detail: detail,
+        extensions: new Dictionary<string, object?> { ["code"] = code });
 }
 
 /// <summary>Hinweise aus der Bauakte selbst: Hinweise zur Baustelle, Storno, fehlende Angaben.</summary>

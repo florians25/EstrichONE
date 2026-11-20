@@ -264,10 +264,12 @@ fun FuelReceiptNewScreen() {
         }
     }
 
-    val capture = remember { Links.captureUri(context, "tankbeleg-${System.currentTimeMillis()}.jpg") }
+    // Zieldatei der Kamera-App erst beim Antippen anlegen (FileProvider).
+    var capture by remember { mutableStateOf<Pair<java.io.File, Uri>?>(null) }
     val camera = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { ok ->
-        if (ok) take(runCatching { capture.first.readBytes() }.getOrNull())
-        capture.first.delete()
+        val file = capture?.first
+        if (ok && file != null) take(runCatching { file.readBytes() }.getOrNull())
+        file?.delete()
     }
     val gallery = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri: Uri? ->
         uri?.let { take(runCatching { context.contentResolver.openInputStream(it)?.use { s -> s.readBytes() } }.getOrNull()) }
@@ -286,7 +288,12 @@ fun FuelReceiptNewScreen() {
                     modifier = Modifier.fillMaxWidth().heightIn(max = 260.dp).clip(RoundedCornerShape(12.dp)))
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = { camera.launch(capture.second) }, modifier = Modifier.weight(1f).height(52.dp)) {
+                Button(onClick = {
+                    runCatching { Links.captureUri(context, "tankbeleg-${System.currentTimeMillis()}.jpg") }.getOrNull()?.let {
+                        capture = it
+                        camera.launch(it.second)
+                    }
+                }, modifier = Modifier.weight(1f).height(52.dp)) {
                     Icon(Icons.Outlined.PhotoCamera, null)
                     Spacer(Modifier.width(8.dp))
                     Text(if (photo == null) "Beleg fotografieren" else "Neu fotografieren")

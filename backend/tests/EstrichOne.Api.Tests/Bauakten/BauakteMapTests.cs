@@ -41,8 +41,8 @@ public sealed class BauakteMapTests(PostgresFixture postgres) : IAsyncLifetime
         points!.Single(p => p.Id == located).ShouldSatisfyAllConditions(
             p => p.Latitude.ShouldBe(48.537), p => p.Longitude.ShouldBe(12.152), p => p.City.ShouldBe("Landshut"));
         all!.Select(p => p.Id).ShouldContain(completed);
-        // Baustellen-Mitarbeiter sehen nur ihre eigenen Bauakten – auch auf der Karte.
-        workerPoints!.Select(p => p.Id).ShouldBe([foreign]);
+        // Alle sehen alle Bauakten – auch auf der Karte.
+        workerPoints!.Select(p => p.Id).ShouldBe([foreign, located], ignoreOrder: true);
     }
 
     [Fact]

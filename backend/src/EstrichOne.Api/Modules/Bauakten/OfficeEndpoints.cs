@@ -52,20 +52,20 @@ internal static class OfficeEndpoints
             .ProducesProblem(StatusCodes.Status404NotFound).RequirePermission(Permissions.BauaktenRead);
         group.MapPut("/sections/{sectionId:guid}", SaveSectionAsync).WithName("SaveSection").WithSummary("Bereich anlegen oder umbenennen")
             .ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status422UnprocessableEntity)
-            .RequirePermission(Permissions.BauaktenEdit);
+            .RequirePermission(Permissions.BauaktenEdit).RequireBauakteWrite();
         group.MapDelete("/sections/{sectionId:guid}", DeleteSectionAsync).WithName("DeleteSection")
             .WithSummary("Bereich entfernen (Räume bleiben, ohne Bereich)")
-            .ProducesProblem(StatusCodes.Status404NotFound).RequirePermission(Permissions.BauaktenEdit);
+            .ProducesProblem(StatusCodes.Status404NotFound).RequirePermission(Permissions.BauaktenEdit).RequireBauakteWrite();
         group.MapPut("/rooms/{roomId:guid}", SaveRoomAsync).WithName("SaveRoom").WithSummary("Raum anlegen oder ändern (Fläche, Estrichaufbau, Status)")
             .ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status422UnprocessableEntity)
-            .RequirePermission(Permissions.BauaktenEdit);
+            .RequirePermission(Permissions.BauaktenEdit).RequireBauakteWrite();
         group.MapDelete("/rooms/{roomId:guid}", DeleteRoomAsync).WithName("DeleteRoom")
-            .ProducesProblem(StatusCodes.Status404NotFound).RequirePermission(Permissions.BauaktenEdit);
+            .ProducesProblem(StatusCodes.Status404NotFound).RequirePermission(Permissions.BauaktenEdit).RequireBauakteWrite();
         group.MapGet("/notes", ListNotesAsync).WithName("ListNotes").WithSummary("Notizen (angeheftete zuerst, dann neueste)")
             .ProducesProblem(StatusCodes.Status404NotFound).RequirePermission(Permissions.BauaktenRead);
         group.MapPost("/notes", CreateNoteAsync).WithName("CreateNote").WithSummary("Notiz schreiben (idempotent über die ID)")
             .ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status409Conflict)
-            .RequirePermission(Permissions.NotesWrite);
+            .RequirePermission(Permissions.NotesWrite).RequireBauakteWrite();
     }
 
     private static async Task<Results<Ok<RoomOverview>, ProblemHttpResult>> ListRoomsAsync(

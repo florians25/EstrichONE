@@ -40,7 +40,7 @@ internal static class ApprovalEndpoints
         files.MapGet("/{fileId:guid}/approvals", HistoryAsync).WithName("ListFileApprovals")
             .WithSummary("Freigabeverlauf eines Dokuments (neueste zuerst)")
             .RequirePermission(Permissions.BauaktenRead);
-        files.MapPost("/{fileId:guid}/approvals", RequestAsync).WithName("RequestFileApproval")
+        files.MapPost("/{fileId:guid}/approvals", RequestAsync).WithName("RequestFileApproval").ProducesProblem(StatusCodes.Status403Forbidden)
             .WithSummary("Freigabe für ein Dokument anfragen (bei einer Person oder Rolle)")
             .ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status409Conflict)
             .RequirePermission(Permissions.FilesUpload);
@@ -84,6 +84,11 @@ internal static class ApprovalEndpoints
         if (file?.BauakteId is not { } bauakteId || !await access.CanReadAsync(bauakteId, cancellationToken))
         {
             return NotFound();
+        }
+
+        if (!await access.CanWriteAsync(bauakteId, cancellationToken))
+        {
+            return BauakteWriteProblems.NotAssigned();
         }
 
         if (await db.Set<FileApproval>().AsNoTracking().SingleOrDefaultAsync(a => a.Id == request.Id, cancellationToken) is { } existing)

@@ -112,6 +112,11 @@ internal sealed class BauakteSync(
             return Denied(op);
         }
 
+        if (await WriteRejectionAsync(op, op.EntityId, cancellationToken) is { } rejected)
+        {
+            return rejected;
+        }
+
         var bauakte = await (await access.VisibleAsync(db.Set<Bauakte>(), cancellationToken)).SingleOrDefaultAsync(b => b.Id == op.EntityId, cancellationToken);
         if (bauakte is null)
         {
@@ -261,6 +266,11 @@ internal sealed class BauakteSync(
             return Denied(op);
         }
 
+        if (await WriteRejectionAsync(op, op.EntityId, cancellationToken) is { } rejected)
+        {
+            return rejected;
+        }
+
         var bauakte = await (await access.VisibleAsync(db.Set<Bauakte>(), cancellationToken)).SingleOrDefaultAsync(b => b.Id == op.EntityId, cancellationToken);
         if (bauakte is null)
         {
@@ -333,6 +343,11 @@ internal sealed class BauakteSync(
             return Denied(op);
         }
 
+        if (await WriteRejectionAsync(op, op.EntityId, cancellationToken) is { } rejected)
+        {
+            return rejected;
+        }
+
         var bauakte = await (await access.VisibleAsync(db.Set<Bauakte>(), cancellationToken)).SingleOrDefaultAsync(b => b.Id == op.EntityId, cancellationToken);
         if (bauakte is null)
         {
@@ -353,9 +368,9 @@ internal sealed class BauakteSync(
         }
 
         var bauakteId = SyncPayload.Read<Guid>(op.Payload, "bauakteId");
-        if (!await access.CanReadAsync(bauakteId, cancellationToken))
+        if (await WriteRejectionAsync(op, bauakteId, cancellationToken) is { } rejected)
         {
-            return NotFound(op);
+            return rejected;
         }
 
         var existing = await db.Set<Note>().IgnoreQueryFilters([QueryFilters.NotDeleted]).SingleOrDefaultAsync(n => n.Id == op.EntityId, cancellationToken);
@@ -395,6 +410,11 @@ internal sealed class BauakteSync(
             return NotFound(op);
         }
 
+        if (await WriteRejectionAsync(op, note.BauakteId, cancellationToken) is { } rejected)
+        {
+            return rejected;
+        }
+
         if (SyncPayload.Read<string>(op.Payload, "text") is { } text)
         {
             try
@@ -431,6 +451,11 @@ internal sealed class BauakteSync(
             return NotFound(op);
         }
 
+        if (await WriteRejectionAsync(op, note.BauakteId, cancellationToken) is { } rejected)
+        {
+            return rejected;
+        }
+
         note.Delete(clock.GetUtcNow());
         await db.SaveChangesAsync(cancellationToken);
         return new SyncOperationResult(op.OpId, SyncOperationStatus.Applied, Version: note.Version);
@@ -442,6 +467,15 @@ internal sealed class BauakteSync(
         var note = await db.Set<Note>().SingleOrDefaultAsync(n => n.Id == id && n.AuthorUserId == currentUser.UserId, cancellationToken);
         return note is not null && await access.CanReadAsync(note.BauakteId, cancellationToken) ? note : null;
     }
+
+    /// <summary>Nur zugeteilte Bauakten (oder mit „Alle Bauakten bearbeiten“) ändern; sonst NOT_FOUND bzw. BAUAKTE_NOT_ASSIGNED.</summary>
+    private async Task<SyncOperationResult?> WriteRejectionAsync(SyncOperation op, Guid bauakteId, CancellationToken cancellationToken) =>
+        await access.CheckWriteAsync(bauakteId, cancellationToken) switch
+        {
+            BauakteWriteCheck.NotFound => NotFound(op),
+            BauakteWriteCheck.NotAssigned => SyncOperationResult.NotAssigned(op.OpId),
+            _ => null,
+        };
 
     private static SyncOperationResult Denied(SyncOperation op) =>
         SyncOperationResult.Rejected(op.OpId, "PERMISSION_DENIED", "Für diese Aktion fehlt die Berechtigung.");

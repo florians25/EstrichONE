@@ -45,7 +45,7 @@ internal static class AcceptanceEndpoints
             .WithSummary("Unterschrift als PNG (side = client | contractor)")
             .Produces(StatusCodes.Status200OK, contentType: "image/png").ProducesProblem(StatusCodes.Status404NotFound)
             .RequirePermission(Permissions.BauaktenRead);
-        group.MapPost("/acceptances/{id:guid}/customer-link", LinkAsync).WithName("CreateAcceptanceCustomerLink")
+        group.MapPost("/acceptances/{id:guid}/customer-link", LinkAsync).WithName("CreateAcceptanceCustomerLink").ProducesProblem(StatusCodes.Status403Forbidden)
             .WithSummary("Freigabelink für den Kunden (ohne Anmeldung, befristet); mit E-Mail-Adresse wird er verschickt")
             .ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status409Conflict)
             .RequirePermission(Permissions.InspectionsWrite);
@@ -106,6 +106,11 @@ internal static class AcceptanceEndpoints
         if (protocol is null)
         {
             return NotFound();
+        }
+
+        if (!await access.CanWriteAsync(protocol.BauakteId, cancellationToken))
+        {
+            return BauakteWriteProblems.NotAssigned();
         }
 
         if (protocol.State == AcceptanceState.Completed)

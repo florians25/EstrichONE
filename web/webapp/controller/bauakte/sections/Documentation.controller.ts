@@ -184,7 +184,7 @@ export default class Documentation extends SectionBase {
 			weatherText: weatherLine(e),
 			timeText: timeRange(e.startTime, e.endTime),
 			photos: this.photoRefs(e.photoFileIds),
-			own: e.authorUserId === own && session.has("diary.write"),
+			own: e.authorUserId === own && session.has("diary.write") && this.writable(),
 			meta: `${session.name(e.authorUserId)} · ${dateTime(e.createdAt)}${e.editedAt ? " · bearbeitet" : ""}`,
 		}));
 		m.setProperty("/diary", entries);

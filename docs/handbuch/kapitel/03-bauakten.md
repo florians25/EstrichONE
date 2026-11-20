@@ -67,7 +67,13 @@ lässt sie sich weder eingeben noch ändern.
 
 **Auftragsbearbeitung** → **Bauakten** zeigt alle laufenden Bauakten. Die Reiter filtern nach Status (**Laufend**,
 **Anfrage**, **Geplant**, **In Ausführung**, **Belegreif / Trocknung**, **Altakten**). Darüber suchen Sie nach Nummer,
-Bauvorhaben und Adresse und filtern nach **Zuständig** und **Kunde**. **Filter zurücksetzen** hebt alle Filter auf.
+Bauvorhaben und Adresse und filtern nach **Zuständig** und **Kunde**. **Anzeigen** schaltet zwischen **Alle Bauakten**
+und **Meine (zugeteilt)** um. **Filter zurücksetzen** hebt alle Filter auf.
+
+Alle, die Bauakten sehen dürfen, sehen **alle** Bauakten des Betriebs. Bearbeiten darf man eine Bauakte aber nur, wenn
+man ihr **zugeteilt** ist – als zuständige Person, als eingetragener Beteiligter oder über einen Einsatz bzw. die
+eigene Kolonne. Das Personen-Symbol hinter dem Bauvorhaben zeigt „zugeteilt“, das Augen-Symbol „nur ansehen“. Wer das
+Recht „Alle Bauakten bearbeiten“ hat (Standard: Administrator, Büro und Bauleitung), darf jede Bauakte ändern.
 
 ![Bauaktenliste](bilder/bauakten-liste.png "Die Bauaktenliste mit Statusreitern, Suche und Filtern")
 
@@ -98,7 +104,10 @@ Die Schaltflächen im Kopf:
   und alle ihre Dokumente werden sofort revisionssicher archiviert (Fortschritt im Dialog, Nachweis unter
   **Aktionen** → **Archivnachweis**). Ist der Archivserver gerade nicht erreichbar, ist die Schaltfläche ausgegraut –
   dann nur abschließen und später archivieren.
-- **Mir zuweisen** – trägt Sie als Zuständige(n) ein.
+- **Mich als Beteiligten eintragen** – trägt Sie als Beteiligten (Mitarbeiter) der Bauakte ein; danach dürfen Sie sie
+  bearbeiten. Das Eintragen steht im Verlauf, die zuständige Person und die Disposition erhalten eine Benachrichtigung.
+  Unter **Aktionen** → **Als Beteiligter austragen** tragen Sie sich wieder aus (die zuständige Person kann sich nicht
+  austragen; sie übergibt zuerst die Zuständigkeit).
 - **Baustellen-Chat anlegen** – Gruppenchat mit allen Beteiligten der Baustelle (Abschnitt 8.2).
 - **In Teams öffnen** bzw. **Teams-Chat anlegen** – nur wenn Microsoft Teams eingerichtet ist (Abschnitt 9 „Microsoft
   Teams“). Im Menü des Knopfs:
@@ -131,6 +140,12 @@ Die Schaltflächen im Kopf:
 Alle Ausdrucke erstellt der Server als PDF mit Ihrem Firmenlogo; sie werden zusätzlich automatisch in der Bauakte
 abgelegt.
 
+**Nur ansehen.** Sind Sie einer Bauakte nicht zugeteilt, steht oben der Hinweis „Nur ansehen – trag dich als
+Beteiligter ein, um zu bearbeiten.“ mit dem Link **Mich als Beteiligten eintragen**. Alle Inhalte (Fotos, Dokumente,
+Bautagebuch, Protokolle, Räume, Kontakte, Notizen, Verlauf) sind sichtbar, Ausdrucke und PDFs funktionieren; Knöpfe zum
+Ändern sind ausgeblendet. Auch der Server lehnt Änderungen ab (Meldung „Nur ansehen“). Ausnahme: Eine Aufgabe, die Ihnen
+zugewiesen ist, dürfen Sie erledigen. Chat-Nachrichten richten sich nach der Mitgliedschaft im Baustellen-Chat.
+
 Die Bauakte ist in **Abschnitte** gegliedert, die Sie über die Reiter unter dem Kopf erreichen. Mit dem kleinen Pfeil in
 der Mitte klappen Sie den Kopf ein, damit mehr Platz für den Inhalt bleibt.
 
@@ -157,7 +172,8 @@ griffbereit für Büro und Baustelle.
 - **Team im Betrieb** zeigt die zuständige Person und die zugewiesenen Mitarbeiter als Karten in derselben Optik wie die
   Kontakte: Avatar, Name, Rolle (**Zuständig**, **Mitarbeiter**, **Gesperrt**), die Kolonne aus den Einsätzen der Akte
   sowie E-Mail und **Kontaktdaten kopieren**. **Mitarbeiter zuweisen** rechts in der Überschrift ändert die Zuweisung.
-  Zugewiesene sehen die Bauakte, auch wenn sie nur das Recht „Eigene Bauakten sehen“ haben.
+  Zugewiesene dürfen die Bauakte bearbeiten und haben sie in der App offline dabei. Andere Mitarbeiter zuweisen darf, wer
+  der Bauakte selbst zugeteilt ist oder das Recht „Kollegen einer Bauakte zuordnen“ hat.
 
 ## Dokumente
 

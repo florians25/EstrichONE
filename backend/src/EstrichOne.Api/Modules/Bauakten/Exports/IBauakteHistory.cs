@@ -24,6 +24,12 @@ public static class BauakteHistoryActions
     public const string InspectionAdded = "inspection_added";
     public const string RoomAdded = "room_added";
     public const string MembersChanged = "members_changed";
+
+    /// <summary>Selbst als Beteiligter eingetragen („Mich als Beteiligten eintragen“).</summary>
+    public const string MemberJoined = "member_joined";
+
+    /// <summary>Selbst als Beteiligter ausgetragen.</summary>
+    public const string MemberLeft = "member_left";
     public const string PartiesChanged = "parties_changed";
 
     /// <summary>„Erstbegehung nicht erforderlich“ gesetzt (waived=true) oder aufgehoben.</summary>

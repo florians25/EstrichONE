@@ -29,9 +29,14 @@ internal sealed class FileSync(FileService files, EstrichOneDbContext db, IUserP
                 return SyncOperationResult.Rejected(op.OpId, "PERMISSION_DENIED", "Für diese Aktion fehlt die Berechtigung.");
             }
 
-            if (await files.FindReadableAsync(op.EntityId, cancellationToken) is null)
+            if (await files.FindReadableAsync(op.EntityId, cancellationToken) is not { } readable)
             {
                 return SyncOperationResult.Rejected(op.OpId, "NOT_FOUND", "Die Datei existiert nicht (mehr) oder ist nicht sichtbar.");
+            }
+
+            if (!await files.CanWriteAsync(readable, cancellationToken))
+            {
+                return SyncOperationResult.NotAssigned(op.OpId);
             }
 
             var record = await db.Set<FileRecord>().SingleAsync(f => f.Id == op.EntityId, cancellationToken);
@@ -70,6 +75,7 @@ internal sealed class FileSync(FileService files, EstrichOneDbContext db, IUserP
         {
             null => new SyncOperationResult(op.OpId, SyncOperationStatus.Applied, Version: file!.Version, Entity: SyncPayload.ToNode(FileEndpoints.ToResponse(file))),
             FileFailure.BauakteNotFound => SyncOperationResult.Rejected(op.OpId, "BAUAKTE_NOT_FOUND", "Die Bauakte existiert nicht (mehr) oder ist nicht sichtbar."),
+            FileFailure.BauakteNotAssigned => SyncOperationResult.NotAssigned(op.OpId),
             FileFailure.TooLarge => SyncOperationResult.Rejected(op.OpId, "FILE_TOO_LARGE", "Die Datei ist zu groß."),
             _ => SyncOperationResult.Rejected(op.OpId, "ID_CONFLICT", "Unter dieser ID existiert bereits eine andere Datei."),
         };
@@ -82,9 +88,14 @@ internal sealed class FileSync(FileService files, EstrichOneDbContext db, IUserP
             return SyncOperationResult.Rejected(op.OpId, "PERMISSION_DENIED", "Für diese Aktion fehlt die Berechtigung.");
         }
 
-        if (await files.FindReadableAsync(op.EntityId, cancellationToken) is null)
+        if (await files.FindReadableAsync(op.EntityId, cancellationToken) is not { } readable)
         {
             return SyncOperationResult.Rejected(op.OpId, "NOT_FOUND", "Die Datei existiert nicht (mehr) oder ist nicht sichtbar.");
+        }
+
+        if (!await files.CanWriteAsync(readable, cancellationToken))
+        {
+            return SyncOperationResult.NotAssigned(op.OpId);
         }
 
         var file = await db.Set<FileRecord>().SingleAsync(f => f.Id == op.EntityId, cancellationToken);

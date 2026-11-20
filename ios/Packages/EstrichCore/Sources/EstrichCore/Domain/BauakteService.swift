@@ -90,10 +90,13 @@ public enum BauakteError: Error, Equatable, Sendable {
     case storage
     /// „Nur Ansicht“: Server länger nicht erreichbar, Ändern gesperrt.
     case readOnly
+    /// Bauakte nicht zugeteilt: nur ansehen.
+    case notAssigned
 
     /// Fehler beim lokalen Speichern: „Nur Ansicht“ verständlich melden, sonst allgemein.
     public static func from(_ error: any Error) -> BauakteError {
         if let error = error as? BauakteError { return error }
+        if error is BauakteNotAssignedError { return .notAssigned }
         return error is ReadOnlyModeError ? .readOnly : .storage
     }
 
@@ -109,6 +112,7 @@ public enum BauakteError: Error, Equatable, Sendable {
         case .cancellationReasonRequired: "Bitte einen Stornogrund angeben."
         case .storage: "Die Daten konnten auf diesem Gerät nicht gespeichert werden."
         case .readOnly: ReadOnlyModeError.message
+        case .notAssigned: BauakteNotAssignedError.message
         }
     }
 }

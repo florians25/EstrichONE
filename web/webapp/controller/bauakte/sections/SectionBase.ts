@@ -58,6 +58,11 @@ export default abstract class SectionBase extends BaseController {
 
 	protected abstract load(): Promise<void>;
 
+	/** Bearbeitbar (zugeteilt oder „Alle Bauakten bearbeiten“)? Sonst zeigt die Bauakte „Nur ansehen“. */
+	protected writable(): boolean {
+		return this.v().getModel("akte")?.getProperty("/writable") !== false;
+	}
+
 	protected bauakte(): BauakteDetail {
 		return this.v().getModel("akte")?.getProperty("/bauakte") as BauakteDetail;
 	}

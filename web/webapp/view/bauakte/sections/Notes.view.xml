@@ -11,7 +11,7 @@
 				</items>
 			</SegmentedButton>
 		</OverflowToolbar>
-		<VBox visible="{= ${session>/permissions/notes.write} === true }" class="sapUiSmallMarginBottom">
+		<VBox visible="{= (${session>/permissions/notes.write} === true &amp;&amp; ${akte>/writable} !== false) }" class="sapUiSmallMarginBottom">
 			<Label text="{i18n>notes.new}" labelFor="noteInput"/>
 			<TextArea id="noteInput" value="{nt>/text}" valueLiveUpdate="true" rows="3" width="100%" placeholder="Notiz schreiben …" growing="true"/>
 			<HBox justifyContent="SpaceBetween" alignItems="Center">
@@ -30,7 +30,7 @@
 					<core:Icon src="sap-icon://pushpin-on" class="sapUiTinyMarginEnd" color="Critical"/>
 					<Text text="{nt>text}" class="eoPre"/>
 				</HBox>
-				<Button icon="sap-icon://pushpin-off" type="Transparent" tooltip="Notiz lösen" press=".onPin" visible="{= ${session>/permissions/notes.write} === true }"/>
+				<Button icon="sap-icon://pushpin-off" type="Transparent" tooltip="Notiz lösen" press=".onPin" visible="{= (${session>/permissions/notes.write} === true &amp;&amp; ${akte>/writable} !== false) }"/>
 			</HBox>
 		</VBox>
 		<List items="{nt>/items}" noDataText="{i18n>notes.none}" showSeparators="None" growing="true" growingThreshold="100" ariaLabelledBy="notesLabel">
@@ -56,7 +56,7 @@
 								<ObjectStatus text="Angeheftet" state="Warning" visible="{= !!${nt>isPinned} }" class="sapUiTinyMarginEnd"/>
 								<Text text="· bearbeitet" visible="{= !!${nt>editedAt} }" class="eoMuted"/>
 							</HBox>
-							<HBox visible="{= ${session>/permissions/notes.write} === true }">
+							<HBox visible="{= (${session>/permissions/notes.write} === true &amp;&amp; ${akte>/writable} !== false) }">
 								<Button icon="{= ${nt>isPinned} ? 'sap-icon://pushpin-off' : 'sap-icon://pushpin-on' }" type="Transparent"
 									tooltip="{= ${nt>isPinned} ? 'Notiz lösen' : 'Notiz anheften' }" press=".onPin"/>
 								<MenuButton icon="sap-icon://palette" type="Transparent" tooltip="Notiz einfärben">

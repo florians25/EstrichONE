@@ -29,6 +29,15 @@
 							<Label text="{i18n>bauakten.customer}" labelFor="listCustomerHost"/>
 							<HBox id="listCustomerHost" width="16rem"/>
 						</VBox>
+						<VBox class="sapUiSmallMarginEnd">
+							<Label text="{i18n>bauakten.scope}" labelFor="listScope"/>
+							<SegmentedButton id="listScope" selectedKey="{view>/scope}" selectionChange=".onScope">
+								<items>
+									<SegmentedButtonItem key="all" text="{i18n>bauakten.scopeAll}"/>
+									<SegmentedButtonItem key="mine" text="{i18n>bauakten.scopeMine}" icon="sap-icon://employee"/>
+								</items>
+							</SegmentedButton>
+						</VBox>
 						<Button text="{i18n>bauakten.resetFilters}" type="Transparent" icon="sap-icon://clear-filter" press=".onReset"/>
 					</FlexBox>
 					<IconTabHeader id="statusTabs" selectedKey="{view>/statusKey}" select=".onStatus" mode="Inline" backgroundDesign="Transparent">
@@ -67,7 +76,13 @@
 					<items>
 						<ColumnListItem type="Navigation" press=".onOpen" highlight="{path: 'view>status', formatter: 'fmt.bauakteStatusState'}">
 							<Text text="{= ${view>number} || 'neu' }" class="eoTabular"/>
-							<Link text="{view>title}" href="/bauakten/{view>id}" wrapping="true" emphasized="true"/>
+							<HBox alignItems="Center" renderType="Bare">
+								<Link text="{view>title}" href="/bauakten/{view>id}" wrapping="true" emphasized="true"/>
+								<core:Icon src="sap-icon://employee" visible="{= ${view>isAssigned} === true }" tooltip="{i18n>bauakten.assignedTooltip}"
+									class="sapUiTinyMarginBegin" color="Default"/>
+								<core:Icon src="sap-icon://show" visible="{= ${view>canEdit} === false }" tooltip="{i18n>bauakten.readOnlyTooltip}"
+									class="sapUiTinyMarginBegin" color="Neutral"/>
+							</HBox>
 							<HBox alignItems="Center">
 								<core:Icon src="sap-icon://map" visible="{= ${view>latitude} !== null }" tooltip="{i18n>bauakten.located}" class="sapUiTinyMarginEnd"/>
 								<Text text="{parts: ['view>street', 'view>postalCode', 'view>city'], formatter: 'fmt.address'}"/>

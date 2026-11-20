@@ -62,7 +62,7 @@ internal static class FileEndpoints
     {
         var files = api.MapGroup("/files").WithTags("Dateien");
 
-        files.MapPost("/", AnnounceAsync).WithName("AnnounceFile")
+        files.MapPost("/", AnnounceAsync).WithName("AnnounceFile").ProducesProblem(StatusCodes.Status403Forbidden)
             .WithSummary("Datei ankündigen (Metadaten + SHA-256); idempotent über die ID")
             .ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status409Conflict)
             .ProducesProblem(StatusCodes.Status413PayloadTooLarge)
@@ -91,19 +91,19 @@ internal static class FileEndpoints
             .Produces(StatusCodes.Status200OK, contentType: "application/octet-stream")
             .ProducesProblem(StatusCodes.Status404NotFound);
 
-        files.MapPatch("/{id:guid}", UpdateAsync).WithName("UpdateFile")
+        files.MapPatch("/{id:guid}", UpdateAsync).WithName("UpdateFile").ProducesProblem(StatusCodes.Status403Forbidden)
             .WithSummary("Beschriftung und Dokumentart ändern")
             .ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status409Conflict)
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
             .RequirePermission(Permissions.FilesUpload);
 
-        files.MapPut("/{id:guid}/details", UpdateDetailsAsync).WithName("UpdateFileDetails")
+        files.MapPut("/{id:guid}/details", UpdateDetailsAsync).WithName("UpdateFileDetails").ProducesProblem(StatusCodes.Status403Forbidden)
             .WithSummary("Name, Beschriftung, Ablage (Dokumentart, Unterordner) und Bezug zu Raum oder Mangel ändern")
             .ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status409Conflict)
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
             .RequirePermission(Permissions.FilesUpload);
 
-        files.MapDelete("/{id:guid}", DeleteAsync).WithName("DeleteFile")
+        files.MapDelete("/{id:guid}", DeleteAsync).WithName("DeleteFile").ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .RequirePermission(Permissions.FilesDelete);
 
@@ -171,9 +171,14 @@ internal static class FileEndpoints
     private static async Task<Results<Ok<FileResponse>, ProblemHttpResult>> UpdateAsync(
         Guid id, UpdateFileRequest request, FileService service, EstrichOneDbContext db, IValueLists valueLists, CancellationToken cancellationToken)
     {
-        if (await service.FindReadableAsync(id, cancellationToken) is null)
+        if (await service.FindReadableAsync(id, cancellationToken) is not { } readable)
         {
             return ProblemFor(FileFailure.NotFound);
+        }
+
+        if (!await service.CanWriteAsync(readable, cancellationToken))
+        {
+            return ProblemFor(FileFailure.BauakteNotAssigned);
         }
 
         if (request.Category is { } category && !await DocumentCategories.IsKnownAsync(category, valueLists, cancellationToken))
@@ -206,9 +211,14 @@ internal static class FileEndpoints
         Guid id, UpdateFileDetailsRequest request, FileService service, EstrichOneDbContext db, IBauakteRooms rooms,
         IWorkItemReferences workItems, IValueLists valueLists, CancellationToken cancellationToken)
     {
-        if (await service.FindReadableAsync(id, cancellationToken) is null)
+        if (await service.FindReadableAsync(id, cancellationToken) is not { } readable)
         {
             return ProblemFor(FileFailure.NotFound);
+        }
+
+        if (!await service.CanWriteAsync(readable, cancellationToken))
+        {
+            return ProblemFor(FileFailure.BauakteNotAssigned);
         }
 
         if (request.Category is { } category && !await DocumentCategories.IsKnownAsync(category, valueLists, cancellationToken))
@@ -469,9 +479,14 @@ internal static class FileEndpoints
     private static async Task<Results<NoContent, ProblemHttpResult>> DeleteAsync(
         Guid id, FileService service, EstrichOneDbContext db, TimeProvider clock, CancellationToken cancellationToken)
     {
-        if (await service.FindReadableAsync(id, cancellationToken) is null)
+        if (await service.FindReadableAsync(id, cancellationToken) is not { } readable)
         {
             return ProblemFor(FileFailure.NotFound);
+        }
+
+        if (!await service.CanWriteAsync(readable, cancellationToken))
+        {
+            return ProblemFor(FileFailure.BauakteNotAssigned);
         }
 
         var file = await db.Set<FileRecord>().SingleAsync(f => f.Id == id, cancellationToken);
@@ -512,6 +527,7 @@ internal static class FileEndpoints
     {
         FileFailure.NotFound => Problem(StatusCodes.Status404NotFound, "FILE_NOT_FOUND", "Datei nicht gefunden"),
         FileFailure.BauakteNotFound => Problem(StatusCodes.Status404NotFound, "BAUAKTE_NOT_FOUND", "Bauakte nicht gefunden"),
+        FileFailure.BauakteNotAssigned => BauakteWriteProblems.NotAssigned(),
         FileFailure.IdConflict => Problem(StatusCodes.Status409Conflict, "ID_CONFLICT", "Unter dieser ID existiert bereits eine andere Datei."),
         FileFailure.TooLarge => Problem(StatusCodes.Status413PayloadTooLarge, "FILE_TOO_LARGE", "Die Datei ist zu groß."),
         FileFailure.ChecksumMismatch => Problem(StatusCodes.Status422UnprocessableEntity, "CHECKSUM_MISMATCH",

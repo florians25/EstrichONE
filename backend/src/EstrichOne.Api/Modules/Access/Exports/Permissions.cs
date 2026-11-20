@@ -10,6 +10,7 @@ public static class Permissions
     public const string BauaktenReadAll = "bauakten.read_all";
     public const string BauaktenCreate = "bauakten.create";
     public const string BauaktenEdit = "bauakten.edit";
+    public const string BauaktenEditAll = "bauakten.edit_all";
     public const string BauaktenDelete = "bauakten.delete";
     public const string BauaktenAssign = "bauakten.assign";
     public const string ContactsRead = "contacts.read";
@@ -56,10 +57,11 @@ public static class Permissions
 
     public static IReadOnlyList<PermissionInfo> All { get; } =
     [
-        new(BauaktenRead, "Bauakten", "Eigene Bauakten (Mitglied, zuständig) sehen"),
-        new(BauaktenReadAll, "Bauakten", "Alle Bauakten sehen"),
+        new(BauaktenRead, "Bauakten", "Alle Bauakten sehen und sich selbst als Beteiligter eintragen (Handy und Tablet speichern nur zugeteilte offline)"),
+        new(BauaktenReadAll, "Bauakten", "Alle Bauakten auf Handy und Tablet offline speichern (nicht nur zugeteilte)"),
         new(BauaktenCreate, "Bauakten", "Bauakten anlegen"),
-        new(BauaktenEdit, "Bauakten", "Bauakten bearbeiten"),
+        new(BauaktenEdit, "Bauakten", "Bauakten bearbeiten, denen man zugeteilt ist (zuständig, Beteiligter oder eingeplant)"),
+        new(BauaktenEditAll, "Bauakten", "Alle Bauakten bearbeiten, auch ohne Zuteilung (Büro, Disposition)"),
         new(BauaktenDelete, "Bauakten", "Bauakten löschen und wiederherstellen"),
         new(BauaktenAssign, "Bauakten", "Kollegen einer Bauakte zuordnen"),
         new(ContactsRead, "Kontakte", "Kunden und Projektbeteiligte sehen"),

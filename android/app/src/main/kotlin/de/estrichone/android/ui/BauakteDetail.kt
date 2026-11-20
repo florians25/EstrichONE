@@ -107,6 +107,9 @@ import de.estrichone.core.Task
 import de.estrichone.core.WorkItemKind
 import de.estrichone.core.WorkItemStatus
 import de.estrichone.core.display
+import de.estrichone.core.BauakteNotAssignedException
+import de.estrichone.core.isMemberOf
+import androidx.compose.material.icons.outlined.Visibility
 import de.estrichone.core.dueText
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -167,22 +170,33 @@ fun BauakteScreen(id: String, showBack: Boolean = true) {
 
     val b = bauakte
     if (b == null) {
-        ScreenScaffold("Bauakte", showBack = showBack) { padding ->
-            EmptyState(Icons.Outlined.Folder, "Bauakte nicht auf dem Gerät", "Sie ist nicht (mehr) sichtbar oder wird gerade geladen.",
-                Modifier.padding(padding)) {
-                TextButton(onClick = { scope.launch { session.synchronize() } }) { Text("Jetzt abgleichen") }
-            }
-        }
+        // Nicht auf dem Gerät – meist nicht zugeteilt (offline liegen nur zugeteilte): Kopf online, „Mich als Beteiligten eintragen“.
+        OnlineBauakteScreen(id, showBack)
         return
+    }
+    val revision by session.store.revision.collectAsState()
+    val viewOnly = remember(revision, id) { session.store.isViewOnly(id) }
+    var isMember by remember(id) { mutableStateOf(false) }
+    LaunchedEffect(id) { isMember = runCatching { withContext(Dispatchers.IO) { session.api.isMemberOf(id, session.user.id) } }.getOrDefault(false) }
+    val join: () -> Unit = {
+        scope.launch {
+            runCatching { session.joinBauakte(id) }
+                .onSuccess { isMember = true; model.message("Als Beteiligter eingetragen – Bearbeiten ist freigeschaltet.") }
+                .onFailure { model.message(it.message ?: "Eintragen nicht möglich. Bitte mit Verbindung erneut versuchen.") }
+        }
     }
 
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
     // Titel oben erst nach dem Kopf (wie die große Überschrift auf iOS).
     val scrolled by remember { androidx.compose.runtime.derivedStateOf { listState.firstVisibleItemIndex > 0 } }
     // Foto und Video als Hauptaktionen unten (immer erreichbar, mit Handschuhen bedienbar); alles andere im Menü „⋮“.
-    ScreenScaffold(if (scrolled) b.title else "", showBack = showBack, bottomBar = { CaptureBar(id) }, actions = {
+    ScreenScaffold(if (scrolled) b.title else "", showBack = showBack, bottomBar = { if (!viewOnly) CaptureBar(id) }, actions = {
         IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, "Weitere Aktionen") }
         DropdownMenu(menu, { menu = false }) {
+            if (viewOnly) {
+                DropdownMenuItem(text = { Text(BauakteNotAssignedException.JOIN) }, onClick = { menu = false; join() })
+            }
+            if (!viewOnly) {
             DropdownMenuItem(text = { Text("Dokument scannen") }, leadingIcon = { Icon(Icons.Filled.DocumentScanner, null) },
                 onClick = { menu = false; nav.push(Route.Camera(id, scan = true)) })
             if (modules.isOn(AppModules.DIARY)) {
@@ -197,6 +211,7 @@ fun BauakteScreen(id: String, showBack: Boolean = true) {
                 onClick = { menu = false; nav.captureOpenFor = id })
             HorizontalDivider()
             DropdownMenuItem(text = { Text("Basisdaten bearbeiten") }, onClick = { menu = false; nav.push(Route.Area(id, AreaKind.Project)) })
+            }
             DropdownMenuItem(text = { Text("Bauakte als PDF") }, onClick = {
                 menu = false
                 scope.launch {
@@ -220,14 +235,33 @@ fun BauakteScreen(id: String, showBack: Boolean = true) {
             if (chat?.isAvailable == true && chat?.readOnly != true) {
                 DropdownMenuItem(text = { Text("Baustellenchat") }, onClick = { menu = false; nav.push(Route.ChatList) })
             }
-            DropdownMenuItem(text = { Text("Bauakte stornieren", color = tones.danger) }, enabled = b.status != BauakteStatus.Cancelled,
-                onClick = { menu = false; cancelling = true })
+            if (isMember) {
+                DropdownMenuItem(text = { Text(BauakteNotAssignedException.LEAVE) }, onClick = {
+                    menu = false
+                    scope.launch {
+                        runCatching { session.leaveBauakte(id) }
+                            .onSuccess { isMember = false; model.message("Als Beteiligter ausgetragen.") }
+                            .onFailure { model.message(it.message ?: "Austragen nicht möglich. Bitte mit Verbindung erneut versuchen.") }
+                    }
+                })
+            }
+            if (!viewOnly) {
+                DropdownMenuItem(text = { Text("Bauakte stornieren", color = tones.danger) }, enabled = b.status != BauakteStatus.Cancelled,
+                    onClick = { menu = false; cancelling = true })
+            }
         }
     }) { padding ->
+        androidx.compose.runtime.CompositionLocalProvider(LocalViewOnly provides viewOnly) {
         LazyColumn(state = listState, contentPadding = padding.content(), modifier = Modifier.readable()) {
             // Oben die Basisdaten auf einen Blick: Nummer, Status, Bauvorhaben, Adresse mit Route, Kunde und Ansprechpartner mit
             // Anruf, nächster Einsatz. Darunter Kennwerte (aufklappbar), offene Punkte, neueste Fotos und die Bereiche.
-            item { Header(b, session) }
+            if (viewOnly) {
+                item {
+                    Banner(BauakteNotAssignedException.MESSAGE, Icons.Outlined.Visibility, MaterialTheme.colorScheme.primary, tones.infoSoft,
+                        Modifier.padding(vertical = 4.dp), action = BauakteNotAssignedException.JOIN, onAction = join)
+                }
+            }
+            item { Header(b, session, viewOnly) }
             item { ContactCard(b, session) }
             item { PinnedNote(session, id) }
             item { InitialInspectionHint(session, b) }
@@ -240,12 +274,13 @@ fun BauakteScreen(id: String, showBack: Boolean = true) {
                 item { SectionCard(padding = androidx.compose.foundation.layout.PaddingValues(16.dp)) { Text(text) } }
             }
         }
+        }
     }
     if (cancelling) CancelDialog(onDismiss = { cancelling = false }) { reason -> session.service.setStatus(id, BauakteStatus.Cancelled, reason) }
 }
 
 @Composable
-private fun Header(b: Bauakte, session: Session) {
+private fun Header(b: Bauakte, session: Session, viewOnly: Boolean = false) {
     var statusMenu by remember { mutableStateOf(false) }
     Column(Modifier.padding(horizontal = 4.dp, vertical = 4.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -253,7 +288,7 @@ private fun Header(b: Bauakte, session: Session) {
             SyncMark(b.syncState)
             Spacer(Modifier.width(8.dp))
             Box {
-                TextButton(onClick = { statusMenu = true }, modifier = Modifier.heightIn(min = 48.dp)) {
+                TextButton(onClick = { statusMenu = true }, enabled = !viewOnly, modifier = Modifier.heightIn(min = 48.dp)) {
                     StatusLabel(b.status, short = false)
                     Icon(Icons.Filled.ArrowDropDown, "Status ändern", tint = tones.textSecondary)
                 }
@@ -387,7 +422,7 @@ fun TaskRow(task: Task, session: Session, subtitle: String? = null) {
     val today = LocalDate.now(Dates.zone)
     val haptics = androidx.compose.ui.platform.LocalHapticFeedback.current
     Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = Alignment.Top) {
-        IconButton(onClick = {
+        IconButton(enabled = !LocalViewOnly.current || task.assigneeUserId.equals(session.user.id, ignoreCase = true), onClick = {
             haptics.performHapticFeedback(if (task.isOpen) androidx.compose.ui.hapticfeedback.HapticFeedbackType.Confirm
                 else androidx.compose.ui.hapticfeedback.HapticFeedbackType.ToggleOff)
             session.service.setTaskStatus(task, if (task.isOpen) WorkItemStatus.Done else WorkItemStatus.Open)
@@ -547,4 +582,54 @@ private fun CancelDialog(onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Abbrechen") } },
     )
+}
+
+/**
+ * Bauakte, die nicht auf dem Gerät liegt: Alle sehen alle Bauakten, offline liegen aber nur zugeteilte. Kopf online mit
+ * „Nur ansehen“ und „Mich als Beteiligten eintragen“; danach wird sie vollständig geladen und ist bearbeitbar.
+ */
+@Composable
+private fun OnlineBauakteScreen(id: String, showBack: Boolean) {
+    val session = LocalSession.current
+    val model = LocalModel.current
+    val scope = rememberCoroutineScope()
+    var working by remember { mutableStateOf(false) }
+    var tried by remember { mutableStateOf(false) }
+    var remote by remember { mutableStateOf<de.estrichone.core.BauakteDetail?>(null) }
+    LaunchedEffect(id) {
+        // Erst versuchen, sie aufs Gerät zu laden (eingeplant oder gerade zugeteilt), sonst den Kopf online holen.
+        session.synchronize()
+        if (session.service.bauakte(id) == null) remote = runCatching { withContext(Dispatchers.IO) { session.api.bauakte(id) } }.getOrNull()
+        tried = true
+    }
+    ScreenScaffold(remote?.title ?: "Bauakte", showBack = showBack) { padding ->
+        val r = remote
+        if (r == null) {
+            EmptyState(Icons.Outlined.Folder, if (tried) "Bauakte nicht verfügbar" else "Bauakte wird geladen …",
+                if (tried) "Ohne Verbindung lässt sie sich nicht laden. Bitte später erneut versuchen." else null, Modifier.padding(padding)) {
+                if (tried) TextButton(onClick = { scope.launch { session.synchronize() } }) { Text("Jetzt abgleichen") }
+            }
+            return@ScreenScaffold
+        }
+        Column(Modifier.padding(padding).padding(16.dp).readable(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text(r.number ?: "ohne Nummer", style = MaterialTheme.typography.bodyMedium, color = tones.textSecondary)
+            Text(r.title, style = MaterialTheme.typography.headlineSmall)
+            listOfNotNull(r.street, listOfNotNull(r.postalCode, r.city).joinToString(" ").ifBlank { null }).joinToString(", ").ifBlank { null }?.let {
+                Secondary(it)
+            }
+            Banner(BauakteNotAssignedException.MESSAGE, Icons.Outlined.Visibility, MaterialTheme.colorScheme.primary, tones.infoSoft)
+            if (r.status != BauakteStatus.Cancelled) {
+                Button(onClick = {
+                    working = true
+                    scope.launch {
+                        runCatching { session.joinBauakte(id) }
+                            .onSuccess { model.message("Als Beteiligter eingetragen – Bearbeiten ist freigeschaltet.") }
+                            .onFailure { model.message(it.message ?: "Eintragen nicht möglich. Bitte mit Verbindung erneut versuchen.") }
+                        working = false
+                    }
+                }, enabled = !working, modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp)) { Text(BauakteNotAssignedException.JOIN) }
+            }
+            Secondary("Auf dem Gerät liegen nur Bauakten, denen Sie zugeteilt sind. Nach dem Eintragen wird die Bauakte vollständig geladen – auch für unterwegs ohne Verbindung.")
+        }
+    }
 }
