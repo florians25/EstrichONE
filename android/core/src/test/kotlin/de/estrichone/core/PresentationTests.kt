@@ -196,7 +196,7 @@ class PresentationTests {
         assertEquals("new", ticket.summary.status)
         val plan = api.myPlan(LocalDate.now().toString(), LocalDate.now().plusDays(6).toString())
         assertEquals("Estrich einbringen OG", plan.assignments.first().activity)
-        assertEquals("07:00 – 15:00", plan.assignments.first().time)
+        assertEquals("07:00 – 13:00", plan.assignments.first().time)
         assertEquals(3, NoticePresentation.items(api.systemNotices(), Instant.now()).size)
         assertTrue(api.healthBanners().isEmpty())
     }

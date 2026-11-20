@@ -72,14 +72,19 @@ public sealed record AbsencePreview(decimal WorkingDays, IReadOnlyList<string> W
 public sealed record DecideAbsenceRequest(bool Approve, [property: MaxLength(1000)] string? Comment);
 
 /// <param name="CaseId">Krankheitsfall (ID der Erstmeldung); Folgebescheinigungen haben dieselbe CaseId.</param>
+/// <param name="CertificateRetrievedOn">eAU bei der Krankenkasse abgerufen am.</param>
+/// <param name="CertificateStatus">attached (Datei), retrieved (eAU), missing (fällig, fehlt), later (noch nicht fällig), notRequired (kurz).</param>
+/// <param name="CertificateDueOn">Nachweis erwartet ab (laut Einstellung „AU ab Kalendertag“).</param>
 public sealed record SickNoteView(Guid Id, Guid UserId, string UserName, DateOnly From, DateOnly To, int WorkingDays, string? Note, Guid? CertificateFileId,
-    Guid? CaseId = null, bool IsFollowUp = false, DateTimeOffset? RecordedAt = null, Guid? TypeId = null);
+    Guid? CaseId = null, bool IsFollowUp = false, DateTimeOffset? RecordedAt = null, Guid? TypeId = null, DateOnly? CertificateRetrievedOn = null,
+    string CertificateStatus = "missing", DateOnly? CertificateDueOn = null);
 
 /// <param name="CertificateFileId">AU-Bescheinigung: vorher ohne Bauakte hochgeladene eigene Datei (POST /files).</param>
 /// <param name="FollowUpOf">Folgebescheinigung zu dieser Krankmeldung (eigener Eintrag im selben Fall).</param>
 /// <param name="TypeId">Krankheitsart (z. B. Kind krank); leer = Krankheit. Keine Diagnose erfassen.</param>
+/// <param name="CertificateRetrievedOn">eAU abgerufen am (leer = bisherigen Wert behalten; entfernen über …/certificate-retrieved).</param>
 public sealed record SaveSickNoteRequest(Guid UserId, DateOnly From, DateOnly To, [property: MaxLength(500)] string? Note, Guid? CertificateFileId,
-    Guid? FollowUpOf = null, Guid? TypeId = null);
+    Guid? FollowUpOf = null, Guid? TypeId = null, DateOnly? CertificateRetrievedOn = null);
 
 /// <param name="Kind">qualification, probation, birthday, anniversary, document</param>
 /// <param name="Severity">error (abgelaufen), warning (bald), info</param>
@@ -157,6 +162,7 @@ internal static class HrEndpoints
             .RequirePermission(Permissions.HrRead).RequireModule(AppModules.Staff);
 
         AbsenceAdminEndpoints.Map(hr);
+        AbsenceWarningEndpoints.Map(hr);
     }
 
     private static HrSettingsResponse ToResponse(HrSettings s) => new(s.State, GermanHolidays.States[s.State],
@@ -899,9 +905,38 @@ internal static class HrEndpoints
         var ids = items.Select(a => a.UserId).Distinct().ToList();
         var users = await db.Set<User>().AsNoTracking().Where(u => ids.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => u.DisplayName, cancellationToken);
         var employees = await db.Set<Employee>().AsNoTracking().Where(e => e.UserId != null && ids.Contains(e.UserId.Value)).ToDictionaryAsync(e => e.UserId!.Value, cancellationToken);
-        return TypedResults.Ok(items.Select(a => new SickNoteView(a.Id, a.UserId, users.GetValueOrDefault(a.UserId) ?? "Unbekannt", a.From, a.To,
-            employees.GetValueOrDefault(a.UserId)?.WorkingDays(a.From, a.To, holidays) ?? Weekdays(a.From, a.To, holidays), a.Note, a.CertificateFileId,
-            a.CaseId ?? a.Id, a.CaseId is { } c && c != a.Id, a.RecordedAt, HrService.TypeOf(a))).ToList());
+        var settings = await hr.SettingsAsync(cancellationToken);
+        var cases = items.GroupBy(a => a.CaseId ?? a.Id).ToDictionary(g => g.Key, g => (From: g.Min(a => a.From), To: g.Max(a => a.To)));
+        return TypedResults.Ok(items.Select(a =>
+        {
+            var (status, due) = Certificate(a, cases[a.CaseId ?? a.Id], settings.CertificateDueDay, hr.Today);
+            return new SickNoteView(a.Id, a.UserId, users.GetValueOrDefault(a.UserId) ?? "Unbekannt", a.From, a.To,
+                employees.GetValueOrDefault(a.UserId)?.WorkingDays(a.From, a.To, holidays) ?? Weekdays(a.From, a.To, holidays), a.Note, a.CertificateFileId,
+                a.CaseId ?? a.Id, a.CaseId is { } c && c != a.Id, a.RecordedAt, HrService.TypeOf(a), a.CertificateRetrievedOn, status, due);
+        }).ToList());
+    }
+
+    /// <summary>Stand des AU-Nachweises je Eintrag (gleiche Regel wie die Warnung „AU fehlt“).</summary>
+    internal static (string Status, DateOnly? Due) Certificate(Absence a, (DateOnly From, DateOnly To) sickCase, int dueDay, DateOnly today)
+    {
+        if (a.CertificateFileId is not null)
+        {
+            return ("attached", null);
+        }
+
+        if (a.CertificateRetrievedOn is not null)
+        {
+            return ("retrieved", null);
+        }
+
+        var firstDue = sickCase.From.AddDays(dueDay - 1);
+        var due = a.From > firstDue ? a.From : firstDue;
+        if (sickCase.To.DayNumber - sickCase.From.DayNumber + 1 < dueDay || a.To < due)
+        {
+            return ("notRequired", null);
+        }
+
+        return (today >= due ? "missing" : "later", due);
     }
 
     private static int Weekdays(DateOnly from, DateOnly to, HashSet<DateOnly> holidays) =>
@@ -909,7 +944,7 @@ internal static class HrEndpoints
 
     private static async Task<Results<Ok<SickNoteView>, ProblemHttpResult>> SaveSickNoteAsync(
         Guid id, SaveSickNoteRequest request, EstrichOneDbContext db, IStoredFiles files, ICurrentUser currentUser, HrService hr, IAuditLog audit, TimeProvider clock,
-        CancellationToken cancellationToken)
+        AbsenceWarningService warnings, IRoleAssignments roles, INotifier notifier, ILogger<AbsenceWarningService> logger, CancellationToken cancellationToken)
     {
         var user = await db.Set<User>().AsNoTracking().SingleOrDefaultAsync(u => u.Id == request.UserId, cancellationToken);
         if (user is null)
@@ -958,7 +993,9 @@ internal static class HrEndpoints
         try
         {
             var absence = Absence.Create(id, request.UserId, request.From, request.To, AbsenceKind.Sick, request.Note, request.CertificateFileId,
-                caseId: caseId, recordedAt: existing?.RecordedAt ?? clock.GetUtcNow()).WithDetails(typeId, false, false);
+                caseId: caseId, recordedAt: existing?.RecordedAt ?? clock.GetUtcNow()).WithDetails(typeId, false, false)
+                .WithRetrievedCertificate(request.CertificateRetrievedOn ?? existing?.CertificateRetrievedOn);
+            var datesChanged = existing is null || existing.From != absence.From || existing.To != absence.To || existing.UserId != absence.UserId;
             if (existing is not null)
             {
                 db.Remove(existing);
@@ -973,11 +1010,27 @@ internal static class HrEndpoints
                     ["to"] = absence.To.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture), ["certificate"] = absence.CertificateFileId is null ? "nein" : "ja",
                 });
             await db.SaveChangesAsync(cancellationToken);
+            if (datesChanged)
+            {
+                // Sofortige Warnung an Disposition und Personal (nur „abwesend“, betroffene Einsätze); Fehler blockieren das Speichern nicht.
+                try
+                {
+                    await AbsenceWarningNotifications.SickNoteSavedAsync(absence, user.DisplayName, existing is null, warnings, hr, roles, notifier, db, cancellationToken);
+                }
+                catch (Exception exception) when (exception is not OperationCanceledException)
+                {
+                    logger.LogWarning(exception, "Warnung zur Krankmeldung konnte nicht gesendet werden");
+                }
+            }
+
             var holidays = await hr.HolidaysAsync(absence.From, absence.To, cancellationToken);
             var employee = await db.Set<Employee>().AsNoTracking().SingleOrDefaultAsync(e => e.UserId == request.UserId, cancellationToken);
+            var caseEntries = await db.Set<Absence>().AsNoTracking().Where(a => a.CaseId == absence.CaseId).Select(a => new { a.From, a.To }).ToListAsync(cancellationToken);
+            var (status, due) = Certificate(absence, (caseEntries.Min(a => a.From), caseEntries.Max(a => a.To)),
+                (await hr.SettingsAsync(cancellationToken)).CertificateDueDay, hr.Today);
             return TypedResults.Ok(new SickNoteView(absence.Id, absence.UserId, user.DisplayName, absence.From, absence.To,
                 employee?.WorkingDays(absence.From, absence.To, holidays) ?? Weekdays(absence.From, absence.To, holidays), absence.Note, absence.CertificateFileId,
-                absence.CaseId, absence.CaseId is { } c && c != absence.Id, absence.RecordedAt, typeId));
+                absence.CaseId, absence.CaseId is { } c && c != absence.Id, absence.RecordedAt, typeId, absence.CertificateRetrievedOn, status, due));
         }
         catch (ArgumentException exception)
         {

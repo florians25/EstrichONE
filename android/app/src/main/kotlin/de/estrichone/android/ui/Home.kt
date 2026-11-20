@@ -27,6 +27,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.HourglassTop
+import androidx.compose.material.icons.filled.WbSunny
+import androidx.compose.ui.draw.alpha
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Directions
@@ -91,6 +95,8 @@ import de.estrichone.core.MyPlanning
 import de.estrichone.core.NoticeItem
 import de.estrichone.core.NoticePresentation
 import de.estrichone.core.PlannedJob
+import de.estrichone.core.SiteGlance
+import de.estrichone.core.TodayGlance
 import de.estrichone.core.WorkItemKind
 import de.estrichone.core.dueText
 import de.estrichone.core.myPlan
@@ -133,28 +139,47 @@ fun HomeScreen() {
     val tasks by session.local { session.service.myTasks().filter { it.isOpen } }
     val firstName = session.user.displayName.substringBefore(' ')
     val modules by session.modules.collectAsState()
+    // Uhr für „Jetzt“/„in 2 Std.“ (minütlich); vom Nutzer aufgeklappter Einsatz.
+    var clock by remember { mutableStateOf(Live.clock()) }
+    LaunchedEffect(Unit) { while (Live.polling) { delay(60_000); clock = Live.clock() } }
+    var expanded by remember { mutableStateOf<String?>(null) }
 
     ScreenScaffold("Heute", root = true, actions = { HomeOverflow(); NotificationAction() }) { padding ->
         // Nach unten ziehen: abgleichen und Plan, Hinweise und Zähler neu laden.
         PullToRefreshBox(isRefreshing = status.running, onRefresh = { scope.launch { session.synchronize() } }, modifier = Modifier.fillMaxSize()) {
         LazyColumn(contentPadding = padding.content(), modifier = Modifier.readable()) {
             item(key = "head") {
-                // Datum als ruhige Zeile; Hinweise nur bei Bedarf. Der Demomodus steht oben links („Demo“).
-                Secondary(Dates.long(today), modifier = Modifier.padding(start = 4.dp, bottom = Space.s))
+                // Datum als ruhige Zeile, rechts dezent der Abgleich; Hinweise nur bei Bedarf. Der Demomodus steht oben links („Demo“).
+                Row(Modifier.fillMaxWidth().padding(start = 4.dp, bottom = Space.s), verticalAlignment = Alignment.CenterVertically) {
+                    Secondary(Dates.long(today), modifier = Modifier.weight(1f))
+                    Row(Modifier.clip(RoundedCornerShape(8.dp)).clickable { nav.push(Route.Sync) }.heightIn(min = 32.dp).padding(horizontal = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically) {
+                        val problem = status.summary.hasProblems
+                        Icon(if (problem) Icons.Filled.ErrorOutline else Icons.Filled.CloudDone, null,
+                            tint = if (problem) tones.danger else tones.textSecondary, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("Abgleich: ${status.shortText}", style = MaterialTheme.typography.bodySmall,
+                            color = if (problem) tones.danger else tones.textSecondary, maxLines = 1)
+                    }
+                }
                 OfflineBanner(session)
                 NoticeCards(session)
                 TeamsRolloutCard()
             }
             // Systemeinstellungen › Module: ohne Disposition kein Einsatz, ohne Aufgaben und Mängel keine Aufgabenzeile.
             val planning = modules.isOn(AppModules.PLANNING)
-            if (planning) item { SectionHeader("Mein Einsatz") }
-            val todays = plan?.assignments?.filter { it.day == today.toString() }.orEmpty()
+            val todays = plan?.assignments?.filter { it.day == today.toString() }.orEmpty().sortedBy { it.startTime ?: "99" }
+            if (planning) item { SectionHeader(if (todays.size > 1) "Meine Einsätze (${todays.size})" else "Mein Einsatz") }
+            // Laufender bzw. nächster Einsatz aufgeklappt, die übrigen kompakt (Tipp klappt auf).
+            val phases = todays.map { TodayGlance.phase(it.startTime, it.endTime, clock) }
+            val focus = expanded?.takeIf { id -> todays.any { it.id == id } } ?: TodayGlance.focusIndex(phases)?.let { todays[it].id }
             when {
                 !planning -> Unit
                 plan == null -> item { SectionCard { RowItem("Einsätze werden geladen …") } }
                 todays.isEmpty() -> item { SectionCard { RowItem("Heute ist nichts für Sie eingeplant.") } }
                 else -> items(todays, key = { it.id }) { job ->
-                    TodayJobCard(job, session)
+                    val index = todays.indexOf(job)
+                    TodayJobCard(job, session, phases[index], expanded = todays.size == 1 || job.id == focus, onExpand = { expanded = job.id })
                     Spacer(Modifier.height(Space.m))
                 }
             }
@@ -267,35 +292,84 @@ fun WeekRow(job: PlannedJob, today: LocalDate, onClick: () -> Unit) {
     }
 }
 
-/** Karte „Mein Einsatz“ wie TodayJob.swift: Zeit, Status, Baustelle, Adresse mit Route, Kontakt, Tätigkeit, Kolonne, Aktionen. */
+/**
+ * Karte eines Einsatzes wie TodayJob.swift: Zeit mit „Jetzt“/„in 2 Std.“, Baustelle mit Status, Kennzahlen (offene Mängel und
+ * Aufgaben, Belegreife, Wetter laut Tagebuch), Adresse, Ansprechpartner, Leistung, Kolonne, Fahrzeuge, Hinweise und vier große
+ * Handgriffe (Route, Anrufen, Foto, Tagebuch). Zugeklappt: eine kompakte Zeile mit Route und Anruf; Tipp klappt auf.
+ */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun TodayJobCard(job: PlannedJob, session: Session) {
+fun TodayJobCard(job: PlannedJob, session: Session, phase: TodayGlance.Phase = TodayGlance.Phase.Unknown, expanded: Boolean = true, onExpand: () -> Unit = {}) {
     val nav = LocalNav.current
     val context = LocalContext.current
     val bauakte by session.local(job.bauakteId) { session.service.bauakte(job.bauakteId) }
-    SectionCard(padding = androidx.compose.foundation.layout.PaddingValues(16.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(job.time, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-            bauakte?.let { StatusLabel(it.status) }
+    val glance by session.local(job.bauakteId) {
+        val service = session.service
+        SiteGlance.of(service.tasks(job.bauakteId), service.rooms(job.bauakteId), service.inspections(job.bauakteId),
+            service.diary(job.bauakteId), LocalDate.now(Dates.zone))
+    }
+    val modules by session.modules.collectAsState()
+    val phone = bauakte?.siteContactPhone?.takeIf { it.isNotBlank() }
+    val route: (() -> Unit)? = job.bauakteAddress?.let { address -> { Links.route(context, address, bauakte?.latitude, bauakte?.longitude); Unit } }
+    val call: (() -> Unit)? = phone?.let { number -> { Links.call(context, number); Unit } }
+    val open: () -> Unit = { nav.open(de.estrichone.core.NotificationRoute.Bauakte(job.bauakteId)) }
+    val running = phase == TodayGlance.Phase.Running
+    val border = if (running) Modifier.border(1.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.55f), RoundedCornerShape(16.dp)) else Modifier
+    if (!expanded) {
+        SectionCard(border.clickable(onClickLabel = "Alle Angaben zeigen", onClick = onExpand), padding = androidx.compose.foundation.layout.PaddingValues(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(job.time, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        PhasePill(phase, Modifier.padding(start = 8.dp))
+                    }
+                    Text(job.bauakteTitle, style = MaterialTheme.typography.titleMedium)
+                    Secondary(listOfNotNull(job.activity, job.crewName).joinToString(" · "))
+                    job.bauakteAddress?.let { Secondary(it) }
+                    if (!glance.isEmpty) GlanceChips(glance, Modifier.padding(top = 4.dp))
+                }
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    route?.let { CircleAction(Icons.Filled.Directions, "Route", it) }
+                    call?.let { CircleAction(Icons.Filled.Phone, "Anrufen", it) }
+                }
+            }
         }
-        Row(Modifier.fillMaxWidth().clickable { nav.open(de.estrichone.core.NotificationRoute.Bauakte(job.bauakteId)) }.padding(vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically) {
+        return
+    }
+    SectionCard(border, padding = androidx.compose.foundation.layout.PaddingValues(16.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(job.time, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            PhasePill(phase, Modifier.padding(start = 10.dp))
+            Spacer(Modifier.weight(1f))
+            var menu by remember { mutableStateOf(false) }
+            Box {
+                IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, "Weitere Aktionen") }
+                DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                    if (modules.isOn(AppModules.DEFECTS)) {
+                        DropdownMenuItem(text = { Text("Mangel melden") }, leadingIcon = { Icon(Icons.Outlined.ReportProblem, null) },
+                            onClick = { menu = false; nav.captureTask = SiteTask.Defect.with(job.bauakteId) })
+                    }
+                    DropdownMenuItem(text = { Text("Bauakte öffnen") }, leadingIcon = { Icon(Icons.Outlined.Folder, null) },
+                        onClick = { menu = false; open() })
+                }
+            }
+        }
+        Row(Modifier.fillMaxWidth().clickable(onClick = open).padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text(job.bauakteTitle, style = MaterialTheme.typography.titleLarge)
-                Secondary(job.bauakteNumber ?: "Neu")
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Secondary(job.bauakteNumber ?: "Neu")
+                    bauakte?.let { StatusLabel(it.status, modifier = Modifier.padding(start = 10.dp)) }
+                }
             }
             Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = tones.textTertiary)
         }
+        if (!glance.isEmpty) GlanceChips(glance, Modifier.padding(top = 6.dp).clickable(onClick = open))
         HorizontalDivider(Modifier.padding(vertical = 10.dp), color = tones.separator)
-        job.bauakteAddress?.let { address ->
-            JobLine(Icons.Outlined.Place, address) { CircleAction(Icons.Filled.Directions, "Route", { Links.route(context, address, bauakte?.latitude, bauakte?.longitude) }) }
-        }
+        job.bauakteAddress?.let { JobLine(Icons.Outlined.Place, it) }
         val contact = bauakte?.siteContactName
-        if (contact != null) {
-            JobLine(Icons.Outlined.AccountCircle, "Vor Ort: $contact") {
-                bauakte?.siteContactPhone?.let { phone -> CircleAction(Icons.Filled.Phone, "Anrufen", { Links.call(context, phone) }) }
-            }
+        if (contact != null || phone != null) {
+            JobLine(Icons.Outlined.AccountCircle, listOfNotNull(contact?.let { "Vor Ort: $it" } ?: "Ansprechpartner vor Ort", phone).joinToString(" · "))
         }
         JobLine(Icons.Filled.Handyman, job.activity, bold = true)
         job.crewName?.let { crew ->
@@ -316,31 +390,62 @@ fun TodayJobCard(job: PlannedJob, session: Session) {
         job.notes?.let { JobLine(Icons.Outlined.ChatBubbleOutline, it, secondary = true) }
         job.warnings.forEach { JobLine(Icons.Filled.Warning, it, color = tones.warning) }
         Spacer(Modifier.height(Space.m))
-        // Eine Hauptaktion (Foto); Tagebuch, Mangel und „Akte öffnen“ im Menü daneben.
-        val modules by session.modules.collectAsState()
-        var menu by remember { mutableStateOf(false) }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Button(onClick = { nav.push(Route.Camera(job.bauakteId)) }, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) {
-                Icon(Icons.Filled.PhotoCamera, null, modifier = Modifier.size(20.dp))
-                Spacer(Modifier.width(8.dp))
-                Text("Foto")
-            }
-            Box {
-                OutlinedIconButton(onClick = { menu = true }, modifier = Modifier.size(48.dp)) { Icon(Icons.Filled.MoreVert, "Weitere Aktionen") }
-                DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                    if (modules.isOn(AppModules.DIARY)) {
-                        DropdownMenuItem(text = { Text("Bautagebuch-Eintrag") }, leadingIcon = { Icon(Icons.AutoMirrored.Outlined.MenuBook, null) },
-                            onClick = { menu = false; nav.captureTask = SiteTask.Diary.with(job.bauakteId) })
-                    }
-                    if (modules.isOn(AppModules.DEFECTS)) {
-                        DropdownMenuItem(text = { Text("Mangel melden") }, leadingIcon = { Icon(Icons.Outlined.ReportProblem, null) },
-                            onClick = { menu = false; nav.captureTask = SiteTask.Defect.with(job.bauakteId) })
-                    }
-                    DropdownMenuItem(text = { Text("Bauakte öffnen") }, leadingIcon = { Icon(Icons.Outlined.Folder, null) },
-                        onClick = { menu = false; nav.open(de.estrichone.core.NotificationRoute.Bauakte(job.bauakteId)) })
-                }
+        // Vier gleich große Handgriffe (64 dp hoch) – gut mit Handschuhen und einer Hand.
+        Row(Modifier.height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            ActionTile(Icons.Filled.Directions, "Route", enabled = route != null, modifier = Modifier.weight(1f)) { route?.invoke() }
+            ActionTile(Icons.Filled.Phone, "Anrufen", enabled = call != null, modifier = Modifier.weight(1f)) { call?.invoke() }
+            ActionTile(Icons.Filled.PhotoCamera, "Foto", primary = true, modifier = Modifier.weight(1f)) { nav.push(Route.Camera(job.bauakteId)) }
+            ActionTile(Icons.AutoMirrored.Outlined.MenuBook, "Tagebuch", enabled = modules.isOn(AppModules.DIARY), modifier = Modifier.weight(1f)) {
+                nav.captureTask = SiteTask.Diary.with(job.bauakteId)
             }
         }
+    }
+}
+
+/** Große Aktionskachel: Symbol über kurzer Beschriftung, 64 dp hoch. */
+@Composable
+private fun ActionTile(
+    icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, modifier: Modifier = Modifier, primary: Boolean = false,
+    enabled: Boolean = true, onClick: () -> Unit,
+) {
+    val background = if (primary) MaterialTheme.colorScheme.primary else tones.fill
+    val content = if (primary) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary
+    Column(
+        modifier.fillMaxHeight().heightIn(min = 64.dp).clip(RoundedCornerShape(14.dp)).background(background)
+            .clickable(enabled = enabled, role = androidx.compose.ui.semantics.Role.Button, onClick = onClick)
+            .alpha(if (enabled) 1f else 0.4f).padding(vertical = 8.dp, horizontal = 4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center,
+    ) {
+        Icon(icon, null, tint = content, modifier = Modifier.size(24.dp))
+        Spacer(Modifier.height(4.dp))
+        Text(label, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold,
+            color = if (primary) content else MaterialTheme.colorScheme.onSurface, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+}
+
+/** „Jetzt“ (Markenfarbe), „in 2 Std.“ oder „Vorbei“ (grau) neben der Uhrzeit. */
+@Composable
+private fun PhasePill(phase: TodayGlance.Phase, modifier: Modifier = Modifier) {
+    val text = phase.text ?: return
+    val running = phase == TodayGlance.Phase.Running
+    Pill(text, if (running) MaterialTheme.colorScheme.primary else tones.textSecondary, if (running) tones.infoSoft else tones.fill, modifier = modifier)
+}
+
+/** Kennzahlen der Baustelle als kleine Kapseln: offene Mängel (rot), Aufgaben, Belegreife, Wetter laut Tagebuch. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun GlanceChips(glance: SiteGlance, modifier: Modifier = Modifier) {
+    FlowRow(modifier, horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        glance.defectsText?.let { Pill(it, tones.danger, tones.dangerSoft, Icons.Filled.Warning) }
+        glance.tasksText?.let { Pill(it, tones.textSecondary, tones.fill, Icons.Outlined.Checklist) }
+        glance.readiness?.let { readiness ->
+            when {
+                readiness.isReady -> Pill(readiness.text, tones.success, tones.successSoft, Icons.Filled.CheckCircle)
+                readiness is SiteGlance.Readiness.NotReady -> Pill(readiness.text, tones.warning, tones.warningSoft, Icons.Filled.HourglassTop)
+                else -> Pill(readiness.text, tones.textSecondary, tones.fill)
+            }
+        }
+        glance.weatherText?.let { Pill(it, tones.textSecondary, tones.fill, Icons.Filled.WbSunny) }
     }
 }
 

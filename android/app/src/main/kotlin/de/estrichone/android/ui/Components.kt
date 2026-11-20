@@ -76,6 +76,13 @@ import kotlinx.coroutines.withContext
 object Live {
     @Volatile
     var polling = true
+
+    /** Feste Uhrzeit für Screenshots (sonst `null`: die echte Uhr). */
+    @Volatile
+    var fixedTime: java.time.LocalTime? = null
+
+    /** Uhrzeit für „Jetzt“/„in 2 Std.“ auf Heute. */
+    fun clock(): java.time.LocalTime = fixedTime ?: java.time.LocalTime.now(de.estrichone.core.Dates.zone)
 }
 
 object Space {

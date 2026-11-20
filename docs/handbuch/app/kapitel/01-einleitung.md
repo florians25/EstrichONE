@@ -20,7 +20,7 @@ Die Einrichtung des Servers, Benutzer, Rollen und Geräte im **IT Center** besch
 
 ## Was Sie brauchen
 
-![Die Heute-Seite auf dem iPhone](bilder/iphone-heute.jpg "Die Heute-Seite: Mein Einsatz, Kennzahlen und Schnellaktionen"){rechts}
+![Die Heute-Seite auf dem iPhone](bilder/iphone-heute.jpg "Die Heute-Seite: alle Einsätze, Kennzahlen und große Handgriffe"){rechts}
 
 - Ein **iPhone oder iPad mit iOS bzw. iPadOS 17** oder neuer.
 - Die App **EstrichONE** aus dem App Store (kostenlos).
@@ -37,7 +37,7 @@ Unten auf dem iPhone (auf dem iPad oben) sitzt die **Tab-Leiste** mit fünf Bere
 
 | Tab | Inhalt |
 |---|---|
-| **Heute** | Ihr Einsatz von heute mit Adresse, Route und Ansprechpartner, Kennzahlen zu Aufgaben, „Wer fährt wohin“ und Woche, offene Aufgaben, morgen, zuletzt geöffnete Bauakten |
+| **Heute** | Alle Einsätze von heute mit Adresse, Route und Ansprechpartner, offenen Mängeln, Belegreife und Wetter, Kennzahlen zu Aufgaben, „Wer fährt wohin“ und Woche, offene Aufgaben, morgen, zuletzt geöffnete Bauakten |
 | **Baustellen** | alle Bauakten, die Sie sehen dürfen – laufende sowie abgeschlossene und stornierte –, Suche, neue Bauakte |
 | **Erfassen** | Schnellzugriff: Baustelle wählen, dann Foto, Dokument, Bautagebuch, Mangel, Erstbegehung, Abnahme, Aufgabe, CM-Messung, Video oder Notiz |
 | **Kunden** | Kundenstamm mit Anrufen, Nachricht, E-Mail und Route |

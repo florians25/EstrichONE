@@ -105,6 +105,7 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
             migrationBuilder.Sql("DELETE FROM role_permissions WHERE permission IN ('fuel.record', 'fuel.manage', 'fuel.export');");
             migrationBuilder.Sql("DELETE FROM number_range_counters WHERE record_type = 'fuelReceipt';");
             migrationBuilder.Sql("DELETE FROM number_ranges WHERE record_type = 'fuelReceipt';");
+
             migrationBuilder.DropTable(
                 name: "fuel_receipts");
 

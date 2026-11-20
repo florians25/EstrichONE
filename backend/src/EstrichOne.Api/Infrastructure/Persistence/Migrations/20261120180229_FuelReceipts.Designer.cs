@@ -13,7 +13,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(EstrichOneDbContext))]
-    [Migration("20261120165207_FuelReceipts")]
+    [Migration("20261120180229_FuelReceipts")]
     partial class FuelReceipts
     {
         /// <inheritdoc />
@@ -5785,6 +5785,10 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("certificate_file_id");
 
+                    b.Property<DateOnly?>("CertificateRetrievedOn")
+                        .HasColumnType("date")
+                        .HasColumnName("certificate_retrieved_on");
+
                     b.Property<Guid?>("ClosureId")
                         .HasColumnType("uuid")
                         .HasColumnName("closure_id");
@@ -6195,6 +6199,27 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                             RequiresApproval = true,
                             SortOrder = 100
                         });
+                });
+
+            modelBuilder.Entity("EstrichOne.Api.Modules.Planning.AbsenceWarningAck", b =>
+                {
+                    b.Property<string>("Key")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("key");
+
+                    b.Property<DateTimeOffset>("AcknowledgedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("acknowledged_at");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Key")
+                        .HasName("pk_absence_warning_acks");
+
+                    b.ToTable("absence_warning_acks", (string)null);
                 });
 
             modelBuilder.Entity("EstrichOne.Api.Modules.Planning.Assignment", b =>
@@ -7006,13 +7031,37 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("carry_over_expiry_month");
 
+                    b.Property<int>("CertificateDueDay")
+                        .HasColumnType("integer")
+                        .HasColumnName("certificate_due_day");
+
                     b.Property<bool>("CrewLeadersApprove")
                         .HasColumnType("boolean")
                         .HasColumnName("crew_leaders_approve");
 
+                    b.Property<int>("FrequentShortThreshold")
+                        .HasColumnType("integer")
+                        .HasColumnName("frequent_short_threshold");
+
                     b.Property<int>("MaxCrewAbsencePercent")
                         .HasColumnType("integer")
                         .HasColumnName("max_crew_absence_percent");
+
+                    b.Property<bool>("NotifyCrewLeaders")
+                        .HasColumnType("boolean")
+                        .HasColumnName("notify_crew_leaders");
+
+                    b.Property<bool>("NotifyHr")
+                        .HasColumnType("boolean")
+                        .HasColumnName("notify_hr");
+
+                    b.Property<bool>("NotifyPlanners")
+                        .HasColumnType("boolean")
+                        .HasColumnName("notify_planners");
+
+                    b.Property<int>("PlanningImpactDays")
+                        .HasColumnType("integer")
+                        .HasColumnName("planning_impact_days");
 
                     b.Property<bool>("ProrateEntitlement")
                         .HasColumnType("boolean")
@@ -7031,6 +7080,34 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasMaxLength(2)
                         .HasColumnType("character varying(2)")
                         .HasColumnName("state");
+
+                    b.Property<bool>("WarnAdjacent")
+                        .HasColumnType("boolean")
+                        .HasColumnName("warn_adjacent");
+
+                    b.Property<bool>("WarnBem")
+                        .HasColumnType("boolean")
+                        .HasColumnName("warn_bem");
+
+                    b.Property<bool>("WarnCertificate")
+                        .HasColumnType("boolean")
+                        .HasColumnName("warn_certificate");
+
+                    b.Property<bool>("WarnContinuedPay")
+                        .HasColumnType("boolean")
+                        .HasColumnName("warn_continued_pay");
+
+                    b.Property<bool>("WarnPlanningImpact")
+                        .HasColumnType("boolean")
+                        .HasColumnName("warn_planning_impact");
+
+                    b.Property<bool>("WarnVacationOverlap")
+                        .HasColumnType("boolean")
+                        .HasColumnName("warn_vacation_overlap");
+
+                    b.Property<bool>("WarningsEnabled")
+                        .HasColumnType("boolean")
+                        .HasColumnName("warnings_enabled");
 
                     b.HasKey("Id")
                         .HasName("pk_hr_settings");

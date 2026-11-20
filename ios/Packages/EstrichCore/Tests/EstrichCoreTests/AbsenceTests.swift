@@ -124,6 +124,25 @@ struct AbsenceTests {
         #expect(AbsenceDecision(approve: false, comment: " Bitte verschieben ").comment == "Bitte verschieben")
     }
 
+    @Test("Warnungen: Disposition sieht nur „abwesend“ mit betroffenen Einsätzen")
+    func warnings() throws {
+        let json = """
+            {"enabled":true,"healthDetails":false,"acknowledged":0,"items":[{"key":"plan:a1:abc","kind":"planning_impact","severity":"error",
+             "userId":"01a00000-0000-7000-8000-0000000000a1","userName":"Anna Kraus","employeeId":null,"date":"2026-11-19",
+             "title":"Anna Kraus abwesend 18.11. – 20.11.2026","text":"1 geplanter Einsatz betroffen, unterbesetzt: Kolonne Süd.",
+             "absenceId":null,"caseId":null,"link":"/planung?ansicht=tag&datum=2026-11-19&tag=2026-11-19",
+             "assignments":[{"id":"01a00000-0000-7000-8000-0000000000c1","day":"2026-11-19","bauakteId":"01a00000-0000-7000-8000-0000000000c2",
+               "bauakteTitle":"Halle Süd","activity":"Estrich","crewId":null,"crewName":"Kolonne Süd","present":1,"minimumStaff":2,"understaffed":true,
+               "text":"Do 19.11.: Halle Süd – Estrich · unterbesetzt (1 von mindestens 2)"}]}]}
+            """
+        let list = try JSONCoding.decoder.decode(AbsenceWarningList.self, from: Data(json.utf8))
+        let warning = try #require(list.items.first)
+        #expect(warning.isUrgent)
+        #expect(warning.severityLabel == "Dringend")
+        #expect(list.heading == "Abwesenheit betrifft Einsätze")
+        #expect(warning.details == "1 geplanter Einsatz betroffen, unterbesetzt: Kolonne Süd.\n• Do 19.11.: Halle Süd – Estrich · unterbesetzt (1 von mindestens 2)")
+    }
+
     @Test("Feldnamen stimmen mit dem API-Vertrag überein")
     func contract() throws {
         let url = URL(fileURLWithPath: #filePath)
@@ -147,6 +166,9 @@ struct AbsenceTests {
             ("AbsencePreview", ["workingDays", "warnings", "remainingAfter", "requiresApproval", "holidays"]),
             ("SaveAbsenceRequestRequest", ["typeId", "from", "to", "halfDayStart", "halfDayEnd", "note", "substituteUserId", "replacesRequestId"]),
             ("DecideAbsenceRequest", ["approve", "comment"]),
+            ("AbsenceWarningList", ["enabled", "healthDetails", "items"]),
+            ("AbsenceWarning", ["key", "kind", "severity", "title", "text", "link", "assignments"]),
+            ("AffectedAssignment", ["day", "text", "understaffed"]),
         ]
         for (schema, fields) in checks {
             let known = try properties(schema)
