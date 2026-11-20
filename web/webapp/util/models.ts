@@ -470,6 +470,8 @@ export interface ResourceResponse {
   crewId?: string | null;
   /** Inventarnummer aus dem Nummernkreis „Maschinen und Fahrzeuge“. */
   inventoryNumber?: string | null;
+  /** Tankgröße in Litern (Plausibilität der Tankbelege). */
+  tankCapacityLiters?: number | null;
 }
 
 export interface CrewResponse {

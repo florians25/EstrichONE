@@ -169,7 +169,7 @@ final class ScreenshotDirector {
     /// Blätter und Seitenwechsel brauchen etwas länger, bis alles steht.
     private static func settleMilliseconds(_ scene: String) -> Int {
         if scene.hasPrefix("postfach") { return scene.hasSuffix("detail") ? 3600 : 3200 }
-        let sheets = ["hinweis-detail", "erfassen", "neu-", "erstbegehung", "abnahme", "foto-", "tagebuch-neu", "mangel-neu", "raum", "basisdaten-neu", "kontakt-neu", "dispo-", "abwesenheit-"]
+        let sheets = ["hinweis-detail", "erfassen", "neu-", "erstbegehung", "abnahme", "foto-", "tagebuch-neu", "mangel-neu", "raum", "basisdaten-neu", "kontakt-neu", "dispo-", "abwesenheit-", "tankbeleg"]
         if scene.hasSuffix("-quer") { return 3200 }
         // Unterhaltung: Verlauf lädt nach dem Öffnen (sonst stand teils noch die Ladeanzeige im Bild).
         if scene.hasPrefix("chat-verlauf") { return 4200 }

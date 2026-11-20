@@ -19,6 +19,7 @@ import { numberField } from "../../util/numberField";
 import { uuidv7 } from "../../util/ids";
 import { options, resourceKinds } from "../../util/labels";
 import { planningChanged, planningLookups } from "../../util/assignmentDialog";
+import { openVehicleFuel } from "../../util/fuelDialogs";
 import type { CrewResponse, DirectoryUser, PlanningRange, ResourceResponse } from "../../util/models";
 
 /** Fälligkeit: überfällig (rot), in 30 Tagen (gelb), sonst Datum. */
@@ -85,7 +86,7 @@ export default class Resources extends BaseController {
 			...r, kindText: resourceKinds[r.kind] ?? r.kind, crewName: r.crewId ? crewName.get(r.crewId) ?? "–" : "–",
 			thumb: r.imageFileId ? fileUrl(r.imageFileId, "thumb") : null, docCount: r.documentFileIds?.length ?? 0,
 			inspection: due(r.inspectionDue), service: due(r.serviceDue),
-			detailText: (r.kind === "vehicle" ? [r.model, r.licenseClass ? `Klasse ${r.licenseClass}` : null] : [resourceKinds[r.kind] ?? r.kind, r.model]).filter(Boolean).join(" · ") || "–",
+			detailText: (r.kind === "vehicle" ? [r.model, r.licenseClass ? `Klasse ${r.licenseClass}` : null, r.tankCapacityLiters ? `Tank ${r.tankCapacityLiters.toLocaleString("de-DE")} l` : null] : [resourceKinds[r.kind] ?? r.kind, r.model]).filter(Boolean).join(" · ") || "–",
 		}));
 		m.setProperty("/vehicles", resources.filter((r) => r.kind === "vehicle"));
 		m.setProperty("/machines", resources.filter((r) => r.kind !== "vehicle"));
@@ -215,6 +216,7 @@ export default class Resources extends BaseController {
 			inventoryNumber: r.inventoryNumber ?? null, kind: r.kind, name: r.name, identifier: r.identifier ?? null, notes: r.notes ?? null, isActive: r.isActive ?? true,
 			model: r.model ?? null, licenseClass: r.licenseClass ?? null, inspectionDue: r.inspectionDue ?? null, serviceDue: r.serviceDue ?? null,
 			imageFileId: r.imageFileId ?? null, documentFileIds: r.documentFileIds ?? [], crewId: r.crewId ?? null,
+			tankCapacityLiters: r.tankCapacityLiters ?? null,
 		});
 	}
 
@@ -267,7 +269,7 @@ export default class Resources extends BaseController {
 			title: r ? `${r.name} bearbeiten` : "Fahrzeug oder Gerät hinzufügen", submitText: "Speichern", width: "36rem",
 			initial: { kind: r?.kind ?? kind ?? "vehicle", name: r?.name ?? "", identifier: r?.identifier ?? "", notes: r?.notes ?? "", model: r?.model ?? "",
 				licenseClass: r?.licenseClass ?? "", inspectionDue: r?.inspectionDue ?? null, serviceDue: r?.serviceDue ?? null, crewId: r?.crewId ?? "",
-				inventoryNumber: r?.inventoryNumber ?? "" },
+				inventoryNumber: r?.inventoryNumber ?? "", tankCapacityLiters: r?.tankCapacityLiters ?? null },
 			fields: [
 				numberField("inventoryNumber", "Inventarnummer", !r),
 				{ key: "kind", label: "Art", type: "select", options: options(resourceKinds) },
@@ -275,6 +277,8 @@ export default class Resources extends BaseController {
 				{ key: "identifier", label: "Kennzeichen / Seriennummer", maxLength: 50 },
 				{ key: "model", label: "Typ / Modell", maxLength: 100, placeholder: "z. B. Sprinter 316 CDI, P 700" },
 				{ key: "licenseClass", label: "Führerscheinklasse (Fahrzeuge)", maxLength: 20, placeholder: "z. B. B, BE, C1E" },
+				{ key: "tankCapacityLiters", label: "Tankgröße", type: "number", min: 1, max: 2000, unit: "l",
+					help: "Optional. Tankbelege mit mehr Litern werden markiert." },
 				{ key: "sDue", label: "Fristen", type: "section" },
 				{ key: "inspectionDue", label: "TÜV / Prüfung fällig", type: "date" },
 				{ key: "serviceDue", label: "Wartung fällig", type: "date" },
@@ -289,12 +293,18 @@ export default class Resources extends BaseController {
 					...(r ?? {}), kind: v.kind as ResourceResponse["kind"], name: String(v.name).trim(), identifier: (v.identifier as string) || null,
 					notes: (v.notes as string) || null, isActive: r?.isActive ?? true, model: (v.model as string) || null, licenseClass: (v.licenseClass as string) || null,
 					inspectionDue: (v.inspectionDue as string) || null, serviceDue: (v.serviceDue as string) || null, crewId: (v.crewId as string) || null, imageFileId,
-					inventoryNumber: (v.inventoryNumber as string) || null,
+					inventoryNumber: (v.inventoryNumber as string) || null, tankCapacityLiters: (v.tankCapacityLiters as number | null) ?? null,
 				});
 				return true;
 			},
 		});
 		if (ok) await this.saved("Gespeichert");
+	}
+
+	/** Fahrzeug › Tankbelege: Verbrauch je Monat und letzte Belege (Modul „Tankbelege“, Recht fuel.manage). */
+	onFuel(e: Event): void {
+		const r = this.row<ResourceResponse>(e);
+		void openVehicleFuel(r, isoDay(new Date()));
 	}
 
 	async onToggleResource(e: Event): Promise<void> {

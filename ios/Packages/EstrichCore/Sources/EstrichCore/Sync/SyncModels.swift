@@ -21,6 +21,8 @@ public enum EntityType: String, CaseIterable, Sendable {
     case room
     /// Beteiligter (Bauherr, Bauleiter, Architekt …); nur lesend, gepflegt im Büro.
     case bauakteParty
+    /// Nur ausgehend (eigene Tankbelege bis zur Übertragung, `fuelReceipt.create`); der Server liefert sie nicht über den Feed.
+    case fuelReceipt
 
     /// Präfix der Operationstypen (`bauakte.create`, `workitem.update`, `diary.create`).
     var operationPrefix: String {

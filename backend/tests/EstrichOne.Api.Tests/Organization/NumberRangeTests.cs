@@ -278,6 +278,10 @@ public sealed class NumberRangeTests(PostgresFixture postgres) : IAsyncLifetime
             .ShouldBe(["Alt=10001", "Neu=10002"]);
         (await db.Database.SqlQueryRaw<string>("SELECT record_type || ':' || period || '=' || last_number AS \"Value\" FROM number_range_counters ORDER BY 1").ToListAsync(Ct))
             .ShouldBe(["bauakte:2025=42", "customer:0=0", "employee:0=2", "order:2025=17", "supplier:0=2"]);
+        // Später hinzugekommene Kreise (Tankbelege) legt ihre eigene Migration an.
+        (await db.Database.SqlQueryRaw<int>("SELECT count(*)::int AS \"Value\" FROM number_ranges").SingleAsync(Ct))
+            .ShouldBe(NumberRangeDefinitions.All.Count(d => d.Key != NumberRangeKeys.FuelReceipt));
+        await migrator.MigrateAsync(all[^1], Ct);
         (await db.Database.SqlQueryRaw<int>("SELECT count(*)::int AS \"Value\" FROM number_ranges").SingleAsync(Ct)).ShouldBe(NumberRangeDefinitions.All.Count);
     }
 }

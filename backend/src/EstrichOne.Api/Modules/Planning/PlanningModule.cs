@@ -18,6 +18,7 @@ public sealed class PlanningModule : IModule
         services.AddHostedService(sp => sp.GetRequiredService<AbsenceWarningScanner>());
         services.AddScoped<DispatchService>();
         services.AddScoped<CockpitService>();
+        services.AddScoped<Exports.IVehicleDirectory, VehicleDirectory>();
         services.AddScoped<IFileReadGrant, EmployeeDocumentGrant>();
         services.AddScoped<IFileReadGrant, ResourceFileGrant>();
         services.AddScoped<IDataInitializer, CalendarSeed>();

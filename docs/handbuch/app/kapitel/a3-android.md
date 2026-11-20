@@ -13,6 +13,7 @@ tatsächlich kann.
 | **Heute** | Alle Einsätze von heute (laufender bzw. nächster aufgeklappt) mit „Jetzt“/„in 2 Std.“, offenen Mängeln und Aufgaben, Belegreife und Wetter laut Tagebuch, vier großen Schaltflächen **Route**, **Anrufen**, **Foto**, **Tagebuch**; Abgleich neben dem Datum; die nächsten 7 Tage |
 | **Bauakten** | Suche nach Nummer, Bauvorhaben oder Ort; **Neue Bauakte** mit Bauvorhaben und Adresse |
 | **Bauakte** | Hinweise, Übersicht, **Notizen** (neue Notiz), **Aufgaben und Mängel** anlegen, Kunde **anrufen**, **Route** starten |
+| **Tankbelege** | Beleg mit der Kamera-App fotografieren oder aus der Galerie wählen, Fahrzeug (heutiges Dispo-Fahrzeug vorbelegt), Datum, Kilometerstand, Liter, Betrag, Kraftstoff, Zahlart, Tankstelle; offline gespeichert und später übertragen. Ohne Texterkennung (bräuchte Google ML Kit) |
 | **Support** | **Problem melden** an die IT (mit Kennzeichnung „Ich kann deshalb nicht weiterarbeiten“); mitgeschickt werden nur App- und Android-Version |
 
 Die Anmeldung ist wie unter iOS an das Gerät gebunden: Der Geräteschlüssel liegt im Android Keystore (wo vorhanden im

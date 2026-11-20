@@ -3270,6 +3270,146 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                     b.ToTable("feedback_items", (string)null);
                 });
 
+            modelBuilder.Entity("EstrichOne.Api.Modules.Fuel.FuelReceipt", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<decimal>("AmountGross")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)")
+                        .HasColumnName("amount_gross");
+
+                    b.Property<DateTimeOffset?>("CheckedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("checked_at");
+
+                    b.Property<Guid?>("CheckedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("checked_by_user_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("date")
+                        .HasColumnName("date");
+
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<string>("FuelType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("fuel_type");
+
+                    b.Property<Guid?>("ImageFileId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("image_file_id");
+
+                    b.Property<decimal>("Liters")
+                        .HasPrecision(9, 2)
+                        .HasColumnType("numeric(9,2)")
+                        .HasColumnName("liters");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("notes");
+
+                    b.Property<string>("Number")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("number");
+
+                    b.Property<int?>("OdometerKm")
+                        .HasColumnType("integer")
+                        .HasColumnName("odometer_km");
+
+                    b.Property<string>("PaymentMethod")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("payment_method");
+
+                    b.Property<string>("RejectionReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("rejection_reason");
+
+                    b.Property<DateTimeOffset?>("SettledAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("settled_at");
+
+                    b.Property<Guid?>("SettledByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("settled_by_user_id");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("source");
+
+                    b.Property<string>("Station")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("station");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.Property<Guid>("VehicleId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("vehicle_id");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("pk_fuel_receipts");
+
+                    b.HasIndex("ImageFileId")
+                        .HasDatabaseName("ix_fuel_receipts_image_file_id");
+
+                    b.HasIndex("Number")
+                        .IsUnique()
+                        .HasDatabaseName("ix_fuel_receipts_number");
+
+                    b.HasIndex("Status")
+                        .HasDatabaseName("ix_fuel_receipts_status");
+
+                    b.HasIndex("UserId", "Date")
+                        .HasDatabaseName("ix_fuel_receipts_user_id_date");
+
+                    b.HasIndex("VehicleId", "Date")
+                        .HasDatabaseName("ix_fuel_receipts_vehicle_id_date");
+
+                    b.ToTable("fuel_receipts", (string)null);
+                });
+
             modelBuilder.Entity("EstrichOne.Api.Modules.Helpdesk.HelpdeskGroup", b =>
                 {
                     b.Property<Guid>("Id")
@@ -7079,6 +7219,11 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                     b.Property<DateOnly?>("ServiceDue")
                         .HasColumnType("date")
                         .HasColumnName("service_due");
+
+                    b.Property<decimal?>("TankCapacityLiters")
+                        .HasPrecision(7, 1)
+                        .HasColumnType("numeric(7,1)")
+                        .HasColumnName("tank_capacity_liters");
 
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")

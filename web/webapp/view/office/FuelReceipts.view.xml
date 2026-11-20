@@ -1,0 +1,191 @@
+<mvc:View controllerName="estrichone.controller.office.FuelReceipts" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:f="sap.f" xmlns:core="sap.ui.core"
+	height="100%">
+	<f:DynamicPage id="page" toggleHeaderOnTitleClick="false">
+		<f:title>
+			<f:DynamicPageTitle>
+				<f:heading><Title text="{i18n>nav.fuelReceipts}" level="H1"/></f:heading>
+				<f:expandedContent><Text text="{view>/subtitle}"/></f:expandedContent>
+				<f:actions>
+					<Button id="newReceipt" text="Beleg erfassen" icon="sap-icon://add" type="Emphasized" press=".onNew"/>
+					<Button id="exportCsv" text="Export (CSV)" icon="sap-icon://excel-attachment" press=".onExport" visible="{= ${session>/permissions/fuel.export} === true }"
+						tooltip="Belege des Filters als CSV für die Buchhaltung (DATEV-freundliche Spalten)"/>
+					<Button text="{i18n>common.refresh}" icon="sap-icon://refresh" press=".onRefresh"/>
+				</f:actions>
+			</f:DynamicPageTitle>
+		</f:title>
+		<f:header>
+			<f:DynamicPageHeader pinnable="false">
+				<FlexBox wrap="Wrap" alignItems="End" class="eoFuelFilters sapUiSmallMarginBottom">
+					<VBox class="sapUiSmallMarginEnd">
+						<Label text="Zeitraum" labelFor="fuelRange"/>
+						<DateRangeSelection id="fuelRange" dateValue="{view>/fromDate}" secondDateValue="{view>/toDate}" change=".onRefresh" displayFormat="dd.MM.yyyy" width="14rem"/>
+					</VBox>
+					<VBox class="sapUiSmallMarginEnd">
+						<Label text="Fahrzeug" labelFor="fuelVehicle"/>
+						<Select id="fuelVehicle" selectedKey="{view>/filter/vehicleId}" change=".onRefresh" items="{view>/vehicleOptions}" width="14rem">
+							<core:Item key="{view>key}" text="{view>text}"/>
+						</Select>
+					</VBox>
+					<VBox class="sapUiSmallMarginEnd" visible="{view>/manage}">
+						<Label text="Mitarbeiter" labelFor="fuelPerson"/>
+						<Select id="fuelPerson" selectedKey="{view>/filter/userId}" change=".onRefresh" items="{view>/peopleOptions}" width="12rem">
+							<core:Item key="{view>key}" text="{view>text}"/>
+						</Select>
+					</VBox>
+					<VBox class="sapUiSmallMarginEnd">
+						<Label text="Status" labelFor="fuelStatus"/>
+						<Select id="fuelStatus" selectedKey="{view>/filter/status}" change=".onRefresh" width="12rem">
+							<core:Item key="" text="Alle Status"/>
+							<core:Item key="open" text="Offen (neu, geprüft)"/>
+							<core:Item key="new" text="Neu"/>
+							<core:Item key="checked" text="Geprüft"/>
+							<core:Item key="settled" text="Erstattet/Gebucht"/>
+							<core:Item key="rejected" text="Abgelehnt"/>
+						</Select>
+					</VBox>
+					<VBox class="sapUiSmallMarginEnd">
+						<Label text="Zahlart" labelFor="fuelPayment"/>
+						<Select id="fuelPayment" selectedKey="{view>/filter/paymentMethod}" change=".onRefresh" width="11rem">
+							<core:Item key="" text="Alle Zahlarten"/>
+							<core:Item key="fuelCard" text="Tankkarte"/>
+							<core:Item key="companyCard" text="Firmenkarte"/>
+							<core:Item key="private" text="Privat ausgelegt"/>
+						</Select>
+					</VBox>
+					<CheckBox text="Nur mit Hinweisen" selected="{view>/filter/warningsOnly}" select=".onRefresh" visible="{view>/manage}"/>
+				</FlexBox>
+				<FlexBox class="eoKpiBar" items="{view>/kpis}" wrap="Wrap" renderType="Bare">
+					<VBox class="eoKpiItem" renderType="Bare">
+						<Label text="{view>title}" wrapping="true"/>
+						<ObjectNumber number="{view>value}" unit="{view>unit}" class="eoKpiFigure"
+							state="{= ${view>color} === 'Error' ? 'Error' : ${view>color} === 'Critical' ? 'Warning' : 'None' }"/>
+					</VBox>
+				</FlexBox>
+			</f:DynamicPageHeader>
+		</f:header>
+		<f:content>
+			<IconTabBar id="tabs" selectedKey="{view>/tab}" select=".onTab" expandable="false" applyContentPadding="false" stretchContentHeight="false" headerBackgroundDesign="Transparent">
+				<items>
+					<IconTabFilter key="belege" text="Belege" count="{= ${view>/items}.length }">
+						<Table id="receipts" contextualWidth="Auto" items="{view>/items}" busy="{view>/busy}" mode="{= ${view>/manage} ? 'MultiSelect' : 'None' }"
+							selectionChange=".onSelection" noDataText="Keine Tankbelege für diesen Filter." sticky="HeaderToolbar,ColumnHeaders" popinLayout="GridSmall">
+							<headerToolbar>
+								<OverflowToolbar>
+									<Title text="{= ${view>/items}.length === 1 ? '1 Beleg' : ${view>/items}.length + ' Belege' }" level="H2"/>
+									<ToolbarSpacer/>
+									<Button text="Freigeben" icon="sap-icon://accept" press=".onDecide" visible="{view>/manage}" enabled="{= ${view>/allowed}.indexOf('check') >= 0 }">
+										<customData><core:CustomData key="action" value="check"/></customData>
+										<layoutData><OverflowToolbarLayoutData priority="NeverOverflow"/></layoutData>
+									</Button>
+									<Button text="Ablehnen" icon="sap-icon://decline" press=".onDecide" visible="{view>/manage}" enabled="{= ${view>/allowed}.indexOf('reject') >= 0 }">
+										<customData><core:CustomData key="action" value="reject"/></customData>
+										<layoutData><OverflowToolbarLayoutData priority="NeverOverflow"/></layoutData>
+									</Button>
+									<Button text="Erstattet/Gebucht" icon="sap-icon://complete" press=".onDecide" visible="{view>/manage}" enabled="{= ${view>/allowed}.indexOf('settle') >= 0 }"
+										tooltip="Private Auslagen als erstattet, Karten-Belege als gebucht markieren">
+										<customData><core:CustomData key="action" value="settle"/></customData>
+										<layoutData><OverflowToolbarLayoutData priority="NeverOverflow"/></layoutData>
+									</Button>
+								</OverflowToolbar>
+							</headerToolbar>
+							<columns>
+								<Column width="3.5rem"><Text text="Beleg"/></Column>
+								<Column width="9rem"><Text text="Nummer / Datum"/></Column>
+								<Column minScreenWidth="40rem" demandPopin="true"><Text text="Fahrzeug"/></Column>
+								<Column width="11rem" minScreenWidth="56rem" demandPopin="true"><Text text="Mitarbeiter"/></Column>
+								<Column width="9rem" hAlign="End" minScreenWidth="48rem" demandPopin="true"><Text text="Menge / km"/></Column>
+								<Column width="8rem" hAlign="End"><Text text="Betrag"/></Column>
+								<Column width="9rem" minScreenWidth="64rem" demandPopin="true"><Text text="Zahlart"/></Column>
+								<Column width="9rem"><Text text="Status"/></Column>
+							</columns>
+							<items>
+								<ColumnListItem type="Navigation" press=".onOpen" highlight="{view>highlight}">
+									<Avatar src="{view>thumb}" displaySize="XS" displayShape="Square" fallbackIcon="sap-icon://receipt" tooltip="Belegfoto"/>
+									<VBox>
+										<Text text="{view>number}" class="eoTabular eoStrong"/>
+										<Text text="{view>dateText}" class="eoTabular eoMuted"/>
+									</VBox>
+									<VBox>
+										<Text text="{view>vehicleText}"/>
+										<Text text="{view>station}" class="eoMuted" visible="{= !!${view>station} }"/>
+									</VBox>
+									<Text text="{view>userName}"/>
+									<VBox alignItems="End">
+										<Text text="{view>litersText}" class="eoTabular"/>
+										<Text text="{view>kmText}" class="eoTabular eoMuted"/>
+										<Text text="{view>consumptionText}" class="eoTabular eoMuted" visible="{= !!${view>consumptionText} }"/>
+									</VBox>
+									<Text text="{view>amountText}" class="eoTabular"/>
+									<Text text="{view>paymentText}"/>
+									<VBox>
+										<ObjectStatus text="{view>statusText}" state="{view>statusTone}"/>
+										<ObjectStatus text="{view>warningText}" state="{view>warningTone}" icon="sap-icon://alert" visible="{= !!${view>warningText} }"
+											tooltip="{view>warningTooltip}"/>
+									</VBox>
+								</ColumnListItem>
+							</items>
+						</Table>
+					</IconTabFilter>
+					<IconTabFilter key="auswertung" text="Auswertung je Fahrzeug" visible="{view>/manage}">
+						<Table id="statistics" contextualWidth="Auto" items="{view>/statVehicles}" busy="{view>/busy}" noDataText="Keine Belege im Zeitraum." popinLayout="GridSmall">
+							<headerToolbar>
+								<OverflowToolbar>
+									<Title text="Zeitraum {view>/rangeText}" level="H2"/>
+								</OverflowToolbar>
+							</headerToolbar>
+							<columns>
+								<Column><Text text="Fahrzeug"/></Column>
+								<Column width="6rem" hAlign="End"><Text text="Belege"/></Column>
+								<Column width="9rem" hAlign="End"><Text text="Kraftstoff"/></Column>
+								<Column width="7rem" hAlign="End" minScreenWidth="52rem" demandPopin="true"><Text text="AdBlue"/></Column>
+								<Column width="9rem" hAlign="End"><Text text="Kosten brutto"/></Column>
+								<Column width="9rem" hAlign="End" minScreenWidth="44rem" demandPopin="true"><Text text="Strecke"/></Column>
+								<Column width="10rem" hAlign="End"><Text text="Ø Verbrauch"/></Column>
+							</columns>
+							<items>
+								<ColumnListItem type="Active" press=".onStatVehicle">
+									<VBox>
+										<Text text="{view>title}" class="eoStrong"/>
+										<Text text="{view>monthsText}" class="eoMuted" wrapping="true"/>
+									</VBox>
+									<Text text="{view>receipts}" class="eoTabular"/>
+									<Text text="{view>litersText}" class="eoTabular"/>
+									<Text text="{view>adBlueText}" class="eoTabular"/>
+									<Text text="{view>costText}" class="eoTabular"/>
+									<Text text="{view>distanceText}" class="eoTabular"/>
+									<Text text="{view>consumptionText}" class="eoTabular eoStrong"/>
+								</ColumnListItem>
+							</items>
+						</Table>
+						<Table id="statisticMonths" contextualWidth="Auto" items="{path: 'view>/statRows', sorter: {path: 'vehicle', group: true}}" class="sapUiMediumMarginTop"
+							noDataText="Keine Monatswerte." popinLayout="GridSmall">
+							<headerToolbar>
+								<OverflowToolbar>
+									<Title text="Je Monat" level="H2"/>
+								</OverflowToolbar>
+							</headerToolbar>
+							<columns>
+								<Column><Text text="Monat"/></Column>
+								<Column width="6rem" hAlign="End"><Text text="Belege"/></Column>
+								<Column width="9rem" hAlign="End"><Text text="Kraftstoff"/></Column>
+								<Column width="9rem" hAlign="End"><Text text="Kosten brutto"/></Column>
+								<Column width="9rem" hAlign="End" minScreenWidth="44rem" demandPopin="true"><Text text="Strecke"/></Column>
+								<Column width="10rem" hAlign="End"><Text text="Ø Verbrauch"/></Column>
+							</columns>
+							<items>
+								<ColumnListItem>
+									<Text text="{view>monthText}"/>
+									<Text text="{view>receipts}" class="eoTabular"/>
+									<Text text="{view>litersText}" class="eoTabular"/>
+									<Text text="{view>costText}" class="eoTabular"/>
+									<Text text="{view>distanceText}" class="eoTabular"/>
+									<Text text="{view>consumptionText}" class="eoTabular"/>
+								</ColumnListItem>
+							</items>
+						</Table>
+					</IconTabFilter>
+				</items>
+			</IconTabBar>
+		</f:content>
+	</f:DynamicPage>
+</mvc:View>

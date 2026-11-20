@@ -46,6 +46,7 @@ public static class NumberRangeKeys
     public const string Defect = "defect";
     public const string Ticket = "ticket";
     public const string Feedback = "feedback";
+    public const string FuelReceipt = "fuelReceipt";
 }
 
 /// <summary>
@@ -62,7 +63,7 @@ public sealed record NumberRangeDefinition(string Key, string Label, string Grou
 /// <summary>
 /// Alle Nummernkreise mit Standardmustern. Schema: Stammdaten zählen ohne Jahr mit eigener Vorziffer
 /// (Personal 10…, Maschinen 20…, Material 50…, Kunden 60…, Lieferanten 70…), Vorgänge zählen je Jahr mit Kürzel
-/// (B- Bestellung, A- Anfrage, AU- Aufgabe, M- Mangel, T- Ticket, F- Rückmeldung); Bauakten wie bisher {JJJJ}-{NNN}.
+/// (B- Bestellung, A- Anfrage, AU- Aufgabe, M- Mangel, T- Ticket, F- Rückmeldung, TB- Tankbeleg); Bauakten wie bisher {JJJJ}-{NNN}.
 /// </summary>
 public static class NumberRangeDefinitions
 {
@@ -81,6 +82,7 @@ public static class NumberRangeDefinitions
         new(NumberRangeKeys.Defect, "Mängel", "Vorgänge", "M-{JJJJ}-{NNNN}", 1, "work_items", "number", 30),
         new(NumberRangeKeys.Ticket, "Helpdesk-Tickets", "Verwaltung", "T-{JJJJ}-{NNNN}", 1, "tickets", "number", 18),
         new(NumberRangeKeys.Feedback, "Fehler und Wünsche", "Verwaltung", "F-{JJJJ}-{NNNN}", 1, "feedback_items", "number", 18),
+        new(NumberRangeKeys.FuelReceipt, "Tankbelege", "Vorgänge", "TB-{JJJJ}-{NNNN}", 1, "fuel_receipts", "number", 18),
     ];
 
     public static NumberRangeDefinition Get(string key) =>

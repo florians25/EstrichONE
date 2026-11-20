@@ -10,6 +10,7 @@ using EstrichOne.Api.Modules.Contacts;
 using EstrichOne.Api.Modules.Devices;
 using EstrichOne.Api.Modules.Documentation;
 using EstrichOne.Api.Modules.Feedback;
+using EstrichOne.Api.Modules.Fuel;
 using EstrichOne.Api.Modules.Helpdesk;
 using EstrichOne.Api.Modules.Identity;
 using EstrichOne.Api.Modules.Mail;
@@ -46,6 +47,7 @@ public static class ModuleCatalog
         new PlanningModule(),
         new CallsModule(),
         new MaterialsModule(),
+        new FuelModule(),
         new SetupModule(),
         new SyncModule(),
         new NoticesModule(),
