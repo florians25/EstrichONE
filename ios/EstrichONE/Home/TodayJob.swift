@@ -136,11 +136,10 @@ struct TodayJobCard: View {
 
     private var full: some View {
         VStack(alignment: .leading, spacing: Space.m) {
+            // Kopf: Uhrzeit mit Kennzeichnung und rechts „…“; darunter Baustelle (Tipp öffnet die Bauakte) über die volle Breite.
             HStack(alignment: .top, spacing: Space.s) {
-                Button { perform(.open) } label: { heading }
-                    .buttonStyle(.plain)
-                    .accessibilityIdentifier("todayJob-\(job.title)")
-                    .accessibilityHint("Öffnet die Bauakte")
+                timeRow
+                Spacer(minLength: 0)
                 Menu { menuItems } label: {
                     Image(systemName: "ellipsis.circle")
                         .font(.title3)
@@ -150,9 +149,15 @@ struct TodayJobCard: View {
                 }
                 .menuStyle(.button)
                 .buttonStyle(.plain)
+                .padding(.top, -Space.s)
                 .accessibilityLabel("Weitere Aktionen")
                 .accessibilityIdentifier("todayJobMore")
             }
+            Button { perform(.open) } label: { heading }
+                .buttonStyle(.plain)
+                .padding(.top, -Space.s)
+                .accessibilityIdentifier("todayJob-\(job.title)")
+                .accessibilityHint("Öffnet die Bauakte")
 
             if let glance, !glance.isEmpty {
                 Button { perform(.open) } label: { GlanceChips(glance: glance) }
@@ -190,17 +195,21 @@ struct TodayJobCard: View {
         }
     }
 
+    /// Uhrzeit und „Jetzt“/„in 2 Std.“; bei sehr großer Schrift untereinander (nichts wird abgeschnitten).
+    private var timeRow: some View {
+        let layout = typeSize.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading, spacing: Space.xs))
+                                                  : AnyLayout(HStackLayout(alignment: .center, spacing: Space.s))
+        return layout {
+            Text(job.timeText)
+                .font(Typo.time)
+                .foregroundStyle(Theme.textPrimary)
+            PhaseBadge(phase: phase)
+        }
+        .accessibilityElement(children: .combine)
+    }
+
     private var heading: some View {
         VStack(alignment: .leading, spacing: Space.xs) {
-            // Sehr große Schrift: Kennzeichnung unter die Uhrzeit statt daneben (nichts wird abgeschnitten).
-            let layout = typeSize.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading, spacing: Space.xs))
-                                                      : AnyLayout(HStackLayout(alignment: .center, spacing: Space.s))
-            layout {
-                Text(job.timeText)
-                    .font(Typo.time)
-                    .foregroundStyle(Theme.textPrimary)
-                PhaseBadge(phase: phase)
-            }
             HStack(alignment: .firstTextBaseline, spacing: Space.s) {
                 Text(job.title)
                     .font(.title3.weight(.semibold))
@@ -210,11 +219,15 @@ struct TodayJobCard: View {
                 Spacer(minLength: Space.s)
                 Chevron()
             }
-            HStack(spacing: Space.s) {
+            // Nummer und Status: nebeneinander, bei sehr großer Schrift untereinander.
+            let layout = typeSize.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading, spacing: Space.xxs))
+                                                      : AnyLayout(HStackLayout(alignment: .firstTextBaseline, spacing: Space.s))
+            layout {
                 if let number = job.number {
                     Text(number)
                         .font(Typo.subhead.monospacedDigit())
                         .foregroundStyle(Theme.textSecondary)
+                        .fixedSize()
                 }
                 if let status = job.status { StatusLabel(status: status) }
             }
@@ -252,7 +265,9 @@ struct TodayJobCard: View {
         HStack(alignment: .center, spacing: Space.m) {
             Button(action: onExpand) {
                 VStack(alignment: .leading, spacing: Space.xs) {
-                    HStack(spacing: Space.s) {
+                    let layout = typeSize.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading, spacing: Space.xs))
+                                                              : AnyLayout(HStackLayout(alignment: .center, spacing: Space.s))
+                    layout {
                         Text(job.timeText)
                             .font(Typo.headline.monospacedDigit())
                             .foregroundStyle(Theme.textPrimary)

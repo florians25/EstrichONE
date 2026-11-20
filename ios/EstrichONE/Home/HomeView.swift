@@ -14,6 +14,7 @@ struct HomeView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.horizontalSizeClass) private var sizeClass
     @Environment(\.shotScene) private var shotScene
+    @Environment(\.dynamicTypeSize) private var typeSize
     @State private var path: [HomeRoute] = []
     @State private var planning: MyPlanning.Snapshot?
     @State private var dispatch: DispatchData.Day?
@@ -302,10 +303,17 @@ struct HomeView: View {
         let stale: String? = planning.flatMap { $0.isCurrent ? nil : "Stand \($0.loadedAt.shortStamp)" }
         let spoken = "Abgleich: \(state.text)" + (stale.map { ", Planung \($0)" } ?? "")
         return Button { path.append(.sync) } label: {
-            Label(stale ?? state.text, systemImage: state.symbol)
-                .labelStyle(TightLabelStyle())
-                .lineLimit(1)
-                .foregroundStyle(state.problem ? Theme.danger : Theme.textSecondary)
+            Group {
+                // Sehr große Schrift: nur das Symbol, damit das Datum Platz hat.
+                if typeSize.isAccessibilitySize {
+                    Image(systemName: state.symbol)
+                } else {
+                    Label(stale ?? state.text, systemImage: state.symbol)
+                        .labelStyle(TightLabelStyle())
+                        .lineLimit(1)
+                }
+            }
+            .foregroundStyle(state.problem ? Theme.danger : Theme.textSecondary)
         }
         .buttonStyle(.plain)
         .font(Typo.meta)

@@ -17,6 +17,7 @@ import de.estrichone.android.ui.Root
 import de.estrichone.android.ui.Route
 import de.estrichone.android.ui.Tab
 import de.estrichone.android.ui.WhatsNewContent
+import de.estrichone.android.ui.weekPlan
 import de.estrichone.core.AppDownload
 import de.estrichone.core.AppReleaseNote
 import de.estrichone.core.AppReleaseSection
@@ -25,6 +26,8 @@ import de.estrichone.core.UpdateState
 import de.estrichone.core.UpdateStatus
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.unit.dp
 import de.estrichone.core.DemoChat
 import de.estrichone.core.ApiDate
 import de.estrichone.core.DemoData
@@ -119,6 +122,34 @@ abstract class ScreenshotBase(private val device: String, private val appearance
 
     @Test
     fun heute() = main("heute", Tab.Today)
+
+    /** Heute: nur die Einsätze (laufender aufgeklappt, nächster kompakt), ohne die Hinweise darüber. */
+    @Test
+    fun heuteEinsatz() {
+        val model = demo()
+        val session = model.session.value!!
+        val today = java.time.LocalDate.now(de.estrichone.core.Dates.zone).toString()
+        val jobs = kotlinx.coroutines.runBlocking { session.weekPlan() }?.assignments.orEmpty().filter { it.day == today }
+            .sortedBy { it.startTime ?: "99" }
+        shot("heute-einsatz") {
+            val nav = remember { Nav(Tab.Today) }
+            androidx.compose.runtime.CompositionLocalProvider(
+                de.estrichone.android.ui.LocalNav provides nav, de.estrichone.android.ui.LocalSession provides session,
+                de.estrichone.android.ui.LocalModel provides model,
+            ) {
+                androidx.compose.foundation.layout.Column(
+                    androidx.compose.ui.Modifier.fillMaxSize().background(de.estrichone.android.ui.tones.canvas)
+                        .padding(16.dp),
+                    verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(12.dp),
+                ) {
+                    jobs.forEachIndexed { index, job ->
+                        val phase = de.estrichone.core.TodayGlance.phase(job.startTime, job.endTime, de.estrichone.android.ui.Live.clock())
+                        de.estrichone.android.ui.TodayJobCard(job, session, phase, expanded = index == 0)
+                    }
+                }
+            }
+        }
+    }
 
     /** Update-Ablauf: Ankündigung mit Countdown, Wartungsbildschirm im Update und im Abschluss (wie Web und iOS). */
     private fun updateScene(name: String, phase: String, seconds: Long, offline: Boolean = false) =
