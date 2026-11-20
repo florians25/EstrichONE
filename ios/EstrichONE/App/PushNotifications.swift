@@ -296,7 +296,17 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         UNUserNotificationCenter.current().delegate = NotificationDelegate.shared
         PushCenter.registerCategories()
+        QuickActionCenter.install(application)
         return true
+    }
+
+    /// Schnellaktion beim Kaltstart übernehmen; spätere kommen über `QuickActionSceneDelegate`.
+    func application(_ application: UIApplication, configurationForConnecting connectingSceneSession: UISceneSession,
+                     options: UIScene.ConnectionOptions) -> UISceneConfiguration {
+        if let item = options.shortcutItem { QuickActionCenter.shared.receive(item) }
+        let configuration = UISceneConfiguration(name: nil, sessionRole: connectingSceneSession.role)
+        configuration.delegateClass = QuickActionSceneDelegate.self
+        return configuration
     }
 
     func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {

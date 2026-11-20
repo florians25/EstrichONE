@@ -80,11 +80,19 @@ gespeichert und übertragen“.
 1. Tippen Sie in der Bauakte (oder auf der Heute-Seite, oder in **Erfassen**) auf **Foto**.
 2. Geben Sie optional eine **Beschriftung** ein, z. B. „Randdämmung Bad OG“. Sie gilt für alle folgenden Fotos dieser
    Serie.
-3. Fotografieren Sie beliebig viele Bilder hintereinander. Mit **Aus Fotos auswählen** übernehmen Sie Bilder aus der
-   Fotomediathek.
-4. Tippen Sie auf **Übernehmen**.
+3. Fotografieren Sie beliebig viele Bilder hintereinander – die Kamera bleibt offen, der Zähler unten rechts zählt mit.
+   Ab iOS 18 lösen auch die **Lautstärketasten** (bzw. die Kamerasteuerung) aus – mit Handschuhen sicherer als der
+   Bildschirm. Mit **Aus Fotos auswählen** übernehmen Sie Bilder aus der Fotomediathek.
+4. Tippen Sie auf **Fertig**.
 
-Die Fotos werden für die Übertragung verkleinert und verschlüsselt auf dem Gerät abgelegt, bis sie übertragen sind.
+Ohne Netz zeigt die Kamera „Offline – Fotos bleiben auf dem Gerät“. Die Fotos werden verkleinert (längste Kante
+3000 Pixel, JPEG; Aufnahmezeit und Ort bleiben erhalten) und verschlüsselt auf dem Gerät abgelegt, bis sie übertragen
+sind. In der Fotomediathek landet nichts.
+
+**Schneller zur Kamera:** App-Symbol lange drücken → **Foto zur Baustelle** (bzw. **Bautagebuch**, **Baustelle
+suchen**). Dasselbe gibt es als Kurzbefehl, per Siri („Foto mit EstrichONE“) und – auf iPhones mit Aktionstaste – über
+**Einstellungen** → **Aktionstaste** → **Kurzbefehl**. Gemeint ist immer der heutige Einsatz, sonst die zuletzt geöffnete
+Bauakte; oben in der Kamera lässt sie sich wechseln.
 In **Fotos & Dokumente** tippen Sie ein Foto an, um es groß zu sehen (Doppeltippen vergrößert). Dort können Sie es
 **beschriften** oder **löschen** – ein bereits übertragenes Foto wird dann auch im Büro gelöscht, ein noch nicht
 übertragenes nur auf diesem Gerät.
@@ -93,7 +101,8 @@ In **Fotos & Dokumente** tippen Sie ein Foto an, um es groß zu sehen (Doppeltip
 
 Über **Video** unten in der Bauakte (oder **Erfassen** → **Video**) nehmen Sie ein kurzes Video auf,
 **bis 2 Minuten** lang, z. B. „Estrich wird eingebracht“. Alternativ wählen Sie ein Video aus der Mediathek; längere
-Videos werden auf die ersten 2 Minuten gekürzt. Die App verkleinert das Video vor der Übertragung und zeigt die Größe an.
+Videos werden auf die ersten 2 Minuten gekürzt. Die App verkleinert das Video vor der Übertragung (720p, H.264, rund
+15 MB je Minute – im Browser überall abspielbar) und zeigt die Größe an.
 Mit **Video speichern** landet es in **Fotos & Dokumente**.
 
 ## Dokumente scannen

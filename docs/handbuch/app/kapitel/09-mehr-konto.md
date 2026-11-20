@@ -12,7 +12,7 @@ Der Tab **Mehr** bündelt alles rund um Ihr Konto und das Gerät.
 | Kopf | Ihr Name und Anmeldename, **Synchronisation** mit Stand (Kapitel 8) |
 | **Benachrichtigungen**, **Chat** | Postfach und Chat mit Zahl neuer Einträge, Push an/aus (Kapitel 7) |
 | **Service** | **Urlaub und Abwesenheit**, **IT-Service/Helpdesk** und **Problem melden** (Kapitel 6 und 7) |
-| Sperre und Gerät | auf persönlichen Geräten **Sperre und Face ID** (Kapitel 2); **Gerät, Server und App**: Gerätename, Nutzung (**Persönliches Gerät** oder **Poolgerät**), Status der Freigabe, Server, **App-Update**, **Konto löschen beantragen**, **App zurücksetzen** und App-Version |
+| Sperre und Gerät | auf persönlichen Geräten **Sperre und Face ID** (Kapitel 2); **Gerät, Server und App**: Gerätename, Nutzung (**Persönliches Gerät** oder **Poolgerät**), Status der Freigabe, **Speicher**, Server, **App-Update**, **Konto löschen beantragen**, **App zurücksetzen** und App-Version |
 | unten | **Sperren** bzw. **Benutzer wechseln** und **Abmelden** |
 
 **Meine Aufgaben**, **Wer fährt wohin** und **Meine Woche** stehen auf der Heute-Seite unter **Überblick** (Kapitel 3),
@@ -32,6 +32,17 @@ erhalten; Änderungen, die noch nicht übertragen sind, sendet die App nach dem 
 Nach einem Update der App oder des Servers zeigt die App nach der Anmeldung einmal **Was gibt’s Neues** – nur, wenn es
 Neuerungen für die App gibt. **Verstanden** schließt das Blatt; es erscheint dann auch auf Ihren anderen Geräten nicht
 erneut. Unter **Mehr** → **Gerät, Server und App** → **Was gibt’s Neues** lässt es sich jederzeit wieder öffnen.
+
+## Speicher
+
+Unter **Mehr** → **Gerät, Server und App** → **Speicher** steht, wie viel EstrichONE auf dem Gerät belegt und wie viel
+davon **noch nicht hochgeladen** ist. **Cache leeren** gibt bereits übertragene Fotos und Videos, Vorschaubilder und
+temporäre Dateien frei. Noch nicht hochgeladene Daten löscht die App dabei nie; Übertragenes lädt sie bei Bedarf wieder
+vom Server.
+
+Auch ohne Zutun hält die App den Speicher klein: Übertragene Fotos und Videos bleiben höchstens zwei Tage (zusammen
+höchstens 150 MB) als Sicherheitskopie auf dem Gerät, danach nur ihr kleines Vorschaubild (zusammen höchstens 40 MB).
+Reste abgebrochener Aufnahmen räumt die App nach einem Tag weg.
 
 ## Abmelden
 

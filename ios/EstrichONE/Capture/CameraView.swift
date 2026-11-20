@@ -1,10 +1,13 @@
 @preconcurrency import AVFoundation
+import AVKit
 import EstrichCore
 import PhotosUI
 import SwiftUI
 
 /// Serienaufnahme für eine Bauakte (09, W-2): Auslöser, Zähler, „Fertig (n)“. Oben die Zuordnung (antippen, um die
-/// Bauakte zu wechseln) und eine Beschriftung, die für alle folgenden Fotos gilt (z. B. „Bad OG“).
+/// Bauakte zu wechseln) und eine Beschriftung, die für alle folgenden Fotos gilt (z. B. „Bad OG“). Ab iOS 18 lösen auch
+/// die Lautstärketasten bzw. die Kamerasteuerung aus – mit Handschuhen sicherer als der Bildschirm. Ohne Netz zeigt ein
+/// Hinweis, dass die Fotos sicher auf dem Gerät bleiben.
 /// Glas nur auf den Bedienelementen über dem Kamerabild (07, Abschnitt 1).
 struct CameraView: View {
     let onFinish: (Int) -> Void
@@ -70,6 +73,7 @@ struct CameraView: View {
             Task { await importPicked(items) }
         }
         .sensoryFeedback(.success, trigger: count)
+        .modifier(HardwareShutter(isEnabled: cameraState == .running && !pending.isClosing) { shutter() })
         .statusBarHidden()
     }
 
@@ -106,6 +110,16 @@ struct CameraView: View {
                     .overlayControlStyle()
                     .tint(.white)
                     .accessibilityIdentifier("captionButton")
+
+                    if model.active?.sync?.isOffline == true {
+                        Label("Offline – Fotos bleiben auf dem Gerät", systemImage: "wifi.slash")
+                            .font(.footnote.weight(.semibold))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(.black.opacity(0.6), in: Capsule())
+                            .accessibilityIdentifier("cameraOfflineHint")
+                    }
                 }
                 Spacer()
                 Button {
@@ -260,7 +274,7 @@ struct CameraView: View {
 
     private func importPicked(_ items: [PhotosPickerItem]) async {
         for item in items {
-            // Aufnahmedaten (Datum, Ort) bleiben erhalten; HEIC wird zu JPEG, große Bilder auf 4096 px (PhotoCompressor).
+            // Aufnahmedaten (Datum, Ort) bleiben erhalten; HEIC wird zu JPEG, große Bilder auf 3000 px (PhotoCompressor).
             guard let data = try? await item.loadTransferable(type: Data.self), UIImage(data: data) != nil else { continue }
             await save(data)
         }
@@ -314,6 +328,25 @@ struct PendingShots: Equatable {
         guard isClosing, !closed, count == 0 || forced else { return false }
         closed = true
         return true
+    }
+}
+
+/// Lautstärketasten und Kamerasteuerung als Auslöser (ab iOS 18; davor nur der Bildschirm).
+private struct HardwareShutter: ViewModifier {
+    let isEnabled: Bool
+    let action: @MainActor () -> Void
+
+    func body(content: Content) -> some View {
+        if #available(iOS 18, *) {
+            content.onCameraCaptureEvent(isEnabled: isEnabled) { event in
+                let ended = event.phase == .ended
+                MainActor.assumeIsolated {
+                    if ended { action() }
+                }
+            }
+        } else {
+            content
+        }
     }
 }
 

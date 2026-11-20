@@ -21,6 +21,11 @@ struct MainTabView: View {
     @State private var push = PushCenter.shared
     /// Erfassen im Modus „Nur Ansicht“: erst bestätigen lassen.
     @State private var confirmsOverride = false
+    /// Schnellaktion vom App-Symbol, aus Kurzbefehlen oder per Siri.
+    @State private var quick = QuickActionCenter.shared
+    @State private var quickCamera: Bauakte?
+    @State private var quickDiary: Bauakte?
+    @State private var toast: String?
 
     var body: some View {
         // Backup-/Archiv-Störung und „Nur Ansicht“ über allen Reitern (Navigationsleisten darunter).
@@ -62,6 +67,17 @@ struct MainTabView: View {
                 .presentationDragIndicator(.visible)
         }
         .task { applyShotScene() }
+        .task(id: quick.pending) { await runQuickAction() }
+        .fullScreenCover(item: $quickCamera) { bauakte in
+            CameraView(bauakte: bauakte) { count in
+                quickCamera = nil
+                if count > 0 { toast = count == 1 ? "Foto gespeichert" : "\(count) Fotos gespeichert" }
+            }
+        }
+        .sheet(item: $quickDiary) { bauakte in
+            NewDiaryEntryView(bauakteId: bauakte.id) { quickDiary = nil }
+        }
+        .toast($toast)
         .task(id: model.active?.sync?.revision) {
             unreadTickets = await TicketReadState.unreadCount(model: model)
             if let sync = model.active?.sync, sync.chat == nil { await sync.refreshChat() }
@@ -85,6 +101,38 @@ struct MainTabView: View {
                     }
             }
         }
+    }
+
+    /// Schnellaktion ausführen: Foto bzw. Bautagebuch für den heutigen Einsatz, sonst die zuletzt geöffnete Bauakte;
+    /// ohne beides (oder bei abgeschaltetem Modul) öffnet „Erfassen“ mit der Auswahl der Baustelle.
+    private func runQuickAction() async {
+        guard let action = quick.pending, let service = model.active?.service else { return }
+        quick.pending = nil
+        if action == .search {
+            selection = .bauakten
+            return
+        }
+        if model.active?.sync?.isReadOnly == true {
+            confirmsOverride = true
+            return
+        }
+        if action == .diary, model.active?.sync?.modules.isOn(AppModules.diary) == false {
+            showsCaptureHub = true
+            return
+        }
+        var target: Bauakte?
+        if let id = await TodayContext.bauakteIds(model: model).first {
+            target = try? await service.bauakte(id)
+        }
+        if target == nil {
+            target = try? await service.recentBauakten(limit: 1).first
+        }
+        guard let target else {
+            showsCaptureHub = true
+            return
+        }
+        showsCaptureHub = false
+        if action == .photo { quickCamera = target } else { quickDiary = target }
     }
 
     /// Screenshot-Modus: passenden Reiter wählen bzw. „Erfassen“ öffnen.

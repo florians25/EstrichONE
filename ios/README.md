@@ -12,6 +12,8 @@ und Poolgeräte folgen mit AP-11.
 über `contact.create` vor `bauakte.create`), Foto-Serien mit Beschriftung und Zuordnung, Dokumentenscanner
 (VisionKit, mehrseitig, PDF mit Texterkennung, Dokumentart), Dokumente per QuickLook, Bautagebuch mit Textbausteinen,
 Kunde anrufen und Route starten aus der Akte, Räume und Flächen, Beteiligte, Erstbegehung, Abnahme, CM-Messung.
+Schnellaktionen am App-Symbol sowie Kurzbefehle/Siri/Aktionstaste („Foto zur Baustelle“, „Bautagebuch“) in
+`App/QuickActions.swift`; ab iOS 18 lösen Lautstärketasten bzw. Kamerasteuerung die Serienkamera aus.
 
 **Designsystem** (`EstrichONE/Design/`): Farben, Abstände (8-pt-Raster), Radien und Größen in `Theme.swift` (eine
 Akzentfarbe Markenblau, gedämpfte Statusfarben, hell und dunkel), Schriftstufen mit Dynamic Type in `Typography.swift`,
