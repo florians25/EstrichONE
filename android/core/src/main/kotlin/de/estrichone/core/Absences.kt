@@ -219,3 +219,42 @@ suspend fun EstrichOneApi.decideAbsence(id: String, approve: Boolean, comment: S
     send("POST", "hr/absence-requests/$id/decision", AbsenceDecision(approve, comment?.trim()?.ifEmpty { null }))
 
 suspend fun EstrichOneApi.cancelAbsence(id: String): AbsenceRequestItem = send("POST", "hr/absence-requests/$id/cancel", kotlinx.serialization.json.JsonObject(emptyMap()))
+
+// ---- Warnungen bei Abwesenheiten (Personalverwaltung und Disposition; der Server filtert nach Rechten) -----------------
+
+/** Von einer Abwesenheit betroffener Einsatz. */
+@Serializable
+data class AffectedAssignmentItem(val id: String, val day: String, val bauakteTitle: String = "", val crewName: String? = null, val understaffed: Boolean = false, val text: String = "")
+
+/** Warnung: z. B. „Anna Kraus abwesend 18.11. – 20.11.“ mit betroffenen Einsätzen; gesundheitsbezogene Arten nur für die Personalverwaltung. */
+@Serializable
+data class AbsenceWarningItem(
+    val key: String,
+    val kind: String,
+    val severity: String = "info",
+    val userName: String = "",
+    val date: String = "",
+    val title: String = "",
+    val text: String = "",
+    val link: String? = null,
+    val assignments: List<AffectedAssignmentItem> = emptyList(),
+) {
+    val isUrgent: Boolean get() = severity == "error"
+    val severityLabel: String get() = when (severity) { "error" -> "Dringend"; "warning" -> "Warnung"; else -> "Hinweis" }
+
+    /** Text mit den betroffenen Einsätzen (je Zeile einer). */
+    val details: String get() = (listOf(text) + assignments.map { "• ${it.text}" }).joinToString("\n")
+}
+
+@Serializable
+data class AbsenceWarnings(val enabled: Boolean = true, val healthDetails: Boolean = false, val items: List<AbsenceWarningItem> = emptyList(), val acknowledged: Int = 0) {
+    /** Überschrift der Gruppe in der App. */
+    val heading: String get() = if (healthDetails) "Warnungen Personal" else "Abwesenheit betrifft Einsätze"
+}
+
+/** Warnungen oder null, wenn der Benutzer sie nicht sehen darf (403) bzw. der Server sie noch nicht kennt (404). */
+suspend fun EstrichOneApi.absenceWarnings(): AbsenceWarnings? = try {
+    send<AbsenceWarnings>("GET", "hr/absence-warnings", null)
+} catch (e: ApiException) {
+    if (e.status == 403 || e.status == 404) null else throw e
+}

@@ -78,6 +78,9 @@
 			<VBox>
 				<MessageStrip text="{view>/error}" type="Error" showIcon="true" visible="{= !!${view>/error} }" class="sapUiSmallMarginBottom"/>
 				<MessageStrip text="{view>/warningText}" type="Warning" showIcon="true" visible="{= ${view>/warningCount} > 0 }" class="sapUiSmallMarginBottom"/>
+				<MessageStrip id="absenceStrip" text="{view>/absenceText}" type="{view>/absenceType}" showIcon="true" visible="{= !!${view>/absenceText} }" class="sapUiSmallMarginBottom">
+					<link><Link text="Betroffene Einsätze anzeigen" press=".onAbsenceWarnings"/></link>
+				</MessageStrip>
 				<FlexBox alignItems="Start" class="eoPlanLayout">
 					<VBox class="eoGrow" busy="{view>/busy}" busyIndicatorDelay="300">
 						<eo:PlanBoard id="board" data="{view>/board}" open=".onOpen" add=".onAdd" move=".onMove" dropBauakte=".onDropBauakte" dayPress=".onDay" openEvent=".onOpenEvent"/>

@@ -382,7 +382,7 @@ export default {
     for (const [path, name] of [["/tagesuebersicht", "tagesuebersicht"], ["/bauakten/karte", "baustellenkarte"], ["/dokumente", "dokumente"],
       ["/dokumente?reiter=freigaben", "freigaben"], ["/anfragen", "anfragen"], ["/kunden", "kunden"], ["/anrufe", "anrufe"],
       ["/planung", "kolonnenplanung"], ["/planung/teamplaner", "teamplaner"], ["/planung/kalender", "kalender"],
-      ["/planung/arbeitsplan", "arbeitsplan"], ["/planung/kolonnen", "kolonnen"], ["/planung/geraete", "geraete-fahrzeuge"],
+      ["/planung/arbeitsplan", "arbeitsplan"], ["/planung/kolonnen", "kolonnen"], ["/planung/geraete", "geraete-fahrzeuge"], ["/tankbelege", "tankbelege"],
       ["/personal", "personal"], ["/personal/urlaub?reiter=plan", "urlaubsplan"], ["/personal/urlaub?reiter=antraege", "urlaubsantraege"],
       ["/personal/urlaub", "urlaub"], ["/bestellungen", "bestellungen"], ["/material", "material"], ["/lieferanten", "lieferanten"],
       ["/benachrichtigungen", "benachrichtigungen"], ["/verwaltung/nachrichten", "nachrichten"],

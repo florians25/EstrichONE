@@ -475,6 +475,47 @@ struct LiveServerTests {
         }
     }
 
+    @Test("Tankbeleg über den echten Server: Dispo-Fahrzeug vorbelegt, offline mit Foto erfasst, Nummer aus dem Nummernkreis")
+    func fuelReceipt() async throws {
+        let device = try await syncingAccount()
+        let vehicleId = UUID.v7()
+        let vehicle = try JSONSerialization.data(withJSONObject: ["kind": "vehicle", "name": "Sprinter Integrationstest", "identifier": "LA-CI 1",
+                                                                  "tankCapacityLiters": 80])
+        struct Saved: Decodable { let id: UUID }
+        let _: Saved = try await device.client.send(APIRequest(method: "PUT", path: "planning/resources/\(vehicleId.key)", body: vehicle,
+                                                               contentType: "application/json"))
+        let service = BauakteService(store: device.store, files: device.files, userId: device.userId)
+        let bauakte = try await service.create(NewBauakte(title: "Tanken Integrationstest", city: "Landshut"))
+        #expect(await device.engine.synchronize() == .completed)
+        let plan = try JSONSerialization.data(withJSONObject: [
+            "bauakteId": bauakte.key, "day": CalendarDay.string(Date()), "activity": "Estrich einbringen", "userIds": [device.userId.key],
+            "resourceIds": [vehicleId.key],
+        ])
+        let _: Saved = try await device.client.send(APIRequest(method: "PUT", path: "planning/assignments/\(UUID.v7().key)", body: plan,
+                                                               contentType: "application/json"))
+
+        let options = try #require(await FuelOptionsStore(store: device.store).load(using: device.client))
+        #expect(options.suggestedVehicleId == vehicleId)
+        var draft = FuelReceiptDraft.prefilled(from: options)
+        draft.liters = "61,37"
+        draft.amount = "104,27"
+        draft.odometer = "48210"
+        draft.paymentMethod = .privatelyPaid
+        let jpeg = try #require(Data(base64Encoded: "/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////2wBDAf//////////////////////////////////////////////////////////////////////////////////////wAARCAABAAEDASIAAhEBAxEB/8QAFAABAAAAAAAAAAAAAAAAAAAAA//EABQQAQAAAAAAAAAAAAAAAAAAAAD/xAAUAQEAAAAAAAAAAAAAAAAAAAAA/8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/aAAwDAQACEQMRAD8AN//Z"))
+        let id = try await FuelReceiptService(store: device.store, files: device.files, userId: device.userId)
+            .record(draft, photo: jpeg, vehicle: options.vehicles.first { $0.id == vehicleId })
+        #expect(await device.engine.synchronize() == .completed)
+        #expect(try await device.store.summary().isSettled, "Beleg und Foto angenommen")
+        let mine = try await device.client.myFuelReceipts()
+        let receipt = try #require(mine.first { $0.id == id })
+        #expect(receipt.number.hasPrefix("TB-"))
+        #expect(receipt.vehicleId == vehicleId)
+        #expect(receipt.paymentMethod == .privatelyPaid)
+        #expect(receipt.status == .new)
+        #expect(receipt.imageFileId != nil)
+        #expect(await FuelOptionsStore(store: device.store).cached() == options, "Fahrzeuge auch offline")
+    }
+
     @Test("Mein Einsatz: im Büro geplant, in der App sichtbar und offline zwischengespeichert")
     func myPlanning() async throws {
         let device = try await syncingAccount()

@@ -338,6 +338,9 @@ public sealed record ModuleSettings
     /// <summary>Feedback (Fehlermeldungen und Funktionswünsche).</summary>
     public bool Feedback { get; init; } = true;
 
+    /// <summary>Tankbelege (setzt Maschinen und Fahrzeuge voraus).</summary>
+    public bool Fuel { get; init; } = true;
+
     /// <summary>Eingeschaltet? Kernmodule und unbekannte Schlüssel gelten als eingeschaltet.</summary>
     public bool IsEnabled(string key) => key switch
     {
@@ -358,6 +361,7 @@ public sealed record ModuleSettings
         AppModules.Dossiers => Dossiers,
         AppModules.Helpdesk => Helpdesk,
         AppModules.Feedback => Feedback,
+        AppModules.Fuel => Fuel,
         _ => true,
     };
 
@@ -381,6 +385,7 @@ public sealed record ModuleSettings
         AppModules.Dossiers => this with { Dossiers = on },
         AppModules.Helpdesk => this with { Helpdesk = on },
         AppModules.Feedback => this with { Feedback = on },
+        AppModules.Fuel => this with { Fuel = on },
         _ => this,
     };
 

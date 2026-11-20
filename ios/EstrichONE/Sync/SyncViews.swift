@@ -257,6 +257,7 @@ struct SyncView: View {
         case .ticket: "Meldung an die IT"
         case .room: "Raum"
         case .bauakteParty: "Beteiligter"
+        case .fuelReceipt: "Tankbeleg"
         }
         let action = operation.type.split(separator: ".").last ?? ""
         return switch action {

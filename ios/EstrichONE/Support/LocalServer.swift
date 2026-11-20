@@ -43,6 +43,8 @@ final class FakeServer: HTTPTransport, @unchecked Sendable {
     private lazy var chat = DemoChat(userId: currentUserId)
     /// Urlaub und Abwesenheiten im Demomodus.
     private lazy var absences = DemoAbsences(userId: currentUserId)
+    /// Tankbelege im Demomodus.
+    private lazy var fuel = DemoFuel()
 
     init(serverInfoStatus: Int, serverInfoBody: String, password: String, newDeviceStatus: String, demo: DemoContent? = nil) {
         self.serverInfoStatus = serverInfoStatus
@@ -210,6 +212,9 @@ final class FakeServer: HTTPTransport, @unchecked Sendable {
                 if type == "ticket.create", demo != nil {
                     helpdesk.add(id: entityId, payload: entity)
                 }
+                if type == "fuelReceipt.create", demo != nil {
+                    entity = fuel.add(id: entityId, payload: entity)
+                }
                 if type == "note.create" {
                     entity["authorUserId"] = currentUserId
                     entity["isPinned"] = false
@@ -310,7 +315,7 @@ final class FakeServer: HTTPTransport, @unchecked Sendable {
         case "/api/v1/access/me/permissions" where demo != nil:
             // Demo als Bauleiter mit Planung und IT-Bearbeitung, damit alle Funktionen sichtbar sind.
             return json(200, ["bauakten.read", "bauakten.edit", "bauakten.create", "contacts.read", "planning.read", "planning.manage",
-                              "helpdesk.agent", "absence.request", "absence.approve"])
+                              "helpdesk.agent", "absence.request", "absence.approve", "files.upload", "fuel.record"])
         case "/api/v1/files" where demo != nil:
             // Eigene Datei ohne Bauakte ankündigen (Anhang einer Antwort im Helpdesk).
             if let id = (body["id"] as? String)?.lowercased() { files[id] = ((body["sizeBytes"] as? Int) ?? 0, 0) }
@@ -345,6 +350,10 @@ final class FakeServer: HTTPTransport, @unchecked Sendable {
             case (5, "rating"): return helpdesk.rate(parts[3].lowercased(), body: body).map { json(200, $0) } ?? problem(404, "NOT_FOUND", "Nicht gefunden")
             default: return problem(404, "NOT_FOUND", "Nicht gefunden")
             }
+        case "/api/v1/fuel-receipts/options" where demo != nil:
+            return json(200, fuel.options())
+        case "/api/v1/fuel-receipts/mine" where demo != nil:
+            return json(200, fuel.mine())
         case "/api/v1/hr/me" where demo != nil:
             return json(200, absences.mine())
         case "/api/v1/hr/absence-requests" where demo != nil:

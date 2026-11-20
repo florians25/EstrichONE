@@ -108,6 +108,8 @@ Legende: ✅ umgesetzt · 🟡 teilweise (siehe Bemerkung) · ❌ fehlt noch
 | Kolonnenplan und Disposition für Planer (zuweisen, tauschen, freigeben) | ✅ | ❌ | iOS CrewPlanView/PlanningSheets; auf Android nur lesend |
 | Urlaub: Konto, Anträge, Vorschau mit Feiertagen, Genehmigen | ✅ | ✅ | |
 | Urlaub: Vertretung wählen, Änderungsantrag zu genehmigtem Urlaub | ✅ | ✅ | Demomodus rechnet Feiertage (Bayern) heraus |
+| Tankbelege: Beleg fotografieren, Fahrzeug vorbelegt (Dispo), offline über die Outbox, eigene Belege mit Status | ✅ | ✅ | iOS Dokumentkamera, Android Kamera-App bzw. Galerie |
+| Tankbelege: Betrag, Liter, Datum aus dem Foto vorschlagen (Texterkennung auf dem Gerät) | ✅ Vision | ❌ | bräuchte Google ML Kit (neue, schwere Abhängigkeit) |
 
 ## Kommunikation
 

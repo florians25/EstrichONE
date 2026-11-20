@@ -1,6 +1,7 @@
 package de.estrichone.android.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -79,7 +80,9 @@ import de.estrichone.core.Dates
 import de.estrichone.core.VacationAccount
 import de.estrichone.core.cancelAbsence
 import de.estrichone.core.decideAbsence
+import de.estrichone.core.absenceWarnings
 import de.estrichone.core.myVacation
+import de.estrichone.core.NotificationRoute
 import de.estrichone.core.pendingAbsenceRequests
 import de.estrichone.core.previewAbsence
 import de.estrichone.core.requestAbsence
@@ -103,6 +106,8 @@ fun AbsencesScreen() {
     val scope = rememberCoroutineScope()
     val haptics = LocalHapticFeedback.current
     val mine = rememberRefreshable("hr/me") { session.api.myVacation() }
+    // Nur Personalverwaltung und Disposition erhalten Warnungen (sonst 403 → nichts anzeigen).
+    val warnings = rememberRefreshable("hr/absence-warnings") { runCatching { session.api.absenceWarnings() }.getOrNull() }
     var cancelling by remember { mutableStateOf<AbsenceRequestItem?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     val data = mine.value
@@ -113,11 +118,32 @@ fun AbsencesScreen() {
     }) { padding ->
         LoadView(mine.load) {
             val m = data ?: return@LoadView
-            PullToRefreshBox(isRefreshing = mine.refreshing && data != null, onRefresh = { mine.refresh() }, modifier = Modifier.fillMaxSize()) {
+            PullToRefreshBox(isRefreshing = mine.refreshing && data != null, onRefresh = { mine.refresh(); warnings.refresh() }, modifier = Modifier.fillMaxSize()) {
             LazyColumn(contentPadding = padding.content(), verticalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.readable()) {
                 m.vacation?.let { account -> item(key = "account-label") { GroupLabel("Urlaubskonto ${account.year}") }; item(key = "account") { AccountCard(account) } }
                     ?: item(key = "no-account") { Banner("Für Ihr Konto ist noch kein Personalstamm angelegt. Das Büro trägt den Urlaubsanspruch ein.", Icons.Filled.CalendarMonth,
                         tones.textSecondary, tones.fill) }
+                warnings.value?.takeIf { it.enabled && it.items.isNotEmpty() }?.let { w ->
+                    item(key = "warnings-label") { GroupLabel(w.heading) }
+                    item(key = "warnings") {
+                        SectionCard {
+                            w.items.take(5).forEachIndexed { index, item ->
+                                if (index > 0) RowDivider(16.dp)
+                                val route = NotificationRoute.from(item.link)
+                                Row(Modifier.fillMaxWidth().heightIn(min = 56.dp).padding(horizontal = 16.dp, vertical = 12.dp)
+                                    .let { if (route is NotificationRoute.Planning) it.clickable(role = Role.Button) { nav.open(route) } else it },
+                                    verticalAlignment = Alignment.Top) {
+                                    Icon(Icons.Filled.WarningAmber, item.severityLabel, tint = if (item.isUrgent) tones.danger else tones.warning, modifier = Modifier.size(22.dp))
+                                    Column(Modifier.weight(1f).padding(start = 10.dp)) {
+                                        Text(item.title, fontWeight = FontWeight.SemiBold)
+                                        Secondary(item.details)
+                                    }
+                                }
+                            }
+                            if (w.items.size > 5) Secondary("${w.items.size - 5} weitere in der Weboberfläche", Modifier.padding(16.dp))
+                        }
+                    }
+                }
                 if (m.canApprove) {
                     item(key = "approvals") {
                         SectionCard {

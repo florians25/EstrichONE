@@ -469,3 +469,54 @@ extension AuthorizedClient {
         try await post("hr/absence-requests/\(id.key)/cancel")
     }
 }
+
+// MARK: - Warnungen bei Abwesenheiten
+
+/// Von einer Abwesenheit betroffener Einsatz (z. B. „Do 19.11.: Halle Süd – Estrich · unterbesetzt (1 von mindestens 2)“).
+public struct AffectedAssignment: Codable, Equatable, Sendable {
+    public let day: String
+    public let text: String
+    public let understaffed: Bool
+}
+
+/// Warnung für Personalverwaltung bzw. Disposition. Der Server liefert gesundheitsbezogene Arten nur an die Personalverwaltung;
+/// die Disposition sieht nur „abwesend“ mit den betroffenen Einsätzen.
+public struct AbsenceWarning: Codable, Equatable, Identifiable, Sendable {
+    public let key: String
+    public let kind: String
+    public let severity: String
+    public let title: String
+    public let text: String
+    public let link: String?
+    public let assignments: [AffectedAssignment]
+
+    public var id: String { key }
+    public var isUrgent: Bool { severity == "error" }
+
+    public var severityLabel: String {
+        switch severity {
+        case "error": "Dringend"
+        case "warning": "Warnung"
+        default: "Hinweis"
+        }
+    }
+
+    /// Text mit den betroffenen Einsätzen (je Zeile einer).
+    public var details: String { ([text] + assignments.map { "• \($0.text)" }).joined(separator: "\n") }
+}
+
+public struct AbsenceWarningList: Codable, Equatable, Sendable {
+    public let enabled: Bool
+    public let healthDetails: Bool
+    public let items: [AbsenceWarning]
+
+    /// Überschrift des Abschnitts in der App.
+    public var heading: String { healthDetails ? "Warnungen Personal" : "Abwesenheit betrifft Einsätze" }
+}
+
+extension AuthorizedClient {
+    /// Warnungen (nur Personalverwaltung und Disposition; sonst 403).
+    public func absenceWarnings() async throws(APIError) -> AbsenceWarningList {
+        try await get("hr/absence-warnings")
+    }
+}

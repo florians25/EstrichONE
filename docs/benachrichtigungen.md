@@ -23,6 +23,8 @@ die Pushnachricht lässt sich abschalten.
 | `planning.released` | Plan freigegeben (gebündelt: eine Nachricht je Person und Freigabe) | alle eingeplanten Mitarbeiter | `planning` |
 | `planning.changed` | Planänderung für mich nach Freigabe – nur Personen, deren Einsätze neu sind oder sich geändert haben | betroffene Mitarbeiter | `planning` (dringend) |
 | `absence.decided` | Urlaubsantrag genehmigt oder abgelehnt (ohne Kommentar) | antragstellende Person | `absence` |
+| `absence.planning_impact` | Abwesenheit betrifft geplante Einsätze (sofort beim Erfassen einer Krankmeldung; sonst einmal, wenn der erste betroffene Einsatz heute/morgen ist) – nur „abwesend“, nie der Grund | Recht `planning.manage`, Personalverwaltung, optional Kolonnenführer (Einstellung) | `absence` |
+| `absence.warning` | Neue Abwesenheitsmeldung bzw. „Personalhinweis“ (AU-Nachweis, Entgeltfortzahlung, BEM, Urlaubsüberschneidung) – ohne Gesundheitsdaten, einmal je Warnung | Recht `hr.manage` (Einstellung) | `absence` |
 | `ticket.updated` | Antwort/Statusänderung an einem Helpdesk-Ticket | Melder bzw. zuständige Person | `ticket` |
 | `chat.message` | Neue Chatnachricht (siehe docs/chat.md; je Nachricht, im Postfach nur der neueste je Unterhaltung; APNs `thread-id` je Unterhaltung, aps.category `chat` mit Antwort-Aktion) | Mitglieder (außer stumm geschaltet; @Erwähnte immer) | `chat` |
 | `office.message` | Nachricht aus dem Büro (**Pflicht**) | ausgewählte Personen, Rollen, Kolonnen oder alle | `message` |

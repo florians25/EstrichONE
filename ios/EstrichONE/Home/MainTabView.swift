@@ -152,7 +152,7 @@ enum ShotRoute {
         switch prefix {
         case "baustellen", "bauakte", "bereich", "neu", "erstbegehung", "abnahme", "foto", "kamera", "raum", "tagebuch", "mangel", "basisdaten", "protokoll", "kontakt": return .bauakten
         case "kunden", "kundenkarte": return .customers
-        case "mehr", "sicherheit", "sync", "meldung", "aufgaben", "woche", "abwesenheit", "disposition", "dispo", "postfach", "chat": return .more
+        case "mehr", "sicherheit", "sync", "meldung", "aufgaben", "woche", "abwesenheit", "disposition", "dispo", "postfach", "chat", "tankbelege", "tankbeleg": return .more
         case "erfassen": return .capture
         default: return .today
         }

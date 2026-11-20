@@ -21,6 +21,7 @@ function teamsNoticeVisible(text: string | null | undefined): boolean {
 import type { BackupStatusResponse, BauaktePage, PlanningRange, TicketSummary, WorkItemDto } from "../util/models";
 import { CATEGORY_ICONS, inbox, relativeTime } from "../util/notifications";
 import { notices } from "../util/notices";
+import { type AbsenceWarningList, warningKpi } from "../util/absenceWarnings";
 
 interface HrReminder { kind: string; employeeId: string; employeeName: string; date: string; text: string; severity: string }
 
@@ -258,6 +259,12 @@ export default class Start extends BaseController {
 			this.has("absence.approve") ? get<{ pendingApprovals: number; remindersDue: number }>("hr/summary").then((h) =>
 				addKpi({ title: "Urlaubsanträge offen", value: String(h.pendingApprovals), icon: "sap-icon://general-leave-request", to: "/personal/urlaub?reiter=antraege",
 					infoState: h.pendingApprovals ? "Warning" : "None" })) : Promise.resolve(),
+			// Warnungen zu Abwesenheiten: Personal (alle Hinweise) bzw. Disposition (nur betroffene Einsätze, ohne Grund).
+			(this.has("hr.manage") || this.has("planning.manage")) && session.moduleOn("absence")
+				? get<AbsenceWarningList>("hr/absence-warnings").then((w) => {
+					const kpi = warningKpi(w, w.healthDetails);
+					if (kpi) addKpi({ title: w.healthDetails ? "Warnungen Abwesenheit" : "Abwesenheit betrifft Einsätze", icon: "sap-icon://alert", ...kpi });
+				}).catch(() => undefined) : Promise.resolve(),
 			this.has("backup.manage") ? get<BackupStatusResponse>("backup/status").then((b) => m.setProperty("/backup", b.lastSuccess
 				? { text: b.healthy ? "Aktuell" : "Veraltet", state: b.healthy ? "Success" : "Warning", detail: `Letzte erfolgreiche Sicherung: ${dateTime(b.lastSuccess.at)}` }
 				: { text: "Bisher wurde keine Sicherung abgeschlossen.", state: "Error", detail: b.summary })) : Promise.resolve(),

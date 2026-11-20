@@ -99,6 +99,7 @@ Wichtige Rechte im Überblick:
 | Geräte sehen / verwalten / sperren | Benutzer & Geräte → Geräte |
 | Einstellungen verwalten, Backups verwalten, Protokoll lesen | System |
 | Chat nutzen / Chat verwalten | Chat |
+| Eigene Tankbelege erfassen / alle prüfen / exportieren | Tankbelege (Kapitel 10) |
 
 ## Stammdaten
 
@@ -197,7 +198,7 @@ Speicher, Module und Pushnachrichten haben zusätzlich eine eigene Karte auf der
 |---|---|
 | **Firma** | Firmendaten (Briefkopf) und Firmenlogo |
 | **Bauakten** | Hinweis „Erstbegehung fehlt“, vorgeschlagene Vorlage, Status-Automatik („Geplant“ → „In Ausführung“ am ersten Einsatztag oder bei erster Aktivität vor Ort, nach Abnahme abschließen), Gültigkeit des Freigabelinks für Kunden |
-| **Nummernkreise** | Nummern aller Datensätze in einer Tabelle (Datensatz, Muster, nächste Nummer, Bereich, Vorschau, verbleibend mit Warnung): Bauakten `{JJJJ}-{NNN}`, Kunden `60{NNNN}`, Lieferanten `70{NNNN}`, Personal `10{NNN}`, Maschinen und Fahrzeuge `20{NNN}`, Kolonnen `K{NN}`, Material `50{NNNN}`, Bestellungen `B-{JJJJ}-{NNNN}`, Anfragen `A-{JJJJ}-{NNNN}`, Aufgaben `AU-{JJJJ}-{NNNN}`, Mängel `M-{JJJJ}-{NNNN}`, Helpdesk-Tickets `T-{JJJJ}-{NNNN}`, Fehler und Wünsche `F-{JJJJ}-{NNNN}`. Muster mit Jahr zählen jedes Jahr neu. Die Nummer vergibt der Server beim Anlegen (Web, App, Import); vergebene Nummern werden übersprungen, vorhandene nie geändert. Von Hand lassen sich Nummern nicht eingeben oder ändern – auch nicht von Administratoren; Nummernfelder in den Formularen sind schreibgeschützt („wird automatisch vergeben“). Nur der **Kunden-Import** übernimmt vorhandene Kundennummern aus der Datei. Änderungen stehen im Protokoll. |
+| **Nummernkreise** | Nummern aller Datensätze in einer Tabelle (Datensatz, Muster, nächste Nummer, Bereich, Vorschau, verbleibend mit Warnung): Bauakten `{JJJJ}-{NNN}`, Kunden `60{NNNN}`, Lieferanten `70{NNNN}`, Personal `10{NNN}`, Maschinen und Fahrzeuge `20{NNN}`, Kolonnen `K{NN}`, Material `50{NNNN}`, Bestellungen `B-{JJJJ}-{NNNN}`, Anfragen `A-{JJJJ}-{NNNN}`, Aufgaben `AU-{JJJJ}-{NNNN}`, Mängel `M-{JJJJ}-{NNNN}`, Helpdesk-Tickets `T-{JJJJ}-{NNNN}`, Fehler und Wünsche `F-{JJJJ}-{NNNN}`, Tankbelege `TB-{JJJJ}-{NNNN}`. Muster mit Jahr zählen jedes Jahr neu. Die Nummer vergibt der Server beim Anlegen (Web, App, Import); vergebene Nummern werden übersprungen, vorhandene nie geändert. Von Hand lassen sich Nummern nicht eingeben oder ändern – auch nicht von Administratoren; Nummernfelder in den Formularen sind schreibgeschützt („wird automatisch vergeben“). Nur der **Kunden-Import** übernimmt vorhandene Kundennummern aus der Datei. Änderungen stehen im Protokoll. |
 | **Dokumente und Freigaben** | Vorgeschlagene Frist und Rolle für Freigaben, Kommentar beim Freigeben verlangen, Verweis auf Ordner- und Bauakten-Vorlagen und Aufbewahrungsfristen |
 | **Anmeldung** | Sitzungen im Browser (Abmelden nach Leerlauf, Dauer von „Angemeldet bleiben“), Zwei-Faktor-Pflicht für Administratoren, wie lange Apps auf Smartphones und Tablets ohne Nutzung angemeldet bleiben |
 | **Benachrichtigungen** | Welche E-Mails verschickt werden, nach wie vielen Minuten ein Ausfall von Archivserver bzw. Backup-Ziel gemeldet wird, Web Push, Inhalt in Pushnachrichten, Apple Push (APNs) für die iOS-App |
@@ -268,7 +269,7 @@ Dokumentation, Kommunikation und Service). Die Schalter wirken **sofort** für a
   **Die Daten bleiben erhalten** und sind nach dem Einschalten wieder da. Administratoren können vorhandene Daten weiter lesen.
 - **Abhängigkeiten** stehen auf der Karte („Benötigt: …“, „Wird benötigt von: …“): *Urlaub und Abwesenheit* braucht
   *Personal*, *Bestellungen* braucht *Material und Lieferanten*, *Maschinen und Fahrzeuge* braucht *Disposition und
-  Kolonnenplanung*. Abhängige Module gehen beim Ausschalten mit aus; beim Einschalten kommen fehlende Voraussetzungen
+  Kolonnenplanung*, *Tankbelege* braucht *Maschinen und Fahrzeuge*. Abhängige Module gehen beim Ausschalten mit aus; beim Einschalten kommen fehlende Voraussetzungen
   nach Rückfrage mit.
 - **Immer aktiv** sind Bauakten, Kunden und Kontakte, Benutzer und Rechte, Einstellungen und Sicherung.
 - Jede Änderung steht im **Protokoll** („settings.modules_changed“).

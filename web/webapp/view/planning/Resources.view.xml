@@ -67,7 +67,7 @@
 										<Column width="8rem" minScreenWidth="60rem" demandPopin="true"><Text text="Wartung"/></Column>
 										<Column width="9rem" minScreenWidth="68rem" demandPopin="true"><Text text="Kolonne"/></Column>
 										<Column width="8rem"><Text text="Status"/></Column>
-										<Column width="8rem" hAlign="End"><Text text="Aktionen"/></Column>
+										<Column width="10rem" hAlign="End"><Text text="Aktionen"/></Column>
 									</columns>
 									<items>
 										<ColumnListItem>
@@ -84,6 +84,7 @@
 											<Text text="{view>crewName}"/>
 											<ObjectStatus text="{= ${view>isActive} ? 'Verfügbar' : 'Außer Betrieb' }" state="{= ${view>isActive} ? 'Success' : 'None' }" inverted="true"/>
 											<HBox class="eoActions">
+												<Button icon="sap-icon://receipt" tooltip="Tankbelege und Verbrauch" type="Transparent" press=".onFuel" visible="{= ${session>/permissions/fuel.manage} === true }"/>
 												<Button icon="sap-icon://attachment" text="{= ${view>docCount} > 0 ? String(${view>docCount}) : '' }" tooltip="{= 'Dokumente (' + ${view>docCount} + ')' }" type="Transparent" press=".onDocuments"/>
 												<Button icon="sap-icon://edit" tooltip="Bearbeiten" type="Transparent" press=".onEditResource" visible="{= ${session>/permissions/planning.manage} === true }"/>
 												<Button icon="{= ${view>isActive} ? 'sap-icon://status-inactive' : 'sap-icon://status-positive' }" tooltip="{= ${view>isActive} ? 'Außer Betrieb setzen' : 'Wieder verfügbar' }" type="Transparent" press=".onToggleResource" visible="{= ${session>/permissions/planning.manage} === true }"/>

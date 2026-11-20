@@ -22,6 +22,7 @@ export const routes: RouteDef[] = [
 	{ name: "bauakte", pattern: "/bauakten/:id", view: "bauakte.Fcl", permission: "bauakten.read", nav: "bauakten", title: "nav.bauakten" },
 	{ name: "bauakteItem", pattern: "/bauakten/:id/:section/:item", view: "bauakte.Fcl", permission: "bauakten.read", nav: "bauakten", title: "nav.bauakten" },
 	{ name: "documents", pattern: "/dokumente", view: "Documents", permission: "bauakten.read", nav: "documents", title: "nav.documents" },
+	{ name: "fuelReceipts", pattern: "/tankbelege", view: "office.FuelReceipts", permission: "fuel.record", nav: "fuelReceipts", title: "nav.fuelReceipts" },
 	{ name: "calls", pattern: "/anrufe", view: "office.Calls", permission: "contacts.read", nav: "calls", title: "nav.calls" },
 	{ name: "inquiries", pattern: "/anfragen", view: "office.Inquiries", permission: "contacts.read", nav: "inquiries", title: "nav.inquiries" },
 	{ name: "orders", pattern: "/bestellungen", view: "materials.Orders", permission: "materials.read", nav: "orders", title: "nav.orders" },
@@ -133,6 +134,7 @@ export const navigation: NavEntry[] = [
 		key: "groupOffice", children: [
 			{ key: "customers", path: "/kunden", icon: "sap-icon://customer", permission: "contacts.read" },
 			{ key: "calls", path: "/anrufe", icon: "sap-icon://call", permission: "contacts.read" },
+			{ key: "fuelReceipts", path: "/tankbelege", icon: "sap-icon://receipt", permission: "fuel.record" },
 			{ key: "messages", path: "/verwaltung/nachrichten", icon: "sap-icon://paper-plane", permission: "notifications.send" },
 		],
 	},

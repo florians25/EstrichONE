@@ -33,6 +33,9 @@ public static class Permissions
     public const string AbsenceApprove = "absence.approve";
     public const string MaterialsRead = "materials.read";
     public const string MaterialsManage = "materials.manage";
+    public const string FuelRecord = "fuel.record";
+    public const string FuelManage = "fuel.manage";
+    public const string FuelExport = "fuel.export";
     public const string UsersManage = "users.manage";
     public const string RolesManage = "roles.manage";
     public const string DevicesRead = "devices.read";
@@ -81,6 +84,9 @@ public static class Permissions
         new(AbsenceApprove, "Personal", "Urlaubsanträge genehmigen oder ablehnen und für andere beantragen"),
         new(MaterialsRead, "Material", "Material, Lieferanten und Bestellungen sehen"),
         new(MaterialsManage, "Material", "Materialstamm pflegen und Material bestellen"),
+        new(FuelRecord, "Tankbelege", "Eigene Tankbelege erfassen und sehen (Apps und Web; für das Belegfoto zusätzlich „Fotos, Videos und Dokumente hochladen“)"),
+        new(FuelManage, "Tankbelege", "Alle Tankbelege sehen, prüfen, freigeben, ablehnen, als erstattet bzw. gebucht markieren; Auswertung je Fahrzeug"),
+        new(FuelExport, "Tankbelege", "Tankbelege als CSV für die Buchhaltung exportieren"),
         new(UsersManage, "Verwaltung", "Benutzer verwalten"),
         new(RolesManage, "Verwaltung", "Rollen und Rechte verwalten"),
         new(DevicesRead, "IT Center", "Geräte sehen"),

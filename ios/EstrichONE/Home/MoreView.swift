@@ -4,7 +4,7 @@ import SwiftUI
 /// Reiter „Mehr“: Person und Abgleich oben, dann Planung, Hilfe, Gerät und Server, Sperren und Abmelden (07, Abschnitt 2).
 struct MoreView: View {
     enum Route: String, Identifiable, Hashable {
-        case sync, tasks, dispatch, week, absences, tickets, inbox, chat, security, device
+        case sync, tasks, dispatch, week, absences, tickets, inbox, chat, security, device, fuel
         var id: String { rawValue }
     }
 
@@ -17,6 +17,8 @@ struct MoreView: View {
     @State private var unreadTickets = 0
     @State private var push = PushCenter.shared
     @State private var crewChats: [TeamsCrewChat] = []
+    /// Recht „Eigene Tankbelege erfassen“ (zuletzt bekannter Stand).
+    @State private var canRecordFuel = false
 
     /// Module der Suite (zuletzt bekannter Stand; ohne Angabe alles an).
     private var modules: AppModules { model.active?.sync?.modules ?? .allOn }
@@ -77,11 +79,15 @@ struct MoreView: View {
 
                 // Systemeinstellungen › Module: Einträge abgeschalteter Module erscheinen nicht. Meine Aufgaben,
                 // Wer fährt wohin und Meine Woche stehen auf „Heute“ und hier nicht noch einmal.
-                if modules.anyOn(AppModules.absence, AppModules.helpdesk) {
+                if modules.anyOn(AppModules.absence, AppModules.helpdesk) || (modules.isOn(AppModules.fuel) && canRecordFuel) {
                     Section("Service") {
                         if modules.isOn(AppModules.absence) {
                             Button { route = .absences } label: { row("Urlaub und Abwesenheit", symbol: "sun.max") }
                                 .accessibilityIdentifier("absencesRow")
+                        }
+                        if modules.isOn(AppModules.fuel), canRecordFuel {
+                            Button { route = .fuel } label: { row("Tankbelege", symbol: "fuelpump") }
+                                .accessibilityIdentifier("fuelReceiptsRow")
                         }
                         if modules.isOn(AppModules.helpdesk) {
                             Button { route = .tickets } label: {
@@ -144,6 +150,7 @@ struct MoreView: View {
                 case .chat: ChatListView()
                 case .security: LockSettingsView()
                 case .device: DeviceAndAppView()
+                case .fuel: FuelReceiptsView()
                 }
             }
             .navigationDestination(for: HomeRoute.self) { route in
@@ -170,6 +177,9 @@ struct MoreView: View {
                 ReportProblemView { reporting = false }
             }
             .task { applyShotScene() }
+            .task(id: model.active?.sync?.revision ?? 0) {
+                if let store = model.active?.sync?.store { canRecordFuel = await MyPermissions(store: store).cached().contains("fuel.record") }
+            }
             .task(id: model.active?.sync?.teams?.available == true) {
                 crewChats = model.active?.sync?.teams?.available == true ? await model.active?.client.myTeamsCrewChats() ?? [] : []
             }
@@ -218,6 +228,7 @@ struct MoreView: View {
         case let scene? where scene.hasPrefix("postfach"): route = .inbox
         case "chat", "chat-verlauf", "chat-gruppe", "chat-anhang", "chat-diktat": route = .chat
         case "disposition": route = .dispatch
+        case "tankbelege", "tankbeleg-neu": route = .fuel
         case "aufgaben": route = .tasks
         case "woche": route = .week
         case "abwesenheit", "abwesenheit-antrag", "abwesenheit-genehmigung", "abwesenheit-aenderung": route = .absences

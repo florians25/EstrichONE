@@ -35,6 +35,7 @@ data class AppModules(val states: Map<String, Boolean> = emptyMap()) {
         const val DOSSIERS = "dossiers"
         const val HELPDESK = "helpdesk"
         const val FEEDBACK = "feedback"
+        const val FUEL = "fuel"
 
         val ALL_ON = AppModules()
 

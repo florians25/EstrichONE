@@ -48,6 +48,9 @@ public sealed class Resource : IVersionedEntity
     /// <summary>Feste Zuordnung zu einer Kolonne (wird in Planung und „Wer fährt wohin“ vorgeschlagen).</summary>
     public Guid? CrewId { get; private set; }
 
+    /// <summary>Tankgröße in Litern (optional; Tankbelege warnen, wenn mehr getankt wurde).</summary>
+    public decimal? TankCapacityLiters { get; private set; }
+
     public long Version { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
@@ -83,6 +86,13 @@ public sealed class Resource : IVersionedEntity
         DocumentFileIds = documentFileIds.Distinct().Take(50).ToList();
         CrewId = crewId;
     }
+
+    public void SetTankCapacity(decimal? liters) => TankCapacityLiters = liters switch
+    {
+        null => null,
+        <= 0 or > 2000 => throw new ArgumentException("Die Tankgröße muss zwischen 1 und 2000 Litern liegen.", nameof(liters)),
+        _ => Math.Round(liters.Value, 1),
+    };
 
     public void SetInventoryNumber(string? number) => InventoryNumber = string.IsNullOrWhiteSpace(number) ? InventoryNumber : number.Trim();
 }
@@ -198,6 +208,9 @@ public sealed class Absence
     /// <summary>Aus Betriebsferien bzw. Brückentag entstanden (wird mit diesen geändert oder gelöscht).</summary>
     public Guid? ClosureId { get; private set; }
 
+    /// <summary>Krankmeldung: elektronische AU (eAU) bei der Krankenkasse abgerufen am (ersetzt die Papierbescheinigung).</summary>
+    public DateOnly? CertificateRetrievedOn { get; private set; }
+
     private Absence()
     {
     }
@@ -234,6 +247,16 @@ public sealed class Absence
     }
 
     public bool Covers(DateOnly day) => From <= day && day <= To;
+
+    /// <summary>eAU als abgerufen markieren (leer = nicht abgerufen); nur bei Krankmeldungen.</summary>
+    public Absence WithRetrievedCertificate(DateOnly? retrievedOn)
+    {
+        CertificateRetrievedOn = Kind == AbsenceKind.Sick ? retrievedOn : null;
+        return this;
+    }
+
+    /// <summary>Nachweis vorhanden: hochgeladene AU-Bescheinigung oder abgerufene eAU.</summary>
+    public bool HasCertificate => CertificateFileId is not null || CertificateRetrievedOn is not null;
 }
 
 /// <summary>
@@ -433,6 +456,7 @@ internal sealed class ResourceConfiguration : IEntityTypeConfiguration<Resource>
         builder.Property(r => r.Model).HasMaxLength(100);
         builder.Property(r => r.LicenseClass).HasMaxLength(20);
         builder.Property(r => r.DocumentFileIds).HasColumnType("uuid[]");
+        builder.Property(r => r.TankCapacityLiters).HasPrecision(7, 1);
         builder.HasOne<Crew>().WithMany().HasForeignKey(r => r.CrewId).OnDelete(DeleteBehavior.SetNull);
     }
 }
@@ -467,6 +491,7 @@ internal sealed class AbsenceConfiguration : IEntityTypeConfiguration<Absence>
         builder.HasOne<User>().WithMany().HasForeignKey(a => a.UserId).OnDelete(DeleteBehavior.Cascade);
         builder.HasIndex(a => new { a.UserId, a.From, a.To });
         builder.HasIndex(a => a.ClosureId);
+        builder.Ignore(a => a.HasCertificate);
     }
 }
 

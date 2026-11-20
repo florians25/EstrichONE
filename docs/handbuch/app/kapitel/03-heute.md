@@ -3,17 +3,19 @@
 Die Heute-Seite ist der Startpunkt für jeden Arbeitstag. Sie zeigt, wo Sie heute eingeteilt sind, was zu tun ist und
 wer wohin fährt – und bietet die wichtigsten Handgriffe für die Baustelle mit einem Tipp.
 
-![Heute](bilder/iphone-heute.jpg "Oben: Datum, Hinweise und Mein Einsatz")
+![Heute](bilder/iphone-heute.jpg "Oben: Datum mit Abgleich, der laufende Einsatz mit Kennzahlen und großen Handgriffen")
 ![Heute weiter unten](bilder/iphone-heute-unten.jpg "Weiter unten: Überblick, Morgen und Zuletzt geöffnet")
 
 ## Aufbau der Seite
 
 Von oben nach unten:
 
-1. **Datum** und – nur wenn es etwas zu sagen gibt – Hinweise (Wartung, offline, Übertragung prüfen, neue App-Version,
-   Meldungen des Betriebs). Oben rechts stehen nur die **Glocke** (Benachrichtigungen) und **Weitere Aktionen** (**…**
-   bzw. **⋮**) mit **Abgleich** (Stand der Synchronisation), **Chat** und **In Teams öffnen**.
-2. **Mein Einsatz** – bei mehreren Einsätzen **Meine Einsätze**.
+1. **Datum** und rechts daneben, klein, der **Abgleich** („Alles übertragen“, „Offline“, „Bitte prüfen“ – ein Tipp
+   öffnet die Synchronisation). Darunter – nur wenn es etwas zu sagen gibt – Hinweise (Wartung, offline, Übertragung
+   prüfen, neue App-Version, Meldungen des Betriebs). Oben rechts stehen die **Glocke** (Benachrichtigungen) und
+   **Weitere Aktionen** (**…** bzw. **⋮**) mit **Abgleich**, **Chat** und **In Teams öffnen**.
+2. **Alle Einsätze von heute**, nach Uhrzeit. Der Einsatz, der gerade läuft – sonst der nächste – ist aufgeklappt; die
+   übrigen stehen kompakt darunter.
 3. **Überblick** – drei Zeilen mit Zahl rechts: **Meine Aufgaben** (offen, davon Mängel), **Wer fährt wohin** (Kolonnen
    heute) und **Meine Woche** (Einsätze der nächsten 7 Tage). Ein Tipp öffnet die jeweilige Seite.
 4. **Morgen** (Android: **Diese Woche**) – Ihre nächsten Einsätze.
@@ -23,25 +25,40 @@ Von oben nach unten:
 Ziehen Sie die Seite nach unten, um sie sofort zu aktualisieren. Ist nichts eingeplant, steht dort „Heute ist nichts
 für Sie eingeplant.“
 
-## Mein Einsatz
+## Der Einsatz auf einen Blick
 
-Die Karte **Mein Einsatz** enthält alles, was Sie morgens brauchen:
+Die aufgeklappte Karte enthält alles, was Sie auf der Baustelle brauchen:
 
-| Angabe | Was Sie damit tun |
+| Angabe | Bedeutung |
 |---|---|
-| **Uhrzeit** und **Status** der Bauakte (z. B. „In Ausführung“) | Antippen öffnet die Bauakte. |
-| **Bauvorhaben** und Nummer | |
-| **Adresse** | **Route starten** öffnet Apple Karten mit der Baustelle als Ziel. |
-| **Vor Ort** – Ansprechpartner | **Anrufen** wählt die Nummer direkt. |
-| **Tätigkeit** (z. B. „Estrich einbringen OG“) | |
-| **Kolonne** mit Besetzung, Fahrzeuge und Geräte, Hinweis aus der Planung | |
+| **Uhrzeit** mit Kennzeichnung | **Jetzt** (läuft, Karte blau umrandet), **in 25 Min.** / **in 2 Std.** oder **Vorbei** |
+| **Bauvorhaben**, Nummer und Status der Bauakte | Antippen öffnet die Bauakte. |
+| **Kennzahlen** als kleine Kapseln | offene **Mängel** (rot) und **Aufgaben** der Baustelle, **Belegreife** (letzte CM-Messung, sonst Räume: „5 von 11 Räumen eingebracht“), **Wetter** laut heutigem Bautagebuch |
+| **Adresse** mit Entfernung | „1,8 km entfernt (Luftlinie)“ – nur auf dem iPhone und nur, wenn die App Ihren Standort ohnehin verwenden darf |
+| **Vor Ort** – Ansprechpartner mit Telefonnummer | |
+| **Leistung** (z. B. „Estrich einbringen OG“), **Kolonne** mit Besetzung, **Fahrzeuge und Geräte** (z. B. Estrichpumpe), Hinweis aus der Planung | |
 
-Unter der Karte liegt die große Schaltfläche **Foto**; daneben öffnet **…** (**⋮**) **Bautagebuch-Eintrag**, **Mangel
-melden** und **Bauakte öffnen**. Alles bezieht sich immer auf die Bauakte dieses Einsatzes – ohne Suchen und ohne
-Auswahl. Die Bauakte öffnet auch ein Tipp auf den Kopf der Karte.
+Unten liegen vier große Schaltflächen – gut mit Handschuhen und mit einer Hand:
+
+| Schaltfläche | Was passiert |
+|---|---|
+| **Route** | Karten-App mit der Baustelle als Ziel |
+| **Anrufen** | wählt den Ansprechpartner vor Ort |
+| **Foto** | Kamera; das Foto landet sofort in der richtigen Bauakte |
+| **Tagebuch** | neuer Bautagebuch-Eintrag für diese Bauakte |
+
+**Mangel melden** und **Bauakte öffnen** stehen unter **…** (**⋮**) oben rechts in der Karte. Auf dem iPhone geht es auch
+ohne Zielen: **langes Drücken** auf die Karte zeigt alle Handgriffe, **Wischen nach rechts** bietet **Foto** und
+**Mangel**, **Wischen nach links** **Route** und **Anrufen**.
+
+Weitere Einsätze des Tages stehen kompakt darunter – mit Uhrzeit, Baustelle, Leistung, Adresse, Kennzahlen und den
+runden Knöpfen **Route** und **Anrufen**. Ein Tipp auf die Karte klappt sie auf.
+
+![Zweiter Einsatz aufgeklappt](bilder/iphone-heute-zweiter.jpg "Ein Tipp auf einen weiteren Einsatz klappt ihn auf"){rechts}
 
 > **Tipp:** Ein Foto, das Sie hier aufnehmen, ist sofort in der richtigen Bauakte. Fehlt das Netz, steht unten
-> „Foto gespeichert – wird übertragen, sobald Netz da ist.“
+> „Foto gespeichert – wird übertragen, sobald Netz da ist.“ Alle Angaben auf der Karte stammen aus dem Stand auf dem
+> Gerät und sind auch offline lesbar.
 
 ## Meine Aufgaben
 

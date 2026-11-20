@@ -15,6 +15,8 @@ struct AbsenceOverviewView: View {
     @Environment(\.shotScene) private var shotScene
     @State private var mine: MyVacation?
     @State private var pending: [AbsenceRequestItem] = []
+    /// Warnungen (nur Personalverwaltung und Disposition; für alle anderen leer).
+    @State private var warnings: AbsenceWarningList?
     @State private var message: String?
     @State private var showsCached = false
     @State private var requesting = false
@@ -104,6 +106,26 @@ struct AbsenceOverviewView: View {
                     Section {
                         Label("Für Ihr Konto ist noch kein Personalstamm angelegt. Das Büro trägt den Urlaubsanspruch ein.", systemImage: "info.circle")
                             .foregroundStyle(Theme.textSecondary)
+                    }
+                }
+                if let warnings, warnings.enabled, !warnings.items.isEmpty {
+                    Section(warnings.heading) {
+                        ForEach(warnings.items.prefix(5)) { warning in
+                            Label {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(warning.title).font(Typo.subheadStrong)
+                                    Text(warning.details).font(Typo.meta).foregroundStyle(Theme.textSecondary)
+                                }
+                            } icon: {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                    .foregroundStyle(warning.isUrgent ? Theme.danger : Theme.warning)
+                                    .accessibilityLabel(warning.severityLabel)
+                            }
+                            .accessibilityElement(children: .combine)
+                        }
+                        if warnings.items.count > 5 {
+                            Text("\(warnings.items.count - 5) weitere in der Weboberfläche").font(Typo.meta).foregroundStyle(Theme.textSecondary)
+                        }
                     }
                 }
                 if mine.canApprove {
@@ -235,6 +257,7 @@ struct AbsenceOverviewView: View {
             mine = loaded
             showsCached = false
             pending = loaded.canApprove ? ((try? await client.pendingAbsenceRequests()) ?? []) : []
+            warnings = try? await client.absenceWarnings()
             message = nil
             if let store, let data = try? JSONCoding.encoder.encode(loaded) {
                 try? await store.setMeta(Self.cacheKey, String(decoding: data, as: UTF8.self))

@@ -160,6 +160,25 @@ class AbsenceTests {
     }
 
     @Test
+    @DisplayName("Warnungen: Disposition sieht nur „abwesend“ mit betroffenen Einsätzen")
+    fun warnings() {
+        val list = EstrichOneApi.json.decodeFromString(AbsenceWarnings.serializer(), """
+            {"enabled":true,"healthDetails":false,"acknowledged":0,"items":[{"key":"plan:a1:abc","kind":"planning_impact","severity":"error",
+             "userId":"u1","userName":"Anna Kraus","employeeId":null,"date":"2026-11-19","title":"Anna Kraus abwesend 18.11. – 20.11.2026",
+             "text":"1 geplanter Einsatz betroffen, unterbesetzt: Kolonne Süd.","absenceId":"a1","caseId":null,"link":"/planung?ansicht=tag&datum=2026-11-19&tag=2026-11-19",
+             "assignments":[{"id":"x","day":"2026-11-19","bauakteId":"b","bauakteTitle":"Halle Süd","activity":"Estrich","crewId":"c","crewName":"Kolonne Süd",
+               "present":1,"minimumStaff":2,"understaffed":true,"text":"Do 19.11.: Halle Süd – Estrich · unterbesetzt (1 von mindestens 2)"}]}]}
+        """.trimIndent())
+        val w = list.items.single()
+        assertTrue(w.isUrgent)
+        assertEquals("Dringend", w.severityLabel)
+        assertEquals("Abwesenheit betrifft Einsätze", list.heading)
+        assertEquals("1 geplanter Einsatz betroffen, unterbesetzt: Kolonne Süd.\n• Do 19.11.: Halle Süd – Estrich · unterbesetzt (1 von mindestens 2)", w.details)
+        assertEquals(NotificationRoute.Planning("2026-11-19"), NotificationRoute.from(w.link, "absence", "a1"))
+        assertEquals("Warnungen Personal", list.copy(healthDetails = true).heading)
+    }
+
+    @Test
     @DisplayName("Feldnamen stimmen mit dem API-Vertrag überein")
     fun contract() {
         var dir: File? = File("").absoluteFile
@@ -173,6 +192,8 @@ class AbsenceTests {
             "AbsenceRequestView" to AbsenceRequestItem.serializer().descriptor, "AbsenceTypeView" to AbsenceType.serializer().descriptor,
             "MyAbsence" to MyAbsence.serializer().descriptor, "AbsencePreview" to AbsencePreview.serializer().descriptor,
             "SaveAbsenceRequestRequest" to AbsenceDraft.serializer().descriptor, "DecideAbsenceRequest" to AbsenceDecision.serializer().descriptor,
+            "AbsenceWarningList" to AbsenceWarnings.serializer().descriptor, "AbsenceWarning" to AbsenceWarningItem.serializer().descriptor,
+            "AffectedAssignment" to AffectedAssignmentItem.serializer().descriptor,
         )
         for ((schema, descriptor) in checks) {
             val known = props(schema)
