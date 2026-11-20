@@ -1,16 +1,16 @@
+import EstrichCore
 import Foundation
 import ImageIO
 import UniformTypeIdentifiers
 
-/// Fotos speicherschonend, aber scharf ablegen (passend zur Ablage auf dem Server): lange Kante höchstens 4096 px,
-/// JPEG mit Qualität 0,8, Ausrichtung angewendet, Aufnahmedaten (EXIF, GPS, TIFF, IPTC) bleiben erhalten.
-/// Kamerafotos der App (JPEG, 12 MP) liegen schon darunter und werden unverändert übernommen – kein zweites Komprimieren.
-/// HEIC aus der Mediathek wird zu JPEG (für Web, Berichte und PDF überall lesbar).
+/// Fotos speicherschonend, aber scharf ablegen (`MediaLimits`, docs/speicher.md): lange Kante höchstens 3000 px,
+/// JPEG mit Qualität 0,78, Ausrichtung angewendet, Aufnahmedaten (EXIF mit Aufnahmezeit, GPS, TIFF, IPTC) bleiben
+/// erhalten. Kamerafotos (12 MP, rund 3–4 MB) werden so zu rund 1–1,5 MB – noch vor dem Speichern auf dem Gerät und dem
+/// Upload. Bereits kleine JPEGs bleiben unverändert (kein zweites Komprimieren). HEIC aus der Mediathek wird zu JPEG
+/// (Web, Berichte und PDF überall lesbar; der Server erzeugt aus HEIC nicht zuverlässig Vorschaustufen).
 enum PhotoCompressor {
-    static let maxPixelLength = 4096
-    static let quality = 0.8
-    /// JPEGs bis zu dieser Größe und Kantenlänge bleiben unverändert.
-    static let keepJPEGBelowBytes = 3_000_000
+    static var maxPixelLength: Int { MediaLimits.photoMaxEdge }
+    static var quality: Double { MediaLimits.photoQuality }
 
     static func prepare(_ data: Data) -> Data {
         guard let source = CGImageSourceCreateWithData(data as CFData, nil),
@@ -18,12 +18,12 @@ enum PhotoCompressor {
               let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any] else { return data }
         let longEdge = max(properties[kCGImagePropertyPixelWidth] as? Int ?? 0, properties[kCGImagePropertyPixelHeight] as? Int ?? 0)
         let isJPEG = type == UTType.jpeg.identifier
-        if isJPEG, longEdge > 0, longEdge <= maxPixelLength, data.count <= keepJPEGBelowBytes { return data }
+        guard MediaLimits.photoNeedsReencoding(isJPEG: isJPEG, longEdge: longEdge, bytes: data.count) else { return data }
 
         let options: [CFString: Any] = [
             kCGImageSourceCreateThumbnailFromImageAlways: true,
             kCGImageSourceCreateThumbnailWithTransform: true,
-            kCGImageSourceThumbnailMaxPixelSize: longEdge > 0 ? min(longEdge, maxPixelLength) : maxPixelLength,
+            kCGImageSourceThumbnailMaxPixelSize: MediaLimits.photoTargetEdge(longEdge: longEdge),
         ]
         guard let image = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else { return data }
         let output = NSMutableData()
@@ -31,8 +31,14 @@ enum PhotoCompressor {
             return data
         }
         var metadata: [CFString: Any] = [kCGImageDestinationLossyCompressionQuality: quality]
-        for key in [kCGImagePropertyExifDictionary, kCGImagePropertyGPSDictionary, kCGImagePropertyIPTCDictionary] {
+        for key in [kCGImagePropertyGPSDictionary, kCGImagePropertyIPTCDictionary] {
             if let value = properties[key] { metadata[key] = value }
+        }
+        // Aufnahmezeit, Kamera usw. bleiben; die Pixelmaße beschreiben das verkleinerte Bild.
+        if var exif = properties[kCGImagePropertyExifDictionary] as? [CFString: Any] {
+            exif[kCGImagePropertyExifPixelXDimension] = image.width
+            exif[kCGImagePropertyExifPixelYDimension] = image.height
+            metadata[kCGImagePropertyExifDictionary] = exif
         }
         // Die Drehung steckt jetzt in den Pixeln.
         var tiff = properties[kCGImagePropertyTIFFDictionary] as? [CFString: Any] ?? [:]

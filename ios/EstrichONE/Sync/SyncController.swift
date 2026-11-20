@@ -10,7 +10,10 @@ import UIKit
 final class SyncController {
     let store: LocalStore
     let files: FileVault
+    /// Kleine Vorschauen, verschlüsselt mit Größenlimit (Raster und Listen auch offline).
+    let thumbs: ThumbnailDiskCache
     private let engine: SyncEngine
+    private let storageRoot: URL
     private let client: AuthorizedClient
 
     private(set) var summary: SyncSummary?
@@ -58,8 +61,14 @@ final class SyncController {
         let directory = storage.userDirectory(account.user.id)
         store = try LocalStore.open(url: directory.appending(path: "data.sealed"), account: account)
         files = FileVault(directory: directory.appending(path: "files"), key: account.dataKey)
+        thumbs = ThumbnailDiskCache(directory: directory.appending(path: "thumbs"), key: account.dataKey)
+        storageRoot = storage.root
         engine = SyncEngine(store: store, transport: APISyncTransport(client: client), files: files)
         self.client = client
+        // Reste abgebrochener Aufnahmen und Vorschauen (älter als ein Tag) entfernen – gespeicherte Fotos liegen nie dort.
+        Task.detached(priority: .background) {
+            _ = TemporaryFiles.clean(FileManager.default.temporaryDirectory, olderThan: Date.now.addingTimeInterval(-86_400))
+        }
         let store = store
         Task { [weak self] in
             // Letzte Serververbindung aus der vorigen Sitzung: „Nur Ansicht“ auch nach einem Neustart ohne Netz.
@@ -448,5 +457,40 @@ private final class BackgroundTask {
         guard identifier != .invalid else { return }
         UIApplication.shared.endBackgroundTask(identifier)
         identifier = .invalid
+    }
+}
+
+// MARK: Speicher (Mehr › Gerät, Server und App)
+
+extension SyncController {
+    /// Ordner, die EstrichONE außerhalb der Daten belegt: temporäre Dateien und der Zwischenspeicher des Systems.
+    nonisolated static var scratchDirectories: [URL] { [FileManager.default.temporaryDirectory, URL.cachesDirectory] }
+
+    /// Belegt durch EstrichONE und wie viel davon noch nicht hochgeladen ist (Berechnung im Hintergrund).
+    func storageUsage() async -> StorageUsage {
+        let root = storageRoot, thumbs = thumbs, scratchDirectories = Self.scratchDirectories
+        let pending = (try? await store.pendingUploadBytes()) ?? 0
+        let uploaded = ((try? await store.uploadedCopies()) ?? []).reduce(Int64(0)) { $0 + $1.size }
+        return await Task.detached(priority: .utility) {
+            let scratch = scratchDirectories.reduce(Int64(0)) { $0 + DirectorySize.bytes(at: $1) }
+            let total = DirectorySize.bytes(at: root) + scratch
+            return StorageUsage(total: total, pendingUpload: pending, releasable: uploaded + thumbs.size + scratch)
+        }.value
+    }
+
+    /// „Cache leeren“: bereits hochgeladene Fotos und Videos, Vorschauen und temporäre Dateien entfernen. Noch nicht
+    /// hochgeladene Daten bleiben immer (sie liegen verschlüsselt in der Ablage und stehen nicht auf „hochgeladen“).
+    func clearCache(thumbnails: ThumbnailLoader?) async {
+        _ = try? await engine.releaseUploadedCopies()
+        if let thumbnails { await thumbnails.clear() } else { thumbs.clear() }
+        let scratchDirectories = Self.scratchDirectories
+        await Task.detached(priority: .utility) {
+            // Kurz vorher Angelegtes (z. B. ein Video, das gerade verkleinert wird) bleibt.
+            let cutoff = Date.now.addingTimeInterval(-60)
+            for directory in scratchDirectories { TemporaryFiles.clean(directory, olderThan: cutoff) }
+        }.value
+        URLCache.shared.removeAllCachedResponses()
+        DiagnosticsLog.shared.record("CACHE_CLEARED")
+        revision += 1
     }
 }

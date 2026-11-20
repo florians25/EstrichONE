@@ -24,8 +24,8 @@ import java.io.File
 import kotlin.coroutines.resume
 
 /**
- * Videos vor dem Speichern verkleinern (wie VideoCompressor auf iOS): höchstens 720p mit etwa 2 Mbit/s, HEVC, wo das
- * Gerät es kodieren kann, sonst H.264; Ton AAC; höchstens 2 Minuten. Rechnerisch rund 15 MB je Minute statt 100 MB
+ * Videos vor dem Speichern verkleinern (wie VideoCompressor auf iOS): höchstens 720p mit etwa 2 Mbit/s, H.264 (im Browser
+ * überall abspielbar – der Server wandelt Videos nicht um, HEVC spielen nicht alle Browser); Ton AAC; höchstens 2 Minuten. Rechnerisch rund 15 MB je Minute statt 100 MB
  * und mehr aus der Kamera-App.
  */
 object Videos {
@@ -39,12 +39,12 @@ object Videos {
         val ok = withContext(Dispatchers.Main) {
             suspendCancellableCoroutine { continuation ->
                 val transformer = Transformer.Builder(context)
-                    .setVideoMimeType(MimeTypes.VIDEO_H265)
+                    .setVideoMimeType(MimeTypes.VIDEO_H264)
                     .setAudioMimeType(MimeTypes.AUDIO_AAC)
                     .setEncoderFactory(
                         DefaultEncoderFactory.Builder(context)
                             .setRequestedVideoEncoderSettings(VideoEncoderSettings.Builder().setBitrate(VideoTarget.VIDEO_BITRATE).build())
-                            // Ohne HEVC-Kodierer: H.264 bzw. die nächstmögliche Einstellung des Geräts.
+                            // Ohne passenden Kodierer: die nächstmögliche Einstellung des Geräts.
                             .setEnableFallback(true)
                             .build(),
                     )

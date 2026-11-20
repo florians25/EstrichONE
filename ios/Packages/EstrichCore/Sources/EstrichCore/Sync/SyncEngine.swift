@@ -68,8 +68,9 @@ public enum SyncOutcome: Equatable, Sendable {
 /// neu angekündigte Dateien hochladen → Pull bis `hasMore = false`. Es läuft höchstens ein Lauf gleichzeitig.
 public actor SyncEngine {
     public static let chunkSize = 4 * 1024 * 1024
-    /// Hochgeladene Dateien bleiben 7 Tage lokal (Absicherung für eine Wiederherstellung des Servers).
-    public static let localRetention: TimeInterval = 7 * 24 * 3600
+    /// Hochgeladene Dateien bleiben höchstens 2 Tage und 150 MB lokal (Absicherung für eine Wiederherstellung des
+    /// Servers aus dem nächtlichen Backup); danach nur noch die Vorschau (docs/speicher.md, Abschnitt „Apps“).
+    public static let localRetention: TimeInterval = LocalCopyRetention.standard.maxAge
 
     private let store: LocalStore
     private let transport: SyncTransport
@@ -78,7 +79,11 @@ public actor SyncEngine {
     private var running: Task<SyncOutcome, Never>?
     private var preparedAfterLaunch = false
 
-    public init(store: LocalStore, transport: SyncTransport, files: FileVault, now: @escaping @Sendable () -> Date = Date.init) {
+    private let retention: LocalCopyRetention
+
+    public init(store: LocalStore, transport: SyncTransport, files: FileVault, retention: LocalCopyRetention = .standard,
+                now: @escaping @Sendable () -> Date = Date.init) {
+        self.retention = retention
         self.store = store
         self.transport = transport
         self.files = files
@@ -255,9 +260,22 @@ public actor SyncEngine {
     static let transientStatuses: Set<Int> = [408, 423, 425, 429]
 
     private func removeExpiredLocalCopies() async throws {
-        for fileId in try await store.uploadsCompleted(before: now().addingTimeInterval(-Self.localRetention)) {
+        for fileId in retention.expired(try await store.uploadedCopies(), now: now()) {
             files.remove(fileId)
             try await store.forgetUpload(fileId)
         }
+    }
+
+    /// „Cache leeren“: alle bereits hochgeladenen Kopien sofort entfernen; liefert die freigegebenen Bytes.
+    /// Noch nicht hochgeladene Dateien bleiben immer (sie stehen nicht im Zustand `done`).
+    @discardableResult
+    public func releaseUploadedCopies() async throws -> Int64 {
+        var freed: Int64 = 0
+        for copy in try await store.uploadedCopies() {
+            files.remove(copy.fileId)
+            try await store.forgetUpload(copy.fileId)
+            freed += copy.size
+        }
+        return freed
     }
 }

@@ -214,7 +214,7 @@ struct MoreView: View {
         switch shotScene {
         case "sync": route = .sync
         case "sicherheit": route = .security
-        case "mehr-zuruecksetzen": route = .device
+        case "mehr-zuruecksetzen", "mehr-speicher": route = .device
         case let scene? where scene.hasPrefix("postfach"): route = .inbox
         case "chat", "chat-verlauf", "chat-gruppe", "chat-anhang", "chat-diktat": route = .chat
         case "disposition": route = .dispatch
@@ -259,6 +259,9 @@ struct DeviceAndAppView: View {
     @State private var confirmReset = false
     @State private var confirmDeletion = false
     @State private var deletionRequested = false
+    @State private var usage: StorageUsage?
+    @State private var clearing = false
+    @State private var toast: String?
 
     var body: some View {
         List {
@@ -268,6 +271,10 @@ struct DeviceAndAppView: View {
                     LabeledContent("Nutzung", value: registration.kind == .pool ? "Poolgerät" : "Persönliches Gerät")
                     LabeledContent("Status", value: MoreView.describe(registration.status))
                 }
+            }
+
+            if let sync = model.active?.sync {
+                storageSection(sync)
             }
 
             if let server = model.server {
@@ -305,10 +312,69 @@ struct DeviceAndAppView: View {
             Text("Der Antrag liegt im Helpdesk. Zum sofortigen Entfernen Ihrer Daten von diesem Gerät: Abmelden.")
         }
         .resetAppConfirmation(isPresented: $confirmReset)
+        .toast($toast)
+        .task(id: model.active?.sync?.revision) {
+            usage = await model.active?.sync?.storageUsage()
+        }
         .task {
             // Screenshot-Modus: Rückfrage „App zurücksetzen“ zeigen.
             if shotScene == "mehr-zuruecksetzen" { confirmReset = true }
         }
+    }
+
+    /// Speicher: was die App belegt, was davon noch hochgeladen werden muss, und „Cache leeren“ (nie Unhochgeladenes).
+    private func storageSection(_ sync: SyncController) -> some View {
+        Section {
+            LabeledContent {
+                if let usage {
+                    Text(Self.megabytes(usage.total)).monospacedDigit()
+                } else {
+                    ProgressView()
+                }
+            } label: {
+                Text("Belegt durch EstrichONE")
+                if let usage {
+                    Text(usage.pendingUpload > 0 ? "davon \(Self.megabytes(usage.pendingUpload)) noch nicht hochgeladen" : "alles hochgeladen")
+                }
+            }
+            .accessibilityElement(children: .combine)
+            .accessibilityIdentifier("storageUsage")
+            Button {
+                Task { await clearCache(sync) }
+            } label: {
+                HStack {
+                    Text("Cache leeren")
+                    Spacer()
+                    if clearing { ProgressView() }
+                }
+            }
+            .disabled(clearing || usage == nil)
+            .accessibilityIdentifier("clearCacheButton")
+        } header: {
+            Text("Speicher")
+        } footer: {
+            Text("Gibt bereits übertragene Fotos und Videos, Vorschaubilder und temporäre Dateien frei\(releasableText). Noch nicht hochgeladene Daten bleiben immer erhalten; Übertragenes lädt die App bei Bedarf wieder vom Server.")
+        }
+    }
+
+    private var releasableText: String {
+        guard let usage, usage.releasable > 0 else { return "" }
+        return " (etwa \(Self.megabytes(usage.releasable)))"
+    }
+
+    private func clearCache(_ sync: SyncController) async {
+        clearing = true
+        let before = usage?.total ?? 0
+        await sync.clearCache(thumbnails: model.active?.thumbnails)
+        let after = await sync.storageUsage()
+        usage = after
+        clearing = false
+        let freed = max(0, before - after.total)
+        toast = freed > 0 ? "\(Self.megabytes(freed)) freigegeben" : "Cache geleert"
+    }
+
+    static func megabytes(_ bytes: Int64) -> String {
+        ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file)
     }
 
     /// Apple-Vorgabe 5.1.1(v): Löschung des Kontos aus der App heraus anstoßen. Konten legt der Betrieb an; der Antrag

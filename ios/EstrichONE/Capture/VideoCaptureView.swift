@@ -7,7 +7,7 @@ import UIKit
 import UniformTypeIdentifiers
 
 /// Videos für eine Bauakte: aufnehmen (höchstens 2 Minuten) oder aus der Mediathek wählen, beschriften, auf
-/// 720p mit etwa 2 Mbit/s (HEVC, sonst H.264) verkleinern und wie Fotos offline speichern; der Upload läuft über die Datei-Synchronisation.
+/// 720p mit etwa 2 Mbit/s (H.264, im Browser überall abspielbar) verkleinern und wie Fotos offline speichern; der Upload läuft über die Datei-Synchronisation.
 struct VideoCaptureView: View {
     let bauakte: Bauakte
     /// `true`, wenn ein Video gespeichert wurde.
@@ -174,18 +174,20 @@ struct PickedMovie: Transferable {
     }
 }
 
-/// Verkleinert Videos für die Übertragung: höchstens 720p, HEVC (Fallback H.264) mit etwa 2 Mbit/s, Ton AAC mono
-/// 64 kbit/s, MP4, höchstens 2 Minuten – rechnerisch rund 15 MB je Minute (vorher 1080p mit 6–10 Mbit/s, 45–75 MB).
+/// Verkleinert Videos für die Übertragung (`MediaLimits`): höchstens 720p, H.264 High mit etwa 2 Mbit/s, Ton AAC mono
+/// 64 kbit/s, MP4, höchstens 2 Minuten – rechnerisch rund 15 MB je Minute (Kamera: 1080p mit 6–10 Mbit/s, 45–75 MB).
+/// Bewusst H.264 statt HEVC: Der Server wandelt Videos nicht um, und HEVC spielen nicht alle Browser im Büro ab
+/// (Firefox, Chrome/Edge ohne passende Grafikkarte) – die Web-Anzeige darf nicht kaputtgehen.
 /// Gelingt das Umkodieren nicht, verkleinert der Systemexport auf 1280 × 720 (H.264).
 enum VideoCompressor {
-    static let maxDuration: Double = 120
+    static let maxDuration: Double = MediaLimits.videoMaxDuration
     /// Längere und kürzere Kante des Ergebnisses höchstens (720p, Hoch- wie Querformat).
-    static let maxLongEdge: CGFloat = 1280
-    static let maxShortEdge: CGFloat = 720
-    static let videoBitrate = 2_000_000
-    static let audioBitrate = 64_000
+    static let maxLongEdge = CGFloat(MediaLimits.videoMaxLongEdge)
+    static let maxShortEdge = CGFloat(MediaLimits.videoMaxShortEdge)
+    static let videoBitrate = MediaLimits.videoBitrate
+    static let audioBitrate = MediaLimits.audioBitrate
     /// Rechnerische Größe je Minute: (Video + Ton) × 60 s / 8 ≈ 15,5 MB (ohne den geringen Containeranteil).
-    static var bytesPerMinute: Int { (videoBitrate + audioBitrate) * 60 / 8 }
+    static var bytesPerMinute: Int { MediaLimits.videoBytesPerMinute }
 
     struct Result: Sendable, Equatable {
         let url: URL
@@ -235,15 +237,10 @@ enum VideoCompressor {
         writer.shouldOptimizeForNetworkUse = true
 
         let size = targetSize(for: natural)
-        func videoSettings(_ codec: AVVideoCodecType) -> [String: Any] {
-            var compression: [String: Any] = [AVVideoAverageBitRateKey: videoBitrate, AVVideoMaxKeyFrameIntervalKey: 60,
-                                              AVVideoExpectedSourceFrameRateKey: 30]
-            if codec == .h264 { compression[AVVideoProfileLevelKey] = AVVideoProfileLevelH264HighAutoLevel }
-            return [AVVideoCodecKey: codec, AVVideoWidthKey: Int(size.width), AVVideoHeightKey: Int(size.height),
-                    AVVideoScalingModeKey: AVVideoScalingModeResizeAspect, AVVideoCompressionPropertiesKey: compression]
-        }
-        let hevc = videoSettings(.hevc)
-        let settings = writer.canApply(outputSettings: hevc, forMediaType: .video) ? hevc : videoSettings(.h264)
+        let compression: [String: Any] = [AVVideoAverageBitRateKey: videoBitrate, AVVideoMaxKeyFrameIntervalKey: 60,
+                                          AVVideoExpectedSourceFrameRateKey: 30, AVVideoProfileLevelKey: AVVideoProfileLevelH264HighAutoLevel]
+        let settings: [String: Any] = [AVVideoCodecKey: AVVideoCodecType.h264, AVVideoWidthKey: Int(size.width), AVVideoHeightKey: Int(size.height),
+                                       AVVideoScalingModeKey: AVVideoScalingModeResizeAspect, AVVideoCompressionPropertiesKey: compression]
         guard writer.canApply(outputSettings: settings, forMediaType: .video) else { return false }
         let videoInput = AVAssetWriterInput(mediaType: .video, outputSettings: settings)
         videoInput.transform = transform

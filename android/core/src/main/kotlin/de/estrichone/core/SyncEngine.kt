@@ -269,7 +269,7 @@ class SyncEngine(
 
     companion object {
         const val CHUNK_SIZE = 4L * 1024 * 1024
-        /** Hochgeladene Dateien bleiben 7 Tage lokal (Absicherung für eine Wiederherstellung des Servers). */
-        const val LOCAL_RETENTION_MS = 7L * 24 * 3600 * 1000
+        /** Hochgeladene Dateien bleiben 2 Tage lokal (Absicherung für eine Wiederherstellung des Servers aus dem nächtlichen Backup, wie iOS). */
+        const val LOCAL_RETENTION_MS = 2L * 24 * 3600 * 1000
     }
 }

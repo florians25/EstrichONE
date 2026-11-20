@@ -27,6 +27,29 @@ Messung mit echten Kamerafotos (Server, Standardeinstellungen):
 Zum Vergleich: ImageMagick mit Qualität 82 ohne mozjpeg ergibt beim iPhone-6-Foto 1,19 MB. Ab etwa 38 dB PSNR ist
 ein Unterschied in der 100-%-Ansicht praktisch nicht sichtbar.
 
+## Apps (iPhone/iPad, Android)
+
+Die Apps verkleinern **vor dem Speichern auf dem Gerät** – das spart Platz auf dem Telefon und Datenvolumen auf der
+Baustelle (Werte in `MediaLimits`, `ios/Packages/EstrichCore`, bzw. `VideoTarget`/`Images` auf Android):
+
+| | iOS vorher | iOS jetzt | Android |
+|---|---|---|---|
+| Fotos | JPEG, lange Kante bis 4096 px; Kamera-JPEGs bis 3 MB unverändert (12 MP, typ. 3–4 MB) | JPEG, lange Kante **3000 px**, Qualität 0,78 (typ. **1–1,5 MB**); EXIF (Aufnahmezeit, GPS) bleibt | JPEG, 2560 px, Qualität 85 |
+| Videos | 720p, HEVC 2 Mbit/s | 720p, **H.264** High 2 Mbit/s, AAC 64 kbit/s, ≤ 2 min (≈ 15 MB/min) | wie iOS (H.264) |
+| hochgeladene Kopien | 7 Tage | **2 Tage, höchstens 150 MB** (älteste zuerst) | 2 Tage |
+| Vorschaubilder | nur im Arbeitsspeicher | zusätzlich verschlüsselt auf dem Datenträger, **40 MB mit LRU** | – |
+| temporäre Dateien | beim Schließen der Aufnahme | zusätzlich beim Start: alles älter als 1 Tag | Cache des Systems |
+
+- **Warum JPEG und H.264, nicht HEIC/HEVC:** Der Server wandelt HEIC nur, wenn libvips mit HEIF-Decoder gebaut ist, und
+  Videos gar nicht (kein ffmpeg im API-Image). HEVC spielen Firefox sowie Chrome/Edge ohne passende Grafikkarte nicht ab –
+  die Web-Vorschau ginge kaputt. Bei gleicher Bitrate bleibt die Dateigröße der Videos gleich; die Ersparnis kommt aus
+  Kantenlänge und Qualität der Fotos und der kürzeren Aufbewahrung.
+- Die App legt nie etwas zusätzlich in der Fotomediathek ab (nur auf ausdrücklichen Wunsch „In Fotos sichern“).
+- **Mehr → Gerät, Server und App → Speicher** zeigt „Belegt durch EstrichONE“ und „davon noch nicht hochgeladen“.
+  **Cache leeren** entfernt hochgeladene Kopien, Vorschauen und temporäre Dateien – nie Dateien, deren Upload noch
+  aussteht (Zustand ≠ `done` in der Upload-Warteschlange).
+- Der Server verdichtet danach wie oben beschrieben (Fotos unter 4096 px werden nur neu kodiert, wenn es ≥ 8 % spart).
+
 ## Dokumente
 - **PDFs** werden verlustfrei neu geschrieben: unkomprimierte Streams mit Flate gepackt, nur erreichbare Objekte
   gespeichert. Ergebnis zählt nur, wenn es mindestens 8 % kleiner ist und sich mit gleicher Seitenzahl öffnen lässt.

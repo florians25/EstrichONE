@@ -25,8 +25,8 @@ data class CameraShots(
 }
 
 /**
- * Videos für die Übertragung (wie VideoCompressor auf iOS): höchstens 720p, etwa 2 Mbit/s, HEVC mit Rückfall auf
- * H.264, höchstens 2 Minuten – rechnerisch rund 15 MB je Minute.
+ * Videos für die Übertragung (wie VideoCompressor auf iOS): höchstens 720p, etwa 2 Mbit/s, H.264 (Web-Anzeige überall),
+ * höchstens 2 Minuten – rechnerisch rund 15 MB je Minute.
  */
 object VideoTarget {
     const val MAX_LONG_EDGE = 1280

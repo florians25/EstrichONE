@@ -482,12 +482,26 @@ public actor LocalStore {
         }
     }
 
-    /// Hochgeladene Dateien, deren lokale Kopie nach der Aufbewahrungsfrist (7 Tage) entfernt werden darf.
+    /// Hochgeladene Dateien, deren Upload vor `date` abgeschlossen wurde.
     public func uploadsCompleted(before date: Date) throws -> [UUID] {
         try db.database.query("SELECT file_id, completed_at FROM upload WHERE state = 'done'").compactMap { row in
             guard let completed = row["completed_at"]?.string.flatMap(APIDate.parse), completed < date else { return nil }
             return row["file_id"]?.string.flatMap(UUID.init(uuidString:))
         }
+    }
+
+    /// Hochgeladene Dateien mit Größe und Zeitpunkt (für die Aufbewahrung der lokalen Kopien).
+    public func uploadedCopies() throws -> [UploadedCopy] {
+        try db.database.query("SELECT file_id, size, completed_at FROM upload WHERE state = 'done'").compactMap { row in
+            guard let id = row["file_id"]?.string.flatMap(UUID.init(uuidString:)) else { return nil }
+            return UploadedCopy(fileId: id, size: row["size"]?.int ?? 0,
+                                completedAt: row["completed_at"]?.string.flatMap(APIDate.parse) ?? .distantPast)
+        }
+    }
+
+    /// Bytes, die noch hochgeladen werden müssen (wartend, laufend oder fehlgeschlagen) – nie freigebbar.
+    public func pendingUploadBytes() throws -> Int64 {
+        try db.database.scalar("SELECT COALESCE(SUM(size), 0) FROM upload WHERE state <> 'done'").int ?? 0
     }
 
     public func forgetUpload(_ fileId: UUID) throws {

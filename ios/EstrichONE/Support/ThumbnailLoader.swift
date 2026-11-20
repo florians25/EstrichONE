@@ -5,10 +5,15 @@ import UIKit
 /// Vorschaubilder: eigene Fotos aus der verschlüsselten Ablage, alle anderen als `thumb` bzw. `display` vom Server
 /// (WebP). Erzeugt der Server die Vorschau gerade noch (`VARIANT_PENDING`), wird kurz gewartet und erneut gefragt;
 /// gibt es keine Vorschau (`VARIANT_NOT_AVAILABLE`, z. B. HEIC ohne Decoder), wird das Original geladen und auf dem
-/// Gerät verkleinert. Zwischengespeichert nur im Arbeitsspeicher, nie unverschlüsselt auf dem Datenträger.
+/// Gerät verkleinert. Zwischengespeichert im Arbeitsspeicher und – nur die kleinen Vorschauen – verschlüsselt auf dem
+/// Datenträger (`ThumbnailDiskCache`, 40 MB mit LRU): So bleiben Raster und Listen offline gefüllt, auch wenn das
+/// Original nach dem Upload vom Gerät entfernt wurde. Nie unverschlüsselt auf dem Datenträger.
 actor ThumbnailLoader {
     private let service: BauakteService
     private let client: AuthorizedClient
+    private let disk: ThumbnailDiskCache?
+    /// Nach so vielen neuen Vorschauen wird der Datenträger-Zwischenspeicher auf sein Limit gekürzt.
+    private var storesSinceTrim = 0
     /// Threadsicher: Zugriff auch ohne Umweg über den Actor (sofortige Anzeige beim Scrollen).
     private let cache = ImageCache()
     /// Laufende Ladevorgänge: dasselbe Bild in Raster und Leiste wird nur einmal geladen.
@@ -16,9 +21,17 @@ actor ThumbnailLoader {
     /// Originale nur bis zu dieser Größe als Ersatz für fehlende Vorschauen laden.
     private let maxOriginalBytes: Int64 = 25 * 1024 * 1024
 
-    init(service: BauakteService, client: AuthorizedClient) {
+    init(service: BauakteService, client: AuthorizedClient, disk: ThumbnailDiskCache? = nil) {
         self.service = service
         self.client = client
+        self.disk = disk
+        if let disk { Task.detached(priority: .background) { _ = disk.trim() } }
+    }
+
+    /// „Cache leeren“: Arbeitsspeicher und Datenträger.
+    func clear() {
+        cache.removeAll()
+        _ = disk?.clear()
     }
 
     /// Bereits geladenes Vorschaubild ohne Warten (oder `nil`).
@@ -39,14 +52,36 @@ actor ThumbnailLoader {
     }
 
     private func loadThumbnail(for file: FileItem, size: CGFloat) async -> UIImage? {
+        let name = "\(file.id.uuidString.lowercased())-\(Int(size))"
+        let persists = size <= 200
+        if persists, let disk {
+            // Entschlüsseln außerhalb des Actors, damit mehrere Vorschauen parallel entstehen.
+            if let image = await Task.detached(priority: .userInitiated, operation: { disk.read(name).flatMap { UIImage(data: $0) } }).value {
+                return image
+            }
+        }
+        var image: UIImage?
         if let data = service.localContent(of: file.id) {
-            // Entschlüsseln und Verkleinern außerhalb des Actors, damit mehrere Vorschauen parallel entstehen.
-            return await Task.detached(priority: .userInitiated) { Self.downsample(data, to: size) }.value
+            image = await Task.detached(priority: .userInitiated) { Self.downsample(data, to: size) }.value
+        } else if file.isStoredOnServer, let data = await remote(file, variant: "thumb") {
+            image = await Task.detached(priority: .userInitiated) { Self.downsample(data, to: size) }.value
         }
-        if file.isStoredOnServer, let data = await remote(file, variant: "thumb") {
-            return await Task.detached(priority: .userInitiated) { Self.downsample(data, to: size) }.value
+        if persists, let disk, let image {
+            remember(image, as: name, in: disk)
         }
-        return nil
+        return image
+    }
+
+    /// Kleine Vorschau verschlüsselt ablegen (JPEG, rund 20–40 KB) und gelegentlich auf das Limit kürzen.
+    private func remember(_ image: UIImage, as name: String, in disk: ThumbnailDiskCache) {
+        storesSinceTrim += 1
+        let trim = storesSinceTrim >= 40
+        if trim { storesSinceTrim = 0 }
+        let data = image.jpegData(compressionQuality: 0.7)
+        Task.detached(priority: .utility) {
+            if let data { disk.store(data, for: name) }
+            if trim { _ = disk.trim() }
+        }
     }
 
     /// Großansicht: eigenes Original oder `display` vom Server (Ersatz: Original).
@@ -107,5 +142,6 @@ final class ImageCache: @unchecked Sendable {
     }()
 
     func object(forKey key: NSString) -> UIImage? { storage.object(forKey: key) }
+    func removeAll() { storage.removeAllObjects() }
     func setObject(_ image: UIImage, forKey key: NSString) { storage.setObject(image, forKey: key) }
 }
