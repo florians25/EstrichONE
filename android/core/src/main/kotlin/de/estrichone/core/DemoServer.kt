@@ -29,6 +29,7 @@ class DemoServer(private val content: (String) -> ByteArray? = { null }) : Inter
     private val notifications = DemoInbox()
     private val tickets = DemoTickets()
     private val absences = DemoAbsences()
+    private val fuel = DemoFuel()
 
     /** Störungen vorführen (Menü „Demo“). */
     @Volatile var backupDown = false
@@ -99,7 +100,7 @@ class DemoServer(private val content: (String) -> ByteArray? = { null }) : Inter
                     "createdAt" to ApiDate.format(now.minusSeconds(86_400)), "lastSeenAt" to ApiDate.format(now.minusSeconds(7200)), "current" to false))
             path == "auth/two-factor" -> 200 to json("enabled" to false, "recoveryCodesRemaining" to 0, "requiredByPolicy" to false)
             path == "access/me/permissions" -> 200 to listOf("bauakten.read", "bauakten.create", "bauakten.edit", "notes.write", "files.upload", "work.edit",
-                "contacts.read", "contacts.edit", "chat.use", "absence.request", "absence.approve") + (if (itAgent) listOf("helpdesk.agent") else emptyList())
+                "contacts.read", "contacts.edit", "chat.use", "absence.request", "absence.approve", "fuel.record") + (if (itAgent) listOf("helpdesk.agent") else emptyList())
             path == "settings" -> 200 to json("settings" to json("bauakte" to json("warnMissingInspection" to true)), "version" to 1)
             path == "sync/push" -> 200 to push(body)
             path == "sync/pull" -> 200 to json("changes" to entities.values.map { EstrichOneApi.json.encodeToJsonElement(SyncChange.serializer(), it) },
@@ -138,6 +139,8 @@ class DemoServer(private val content: (String) -> ByteArray? = { null }) : Inter
             path.startsWith("notifications/devices") -> 204 to null
             path.startsWith("chat/") -> chat.handle(method, path.removePrefix("chat/"), query, body, raw, content)
             path.startsWith("hr/") -> absences.handle(method, path, query, body)
+            path == "fuel-receipts/options" -> 200 to fuel.options()
+            path == "fuel-receipts/mine" -> 200 to fuel.mine()
             path == "tickets/mine" -> 200 to tickets.list()
             path == "tickets" && method == "GET" -> 200 to tickets.list(query["filter"])
             path == "tickets/on-behalf" -> 201 to tickets.createOnBehalf(body)
@@ -174,6 +177,10 @@ class DemoServer(private val content: (String) -> ByteArray? = { null }) : Inter
     private fun push(body: JsonObject): JsonObject {
         val results = (body.arr("operations") ?: JsonArray(emptyList())).mapNotNull { it as? JsonObject }.map { op ->
             val type = op.str("type") ?: ""
+            if (type == "fuelReceipt.create") {
+                val created = fuel.add((op.str("entityId") ?: "").lowercase(), op.obj("payload") ?: JsonObject(emptyMap()))
+                return@map json("opId" to op.str("opId"), "status" to "applied", "version" to 1, "entity" to created)
+            }
             val entityType = EntityTypes.fromOperation(type) ?: return@map json("opId" to op.str("opId"), "status" to "rejected", "code" to "UNKNOWN_OPERATION")
             val id = (op.str("entityId") ?: "").lowercase()
             val key = "$entityType/$id"
@@ -629,5 +636,51 @@ class DemoChat {
             }
             else -> 204 to null
         }
+    }
+}
+
+/** Tankbelege im Demomodus (wie DemoFuel.swift): Fahrzeuge wie in der Disposition, Belege in allen Ständen. */
+private class DemoFuel {
+    private fun id(number: Int) = "0193a1b2-de00-7000-8000-%012d".format(number)
+    private val vehicles = listOf(
+        json("id" to id(5003), "kind" to "vehicle", "name" to "Pritsche", "identifier" to "LA-EO 7", "tankCapacityLiters" to 80.0, "lastOdometerKm" to 48_000,
+            "lastFuelType" to "diesel"),
+        json("id" to id(5002), "kind" to "vehicle", "name" to "Sprinter", "identifier" to "LA-EO 12", "tankCapacityLiters" to 75.0, "lastOdometerKm" to 61_420,
+            "lastFuelType" to "diesel"),
+        json("id" to id(5001), "kind" to "machine", "name" to "Estrichpumpe 1", "identifier" to "Mixokret M3", "tankCapacityLiters" to 60.0),
+    )
+    private var counter = 18
+    private val receipts = mutableListOf<JsonObject>()
+
+    init {
+        val today = LocalDate.now(Dates.zone)
+        fun receipt(n: Int, number: String, vehicle: Int, name: String, plate: String, days: Long, km: Int, liters: Double, amount: Double, fuel: String,
+                    payment: String, status: String, text: String, consumption: Double? = null, reason: String? = null) = json(
+            "id" to id(n), "number" to number, "vehicleId" to id(vehicle), "vehicleName" to name, "vehicleIdentifier" to plate,
+            "date" to today.minusDays(days).toString(), "odometerKm" to km, "liters" to liters, "amountGross" to amount, "fuelType" to fuel,
+            "paymentMethod" to payment, "station" to "Aral Landshut Nord", "status" to status, "statusText" to text, "rejectionReason" to reason,
+            "consumptionPer100Km" to consumption, "warnings" to emptyList<Any>())
+        receipts += receipt(9101, "TB-2026-0017", 5003, "Pritsche", "LA-EO 7", 2, 47_380, 58.2, 98.88, "diesel", "fuelCard", "new", "Neu")
+        receipts += receipt(9102, "TB-2026-0014", 5003, "Pritsche", "LA-EO 7", 9, 46_790, 61.0, 104.92, "diesel", "private", "checked", "Geprüft", 10.3)
+        receipts += receipt(9103, "TB-2026-0011", 5002, "Sprinter", "LA-EO 12", 15, 61_420, 12.0, 11.88, "adBlue", "fuelCard", "settled", "Gebucht")
+        receipts += receipt(9104, "TB-2026-0008", 5003, "Pritsche", "LA-EO 7", 21, 46_200, 64.5, 107.07, "diesel", "private", "rejected", "Abgelehnt",
+            reason = "Betrag auf dem Foto nicht lesbar – bitte neu fotografieren.")
+        receipts += receipt(9105, "TB-2026-0005", 5003, "Pritsche", "LA-EO 7", 28, 45_600, 59.1, 99.29, "diesel", "private", "settled", "Erstattet")
+    }
+
+    fun options() = json("vehicles" to vehicles, "suggestedVehicleId" to id(5003), "today" to LocalDate.now(Dates.zone).toString())
+
+    fun mine(): List<JsonObject> = receipts.toList()
+
+    fun add(id: String, payload: JsonObject): JsonObject {
+        counter++
+        val vehicle = vehicles.firstOrNull { it.str("id") == payload.str("vehicleId")?.lowercase() }
+        val entity = payload.merged(mapOf(
+            "id" to JsonPrimitive(id), "number" to JsonPrimitive("TB-2026-%04d".format(counter)),
+            "vehicleName" to JsonPrimitive(vehicle?.str("name") ?: "Fahrzeug"), "vehicleIdentifier" to (vehicle?.get("identifier") ?: JsonNull),
+            "status" to JsonPrimitive("new"), "statusText" to JsonPrimitive("Neu"), "warnings" to JsonArray(emptyList()),
+        ))
+        receipts.add(0, entity)
+        return entity
     }
 }

@@ -17337,6 +17337,570 @@
         ]
       }
     },
+    "/api/v1/fuel-receipts/options": {
+      "get": {
+        "tags": [
+          "Tankbelege"
+        ],
+        "summary": "Fahrzeuge zur Auswahl mit letztem Kilometerstand und das heutige Dispo-Fahrzeug (Vorbelegung)",
+        "operationId": "GetFuelReceiptOptions",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FuelOptionsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/fuel-receipts/mine": {
+      "get": {
+        "tags": [
+          "Tankbelege"
+        ],
+        "summary": "Eigene Tankbelege (neueste zuerst)",
+        "operationId": "ListMyFuelReceipts",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FuelReceiptResponse"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/fuel-receipts": {
+      "get": {
+        "tags": [
+          "Tankbelege"
+        ],
+        "summary": "Alle Tankbelege mit Filter (Zeitraum, Fahrzeug, Mitarbeiter, Status, Zahlart) und Plausibilitätshinweisen",
+        "operationId": "ListFuelReceipts",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "vehicleId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "userId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "paymentMethod",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "warningsOnly",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FuelReceiptResponse"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/fuel-receipts/statistics": {
+      "get": {
+        "tags": [
+          "Tankbelege"
+        ],
+        "summary": "Auswertung je Fahrzeug: Liter, Kosten, Strecke und Ø-Verbrauch je Monat (ohne abgelehnte Belege)",
+        "operationId": "GetFuelStatistics",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "vehicleId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FuelVehicleStatistics"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/fuel-receipts/export.csv": {
+      "get": {
+        "tags": [
+          "Tankbelege"
+        ],
+        "summary": "CSV für die Buchhaltung (DATEV-freundlich: Semikolon, Komma als Dezimalzeichen, Belegdatum, Belegnummer, Buchungstext, Kostenstelle)",
+        "operationId": "ExportFuelReceipts",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "vehicleId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "userId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "paymentMethod",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/fuel-receipts/{id}": {
+      "get": {
+        "tags": [
+          "Tankbelege"
+        ],
+        "operationId": "GetFuelReceipt",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FuelReceiptResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "Tankbelege"
+        ],
+        "summary": "Tankbeleg anlegen oder ändern (Nummer aus dem Nummernkreis; eigene bis zur Prüfung, mit fuel.manage alle bis zur Erstattung)",
+        "operationId": "SaveFuelReceipt",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveFuelReceiptRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FuelReceiptResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Tankbelege"
+        ],
+        "operationId": "DeleteFuelReceipt",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/fuel-receipts/decisions": {
+      "post": {
+        "tags": [
+          "Tankbelege"
+        ],
+        "summary": "Prüfen/Freigeben, Ablehnen (mit Grund), als erstattet bzw. gebucht markieren oder zurücknehmen – auch für mehrere",
+        "operationId": "DecideFuelReceipts",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FuelDecisionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FuelReceiptResponse"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/setup/status": {
       "get": {
         "tags": [
@@ -35177,6 +35741,466 @@
           }
         }
       },
+      "FuelDecision": {
+        "enum": [
+          "check",
+          "reject",
+          "settle",
+          "reopen"
+        ]
+      },
+      "FuelDecisionRequest": {
+        "required": [
+          "ids",
+          "action"
+        ],
+        "type": "object",
+        "properties": {
+          "ids": {
+            "maxItems": 500,
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "action": {
+            "$ref": "#/components/schemas/FuelDecision"
+          },
+          "reason": {
+            "maxLength": 500,
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "FuelMonthStatistics": {
+        "required": [
+          "month",
+          "receipts",
+          "liters",
+          "adBlueLiters",
+          "cost",
+          "distanceKm",
+          "averageConsumption"
+        ],
+        "type": "object",
+        "properties": {
+          "month": {
+            "type": "string"
+          },
+          "receipts": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "liters": {
+            "type": "number",
+            "format": "double"
+          },
+          "adBlueLiters": {
+            "type": "number",
+            "format": "double"
+          },
+          "cost": {
+            "type": "number",
+            "format": "double"
+          },
+          "distanceKm": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "averageConsumption": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          }
+        }
+      },
+      "FuelOptionsResponse": {
+        "required": [
+          "vehicles",
+          "suggestedVehicleId",
+          "today"
+        ],
+        "type": "object",
+        "properties": {
+          "vehicles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FuelVehicleOption"
+            }
+          },
+          "suggestedVehicleId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "today": {
+            "type": "string",
+            "format": "date"
+          }
+        }
+      },
+      "FuelPaymentMethod": {
+        "enum": [
+          "fuelCard",
+          "companyCard",
+          "private"
+        ]
+      },
+      "FuelReceiptResponse": {
+        "required": [
+          "id",
+          "number",
+          "vehicleId",
+          "vehicleName",
+          "vehicleIdentifier",
+          "userId",
+          "userName",
+          "date",
+          "odometerKm",
+          "liters",
+          "amountGross",
+          "pricePerLiter",
+          "fuelType",
+          "paymentMethod",
+          "station",
+          "notes",
+          "imageFileId",
+          "imageStored",
+          "status",
+          "statusText",
+          "rejectionReason",
+          "checkedByName",
+          "checkedAt",
+          "settledByName",
+          "settledAt",
+          "distanceKm",
+          "consumptionPer100Km",
+          "warnings",
+          "source",
+          "canEdit",
+          "createdAt",
+          "version"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "number": {
+            "type": "string"
+          },
+          "vehicleId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "vehicleName": {
+            "type": "string"
+          },
+          "vehicleIdentifier": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "userName": {
+            "type": "string"
+          },
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "odometerKm": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          },
+          "liters": {
+            "type": "number",
+            "format": "double"
+          },
+          "amountGross": {
+            "type": "number",
+            "format": "double"
+          },
+          "pricePerLiter": {
+            "type": "number",
+            "format": "double"
+          },
+          "fuelType": {
+            "$ref": "#/components/schemas/FuelType"
+          },
+          "paymentMethod": {
+            "$ref": "#/components/schemas/FuelPaymentMethod"
+          },
+          "station": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "notes": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "imageFileId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "imageStored": {
+            "type": "boolean"
+          },
+          "status": {
+            "$ref": "#/components/schemas/FuelReceiptStatus"
+          },
+          "statusText": {
+            "type": "string"
+          },
+          "rejectionReason": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "checkedByName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "checkedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "settledByName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "settledAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "distanceKm": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          },
+          "consumptionPer100Km": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FuelWarning"
+            }
+          },
+          "source": {
+            "type": "string"
+          },
+          "canEdit": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "FuelReceiptStatus": {
+        "enum": [
+          "new",
+          "checked",
+          "settled",
+          "rejected"
+        ]
+      },
+      "FuelType": {
+        "enum": [
+          "diesel",
+          "petrol",
+          "adBlue",
+          "other",
+          null
+        ]
+      },
+      "FuelVehicleOption": {
+        "required": [
+          "id",
+          "kind",
+          "name",
+          "identifier",
+          "tankCapacityLiters",
+          "lastOdometerKm",
+          "lastFuelType"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "identifier": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "tankCapacityLiters": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "lastOdometerKm": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          },
+          "lastFuelType": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/FuelType"
+              }
+            ]
+          }
+        }
+      },
+      "FuelVehicleStatistics": {
+        "required": [
+          "vehicleId",
+          "vehicleName",
+          "identifier",
+          "receipts",
+          "liters",
+          "adBlueLiters",
+          "cost",
+          "distanceKm",
+          "averageConsumption",
+          "lastOdometerKm",
+          "months"
+        ],
+        "type": "object",
+        "properties": {
+          "vehicleId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "vehicleName": {
+            "type": "string"
+          },
+          "identifier": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "receipts": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "liters": {
+            "type": "number",
+            "format": "double"
+          },
+          "adBlueLiters": {
+            "type": "number",
+            "format": "double"
+          },
+          "cost": {
+            "type": "number",
+            "format": "double"
+          },
+          "distanceKm": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "averageConsumption": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "lastOdometerKm": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          },
+          "months": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FuelMonthStatistics"
+            }
+          }
+        }
+      },
+      "FuelWarning": {
+        "required": [
+          "code",
+          "text"
+        ],
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          }
+        }
+      },
       "HealthBanner": {
         "required": [
           "key",
@@ -37015,6 +38039,9 @@
             "type": "boolean"
           },
           "feedback": {
+            "type": "boolean"
+          },
+          "fuel": {
             "type": "boolean"
           }
         }
@@ -40518,6 +41545,13 @@
               "null",
               "string"
             ]
+          },
+          "tankCapacityLiters": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
           }
         }
       },
@@ -42299,6 +43333,91 @@
           }
         }
       },
+      "SaveFuelReceiptRequest": {
+        "required": [
+          "vehicleId",
+          "date",
+          "odometerKm",
+          "liters",
+          "amountGross",
+          "fuelType",
+          "paymentMethod"
+        ],
+        "type": "object",
+        "properties": {
+          "vehicleId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "odometerKm": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          },
+          "liters": {
+            "type": "number",
+            "format": "double"
+          },
+          "amountGross": {
+            "type": "number",
+            "format": "double"
+          },
+          "fuelType": {
+            "$ref": "#/components/schemas/FuelType"
+          },
+          "paymentMethod": {
+            "$ref": "#/components/schemas/FuelPaymentMethod"
+          },
+          "station": {
+            "maxLength": 200,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "notes": {
+            "maxLength": 1000,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "imageFileId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "userId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "number": {
+            "maxLength": 30,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "version": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int64"
+          }
+        }
+      },
       "SaveHelpdeskGroupRequest": {
         "required": [
           "name",
@@ -42999,6 +44118,13 @@
               "null",
               "string"
             ]
+          },
+          "tankCapacityLiters": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
           }
         }
       },
@@ -48680,6 +49806,9 @@
     },
     {
       "name": "Anrufe und Anfragen"
+    },
+    {
+      "name": "Tankbelege"
     },
     {
       "name": "Ersteinrichtung"

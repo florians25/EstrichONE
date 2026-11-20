@@ -83,6 +83,9 @@ sealed interface Route {
     /** Antrag stellen; mit [changing] Änderungsantrag zu diesem genehmigten Antrag. */
     data class AbsenceRequest(val changing: de.estrichone.core.AbsenceRequestItem? = null) : Route
     data object AbsenceApprovals : Route
+    /** Tankbelege: eigene Belege und neuen Beleg erfassen. */
+    data object FuelReceipts : Route
+    data object FuelReceiptNew : Route
     data object Dispatch : Route
     data object Helpdesk : Route
     data object ReportProblem : Route
@@ -296,6 +299,8 @@ private fun RouteScreen(route: Route, twoPane: Boolean) {
         Route.Absences -> AbsencesScreen()
         is Route.AbsenceRequest -> AbsenceRequestScreen(route.changing)
         Route.AbsenceApprovals -> AbsenceApprovalsScreen()
+        Route.FuelReceipts -> FuelReceiptsScreen()
+        Route.FuelReceiptNew -> FuelReceiptNewScreen()
         Route.Dispatch -> DispatchScreen()
         Route.Helpdesk -> HelpdeskScreen()
         Route.ReportProblem -> ReportProblemScreen()

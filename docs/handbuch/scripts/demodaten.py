@@ -128,6 +128,51 @@ def sync(kind, entity, payload):
     return result
 
 
+def make_receipt(name, station, when, fuel, liters, price):
+    """Tankquittung als Foto (Papier leicht schräg auf dunkler Fläche)."""
+    path = os.path.join(TMP, name)
+    lines = [station, "Landshut, Ottostraße 2", "", f"Datum {when:%d.%m.%Y}  07:{10 + liters % 40:02d}", "Säule 3", "", fuel,
+             f"{liters:.2f} l x {price:.3f} EUR/l".replace(".", ","), "", f"Summe EUR {liters * price:10.2f}".replace(".", ","), "",
+             "Kartenzahlung", "Vielen Dank für Ihren Besuch"]
+    args = ["-size", "620x980", "xc:#f7f6f1", "-fill", "#222222", "-font", "DejaVu-Sans-Mono", "-pointsize", "28"]
+    for i, line in enumerate(lines):
+        args += ["-annotate", f"+40+{80 + i * 62}", line]
+    magick(*args, "-background", "#4a4f57", "-rotate", "-2", "-bordercolor", "#4a4f57", "-border", "60", "-quality", "80", path)
+    return path
+
+
+def fuel_receipts(resources, users):
+    """Tankbelege der letzten Wochen: Fahrzeuge MAN TGE und Sprinter, private Auslagen, ein auffälliger Beleg (mehr als der Tank)."""
+    tge, sprinter = resources[0], resources[1]
+    entries = [  # Tage zurück, Fahrzeug, km, Liter, Preis, Zahlart, Status
+        (52, tge, 81_200, 58.40, 1.689, "fuelCard", "settle"), (45, tge, 81_810, 63.10, 1.719, "fuelCard", "settle"),
+        (38, tge, 82_390, 60.20, 1.699, "private", "settle"), (31, tge, 82_950, 59.80, 1.679, "fuelCard", "settle"),
+        (24, tge, 83_540, 61.90, 1.709, "fuelCard", "check"), (17, tge, 84_120, 62.40, 1.739, "private", "check"),
+        (10, tge, 84_690, 60.70, 1.729, "fuelCard", None), (3, tge, 84_980, 88.50, 1.719, "fuelCard", None),
+        (49, sprinter, 132_400, 55.30, 1.699, "companyCard", "settle"), (35, sprinter, 133_080, 57.90, 1.709, "companyCard", "settle"),
+        (21, sprinter, 133_720, 54.20, 1.689, "private", "check"), (7, sprinter, 134_360, 56.80, 1.749, "companyCard", None),
+        (2, sprinter, 134_360, 12.00, 0.990, "companyCard", None),
+    ]
+    decided = {"check": [], "settle": []}
+    for i, (back, vehicle, km, liters, price, payment, status) in enumerate(entries):
+        when = TODAY - dt.timedelta(days=back)
+        fuel = "AdBlue" if price < 1 else "Diesel"
+        photo = upload(make_receipt(f"tankbeleg-{i}.jpg", "ARAL Tankstelle" if i % 2 else "Shell Station", when, fuel, liters, price), None,
+                       "photo", "image/jpeg", name=f"Tankbeleg_{when:%Y%m%d}.jpg", caption="Tankbeleg") if i != 10 else None
+        rid = new_id()
+        call("PUT", f"fuel-receipts/{rid}", {"vehicleId": vehicle, "date": str(when), "odometerKm": km, "liters": liters,
+                                             "amountGross": round(liters * price, 2), "fuelType": "adBlue" if price < 1 else "diesel",
+                                             "paymentMethod": payment, "station": "ARAL Landshut" if i % 2 else "Shell Ergolding", "imageFileId": photo,
+                                             "userId": users.get("m.huber") if vehicle == tge else users.get("s.wagner")})
+        if status:
+            decided["check"].append(rid)
+            if status == "settle":
+                decided["settle"].append(rid)
+    for action in ("check", "settle"):
+        if decided[action]:
+            call("POST", "fuel-receipts/decisions", {"ids": decided[action], "action": action})
+
+
 def signature(text, seed):
     path = os.path.join(TMP, f"sig{seed}.png")
     magick("-size", "600x200", "xc:none", "-fill", "none", "-stroke", "#0b2e66", "-strokewidth", "4",
@@ -172,16 +217,17 @@ def main():
                                               "color": color, "isActive": True, "sortOrder": i})
         crews[name] = cid
     resources = []
-    for kind, name, ident, model, crew in [("vehicle", "MAN TGE Pritsche", "LA-EM 214", "MAN TGE 3.180", "Kolonne Huber"),
-                                           ("vehicle", "Mercedes Sprinter", "LA-EM 318", "Sprinter 316 CDI", "Kolonne Wagner"),
-                                           ("pump", "Estrichboy Brinkmann", "EB-02", "Brinkmann Estrich-Boy 260", None),
-                                           ("pump", "Fließestrichpumpe", "FP-01", "m-tec duo-mix 2000", None),
-                                           ("machine", "Glättmaschine", "GM-03", "Tellerglätter 900", None)]:
+    for kind, name, ident, model, crew, tank in [("vehicle", "MAN TGE Pritsche", "LA-EM 214", "MAN TGE 3.180", "Kolonne Huber", 75),
+                                                 ("vehicle", "Mercedes Sprinter", "LA-EM 318", "Sprinter 316 CDI", "Kolonne Wagner", 71),
+                                                 ("pump", "Estrichboy Brinkmann", "EB-02", "Brinkmann Estrich-Boy 260", None, 60),
+                                                 ("pump", "Fließestrichpumpe", "FP-01", "m-tec duo-mix 2000", None, None),
+                                                 ("machine", "Glättmaschine", "GM-03", "Tellerglätter 900", None, None)]:
         rid = new_id()
         call("PUT", f"planning/resources/{rid}", {"kind": kind, "name": name, "identifier": ident, "notes": None, "isActive": True, "model": model,
                                                   "inspectionDue": day(40) if kind == "vehicle" else None, "serviceDue": day(75),
-                                                  "crewId": crews.get(crew) if crew else None, "documentFileIds": []})
+                                                  "crewId": crews.get(crew) if crew else None, "documentFileIds": [], "tankCapacityLiters": tank})
         resources.append(rid)
+    fuel_receipts(resources, users)
 
     # Kunden und Kontakte
     customers = {}

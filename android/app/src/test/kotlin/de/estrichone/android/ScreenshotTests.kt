@@ -257,6 +257,19 @@ abstract class ScreenshotBase(private val device: String, private val appearance
     fun aufgaben() = main("aufgaben", Tab.More, listOf(Route.Tasks))
 
     @Test
+    fun tankbelege() = main("tankbelege", Tab.More, listOf(Route.FuelReceipts))
+
+    @Test
+    fun tankbelegNeu() {
+        de.estrichone.android.ui.FuelPreset.filled = true
+        try {
+            main("tankbeleg-neu", Tab.More, listOf(Route.FuelReceipts, Route.FuelReceiptNew))
+        } finally {
+            de.estrichone.android.ui.FuelPreset.filled = false
+        }
+    }
+
+    @Test
     fun kunden() = main("kunden", Tab.Customers)
 
     // App-Updates (docs/app-updates.md)

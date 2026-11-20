@@ -15,4 +15,17 @@ public sealed record StoredFileInfo(Guid Id, string OriginalName, string Content
 public interface IStoredFiles
 {
     Task<IReadOnlyDictionary<Guid, StoredFileInfo>> FindAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Eigene Datei ohne Bauakte als Beleg einordnen (z. B. <see cref="StoredFileCategories.FuelReceipt"/>): Die Archivregel
+    /// der Belegart gilt dann für sie (GoBD-Aufbewahrung). Gespeichert wird mit dem nächsten <c>SaveChanges</c>.
+    /// </summary>
+    /// <returns><c>false</c>, wenn die Datei nicht existiert, zu einer Bauakte gehört oder von jemand anderem stammt.</returns>
+    Task<bool> ClassifyOwnAsync(Guid fileId, Guid ownerUserId, string category, CancellationToken cancellationToken);
+}
+
+/// <summary>Belegarten von Dateien ohne Bauakte (Archivregeln).</summary>
+public static class StoredFileCategories
+{
+    public const string FuelReceipt = "fuelReceipt";
 }

@@ -23,6 +23,8 @@ object EntityTypes {
     const val TICKET = "ticket"
     const val ROOM = "room"
     const val PARTY = "bauakteParty"
+    /** Nur ausgehend (eigene Tankbelege bis zur Übertragung); nicht Teil des Änderungsfeeds. */
+    const val FUEL_RECEIPT = "fuelReceipt"
 
     val all = listOf(BAUAKTE, NOTE, FILE, WORK_ITEM, CONTACT, SCREED_TYPE, DIARY, INSPECTION, ACCEPTANCE, VALUE_LIST, FORM_SCHEMA, TICKET, ROOM, PARTY)
 

@@ -39,6 +39,7 @@ public static class AppModules
     public const string Dossiers = "dossiers";
     public const string Helpdesk = "helpdesk";
     public const string Feedback = "feedback";
+    public const string Fuel = "fuel";
 
     /// <summary>Fehlercode der Endpunkte abgeschalteter Module.</summary>
     public const string DisabledCode = "MODULE_DISABLED";
@@ -59,6 +60,9 @@ public static class AppModules
             "Cockpit, Kolonnenplanung, Teamplaner, Kalender, Arbeitsplan, Kolonnen und „Wer fährt wohin“ inklusive Planfreigabe und Push.", [],
             NotificationEvents: ["planning.released", "planning.changed"]),
         new(Machines, "planning", "Maschinen und Fahrzeuge", "Fahrzeuge, Pumpen und Maschinen pflegen und Einsätzen zuordnen.", [Planning]),
+        new(Fuel, "office", "Tankbelege",
+            "Tankbelege in den Apps fotografieren und erfassen, im Büro prüfen, private Auslagen erstatten und für die Buchhaltung exportieren.",
+            [Machines]),
 
         new(Materials, "material", "Material und Lieferanten", "Materialstamm, Lieferanten und Materialhinweise in Bauakten.", []),
         new(Orders, "material", "Bestellungen", "Materialbestellungen mit Bestell-PDF und Lieferstatus.", [Materials]),

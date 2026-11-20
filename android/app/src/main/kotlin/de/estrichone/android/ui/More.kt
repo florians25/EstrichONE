@@ -43,6 +43,7 @@ import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.automirrored.outlined.Assignment
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.EventAvailable
+import androidx.compose.material.icons.outlined.LocalGasStation
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.Devices
 import androidx.compose.material.icons.outlined.Forum
@@ -165,15 +166,20 @@ fun MoreScreen() {
             }
             // Systemeinstellungen › Module: Einträge abgeschalteter Module erscheinen nicht. Meine Aufgaben, Wer fährt wohin und
             // Meine Woche stehen auf „Heute“ und hier nicht noch einmal.
-            if (modules.isOn(AppModules.ABSENCE) || modules.isOn(AppModules.HELPDESK)) {
+            val fuel = modules.isOn(AppModules.FUEL) && "fuel.record" in permissions
+            if (modules.isOn(AppModules.ABSENCE) || modules.isOn(AppModules.HELPDESK) || fuel) {
                 item { GroupLabel("Service") }
                 item {
                     SectionCard {
                         if (modules.isOn(AppModules.ABSENCE)) {
                             RowItem("Urlaub und Abwesenheit", icon = Icons.Outlined.EventAvailable, showChevron = true, onClick = { nav.push(Route.Absences) })
                         }
-                        if (modules.isOn(AppModules.HELPDESK)) {
+                        if (fuel) {
                             if (modules.isOn(AppModules.ABSENCE)) RowDivider()
+                            RowItem("Tankbelege", icon = Icons.Outlined.LocalGasStation, showChevron = true, onClick = { nav.push(Route.FuelReceipts) })
+                        }
+                        if (modules.isOn(AppModules.HELPDESK)) {
+                            if (modules.isOn(AppModules.ABSENCE) || fuel) RowDivider()
                             RowItem(if ("helpdesk.agent" in permissions) "IT-Service/Helpdesk (Tickets bearbeiten)" else "IT-Service/Helpdesk",
                                 icon = Icons.Outlined.SupportAgent, showChevron = true, onClick = { nav.push(Route.Helpdesk) },
                                 trailing = { CountBadge(unreadTickets) })

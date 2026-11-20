@@ -43,6 +43,7 @@ internal sealed partial class ArchiveService(
     public static IReadOnlyList<ArchiveRuleDto> DefaultRules { get; } =
     [
         new("invoice", "Rechnungen", true, 10, ArchiveTrigger.OnUpload),
+        new(FuelReceiptType, "Tankbelege", true, 10, ArchiveTrigger.OnUpload),
         new("order", "Aufträge", true, 6, ArchiveTrigger.OnUpload),
         new("offer", "Angebote", true, 6, ArchiveTrigger.OnApproval),
         new("delivery", "Lieferscheine", true, 6, ArchiveTrigger.OnBauakteCompleted),
@@ -58,8 +59,11 @@ internal sealed partial class ArchiveService(
 
     public static string LabelOf(string documentType) => DefaultRules.FirstOrDefault(r => r.DocumentType == documentType)?.Label ?? documentType;
 
+    /// <summary>Belegfotos der Tankbelege (Dateien ohne Bauakte, eingeordnet vom Modul Tankbelege; Buchungsbeleg, § 147 AO).</summary>
+    public const string FuelReceiptType = Documentation.Exports.StoredFileCategories.FuelReceipt;
+
     public static string DocumentTypeOf(ArchivableDocument document) =>
-        document.Kind == "document" ? document.Category ?? "other" : document.Kind;
+        document.Category == FuelReceiptType ? FuelReceiptType : document.Kind == "document" ? document.Category ?? "other" : document.Kind;
 
     public Task<ArchiveConnection?> ConnectionAsync(CancellationToken cancellationToken) =>
         db.Set<ArchiveConnection>().SingleOrDefaultAsync(cancellationToken);
@@ -211,8 +215,13 @@ internal sealed partial class ArchiveService(
     private IQueryable<ArchivableDocument> Candidates(string documentType)
     {
         var query = documents.Query().Where(d => !db.Set<ArchiveRecord>().Any(r => r.FileId == d.FileId));
+        if (documentType == FuelReceiptType)
+        {
+            return query.Where(d => d.Category == FuelReceiptType);
+        }
+
         return documentType is "photo" or "video"
-            ? query.Where(d => d.Kind == documentType)
+            ? query.Where(d => d.Kind == documentType && (d.Category == null || d.Category != FuelReceiptType))
             : documentType == "other"
                 ? query.Where(d => d.Kind == "document" && (d.Category == null || d.Category == "other"))
                 : query.Where(d => d.Kind == "document" && d.Category == documentType);

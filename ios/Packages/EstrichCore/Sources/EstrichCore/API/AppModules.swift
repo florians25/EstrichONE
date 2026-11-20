@@ -20,6 +20,7 @@ public struct AppModules: Codable, Sendable, Equatable {
     public static let dossiers = "dossiers"
     public static let helpdesk = "helpdesk"
     public static let feedback = "feedback"
+    public static let fuel = "fuel"
 
     /// Schalter je Modul (Schlüssel wie auf dem Server).
     public var states: [String: Bool]

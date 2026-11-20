@@ -13,6 +13,7 @@ tatsächlich kann.
 | **Heute** | Begrüßung und **Mein Einsatz – die nächsten 7 Tage** mit Zeit, Kolonne und Bauakte |
 | **Bauakten** | Suche nach Nummer, Bauvorhaben oder Ort; **Neue Bauakte** mit Bauvorhaben und Adresse |
 | **Bauakte** | Hinweise, Übersicht, **Notizen** (neue Notiz), **Aufgaben und Mängel** anlegen, Kunde **anrufen**, **Route** starten |
+| **Tankbelege** | Beleg mit der Kamera-App fotografieren oder aus der Galerie wählen, Fahrzeug (heutiges Dispo-Fahrzeug vorbelegt), Datum, Kilometerstand, Liter, Betrag, Kraftstoff, Zahlart, Tankstelle; offline gespeichert und später übertragen. Ohne Texterkennung (bräuchte Google ML Kit) |
 | **Support** | **Problem melden** an die IT (mit Kennzeichnung „Ich kann deshalb nicht weiterarbeiten“); mitgeschickt werden nur App- und Android-Version |
 
 Die Anmeldung ist wie unter iOS an das Gerät gebunden: Der Geräteschlüssel liegt im Android Keystore (wo vorhanden im

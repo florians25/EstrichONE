@@ -161,7 +161,9 @@ App-Registrierung öffnet **Teams-Chat** einen Gruppenchat direkt in Teams (nich
 
 **Planung** → **Geräte & Fahrzeuge** verwaltet **Fahrzeuge** sowie **Pumpen & Maschinen** (z. B.
 Estrichboy, Fließestrichpumpe, Glättmaschine) mit Kennzeichen, Typ, Führerscheinklasse, **TÜV**- und **Wartungstermin**,
-zugeordneter Kolonne, Bild und Dokumenten (Fahrzeugschein, Prüfberichte). Geräte werden in den Einsätzen mit geplant;
+zugeordneter Kolonne, Bild und Dokumenten (Fahrzeugschein, Prüfberichte) sowie optional der **Tankgröße** (für die
+Hinweise der Tankbelege). Mit dem Modul Tankbelege zeigt das Belegsymbol **Tankbelege und Verbrauch** des Fahrzeugs
+(Kapitel 10). Geräte werden in den Einsätzen mit geplant;
 EstrichONE erkennt, wenn ein Gerät an zwei Orten gleichzeitig eingeplant ist.
 
 ![Geräte und Fahrzeuge](bilder/geraete-fahrzeuge.png "Fahrzeuge mit Kennzeichen, TÜV, Wartung und Kolonne")
