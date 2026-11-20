@@ -58,6 +58,17 @@ final class LocationProvider: NSObject, CLLocationManagerDelegate {
         return CLLocation(latitude: result.latitude, longitude: result.longitude)
     }
 
+    /// Zuletzt bekannter Standort, ohne nachzufragen und ohne Ortung zu starten (für „Heute“: Entfernung zur Baustelle).
+    /// Nur wenn die App den Standort schon verwenden darf und der Wert höchstens 30 Minuten alt ist; sonst `nil`.
+    nonisolated static func recentLocation(maxAge: TimeInterval = 30 * 60) -> CLLocation? {
+        let manager = CLLocationManager()
+        let status = manager.authorizationStatus
+        guard status == .authorizedWhenInUse || status == .authorizedAlways, let location = manager.location,
+              location.horizontalAccuracy >= 0, location.horizontalAccuracy < 1000,
+              -location.timestamp.timeIntervalSinceNow <= maxAge else { return nil }
+        return location
+    }
+
     /// Adresse zum Standort über den Systemdienst. Ohne Netz `nil` – dann bleiben nur die Koordinaten.
     func address(for location: CLLocation) async -> Address? {
         guard let placemark = try? await CLGeocoder().reverseGeocodeLocation(location, preferredLocale: Locale(identifier: "de_DE")).first else {
