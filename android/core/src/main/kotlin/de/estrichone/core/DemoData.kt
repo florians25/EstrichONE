@@ -101,7 +101,8 @@ object DemoData {
             mapOf("objectType" to "renovation", "totalArea" to 85, "screedType" to "caf", "construction" to "floating", "nominalThicknessMm" to 45,
                 "strengthClass" to "CA-C25-F4", "underfloorHeating" to true, "heatingType" to "water"), -12, -10,
             // Sanierung im Bestand: Untergrund aus dem Vorauftrag bekannt, daher keine Erstbegehung.
-            mapOf("initialInspectionWaived" to true, "initialInspectionWaivedReason" to "Untergrund aus dem Vorauftrag bekannt",
+            mapOf("siteContactName" to "Dr. Maier", "siteContactPhone" to "0871 96 55 10", "latitude" to 48.5359, "longitude" to 12.1508,
+                "initialInspectionWaived" to true, "initialInspectionWaivedReason" to "Untergrund aus dem Vorauftrag bekannt",
                 "initialInspectionWaivedByName" to "Max Huber", "initialInspectionWaivedAt" to time(-14L * 86400)))
         bauakte(ISARPARK, "2026-044", "MFH Isarpark, Haus B", "planned", "Am Isarpark 7", "84034", "Landshut", WOHNBAU,
             mapOf("objectType" to "mfh", "floors" to "EG–3. OG", "totalArea" to 920, "screedType" to "ct", "construction" to "floating",
@@ -274,7 +275,9 @@ object DemoData {
             "from" to from.toString(), "to" to from.plusDays(6).toString(),
             "assignments" to listOf(
                 job("3001", 0, "07:00:00", "Estrich einbringen OG", EFH, "2026-041", "EFH Schneider, Neubau", "Ahornweg 3, 84028 Landshut", pump,
-                    "Pumpe vorher prüfen", end = "15:00:00"),
+                    "Pumpe vorher prüfen", end = "13:00:00"),
+                job("3008", 0, "14:00:00", "CM-Messung und Belegreife", PRAXIS, "2026-038", "Praxis Dr. Maier, Sanierung", "Altstadt 12, 84028 Landshut",
+                    notes = "CM-Gerät mitnehmen", end = "15:30:00"),
                 job("3003", 1, "07:30:00", "CM-Messung und Belegreife", PRAXIS, "2026-038", "Praxis Dr. Maier, Sanierung", "Altstadt 12, 84028 Landshut"),
                 job("3005", 1, "10:30:00", "Estrich OG nacharbeiten", EFH, "2026-041", "EFH Schneider, Neubau", "Ahornweg 3, 84028 Landshut"),
                 job("3006", 2, "07:00:00", "Erstbegehung", ISARPARK, "2026-044", "MFH Isarpark, Haus B", "Am Isarpark 7, 84034 Landshut"),
@@ -292,7 +295,7 @@ object DemoData {
                 "latitude" to 48.5372, "longitude" to 12.1521, "siteContactName" to "Herr Schneider", "siteContactPhone" to "0171 2345678",
                 "startTime" to "07:00:00", "warnings" to emptyList<String>(),
                 "jobs" to listOf(mapOf("assignmentId" to "0193a1b2-de00-7000-8000-000000003001", "activity" to "Estrich einbringen OG", "startTime" to "07:00:00",
-                    "endTime" to "15:00:00", "crewName" to "Kolonne Huber", "crewColor" to "#E07A1F", "notes" to "Pumpe vorher prüfen")),
+                    "endTime" to "13:00:00", "crewName" to "Kolonne Huber", "crewColor" to "#E07A1F", "notes" to "Pumpe vorher prüfen")),
                 "people" to me, "vehicles" to listOf(mapOf("id" to "0193a1b2-de00-7000-8000-000000005001", "name" to "Estrichpumpe 1"))),
             mapOf("bauakteId" to HALLE, "number" to "2026-042", "title" to "Halle Gewerbering", "address" to "Gewerbering 3, 84030 Ergolding",
                 "startTime" to "08:30:00", "warnings" to listOf("Zufahrt nur bis 7,5 t"),

@@ -57,6 +57,8 @@ abstract class ScreenshotBase(private val device: String, private val appearance
 
     init {
         de.estrichone.android.ui.Live.polling = false
+        // Heute: „Jetzt“ beim ersten Einsatz wie auf iOS (9:41).
+        de.estrichone.android.ui.Live.fixedTime = java.time.LocalTime.of(9, 41)
     }
 
     private fun demo(): AppModel {
