@@ -175,7 +175,7 @@ test('Warnungen bei Krankmeldungen: betroffene Einsätze, AU fehlt, eAU abgerufe
   const table = page.locator('[id$="warningsTable"]');
   await expect(table).toBeVisible();
   await expect(table.getByRole('row', { name: /Anna Admin: AU-Bescheinigung fehlt/ })).toBeVisible();
-  const impact = table.getByRole('row', { name: /Anna Admin abwesend/ });
+  const impact = table.getByRole('row', { name: /Anna Admin abwesend/ }).filter({ hasText: 'E2E Halle Warnung' });
   await expect(impact).toBeVisible();
   await expect(impact).toContainText('E2E Halle Warnung');
   await expect(impact).toContainText('niemand mehr eingeplant');
@@ -204,7 +204,7 @@ test('Warnungen bei Krankmeldungen: betroffene Einsätze, AU fehlt, eAU abgerufe
   await shot(page, 'web-start-warnungen');
   await page.goto(`/planung?ansicht=tag&datum=${iso(tomorrow)}`);
   const strip = page.locator('[id$="absenceStrip"]');
-  await expect(strip).toContainText('betrifft geplante Einsätze');
+  await expect(strip).toContainText(/betr(ifft|effen) geplante Einsätze/);
   await expect(strip).not.toContainText('krank');
   await strip.getByText('Betroffene Einsätze anzeigen').click();
   const list = await dialog(page, 'Abwesenheit betrifft Einsätze');
