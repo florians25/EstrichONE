@@ -170,6 +170,80 @@ public sealed class HrSettings
     /// <summary>Kolonnenführer dürfen Anträge ihrer Kolonne genehmigen (zusätzlich zum Recht „Urlaubsanträge genehmigen“).</summary>
     public bool CrewLeadersApprove { get; private set; }
 
+    // ---- Warnungen bei Krankmeldungen und Abwesenheiten (alle abschaltbar) ----------------------------------------
+
+    /// <summary>Hauptschalter: Warnungen bei Krankmeldungen und Abwesenheiten berechnen und melden.</summary>
+    public bool WarningsEnabled { get; private set; } = true;
+
+    /// <summary>Abwesenheit betrifft geplante Einsätze bzw. Kolonnen (auch für die Disposition, ohne Grund).</summary>
+    public bool WarnPlanningImpact { get; private set; } = true;
+
+    /// <summary>Vorschau der Einsätze in Tagen ab heute.</summary>
+    public int PlanningImpactDays { get; private set; } = 14;
+
+    /// <summary>AU-Bescheinigung fehlt bzw. eAU nicht abgerufen.</summary>
+    public bool WarnCertificate { get; private set; } = true;
+
+    /// <summary>AU-Nachweis ab diesem Kalendertag der Arbeitsunfähigkeit erwartet (§ 5 EFZG: ab dem 4. Tag; 1 = ab dem ersten Tag).</summary>
+    public int CertificateDueDay { get; private set; } = 4;
+
+    /// <summary>Hinweis vor Ende der Entgeltfortzahlung (6 Wochen).</summary>
+    public bool WarnContinuedPay { get; private set; } = true;
+
+    /// <summary>BEM-Hinweis: mehr als 42 Kalendertage arbeitsunfähig in 12 Monaten (§ 167 Abs. 2 SGB IX).</summary>
+    public bool WarnBem { get; private set; } = true;
+
+    /// <summary>Krankmeldung überschneidet genehmigten Urlaub oder offenen Urlaubsantrag.</summary>
+    public bool WarnVacationOverlap { get; private set; } = true;
+
+    /// <summary>Häufung kurzer Krankmeldungen (bis 3 Kalendertage) in 12 Monaten ab dieser Anzahl; 0 = aus (Standard).</summary>
+    public int FrequentShortThreshold { get; private set; }
+
+    /// <summary>Neutraler Hinweis, wenn eine Krankmeldung direkt an Urlaub oder Wochenende grenzt (Standard: aus).</summary>
+    public bool WarnAdjacent { get; private set; }
+
+    /// <summary>Empfänger: Personalverwaltung (Recht hr.manage).</summary>
+    public bool NotifyHr { get; private set; } = true;
+
+    /// <summary>Empfänger: Disposition (Recht planning.manage) – nur „abwesend“ und betroffene Einsätze.</summary>
+    public bool NotifyPlanners { get; private set; } = true;
+
+    /// <summary>Empfänger: Kolonnenführer der betroffenen Kolonne – nur „abwesend“ und betroffene Einsätze.</summary>
+    public bool NotifyCrewLeaders { get; private set; }
+
+    public void UpdateWarnings(bool enabled, bool planningImpact, int planningImpactDays, bool certificate, int certificateDueDay, bool continuedPay, bool bem,
+        bool vacationOverlap, int frequentShortThreshold, bool adjacent, bool notifyHr, bool notifyPlanners, bool notifyCrewLeaders)
+    {
+        if (planningImpactDays is < 1 or > 60)
+        {
+            throw new ArgumentException("Bitte eine Vorschau zwischen 1 und 60 Tagen angeben.", nameof(planningImpactDays));
+        }
+
+        if (certificateDueDay is < 1 or > 14)
+        {
+            throw new ArgumentException("Bitte einen Kalendertag zwischen 1 und 14 angeben.", nameof(certificateDueDay));
+        }
+
+        if (frequentShortThreshold is < 0 or > 50)
+        {
+            throw new ArgumentException("Bitte eine Anzahl zwischen 0 (aus) und 50 angeben.", nameof(frequentShortThreshold));
+        }
+
+        WarningsEnabled = enabled;
+        WarnPlanningImpact = planningImpact;
+        PlanningImpactDays = planningImpactDays;
+        WarnCertificate = certificate;
+        CertificateDueDay = certificateDueDay;
+        WarnContinuedPay = continuedPay;
+        WarnBem = bem;
+        WarnVacationOverlap = vacationOverlap;
+        FrequentShortThreshold = frequentShortThreshold;
+        WarnAdjacent = adjacent;
+        NotifyHr = notifyHr;
+        NotifyPlanners = notifyPlanners;
+        NotifyCrewLeaders = notifyCrewLeaders;
+    }
+
     public DateOnly? CarryOverExpiry(int year) =>
         CarryOverExpiryMonth is >= 1 and <= 12 ? new DateOnly(year, CarryOverExpiryMonth, Math.Min(Math.Max(CarryOverExpiryDay, 1), DateTime.DaysInMonth(year, CarryOverExpiryMonth))) : null;
 

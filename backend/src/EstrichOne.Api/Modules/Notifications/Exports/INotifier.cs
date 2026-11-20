@@ -106,6 +106,8 @@ public static class NotificationEvents
     public const string AbsenceDecided = "absence.decided";
     public const string AbsenceRequested = "absence.requested";
     public const string AbsenceCancelled = "absence.cancelled";
+    public const string AbsenceWarning = "absence.warning";
+    public const string AbsencePlanningImpact = "absence.planning_impact";
     public const string TicketUpdated = "ticket.updated";
     public const string TicketCreated = "ticket.created";
     public const string TicketAssigned = "ticket.assigned";
@@ -144,6 +146,10 @@ public static class NotificationEvents
         new(AbsenceDecided, "Personal", "Urlaubsantrag genehmigt oder abgelehnt", "Ihr Urlaubsantrag wurde entschieden."),
         new(AbsenceRequested, "Personal", "Abwesenheitsantrag zur Genehmigung", "Ein Urlaubs- oder Abwesenheitsantrag wartet auf Ihre Genehmigung."),
         new(AbsenceCancelled, "Personal", "Abwesenheitsantrag storniert", "Ein Antrag, über den Sie entscheiden, wurde zurückgezogen, oder Ihr Antrag wurde vom Büro storniert."),
+        new(AbsencePlanningImpact, "Personal", "Abwesenheit betrifft Einsätze (Disposition)",
+            "Eine neue Abwesenheit betrifft geplante Einsätze oder Kolonnen (ohne Grund der Abwesenheit)."),
+        new(AbsenceWarning, "Personal", "Hinweise zu Abwesenheiten (Personalverwaltung)",
+            "Neue Abwesenheitsmeldung oder Hinweis zum Prüfen, z. B. fehlender Nachweis oder Frist. Einzelheiten nur in EstrichONE."),
         new(TicketUpdated, "Support", "Supportticket", "Antwort oder Statusänderung an Ihrem Ticket."),
         new(TicketCreated, "Support", "Neues Ticket (Bearbeitung)", "Ein neues Ticket für Ihre Gruppe oder ohne zuständige Person ist eingegangen."),
         new(TicketAssigned, "Support", "Ticket mir zugewiesen (Bearbeitung)", "Ihnen wurde ein Ticket zugewiesen."),

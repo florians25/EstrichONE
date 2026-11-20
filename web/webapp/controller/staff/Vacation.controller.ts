@@ -22,11 +22,15 @@ import {
 	type AbsenceTypeView, type AccountRow, type ClosureView, type MyVacation, type Plan, type PlanRow, type Preview, type RequestView, type Settings,
 	accountTexts, colorDot, escapeHtml, num, range, requestRow, typeColors, typeRules,
 } from "../../util/absences";
+import {
+	type AbsenceWarningList, type AbsenceWarningSettings, certificateStatus, settingsSummary, warningCounts, warningRow, warningSummary,
+} from "../../util/absenceWarnings";
 
 interface Reminder { kind: string; employeeId: string; employeeName: string; date: string; text: string; severity: string }
 interface SickNote {
 	id: string; userId: string; userName: string; from: string; to: string; workingDays: number; note: string | null; certificateFileId: string | null;
-	caseId?: string | null; isFollowUp?: boolean; recordedAt?: string | null; typeId?: string | null;
+	caseId?: string | null; isFollowUp?: boolean; recordedAt?: string | null; typeId?: string | null; certificateRetrievedOn?: string | null;
+	certificateStatus?: string; certificateDueOn?: string | null;
 }
 const isoNext = (d: string) => { const x = new Date(`${d}T00:00:00`); x.setDate(x.getDate() + 1); return iso(x); };
 const pad = (n: number) => String(n).padStart(2, "0");
@@ -61,7 +65,8 @@ export default class Vacation extends BaseController {
 		this.local({ tab: "mein", busy: false, subtitle: "", year: this.year, me: {}, meText: {}, myRequests: [], myAbsences: [], myInfoText: "", pending: [],
 			grid: null, monthTitle: "", stateText: "", holidayText: "", closureText: "", legendHtml: "", planMode: "month", sickNotes: [], reminders: [], can: {},
 			filter: { crew: "", type: "", status: "" }, crewOptions: [], typeOptions: [], accounts: [], accountsYear: this.accountsYear, typeRows: [], closures: [],
-			kpi: { remaining: "–", pending: 0, away: 0, awayText: "", expiring: "", expiresOn: "" } });
+			kpi: { remaining: "–", pending: 0, away: 0, awayText: "", expiring: "", expiresOn: "" },
+			warnings: { enabled: true, items: [], count: 0, errors: 0, state: "None", summary: "", summaryType: "Information", ackText: "" }, warningSettingsText: "" });
 	}
 
 	onRouteMatched(match: RouteMatch): void {
@@ -116,6 +121,7 @@ export default class Vacation extends BaseController {
 			can.hrRead ? get<Reminder[]>("hr/reminders", { days: 60 }).then((r) => m.setProperty("/reminders", r.map((x) => ({ ...x, icon: reminderIcons[x.kind] ?? "sap-icon://lateness" })))) : Promise.resolve(),
 			can.hrRead ? this.loadToday() : Promise.resolve(),
 			can.hrManage ? this.loadSickNotes() : Promise.resolve(),
+			can.hrManage ? this.loadWarnings() : Promise.resolve(),
 			can.hrManage ? this.loadAdmin() : Promise.resolve(),
 		]);
 		m.setProperty("/busy", false);
@@ -133,9 +139,91 @@ export default class Vacation extends BaseController {
 		for (const x of [...s].sort((a, b) => a.from.localeCompare(b.from))) if (!first.has(x.caseId ?? x.id)) first.set(x.caseId ?? x.id, x);
 		this.model().setProperty("/sickNotes", s.map((x) => {
 			const f = first.get(x.caseId ?? x.id) ?? x;
+			const cert = certificateStatus(x.certificateStatus, x.certificateDueOn);
 			return { ...x, rangeText: `${date(x.from)} – ${date(x.to)}`, kindText: x.isFollowUp ? "Folgebescheinigung" : "Erstmeldung",
-				typeName: this.typeById(x.typeId)?.name ?? "Krankheit", caseLabel: `${f.userName} · seit ${date(f.from)}` };
+				typeName: this.typeById(x.typeId)?.name ?? "Krankheit", caseLabel: `${f.userName} · seit ${date(f.from)}`,
+				certificateText: cert.text, certificateState: cert.state };
 		}));
+	}
+
+	/** Warnungen (AU fehlt, Entgeltfortzahlung, BEM, Überschneidung, betroffene Einsätze) – nur Personalverwaltung. */
+	private async loadWarnings(): Promise<void> {
+		const m = this.model();
+		const [list, settings] = await Promise.all([
+			get<AbsenceWarningList>("hr/absence-warnings"),
+			get<AbsenceWarningSettings>("hr/settings/warnings").catch(() => null),
+		]);
+		const c = warningCounts(list.items);
+		const summary = warningSummary(list);
+		m.setProperty("/warnings", {
+			enabled: list.enabled, items: list.items.map(warningRow), count: c.total, errors: c.errors,
+			state: c.errors ? "Error" : c.total ? "Warning" : "Success", summary: summary.text, summaryType: summary.type,
+			ackText: list.acknowledged ? `${list.acknowledged} zur Kenntnis genommen` : "",
+		});
+		m.setProperty("/warningSettingsText", settings ? settingsSummary(settings) : "");
+	}
+
+	onKpiWarnings(): void { navQuery({ reiter: "krank" }); }
+
+	onWarningPlan(e: Event): void {
+		const w = this.row<{ link: string | null }>(e);
+		if (w.link) this.nav(w.link);
+	}
+
+	async onWarningRetrieved(e: Event): Promise<void> {
+		const w = this.row<{ absenceId: string | null; userName: string }>(e);
+		if (!w.absenceId) return;
+		if (await this.run(async () => { await post(`hr/sick-notes/${w.absenceId}/certificate-retrieved`, { retrievedOn: iso(new Date()) }); return true; })) {
+			this.toast(`eAU für ${w.userName} als abgerufen markiert`);
+			await this.load();
+		}
+	}
+
+	async onWarningAck(e: Event): Promise<void> {
+		const w = this.row<{ key: string }>(e);
+		if (await this.run(async () => { await post("hr/absence-warnings/acknowledge", { key: w.key }); return true; })) {
+			this.toast("Zur Kenntnis genommen");
+			await this.load();
+		}
+	}
+
+	/** Einstellungen der Warnungen: Schwellwerte, Regeln und Empfänger – alles abschaltbar. */
+	async onWarningSettings(): Promise<void> {
+		const s = await this.run(() => get<AbsenceWarningSettings>("hr/settings/warnings"));
+		if (!s) return;
+		const saved = await openForm<AbsenceWarningSettings>({
+			title: "Warnungen bei Krankmeldungen und Abwesenheiten", width: "38rem", initial: { ...s },
+			intro: "Hinweise ohne Rechtsberatung. Gesundheitsbezogene Warnungen sieht nur die Personalverwaltung; die Disposition sieht nur „abwesend“ und die betroffenen Einsätze. Diagnosen werden nie gespeichert.",
+			fields: [
+				{ key: "enabled", label: "Warnungen aktiv", type: "switch", help: "Hauptschalter für alle Regeln und Benachrichtigungen." },
+				{ key: "planung", label: "Planung", type: "section" },
+				{ key: "planningImpact", label: "Abwesenheit betrifft geplante Einsätze", type: "switch", help: "Kolonne unter Mindestbesetzung oder Einsatz ohne Personal." },
+				{ key: "planningImpactDays", label: "Vorschau", type: "integer", min: 1, max: 60, unit: "Tage" },
+				{ key: "nachweis", label: "Krankmeldungen (nur Personalverwaltung)", type: "section" },
+				{ key: "certificate", label: "AU-Bescheinigung fehlt / eAU nicht abgerufen", type: "switch" },
+				{ key: "certificateDueDay", label: "Nachweis erwartet ab Kalendertag", type: "integer", min: 1, max: 14,
+					help: "Gesetzlich ab dem 4. Kalendertag (AU bei mehr als 3 Tagen, § 5 EFZG); 1 = ab dem ersten Tag, falls vertraglich vereinbart." },
+				{ key: "continuedPay", label: "Ende der Entgeltfortzahlung (6 Wochen), Hinweis 1 Woche vorher", type: "switch" },
+				{ key: "bem", label: "BEM-Hinweis: mehr als 42 Kalendertage in 12 Monaten", type: "switch", help: "§ 167 Abs. 2 SGB IX" },
+				{ key: "vacationOverlap", label: "Überschneidung mit Urlaub oder Urlaubsantrag", type: "switch" },
+				{ key: "auffaellig", label: "Häufungen (Datenschutz: standardmäßig aus)", type: "section" },
+				{ key: "frequentShortThreshold", label: "Hinweis ab Anzahl kurzer Krankmeldungen in 12 Monaten", type: "integer", min: 0, max: 50,
+					help: "Kurz = höchstens 3 Kalendertage. 0 = aus. Nur mit Betriebsvereinbarung bzw. Rechtsgrundlage einschalten." },
+				{ key: "adjacent", label: "Krankmeldung direkt vor/nach Urlaub oder Wochenende", type: "switch",
+					help: "Neutraler Hinweis ohne Wertung, nur für die Personalverwaltung. Im Zweifel ausgeschaltet lassen." },
+				{ key: "empfaenger", label: "Benachrichtigung (Postfach und Push, ohne Gesundheitsdaten)", type: "section" },
+				{ key: "notifyHr", label: "Personalverwaltung", type: "switch" },
+				{ key: "notifyPlanners", label: "Disposition (Recht „Einsätze planen“)", type: "switch", help: "Nur „abwesend“ mit betroffenen Einsätzen." },
+				{ key: "notifyCrewLeaders", label: "Kolonnenführer der betroffenen Kolonne", type: "switch" },
+			],
+			submit: (v) => put<AbsenceWarningSettings>("hr/settings/warnings", {
+				...s, ...v, planningImpactDays: v.planningImpactDays ?? 14, certificateDueDay: v.certificateDueDay ?? 4, frequentShortThreshold: v.frequentShortThreshold ?? 0,
+			}),
+		});
+		if (saved) {
+			this.toast("Einstellungen der Warnungen gespeichert");
+			await this.load();
+		}
 	}
 
 	/** Kennzahl „heute abwesend“ (genehmigte Abwesenheiten, Krankheit nur mit Recht sichtbar). */
@@ -486,13 +574,15 @@ export default class Vacation extends BaseController {
 			title: o.existing ? "Krankmeldung bearbeiten" : o.followUpOf ? `Folgebescheinigung: ${o.followUpOf.userName}` : "Krankmeldung erfassen", width: "32rem",
 			intro: o.followUpOf ? `Verlängerung der Krankmeldung vom ${date(o.followUpOf.from)} – ${date(o.followUpOf.to)} (gleicher Krankheitsfall).`
 				: "Vertraulich, nur für die Personalverwaltung sichtbar. Ohne Genehmigung; andere sehen nur „abwesend“.",
-			initial: { userId: base?.userId, typeId: base?.typeId ?? sickTypes[0]?.id, from: o.existing?.from ?? next, to: o.existing?.to ?? null, note: o.existing?.note ?? "" },
+			initial: { userId: base?.userId, typeId: base?.typeId ?? sickTypes[0]?.id, from: o.existing?.from ?? next, to: o.existing?.to ?? null, note: o.existing?.note ?? "",
+				certificateRetrievedOn: o.existing?.certificateRetrievedOn ?? null },
 			fields: [
 				{ key: "userId", label: "Mitarbeiter", type: "select", required: true, editable: !base, options: people.map((p) => ({ key: p.id, text: p.displayName })) },
 				...(sickTypes.length > 1 ? [{ key: "typeId", label: "Art", type: "select" as const, required: true, options: sickTypes.map((t) => ({ key: t.id, text: t.name })) }] : []),
 				{ key: "from", label: "Von", type: "date", required: true },
 				{ key: "to", label: "Bis einschließlich", type: "date", required: true,
 					validate: (v, all) => (v && all.from && String(v) < String(all.from) ? "Das Ende liegt vor dem Beginn." : null) },
+				{ key: "certificateRetrievedOn", label: "eAU abgerufen am", type: "date", help: "Elektronische AU bei der Krankenkasse abgerufen (ersetzt die Papierbescheinigung)." },
 				{ key: "note", label: "Notiz", maxLength: 500, help: "Keine Diagnose eintragen." },
 			],
 			extra: () => {
@@ -513,10 +603,15 @@ export default class Vacation extends BaseController {
 			},
 			submit: async (v) => {
 				const certificateFileId = file ? await uploadLoose(file) : o.existing?.certificateFileId ?? null;
-				return put<SickNote>(`hr/sick-notes/${o.existing?.id ?? uuidv7()}`, {
+				const id = o.existing?.id ?? uuidv7();
+				const retrieved = (v.certificateRetrievedOn as string | null | undefined) || null;
+				const note = await put<SickNote>(`hr/sick-notes/${id}`, {
 					userId: base?.userId ?? v.userId, from: v.from, to: v.to, note: v.note || null, certificateFileId, followUpOf: o.followUpOf?.id ?? null,
-					typeId: v.typeId ?? sickTypes[0]?.id ?? null,
+					typeId: v.typeId ?? sickTypes[0]?.id ?? null, certificateRetrievedOn: retrieved,
 				});
+				// Datum geleert: Markierung entfernen (beim Speichern bleibt ein vorhandener Wert sonst erhalten).
+				if (!retrieved && o.existing?.certificateRetrievedOn) await post(`hr/sick-notes/${id}/certificate-retrieved`, { retrievedOn: null });
+				return note;
 			},
 		});
 		if (saved) {
@@ -537,7 +632,8 @@ export default class Vacation extends BaseController {
 		const list = new List({ headerText: "Verlauf", items: all.map((x, i) => new StandardListItem({
 			title: `${i === 0 ? "Erstmeldung" : `Folgebescheinigung ${i}`}: ${date(x.from)} – ${date(x.to)} (${x.workingDays} AT)`,
 			description: [x.note, x.recordedAt ? `erfasst ${dateTime(x.recordedAt)}` : null].filter(Boolean).join(" · "),
-			info: x.certificateFileId ? "AU vorhanden" : "AU fehlt", infoState: x.certificateFileId ? "Success" : "Warning",
+			info: x.certificateFileId ? "AU vorhanden" : `AU ${certificateStatus(x.certificateStatus, x.certificateDueOn).text}`,
+			infoState: certificateStatus(x.certificateFileId ? "attached" : x.certificateStatus, x.certificateDueOn).state,
 			icon: "sap-icon://stethoscope", type: x.certificateFileId ? "Active" : "Inactive",
 			press: () => { if (x.certificateFileId) window.open(fileUrl(x.certificateFileId), "_blank", "noopener"); },
 		})) });

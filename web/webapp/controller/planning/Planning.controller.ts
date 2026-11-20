@@ -7,7 +7,7 @@ import type List from "sap/m/List";
 import type SegmentedButton from "sap/m/SegmentedButton";
 import { showToast } from "../../util/toast";
 import type { RouteMatch } from "../../util/router";
-import { get, put } from "../../util/api";
+import { get, post, put } from "../../util/api";
 import { addDays, isoDay, isoWeek, mondayOf, parseDay } from "../../util/days";
 import { area } from "../../util/format";
 import { assignmentKinds, bauakteStatus, flowStatuses } from "../../util/labels";
@@ -17,6 +17,11 @@ import { startDrag, type BoardData, type Lane } from "../../control/PlanBoard";
 import type { AssignmentView, BacklogItem, CrewResponse, DirectoryUser, PlanningRange } from "../../util/models";
 import { openEventDialog } from "../../util/calendarDialog";
 import { download, type CalendarOccurrence } from "../../util/planningModels";
+import { type AbsenceWarning, type AbsenceWarningList, warningRow } from "../../util/absenceWarnings";
+import Dialog from "sap/m/Dialog";
+import Button from "sap/m/Button";
+import MList from "sap/m/List";
+import StandardListItem from "sap/m/StandardListItem";
 
 type Mode = "tag" | "woche" | "monat";
 const modes: Mode[] = ["tag", "woche", "monat"];
@@ -56,7 +61,7 @@ export default class Planning extends BaseController {
 	onInit(): void {
 		this.local({
 			mode: "woche", anchor: isoDay(new Date()), rows: "kolonnen", fullWeek: false, title: "", subtitle: "", period: "", periodSub: "", todayText: "",
-			canPlan: false, busy: false, error: "", warningCount: 0, warningText: "", board: null, legend: [],
+			canPlan: false, busy: false, error: "", warningCount: 0, warningText: "", absenceText: "", absenceType: "Warning", board: null, legend: [],
 			filter: { bauakte: "", crew: "", status: "", kind: "", search: "" },
 			bauakteOptions: [], crewOptions: [], statusOptions: [], kindOptions: [],
 			backlogOpen: false, backlogMode: "free", backlogSearch: "", backlogShown: [], backlogCounts: { free: 0, planned: 0, all: 0 },
@@ -162,6 +167,47 @@ export default class Planning extends BaseController {
 		m.setProperty("/busy", false);
 		this.render();
 		this.renderBacklog();
+		void this.loadAbsenceWarnings();
+	}
+
+	private absenceWarnings: AbsenceWarning[] = [];
+
+	/** Abwesenheiten, die geplante Einsätze betreffen (ohne Grund – Krankheit heißt „abwesend“). */
+	private async loadAbsenceWarnings(): Promise<void> {
+		const m = this.model();
+		if (!session.moduleOn("absence") || !(session.has("planning.manage") || session.has("hr.manage"))) return;
+		const list = await get<AbsenceWarningList>("hr/absence-warnings").catch(() => null);
+		this.absenceWarnings = (list?.items ?? []).filter((w) => w.kind === "planning_impact");
+		const n = this.absenceWarnings.length;
+		const first = this.absenceWarnings.slice(0, 2).map((w) => w.title).join("; ");
+		m.setProperty("/absenceType", this.absenceWarnings.some((w) => w.severity === "error") ? "Error" : "Warning");
+		m.setProperty("/absenceText", n ? `${n === 1 ? "Eine Abwesenheit betrifft" : `${n} Abwesenheiten betreffen`} geplante Einsätze: ${first}${n > 2 ? " …" : ""}` : "");
+	}
+
+	/** Liste der betroffenen Einsätze; Sprung zum Tag, Kenntnisnahme für die Disposition. */
+	onAbsenceWarnings(): void {
+		const canAck = session.has("planning.manage") || session.has("hr.manage");
+		const list = new MList({ items: this.absenceWarnings.map((w) => {
+			const r = warningRow(w);
+			return new StandardListItem({
+				title: w.title, description: r.detailText, info: r.dateText, infoState: r.state, icon: r.icon, wrapping: true, type: "Navigation",
+				press: () => { dialog.close(); if (w.link) this.nav(w.link); },
+			});
+		}) });
+		const dialog: Dialog = new Dialog({
+			title: "Abwesenheit betrifft Einsätze", contentWidth: "40rem", content: [list],
+			buttons: [
+				...(canAck ? [new Button({ text: "Alle zur Kenntnis genommen", press: () => void (async () => {
+					for (const w of this.absenceWarnings) await post("hr/absence-warnings/acknowledge", { key: w.key });
+					dialog.close();
+					showToast("Zur Kenntnis genommen");
+					await this.loadAbsenceWarnings();
+				})() })] : []),
+				new Button({ text: "Schließen", press: () => dialog.close() }),
+			],
+			afterClose: () => dialog.destroy(),
+		});
+		dialog.open();
 	}
 
 	private header(days: string[]): void {

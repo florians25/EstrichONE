@@ -10,6 +10,9 @@
 						<VBox visible="{= ${view>/kpi/expiring} !== '' }"><Label text="Verfällt am {view>/kpi/expiresOn}"/><Text text="{view>/kpi/expiring}" class="eoKpiValue"/></VBox>
 						<VBox visible="{view>/can/approve}"><Label text="Offene Anträge"/>
 							<Link text="{view>/kpi/pending}" press=".onKpiPending" class="eoKpiLink"/></VBox>
+						<VBox visible="{= ${view>/can/hrManage} &amp;&amp; ${view>/warnings/enabled} }"><Label text="Warnungen"/>
+							<ObjectStatus text="{view>/warnings/count}" state="{view>/warnings/state}" icon="{= ${view>/warnings/count} > 0 ? 'sap-icon://alert' : '' }"
+								active="true" press=".onKpiWarnings" class="eoKpiValue" tooltip="Warnungen zu Krankmeldungen und Abwesenheiten"/></VBox>
 						<VBox visible="{view>/can/hrRead}"><Label text="Heute abwesend"/>
 							<Text text="{view>/kpi/away}" tooltip="{view>/kpi/awayText}" class="eoKpiValue"/></VBox>
 					</FlexBox>
@@ -195,11 +198,48 @@
 							</Table>
 						</VBox>
 					</IconTabFilter>
-					<IconTabFilter key="krank" text="Krankmeldungen" visible="{view>/can/hrManage}" count="{= ${view>/sickNotes}.length }">
+					<IconTabFilter key="krank" text="Krankmeldungen" visible="{view>/can/hrManage}" count="{= ${view>/sickNotes}.length }"
+						iconColor="{= ${view>/warnings/errors} > 0 ? 'Negative' : ${view>/warnings/count} > 0 ? 'Critical' : 'Default' }">
 						<VBox class="sapUiSmallMargin">
 							<MessageStrip text="Vertraulich: Krankmeldungen und AU-Bescheinigungen sieht nur die Personalverwaltung. In Planung und Urlaubsplan erscheint nur „abwesend“. Bitte keine Diagnosen erfassen."
 								type="Information" showIcon="true" class="sapUiSmallMarginBottom"/>
+							<MessageStrip id="warningStrip" text="{view>/warnings/summary}" type="{view>/warnings/summaryType}" showIcon="true" class="sapUiSmallMarginBottom"/>
+							<Table contextualWidth="Auto" id="warningsTable" items="{view>/warnings/items}" noDataText="Keine offenen Warnungen." popinLayout="GridSmall"
+								visible="{= ${view>/warnings/items}.length > 0 }" class="sapUiSmallMarginBottom">
+								<headerToolbar>
+									<OverflowToolbar>
+										<Title text="Warnungen ({view>/warnings/count})" level="H3"/><ToolbarSpacer/>
+										<Text text="{view>/warnings/ackText}" class="eoMuted" visible="{= !!${view>/warnings/ackText} }"/>
+										<Button text="Warnungen einstellen" icon="sap-icon://action-settings" press=".onWarningSettings"/>
+									</OverflowToolbar>
+								</headerToolbar>
+								<columns>
+									<Column width="9rem"><Text text="Status"/></Column>
+									<Column><Text text="Warnung"/></Column>
+									<Column width="7rem" minScreenWidth="48rem" demandPopin="true"><Text text="Stichtag"/></Column>
+									<Column width="17rem" hAlign="End"><Text text=""/></Column>
+								</columns>
+								<items>
+									<ColumnListItem highlight="{view>state}">
+										<VBox><ObjectStatus text="{view>severityLabel}" state="{view>state}" icon="{view>icon}" inverted="true"/>
+											<Text text="{view>kindLabel}" class="eoMuted"/></VBox>
+										<VBox><Text text="{view>title}" class="eoStrong"/><Text text="{view>detailText}"/></VBox>
+										<Text text="{view>dateText}"/>
+										<HBox justifyContent="End" wrap="Wrap">
+											<Button text="Zur Planung" type="Transparent" icon="sap-icon://gantt-bars" press=".onWarningPlan" visible="{view>canPlan}"/>
+											<Button text="eAU abgerufen" type="Transparent" icon="sap-icon://accept" press=".onWarningRetrieved" visible="{view>canRetrieve}"/>
+											<Button text="Zur Kenntnis genommen" type="Transparent" press=".onWarningAck" tooltip="Für alle ausblenden, bis sich der Sachverhalt ändert"/>
+										</HBox>
+									</ColumnListItem>
+								</items>
+							</Table>
 							<Table contextualWidth="Auto" items="{path: 'view>/sickNotes', sorter: [{path: 'caseLabel', group: true}, {path: 'from'}]}" noDataText="Keine Krankmeldungen in diesem Jahr." popinLayout="GridSmall">
+								<headerToolbar>
+									<OverflowToolbar>
+										<Title text="Krankmeldungen {view>/accountsYear}" level="H3"/><ToolbarSpacer/>
+										<Button text="Warnungen einstellen" icon="sap-icon://action-settings" press=".onWarningSettings" visible="{= ${view>/warnings/items}.length === 0 }"/>
+									</OverflowToolbar>
+								</headerToolbar>
 								<columns>
 									<Column><Text text="Eintrag"/></Column>
 									<Column width="13rem"><Text text="Zeitraum"/></Column>
@@ -216,7 +256,8 @@
 										<Text text="{= ${view>note} || '' }"/>
 										<HBox renderType="Bare">
 											<Link text="öffnen" press=".onCertificate" visible="{= !!${view>certificateFileId} }" tooltip="AU-Bescheinigung öffnen"/>
-											<ObjectStatus text="fehlt" state="Warning" icon="sap-icon://alert" visible="{= !${view>certificateFileId} }"/>
+											<ObjectStatus text="{view>certificateText}" state="{view>certificateState}" icon="{= ${view>certificateState} === 'Warning' ? 'sap-icon://alert' : '' }"
+												visible="{= !${view>certificateFileId} }"/>
 										</HBox>
 										<Button icon="sap-icon://delete" type="Transparent" tooltip="Krankmeldung löschen" press=".onDeleteSick"/>
 									</ColumnListItem>
@@ -235,7 +276,12 @@
 					</IconTabFilter>
 					<IconTabFilter key="verwaltung" text="Arten und Betriebsferien" visible="{view>/can/hrManage}">
 						<VBox class="sapUiSmallMargin">
-							<Table contextualWidth="Auto" id="typesTable" items="{view>/typeRows}" popinLayout="GridSmall">
+							<OverflowToolbar class="sapUiSmallMarginBottom">
+								<Title text="Warnungen bei Krankmeldungen und Abwesenheiten" level="H3"/><ToolbarSpacer/>
+								<Button text="Einstellungen" icon="sap-icon://action-settings" press=".onWarningSettings"/>
+							</OverflowToolbar>
+							<Text text="{view>/warningSettingsText}" class="eoMuted sapUiSmallMarginBottom"/>
+							<Table contextualWidth="Auto" id="typesTable" items="{view>/typeRows}" popinLayout="GridSmall" class="sapUiMediumMarginTop">
 								<headerToolbar>
 									<OverflowToolbar>
 										<Title text="Abwesenheitsarten" level="H3"/><ToolbarSpacer/>

@@ -16174,6 +16174,214 @@
         ]
       }
     },
+    "/api/v1/hr/absence-warnings": {
+      "get": {
+        "tags": [
+          "Personal"
+        ],
+        "summary": "Warnungen: Abwesenheit betrifft Einsätze (Planung), AU fehlt, Entgeltfortzahlung, BEM, Überschneidung mit Urlaub (nur Personal)",
+        "operationId": "ListAbsenceWarnings",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AbsenceWarningList"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/hr/absence-warnings/acknowledge": {
+      "post": {
+        "tags": [
+          "Personal"
+        ],
+        "summary": "Warnung zur Kenntnis nehmen (für alle ausblenden, bis sich der Sachverhalt ändert)",
+        "operationId": "AcknowledgeAbsenceWarning",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AcknowledgeAbsenceWarning"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/hr/settings/warnings": {
+      "get": {
+        "tags": [
+          "Personal"
+        ],
+        "operationId": "GetAbsenceWarningSettings",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AbsenceWarningSettings"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "Personal"
+        ],
+        "operationId": "SaveAbsenceWarningSettings",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AbsenceWarningSettings"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AbsenceWarningSettings"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/hr/sick-notes/{id}/certificate-retrieved": {
+      "post": {
+        "tags": [
+          "Personal"
+        ],
+        "summary": "eAU als abgerufen markieren (Datum) oder Markierung entfernen",
+        "operationId": "MarkCertificateRetrieved",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CertificateRetrievedRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/hr/holidays": {
       "get": {
         "tags": [
@@ -24668,6 +24876,172 @@
           }
         }
       },
+      "AbsenceWarning": {
+        "required": [
+          "key",
+          "kind",
+          "severity",
+          "userId",
+          "userName",
+          "employeeId",
+          "date",
+          "title",
+          "text",
+          "absenceId",
+          "caseId",
+          "link",
+          "assignments"
+        ],
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "severity": {
+            "type": "string"
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "userName": {
+            "type": "string"
+          },
+          "employeeId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "title": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "absenceId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "caseId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "link": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "assignments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AffectedAssignment"
+            }
+          }
+        }
+      },
+      "AbsenceWarningList": {
+        "required": [
+          "enabled",
+          "healthDetails",
+          "items",
+          "acknowledged"
+        ],
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "healthDetails": {
+            "type": "boolean"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AbsenceWarning"
+            }
+          },
+          "acknowledged": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "AbsenceWarningSettings": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "default": true
+          },
+          "planningImpact": {
+            "type": "boolean",
+            "default": true
+          },
+          "planningImpactDays": {
+            "type": "integer",
+            "format": "int32",
+            "default": 14
+          },
+          "certificate": {
+            "type": "boolean",
+            "default": true
+          },
+          "certificateDueDay": {
+            "type": "integer",
+            "format": "int32",
+            "default": 4
+          },
+          "continuedPay": {
+            "type": "boolean",
+            "default": true
+          },
+          "bem": {
+            "type": "boolean",
+            "default": true
+          },
+          "vacationOverlap": {
+            "type": "boolean",
+            "default": true
+          },
+          "frequentShortThreshold": {
+            "type": "integer",
+            "format": "int32",
+            "default": 0
+          },
+          "adjacent": {
+            "type": "boolean",
+            "default": false
+          },
+          "notifyHr": {
+            "type": "boolean",
+            "default": true
+          },
+          "notifyPlanners": {
+            "type": "boolean",
+            "default": true
+          },
+          "notifyCrewLeaders": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      },
       "AcceptanceDto": {
         "required": [
           "id",
@@ -24909,6 +25283,18 @@
           }
         }
       },
+      "AcknowledgeAbsenceWarning": {
+        "required": [
+          "key"
+        ],
+        "type": "object",
+        "properties": {
+          "key": {
+            "maxLength": 200,
+            "type": "string"
+          }
+        }
+      },
       "AddEmployeeDocumentRequest": {
         "required": [
           "fileId",
@@ -25081,6 +25467,72 @@
           "serverTime": {
             "type": "string",
             "format": "date-time"
+          }
+        }
+      },
+      "AffectedAssignment": {
+        "required": [
+          "id",
+          "day",
+          "bauakteId",
+          "bauakteTitle",
+          "activity",
+          "crewId",
+          "crewName",
+          "present",
+          "minimumStaff",
+          "understaffed",
+          "text"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "day": {
+            "type": "string",
+            "format": "date"
+          },
+          "bauakteId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "bauakteTitle": {
+            "type": "string"
+          },
+          "activity": {
+            "type": "string"
+          },
+          "crewId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "crewName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "present": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "minimumStaff": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          },
+          "understaffed": {
+            "type": "boolean"
+          },
+          "text": {
+            "type": "string"
           }
         }
       },
@@ -29134,6 +29586,21 @@
           "total30Days": {
             "type": "integer",
             "format": "int32"
+          }
+        }
+      },
+      "CertificateRetrievedRequest": {
+        "required": [
+          "retrievedOn"
+        ],
+        "type": "object",
+        "properties": {
+          "retrievedOn": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
           }
         }
       },
@@ -43231,6 +43698,13 @@
               "string"
             ],
             "format": "uuid"
+          },
+          "certificateRetrievedOn": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
           }
         }
       },
@@ -44063,6 +44537,24 @@
               "string"
             ],
             "format": "uuid"
+          },
+          "certificateRetrievedOn": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "certificateStatus": {
+            "type": "string",
+            "default": "missing"
+          },
+          "certificateDueOn": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
           }
         }
       },

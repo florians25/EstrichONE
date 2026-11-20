@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { adminPassword, choose, signIn, toast } from './helpers';
+import { adminPassword, apiCall, choose, signIn, toast } from './helpers';
 
 test.describe.configure({ mode: 'serial' });
 
@@ -137,4 +137,82 @@ test('Abwesenheiten: Betriebsferien, halber Tag mit Vorschau, Genehmigung, Ände
   await sick.getByLabel('Bis einschließlich').fill(de(day));
   await sick.getByRole('button', { name: 'Speichern' }).click();
   await expect(toast(page)).toContainText('Krankmeldung erfasst');
+});
+
+test('Warnungen bei Krankmeldungen: betroffene Einsätze, AU fehlt, eAU abgerufen, Einstellungen, Startseite und Planung', async ({ page }) => {
+  test.setTimeout(180_000);
+  await signIn(page, 'admin', adminPassword);
+  const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const today = new Date();
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+
+  // Kolonne mit Mindestbesetzung und Einsatz morgen.
+  const me = await apiCall<{ id: string }>(page, 'GET', '/api/v1/auth/me');
+  const crewId = crypto.randomUUID();
+  expect((await apiCall(page, 'PUT', `/api/v1/planning/crews/${crewId}`, { name: 'E2E Warnkolonne', memberUserIds: [me.json.id], minimumStaff: 1, isActive: true })).status).toBe(200);
+  const bauakte = await apiCall<{ id: string }>(page, 'POST', '/api/v1/bauakten', { id: crypto.randomUUID(), title: 'E2E Halle Warnung', city: 'Landshut' });
+  expect((await apiCall(page, 'PUT', `/api/v1/planning/assignments/${crypto.randomUUID()}`, {
+    bauakteId: bauakte.json.id, day: iso(tomorrow), activity: 'Estrich einbringen', crewId,
+  })).status).toBe(200);
+
+  // Krankmeldung seit drei Tagen (heute 4. Kalendertag), ohne AU.
+  const from = new Date(today);
+  from.setDate(from.getDate() - 3);
+  const to = new Date(today);
+  to.setDate(to.getDate() + 3);
+  await page.goto('/personal/urlaub?reiter=krank');
+  await page.getByRole('button', { name: 'Krankmeldung erfassen' }).click();
+  const sick = await dialog(page, 'Krankmeldung erfassen');
+  await choose(page, sick.getByLabel('Mitarbeiter'), 'Anna Admin');
+  await choose(page, sick.getByLabel('Art'), 'Krankheit');
+  await sick.getByLabel('Von').fill(de(from));
+  await sick.getByLabel('Bis einschließlich').fill(de(to));
+  await sick.getByRole('button', { name: 'Speichern' }).click();
+  await expect(toast(page)).toContainText('Krankmeldung erfasst');
+
+  // Warnungsliste mit MessageStrip und ObjectStatus.
+  const table = page.locator('[id$="warningsTable"]');
+  await expect(table).toBeVisible();
+  await expect(table.getByRole('row', { name: /Anna Admin: AU-Bescheinigung fehlt/ })).toBeVisible();
+  const impact = table.getByRole('row', { name: /Anna Admin abwesend/ });
+  await expect(impact).toBeVisible();
+  await expect(impact).toContainText('E2E Halle Warnung');
+  await expect(impact).toContainText('niemand mehr eingeplant');
+  await expect(page.locator('[id$="warningStrip"]')).toContainText('dringend');
+  await shot(page, 'web-krankmeldungen-warnungen');
+
+  // eAU abgerufen → AU-Warnung entfällt, Spalte zeigt „eAU abgerufen“.
+  await table.getByRole('row', { name: /AU-Bescheinigung fehlt/ }).getByRole('button', { name: 'eAU abgerufen' }).click();
+  await expect(toast(page)).toContainText('als abgerufen markiert');
+  await expect(table.getByRole('row', { name: /AU-Bescheinigung fehlt/ })).toHaveCount(0);
+  await expect(page.getByText('eAU abgerufen').first()).toBeVisible();
+
+  // Einstellungen: Häufungen standardmäßig aus, AU ab 4. Kalendertag.
+  await page.getByRole('button', { name: 'Warnungen einstellen' }).first().click();
+  const settings = await dialog(page, 'Warnungen bei Krankmeldungen und Abwesenheiten');
+  await expect(settings.getByLabel('Nachweis erwartet ab Kalendertag')).toHaveValue('4');
+  await expect(settings.getByLabel('Hinweis ab Anzahl kurzer Krankmeldungen in 12 Monaten')).toHaveValue('0');
+  await expect(settings.getByRole('switch', { name: 'Krankmeldung direkt vor/nach Urlaub oder Wochenende' })).not.toBeChecked();
+  await shot(page, 'web-warnungen-einstellungen');
+  await settings.getByRole('button', { name: 'Speichern' }).click();
+  await expect(toast(page)).toContainText('Einstellungen der Warnungen gespeichert');
+
+  // Startseite: Kennzahl; Planung: MessageStrip mit betroffenen Einsätzen (ohne Grund).
+  await page.goto('/start');
+  await expect(page.getByRole('listitem').filter({ hasText: 'Warnungen Abwesenheit' })).toBeVisible();
+  await shot(page, 'web-start-warnungen');
+  await page.goto(`/planung?ansicht=tag&datum=${iso(tomorrow)}`);
+  const strip = page.locator('[id$="absenceStrip"]');
+  await expect(strip).toContainText('betrifft geplante Einsätze');
+  await expect(strip).not.toContainText('krank');
+  await strip.getByText('Betroffene Einsätze anzeigen').click();
+  const list = await dialog(page, 'Abwesenheit betrifft Einsätze');
+  await expect(list).toContainText('E2E Halle Warnung');
+  await shot(page, 'web-planung-abwesenheit');
+  await list.getByRole('button', { name: 'Alle zur Kenntnis genommen' }).click();
+  await expect(strip).toBeHidden();
+
+  // Aufräumen: Kolonne deaktivieren (andere Tests zählen aktive Kolonnen).
+  expect((await apiCall(page, 'PUT', `/api/v1/planning/crews/${crewId}`, { name: 'E2E Warnkolonne', memberUserIds: [me.json.id], isActive: false })).status).toBe(200);
 });
