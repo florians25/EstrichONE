@@ -391,7 +391,7 @@ fun TodayJobCard(job: PlannedJob, session: Session, phase: TodayGlance.Phase = T
         job.warnings.forEach { JobLine(Icons.Filled.Warning, it, color = tones.warning) }
         Spacer(Modifier.height(Space.m))
         // Vier gleich große Handgriffe (64 dp hoch) – gut mit Handschuhen und einer Hand.
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(Modifier.height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             ActionTile(Icons.Filled.Directions, "Route", enabled = route != null, modifier = Modifier.weight(1f)) { route?.invoke() }
             ActionTile(Icons.Filled.Phone, "Anrufen", enabled = call != null, modifier = Modifier.weight(1f)) { call?.invoke() }
             ActionTile(Icons.Filled.PhotoCamera, "Foto", primary = true, modifier = Modifier.weight(1f)) { nav.push(Route.Camera(job.bauakteId)) }
@@ -411,7 +411,7 @@ private fun ActionTile(
     val background = if (primary) MaterialTheme.colorScheme.primary else tones.fill
     val content = if (primary) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary
     Column(
-        modifier.heightIn(min = 64.dp).clip(RoundedCornerShape(14.dp)).background(background)
+        modifier.fillMaxHeight().heightIn(min = 64.dp).clip(RoundedCornerShape(14.dp)).background(background)
             .clickable(enabled = enabled, role = androidx.compose.ui.semantics.Role.Button, onClick = onClick)
             .alpha(if (enabled) 1f else 0.4f).padding(vertical = 8.dp, horizontal = 4.dp),
         horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center,
