@@ -294,7 +294,10 @@ struct NewFuelReceiptView: View {
     }
 
     private var photoSection: some View {
-        Section {
+        // Label-Inhalte laufen in Sendable-Closures: nur fertige Texte übergeben.
+        let scanText = photo == nil ? "Beleg fotografieren" : "Neu fotografieren"
+        let pickText = photo == nil ? "Foto aus der Mediathek" : "Anderes Foto wählen"
+        return Section {
             if let preview {
                 Image(uiImage: preview)
                     .resizable()
@@ -306,12 +309,12 @@ struct NewFuelReceiptView: View {
             }
             if DocumentCameraView.isAvailable {
                 Button { scanning = true } label: {
-                    Label(photo == nil ? "Beleg fotografieren" : "Neu fotografieren", systemImage: "doc.viewfinder")
+                    Label(scanText, systemImage: "doc.viewfinder")
                 }
                 .accessibilityIdentifier("scanFuelReceipt")
             }
             PhotosPicker(selection: $pickerItem, matching: .images) {
-                Label(photo == nil ? "Foto aus der Mediathek" : "Anderes Foto wählen", systemImage: "photo.on.rectangle")
+                Label(pickText, systemImage: "photo.on.rectangle")
             }
             if recognizing {
                 HStack(spacing: Space.s) {
