@@ -1,8 +1,11 @@
+import CoreLocation
 import EstrichCore
 import SwiftUI
 
-/// „Heute“ – der Arbeitsplatz für den Tag, als ruhige Standardliste: Hinweise nur bei Bedarf, der Einsatz mit Adresse,
-/// Ansprechpartner und „Foto“, darunter „Überblick“ (Meine Aufgaben, Wer fährt wohin, Meine Woche mit Zahl), morgen und
+/// „Heute“ – der Arbeitsplatz für den Tag, als ruhige Standardliste: oben Datum und dezent der Abgleich, Hinweise nur bei
+/// Bedarf, dann alle Einsätze des Tages – der laufende bzw. nächste aufgeklappt mit Kennzahlen (Mängel, Aufgaben,
+/// Belegreife, Wetter), Entfernung und vier großen Handgriffen, die übrigen kompakt mit Route und Anruf. Wischen und langes
+/// Drücken bieten dieselben Handgriffe. Darunter „Überblick“ (Meine Aufgaben, Wer fährt wohin, Meine Woche), morgen und
 /// zuletzt geöffnet. Lokale Daten erscheinen sofort, frische Planung kommt im Hintergrund dazu (offline lesbar).
 struct HomeView: View {
     /// Öffnet das Blatt „Erfassen“.
@@ -23,6 +26,15 @@ struct HomeView: View {
     @State private var defectFor: Bauakte?
     @State private var toast: String?
     @State private var push = PushCenter.shared
+    /// Kennzahlen der heutigen Baustellen (lokal).
+    @State private var glances: [UUID: SiteGlance] = [:]
+    /// Vom Nutzer aufgeklappter Einsatz; sonst der laufende bzw. nächste.
+    @State private var expandedJob: UUID?
+    /// Uhr für „Jetzt“/„in 2 Std.“ (minütlich; im Screenshot-Modus fest 9:41).
+    @State private var now = Date.now
+    /// Zuletzt bekannter Standort (nur wenn schon erlaubt) für die Entfernung.
+    @State private var here: CLLocation?
+    @Environment(\.openURL) private var openURL
 
     private var isWide: Bool { sizeClass == .regular }
 
@@ -31,6 +43,24 @@ struct HomeView: View {
 
     private var jobs: [TodayJob] {
         TodayJob.make(assignments: planning?.assignments(on: CalendarDay.string(.now)) ?? [], board: dispatch?.board, bauakten: bauakten)
+    }
+
+    private func phase(of job: TodayJob) -> TodayGlance.Phase {
+        TodayGlance.phase(start: job.startText, end: job.endText, now: now)
+    }
+
+    /// Aufgeklappt: die Wahl des Nutzers, sonst der laufende bzw. nächste Einsatz.
+    private func isExpanded(_ job: TodayJob, in list: [TodayJob]) -> Bool {
+        if list.count == 1 { return true }
+        if let expandedJob, list.contains(where: { $0.id == expandedJob }) { return expandedJob == job.id }
+        guard let index = TodayGlance.focusIndex(list.map(phase(of:))) else { return false }
+        return list[index].id == job.id
+    }
+
+    private func distance(to job: TodayJob) -> String? {
+        guard let here, let latitude = job.latitude, let longitude = job.longitude else { return nil }
+        return TodayGlance.distanceText(meters: TodayGlance.distance(fromLatitude: here.coordinate.latitude, longitude: here.coordinate.longitude,
+                                                                     toLatitude: latitude, longitude: longitude))
     }
 
     private var tomorrow: [Assignment] {
@@ -61,7 +91,8 @@ struct HomeView: View {
                 .listStyle(.insetGrouped)
                 .listSectionSpacing(.compact)
                 .task(id: loaded) {
-                    // Screenshot-Modus: unteren Teil zeigen.
+                    // Screenshot-Modus: „heute-zweiter“ klappt den zweiten Einsatz auf, „heute-unten“ zeigt den unteren Teil.
+                    if loaded, shotScene == "heute-zweiter" { expandedJob = jobs.dropFirst().first?.id }
                     guard loaded, shotScene == "heute-unten" else { return }
                     try? await Task.sleep(for: .milliseconds(300))
                     proxy.scrollTo("bottom", anchor: .bottom)
@@ -88,6 +119,13 @@ struct HomeView: View {
                 }
             }
             .task(id: model.active?.sync?.revision) { await reload() }
+            .task(id: shotScene) {
+                // Uhr für „Jetzt“/„in 2 Std.“: minütlich; für Screenshots fest 9:41 (wie die Statusleiste).
+                while !Task.isCancelled {
+                    now = shotScene == nil ? .now : (Calendar.current.date(bySettingHour: 9, minute: 41, second: 0, of: .now) ?? .now)
+                    try? await Task.sleep(for: .seconds(60))
+                }
+            }
             .refreshable {
                 await model.active?.sync?.run()
                 await reload()
@@ -196,27 +234,54 @@ struct HomeView: View {
                 }
                 .padding(.vertical, Space.xs)
             } else {
-                ForEach(jobs) { job in
-                    TodayJobCard(job: job, canCapture: bauakten[job.bauakteId] != nil) { action in
-                        perform(action, for: job)
-                    }
-                    .listRowInsets(EdgeInsets(top: Space.xs, leading: 0, bottom: Space.xs, trailing: 0))
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
+                let list = jobs
+                ForEach(list) { job in
+                    jobRow(job, in: list)
                 }
             }
         } header: {
-            // Datum als Überschrift des Einsatzes (keine eigene Zeile), bei altem Stand mit Hinweis.
-            HStack {
+            // Datum als Überschrift der Einsätze, rechts dezent der Abgleich (Tipp öffnet ihn); bei altem Stand mit Uhrzeit.
+            HStack(alignment: .firstTextBaseline, spacing: Space.s) {
                 Text(Date.now.formatted(.dateTime.weekday(.wide).day().month(.wide)))
                     .accessibilityIdentifier("todayDate")
-                Spacer()
-                if let planning, !planning.isCurrent {
-                    Text("Stand \(planning.loadedAt.shortStamp)")
-                }
+                Spacer(minLength: Space.s)
+                syncHint
             }
+            .textCase(nil)
         }
         .accessibilityIdentifier("todayAssignments")
+    }
+
+    /// Ein Einsatz als Karte; Wischen nach rechts: Foto, Mangel – nach links: Route, Anrufen.
+    private func jobRow(_ job: TodayJob, in list: [TodayJob]) -> some View {
+        let canCapture = bauakten[job.bauakteId] != nil
+        return TodayJobCard(job: job, glance: glances[job.bauakteId], distance: distance(to: job), phase: phase(of: job),
+                            expanded: isExpanded(job, in: list), canCapture: canCapture,
+                            onExpand: { withAnimation(.snappy) { expandedJob = job.id } }) { action in
+            perform(action, for: job)
+        }
+        .listRowInsets(EdgeInsets(top: Space.xs, leading: 0, bottom: Space.xs, trailing: 0))
+        .listRowBackground(Color.clear)
+        .listRowSeparator(.hidden)
+        // Wischen: nach rechts Foto bzw. Mangel, nach links Route bzw. Anrufen.
+        .swipeActions(edge: .leading, allowsFullSwipe: true) {
+            if canCapture {
+                Button("Foto", systemImage: "camera") { perform(.photo, for: job) }
+                    .tint(Theme.accentFill)
+                Button("Mangel", systemImage: "exclamationmark.triangle") { perform(.defect, for: job) }
+                    .tint(Theme.warning)
+            }
+        }
+        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+            if job.route != nil {
+                Button("Route", systemImage: "arrow.triangle.turn.up.right.diamond") { perform(.route, for: job) }
+                    .tint(Theme.accentFill)
+            }
+            if job.phone != nil {
+                Button("Anrufen", systemImage: "phone") { perform(.call, for: job) }
+                    .tint(Theme.success)
+            }
+        }
     }
 
     private func perform(_ action: TodayJobCard.Action, for job: TodayJob) {
@@ -226,7 +291,28 @@ struct HomeView: View {
         case .photo: cameraFor = bauakte
         case .diary: diaryFor = bauakte
         case .defect: defectFor = bauakte
+        case .route: if let url = job.route { openURL(url) }
+        case .call: if let url = job.phone { openURL(url) }
         }
+    }
+
+    /// Abgleich in einer Zeile: Symbol und kurzer Text, bei Problemen rot. Alter Planungsstand mit Uhrzeit.
+    private var syncHint: some View {
+        let state = syncState
+        let stale: String? = planning.flatMap { $0.isCurrent ? nil : "Stand \($0.loadedAt.shortStamp)" }
+        let spoken = "Abgleich: \(state.text)" + (stale.map { ", Planung \($0)" } ?? "")
+        return Button { path.append(.sync) } label: {
+            Label(stale ?? state.text, systemImage: state.symbol)
+                .labelStyle(TightLabelStyle())
+                .lineLimit(1)
+                .foregroundStyle(state.problem ? Theme.danger : Theme.textSecondary)
+        }
+        .buttonStyle(.plain)
+        .font(Typo.meta)
+        .textCase(nil)
+        .disabled(model.active?.sync == nil)
+        .accessibilityLabel(spoken)
+        .accessibilityIdentifier("todaySyncHint")
     }
 
     // MARK: Überblick
@@ -361,6 +447,7 @@ struct HomeView: View {
             return (lhs.dueDate ?? "9999") < (rhs.dueDate ?? "9999")
         }
         recent = (try? await service.recentBauakten(limit: 6)) ?? []
+        here = shotScene != nil ? CLLocation(latitude: 48.5468, longitude: 12.1350) : LocationProvider.recentLocation()
         var ids = Set((planning?.assignments(on: CalendarDay.string(.now)) ?? []).map(\.bauakteId))
         ids.formUnion(dispatch?.board?.mySiteIds ?? [])
         ids.formUnion(items.compactMap(\.bauakteId))
@@ -369,6 +456,16 @@ struct HomeView: View {
             if let bauakte = try? await service.bauakte(id) { found[id] = bauakte }
         }
         bauakten = found
+
+        // Kennzahlen der heutigen Baustellen: offene Mängel und Aufgaben, Belegreife, Wetter laut Tagebuch.
+        let today = CalendarDay.string(.now)
+        var sites: [UUID: SiteGlance] = [:]
+        for id in Set(jobs.map(\.bauakteId)) {
+            sites[id] = SiteGlance(items: (try? await service.workItems(of: id)) ?? [], rooms: (try? await service.rooms(of: id)) ?? [],
+                                   inspections: (try? await service.inspections(of: id)) ?? [], diary: (try? await service.diary(of: id)) ?? [],
+                                   today: today)
+        }
+        glances = sites
     }
 
     static func firstName(_ name: String) -> String {
