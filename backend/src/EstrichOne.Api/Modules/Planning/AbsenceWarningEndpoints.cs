@@ -292,10 +292,11 @@ internal sealed partial class AbsenceWarningScanner(IServiceScopeFactory scopes,
         }
     }
 
-    internal async Task<int> RunOnceAsync(CancellationToken cancellationToken)
+    /// <param name="anyTime">Auch nachts prüfen (Tests).</param>
+    internal async Task<int> RunOnceAsync(CancellationToken cancellationToken, bool anyTime = false)
     {
         var local = TimeZoneInfo.ConvertTime(clock.GetUtcNow(), Berlin);
-        if (local.Hour is < 7 or >= 20)
+        if (!anyTime && local.Hour is < 7 or >= 20)
         {
             return 0; // nicht nachts melden
         }

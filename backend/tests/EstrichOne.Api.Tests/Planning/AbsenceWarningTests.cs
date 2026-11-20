@@ -316,18 +316,10 @@ public sealed class AbsenceWarningTests(PostgresFixture postgres) : IAsyncLifeti
         });
 
         // Neue Krankmeldung ohne betroffene Einsätze: Kollegin in der Personalverwaltung erhält „Neue Abwesenheitsmeldung“.
-        // Die Prüfung meldet nur zwischen 7 und 20 Uhr: notfalls auf den nächsten Morgen vorstellen.
-        var berlin = TimeZoneInfo.FindSystemTimeZoneById("Europe/Berlin");
-        var local = TimeZoneInfo.ConvertTime(_factory.Clock.GetUtcNow(), berlin);
-        if (local.Hour is < 7 or >= 20)
-        {
-            var morning = (local.Hour >= 20 ? local.Date.AddDays(1) : local.Date).AddHours(9);
-            _factory.Clock.SetUtcNow(new DateTimeOffset(morning, berlin.GetUtcOffset(morning)));
-        }
-
+        // Die Uhr nicht verstellen (sonst laufen die Hintergrunddienste mit); Prüfung unabhängig von der Uhrzeit.
         var scanner = _factory.Services.GetRequiredService<AbsenceWarningScanner>();
-        (await scanner.RunOnceAsync(Ct)).ShouldBeGreaterThan(0);
-        await scanner.RunOnceAsync(Ct);
+        (await scanner.RunOnceAsync(Ct, anyTime: true)).ShouldBeGreaterThan(0);
+        await scanner.RunOnceAsync(Ct, anyTime: true);
         await using var scope = _factory.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<EstrichOneDbContext>();
         var mine = await db.Set<Notification>().AsNoTracking().Where(n => n.UserId == hrColleague.Id).ToListAsync(Ct);
