@@ -8,7 +8,7 @@
 
 ## Täglich prüfen (1 Minute)
 
-1. **Datensicherung & Archiv** → **Sicherung** öffnen (oder Card **Sicherung** auf der Startseite).
+1. **Verwaltung** → **Sicherung** öffnen (oder Card **Sicherung** auf der Startseite).
 2. **Letzte erfolgreiche Sicherung**, **Integritätsprüfung** und **Wiederherstellungstest** prüfen.
 3. Vor größeren Änderungen: **Jetzt sichern**.
 

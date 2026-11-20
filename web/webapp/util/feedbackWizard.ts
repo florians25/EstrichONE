@@ -396,8 +396,8 @@ export function openFeedbackWizard(options: FeedbackWizardOptions = {}): Promise
 				// Geschützte Bindestriche: die Nummer bricht nicht um („F-“ / „2026-0011“).
 				title: `Vielen Dank. Ihre Meldung ${created.summary.number.replace(/-/g, "\u2011")} ist eingegangen.`,
 				description: bug
-					? "Die IT prüft den Fehler und antwortet im Verlauf der Meldung. Status und Antworten finden Sie unter „Meine Meldungen“; bei Änderungen werden Sie benachrichtigt."
-					: "Die IT prüft Ihren Wunsch und plant die Umsetzung. Status und Antworten finden Sie unter „Meine Meldungen“; bei Änderungen werden Sie benachrichtigt.",
+					? "Die IT prüft den Fehler und antwortet im Verlauf der Meldung. Status und Antworten finden Sie unter „Meine Fehler & Wünsche“ (IT-Service/Helpdesk); bei Änderungen werden Sie benachrichtigt."
+					: "Die IT prüft Ihren Wunsch und plant die Umsetzung. Status und Antworten finden Sie unter „Meine Fehler & Wünsche“ (IT-Service/Helpdesk); bei Änderungen werden Sie benachrichtigt.",
 			});
 			content.destroyItems(); // Assistent mit festen IDs gleich mit aufräumen
 			content.addItem(new VBox({ alignItems: "Center", justifyContent: "Center", height: "100%", items: [done] }).addStyleClass("eoFbDone"));

@@ -26,7 +26,7 @@
 		<f:content>
 			<IconTabBar headerMode="Inline" id="tabs" selectedKey="{view>/tab}" select=".onTab" expandable="false" applyContentPadding="false" stretchContentHeight="false" busy="{view>/busy}">
 				<items>
-					<IconTabFilter key="mein" text="Meine Übersicht">
+					<IconTabFilter key="mein" text="Mein Urlaub">
 						<VBox class="sapUiSmallMargin">
 							<OverflowToolbar class="eoNoPrint">
 								<Button icon="sap-icon://navigation-left-arrow" tooltip="Vorjahr" press=".onPrevYear"/>
@@ -90,7 +90,7 @@
 							<Text text="{view>/myInfoText}" class="eoMuted sapUiSmallMarginTop"/>
 						</VBox>
 					</IconTabFilter>
-					<IconTabFilter key="antraege" text="Anträge" count="{= ${view>/pending}.length }" visible="{view>/can/approve}">
+					<IconTabFilter key="antraege" text="Urlaubsanträge" count="{= ${view>/pending}.length }" visible="{view>/can/approve}">
 						<VBox class="sapUiSmallMargin">
 							<Table contextualWidth="Auto" id="pendingTable" items="{view>/pending}" noDataText="Keine offenen Anträge." popinLayout="GridSmall">
 								<headerToolbar>
@@ -125,7 +125,7 @@
 							</Table>
 						</VBox>
 					</IconTabFilter>
-					<IconTabFilter key="plan" text="Teamkalender" visible="{view>/can/hrRead}">
+					<IconTabFilter key="plan" text="Urlaubsplan" visible="{view>/can/hrRead}">
 						<VBox class="sapUiSmallMargin">
 							<OverflowToolbar class="eoNoPrint">
 								<SegmentedButton selectedKey="{view>/planMode}" selectionChange=".onPlanMode">
@@ -197,7 +197,7 @@
 					</IconTabFilter>
 					<IconTabFilter key="krank" text="Krankmeldungen" visible="{view>/can/hrManage}" count="{= ${view>/sickNotes}.length }">
 						<VBox class="sapUiSmallMargin">
-							<MessageStrip text="Vertraulich: Krankmeldungen und AU-Bescheinigungen sieht nur die Personalverwaltung. In Planung und Teamkalender erscheint nur „abwesend“. Bitte keine Diagnosen erfassen."
+							<MessageStrip text="Vertraulich: Krankmeldungen und AU-Bescheinigungen sieht nur die Personalverwaltung. In Planung und Urlaubsplan erscheint nur „abwesend“. Bitte keine Diagnosen erfassen."
 								type="Information" showIcon="true" class="sapUiSmallMarginBottom"/>
 							<Table contextualWidth="Auto" items="{path: 'view>/sickNotes', sorter: [{path: 'caseLabel', group: true}, {path: 'from'}]}" noDataText="Keine Krankmeldungen in diesem Jahr." popinLayout="GridSmall">
 								<columns>
@@ -224,7 +224,7 @@
 							</Table>
 						</VBox>
 					</IconTabFilter>
-					<IconTabFilter key="fristen" text="Fristen" visible="{view>/can/hrRead}" count="{= ${view>/reminders}.length }">
+					<IconTabFilter key="fristen" text="Fristen &amp; Qualifikationen" visible="{view>/can/hrRead}" count="{= ${view>/reminders}.length }">
 						<VBox class="sapUiSmallMargin">
 							<List items="{view>/reminders}" noDataText="Keine Fristen in den nächsten 60 Tagen.">
 								<StandardListItem title="{view>employeeName}" description="{view>text}" info="{path: 'view>date', formatter: 'fmt.date'}"

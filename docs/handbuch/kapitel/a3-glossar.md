@@ -12,7 +12,6 @@
 <dt>Belegreif</dt><dd>Der Estrich ist ausreichend trocken, um den Bodenbelag zu verlegen; nachgewiesen z. B. durch die CM-Messung.</dd>
 <dt>Card</dt><dd>Kachel auf der Startseite mit Kennzahl und den wichtigsten Einträgen.</dd>
 <dt>CM-Messung</dt><dd>Messung der Restfeuchte des Estrichs mit dem Calciumcarbid-Verfahren.</dd>
-<dt>Disponenten-Cockpit</dt><dd>Plantafel der Disposition mit Vorrat, Konflikten und Freigabe des Plans.</dd>
 <dt>Dublette</dt><dd>Doppelt erfasster Kunde. EstrichONE prüft beim Anlegen auf ähnliche Namen, Telefonnummern, E-Mail-Adressen und Anschriften.</dd>
 <dt>Einsatz</dt><dd>Geplanter Arbeitstag einer Kolonne oder einzelner Mitarbeiter auf einer Baustelle, mit Tätigkeit, Zeit und Geräten.</dd>
 <dt>Einmalpasswort</dt><dd>Erstes Passwort aus dem Zugangsbrief; muss bei der ersten Anmeldung geändert werden.</dd>
@@ -23,6 +22,7 @@
 <dt>GoBD</dt><dd>Grundsätze zur ordnungsmäßigen Führung und Aufbewahrung von Büchern und Unterlagen in elektronischer Form.</dd>
 <dt>Kolonne</dt><dd>Arbeitsgruppe mit Kolonnenführer und Mitgliedern, oft mit eigenem Fahrzeug.</dd>
 <dt>Notfallblatt</dt><dd>PDF mit Wiederherstellungsschlüssel und Anleitung für die Neuinstallation nach einem Totalausfall.</dd>
+<dt>Planungs-Cockpit</dt><dd>Plantafel der Disposition mit Vorrat, Konflikten und Freigabe des Plans (früher „Disponenten-Cockpit“).</dd>
 <dt>Poolgerät</dt><dd>Gerät, das mehrere Personen nacheinander nutzen (z. B. das iPad einer Kolonne); entsperrt mit Pool-PIN.</dd>
 <dt>Rolle</dt><dd>Bündel von Rechten, das Benutzern zugewiesen wird (z. B. Büro und Bauleitung).</dd>
 <dt>Sicherheitsupdate</dt><dd>Update, das eine Sicherheitslücke schließt; wird rot angezeigt und sollte zeitnah eingespielt werden.</dd>

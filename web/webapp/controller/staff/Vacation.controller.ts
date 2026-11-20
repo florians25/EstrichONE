@@ -438,7 +438,7 @@ export default class Vacation extends BaseController {
 			submit: (v) => post<RequestView>(`hr/absence-requests/${r.id}/decision`, { approve, comment: v.comment || null }),
 		});
 		if (result) {
-			this.toast(approve ? "Genehmigt und in Planung und Teamkalender übernommen" : "Abgelehnt");
+			this.toast(approve ? "Genehmigt und in Planung und Urlaubsplan übernommen" : "Abgelehnt");
 			planningChanged();
 			await this.load();
 		}
@@ -452,7 +452,7 @@ export default class Vacation extends BaseController {
 			return;
 		}
 		if (await this.run(() => post<RequestView>(`hr/absence-requests/${r.id}/decision`, { approve: true, comment: null }))) {
-			this.toast(`Genehmigt: ${r.userName}, in Planung und Teamkalender übernommen`);
+			this.toast(`Genehmigt: ${r.userName}, in Planung und Urlaubsplan übernommen`);
 			planningChanged();
 			await this.load();
 		}

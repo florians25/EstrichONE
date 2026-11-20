@@ -9,7 +9,7 @@ import type NavigationList from "sap/tnt/NavigationList";
 import NavigationListItem from "sap/tnt/NavigationListItem";
 import BusyIndicator from "sap/ui/core/BusyIndicator";
 import NavigationListGroup from "sap/tnt/NavigationListGroup";
-import type { SideNavigation$ItemPressEvent, SideNavigation$ItemSelectEvent } from "sap/tnt/SideNavigation";
+import type { SideNavigation$ItemSelectEvent } from "sap/tnt/SideNavigation";
 import type { SearchField$SearchEvent } from "sap/m/SearchField";
 import type SearchField from "sap/m/SearchField";
 import type Event from "sap/ui/base/Event";
@@ -31,7 +31,7 @@ import { hasOwnChoice } from "../util/theme";
 import { date, initials } from "../util/format";
 import { currentRoute, setRouter } from "../util/navigation";
 import { PathRouter, type RouteMatch } from "../util/router";
-import { navKeyFor, navigation, routes, type NavEntry } from "../util/routes";
+import { fixedNavigation, isAdminKey, navKeyFor, navigation, navTargets, routes, type NavEntry } from "../util/routes";
 import { adminAreas, adminGroups, matchesArea } from "../util/adminCatalog";
 import { notices } from "../util/notices";
 import { updateHints } from "../util/updateHints";
@@ -48,6 +48,9 @@ import InstanceManager from "sap/m/InstanceManager";
 import type { CallResponse, DeviceResponse, TicketSummary, WorkItemDto } from "../util/models";
 import { isoDay } from "../util/days";
 import Button from "sap/m/Button";
+import Breadcrumbs from "sap/m/Breadcrumbs";
+import Link from "sap/m/Link";
+import type DynamicPageTitle from "sap/f/DynamicPageTitle";
 import Toolbar from "sap/m/Toolbar";
 import ToolbarSpacer from "sap/m/ToolbarSpacer";
 import Title from "sap/m/Title";
@@ -209,10 +212,12 @@ export default class AppController extends BaseController {
 		const data = session.data;
 		this.model().setProperty("/initials", initials(data.user?.displayName));
 		const list = this.el<NavigationList>("navigationList");
+		const fixed = this.el<NavigationList>("fixedNavigation");
 		const signature = Object.keys(data.permissions).sort().join(",") + JSON.stringify(data.modules ?? {}) + JSON.stringify(data.teams?.chatMode ?? "");
 		if (list.data("signature") === signature) return;
 		list.data("signature", signature);
 		list.destroyItems();
+		fixed.destroyItems();
 		// Abgeschaltete Module (Einstellungen › Module) verschwinden aus der Navigation, auch wenn das Recht vorliegt.
 		// Microsoft Teams: Eintrag nur im Chat-Modus „Teams“ oder „beides“.
 		const presentation = chatPresentation(data.teams);
@@ -229,12 +234,50 @@ export default class AppController extends BaseController {
 				list.addItem(this.navItem(entry));
 			}
 		}
+		// Unten fest: IT-Service/Helpdesk (aufklappbar, Unterpunkte) und Verwaltung.
+		for (const entry of fixedNavigation) {
+			if (entry.children) {
+				const children = entry.children.filter(visible);
+				if (children.length === 0) continue;
+				const parent = this.navItem(entry);
+				// Nicht auswählbar: ein Klick klappt die Unterpunkte nur auf bzw. zu (sap.tnt).
+				parent.setSelectable(false);
+				parent.setExpanded(false);
+				for (const child of children) parent.addItem(this.navItem(child));
+				fixed.addItem(parent);
+			} else if (visible(entry)) {
+				fixed.addItem(this.navItem(entry));
+			}
+		}
+		this.markNav();
 	}
 
 	private navItem(entry: NavEntry): NavigationListItem {
 		// Modus „Microsoft Teams“: der eingebaute Chat ist nur noch ein Archiv (lesen, exportieren).
 		const text = entry.key === "chat" && session.data.teams?.chatReadOnly ? this.t("nav.chatArchive") : this.t(`nav.${entry.key}`);
-		return new NavigationListItem({ key: entry.key, text, icon: entry.icon });
+		const tip = this.bundle().hasText(`navTip.${entry.key}`) ? this.t(`navTip.${entry.key}`) : undefined;
+		return new NavigationListItem({ key: entry.key, text, icon: entry.icon, tooltip: tip });
+	}
+
+	/**
+	 * Verwaltungsseiten: Brotkrumen „Verwaltung › Seite“ über dem Titel (SAP Fiori), damit klar ist, wo die Seite liegt und
+	 * wie es zurück zur Übersicht geht. Einmal je View; der Link läuft über den Pfad-Router.
+	 */
+	private adminBreadcrumbs(view: View, title?: string): void {
+		const heading = view.findAggregatedObjects(true, (c) => c.isA("sap.f.DynamicPageTitle"))[0] as DynamicPageTitle | undefined;
+		if (!heading || heading.getBreadcrumbs()) return;
+		heading.setBreadcrumbs(new Breadcrumbs({
+			links: [new Link({ text: this.t("nav.adminHub"), href: "/verwaltung", tooltip: this.t("navTip.adminHub") })],
+			currentLocationText: title ? this.t(title) : "",
+		}));
+	}
+
+	/** Aktiven Eintrag markieren; liegt er in einer zugeklappten Gruppe unten (Helpdesk), diese aufklappen. */
+	private markNav(): void {
+		const key = String(this.model().getProperty("/navKey") ?? "");
+		for (const item of this.el<NavigationList>("fixedNavigation").getItems() as NavigationListItem[]) {
+			if (item.getItems().some((child) => (child as NavigationListItem).getKey() === key)) item.setExpanded(true);
+		}
 	}
 
 	/** Microsoft Teams in neuem Fenster (Team „Baustellen“, sonst Teams allgemein); die Auswahl bleibt bei der aktuellen Seite. */
@@ -273,25 +316,17 @@ export default class AppController extends BaseController {
 	onNavigate(event: SideNavigation$ItemSelectEvent): void {
 		const item = event.getParameter("item") as NavigationListItem;
 		const key = item.getKey();
-		if (key.startsWith("__")) return; // feste Einträge: onNavPress
 		if (key === "teams") {
 			this.openTeams();
 			return;
 		}
-		const entry = navigation.flatMap((e) => e.children ?? [e]).find((e) => e.key === key);
+		const entry = navTargets().find((e) => e.key === key);
 		if (entry?.path) {
 			this.nav(entry.path);
 			if (this.getOwnerComponent()?.getModel("device")?.getProperty("/system/phone")) {
 				this.el<ToolPage>("toolPage").setSideExpanded(false);
 			}
 		}
-	}
-
-	/** Feste Einträge unten (nicht auswählbar, lösen kein itemSelect aus): Meine Meldungen, Einstellungen. */
-	onNavPress(event: SideNavigation$ItemPressEvent): void {
-		const key = (event.getParameter("item") as NavigationListItem | undefined)?.getKey();
-		if (key === "__settings") openSettings();
-		if (key === "__myFeedback") this.nav("/meine-meldungen");
 	}
 
 	onToggleSide(): void {
@@ -365,14 +400,17 @@ export default class AppController extends BaseController {
 	onAvatar(event: ShellBar$AvatarPressedEvent): void {
 		const menu = new Menu({
 			title: session.data.user?.displayName ?? "",
+			// Gruppiert: Mein Konto · Hilfe und Rückmeldung · Abmelden.
 			items: [
-				new MenuItem({ text: this.t("settings.title"), icon: "sap-icon://action-settings", press: () => openSettings() }),
+				new MenuItem({ text: this.t("settings.title"), icon: "sap-icon://action-settings", tooltip: this.t("shell.settingsTip"), press: () => openSettings() }),
 				new MenuItem({ text: this.t("inbox.preferences"), icon: "sap-icon://bell", press: () => openNotificationPreferences() }),
 				new MenuItem({ text: this.t("password.title"), icon: "sap-icon://key", press: () => this.nav("/konto/passwort") }),
 				new MenuItem({ text: this.t("security.title"), icon: "sap-icon://shield", press: () => this.nav("/konto/sicherheit") }),
 				new MenuItem({ text: this.t("shell.whatsNew"), icon: "sap-icon://hint", startsSection: true, press: () => void openWhatsNew() }),
+				new MenuItem({ text: this.t("nav.helpdeskNew"), icon: "sap-icon://add-activity", tooltip: this.t("navTip.helpdeskNew"),
+					press: () => this.nav("/it-center/helpdesk?neu=1"), visible: session.pathEnabled("/it-center/helpdesk") }),
 				new MenuItem({ text: this.t("shell.feedback"), icon: "sap-icon://quality-issue", press: () => this.onFeedback(), visible: session.moduleOn("feedback") }),
-				new MenuItem({ text: this.t("shell.myFeedback"), icon: "sap-icon://inbox", press: () => this.nav("/meine-meldungen"), visible: session.moduleOn("feedback") }),
+				new MenuItem({ text: this.t("shell.myFeedback"), icon: "sap-icon://feedback", press: () => this.nav("/meine-meldungen"), visible: session.moduleOn("feedback") }),
 				new MenuItem({ text: this.t("shell.signOut"), icon: "sap-icon://log", startsSection: true, press: () => void this.signOut() }),
 			],
 			// Erst nach der Auswahl aufräumen (das Ereignis kommt nach dem Schließen).
@@ -490,6 +528,8 @@ export default class AppController extends BaseController {
 			this.el<NavContainer>(other).removeAllPages();
 		}
 		this.model().setProperty("/navKey", navKeyFor(route.nav, match.query));
+		this.markNav();
+		if (route.nav && isAdminKey(route.nav) && route.nav !== "adminHub") this.adminBreadcrumbs(view, route.title);
 		document.title = `${route.title ? this.t(route.title) : ""} – EstrichONE`.replace(/^ – /, "");
 		const controller = view.getController() as BaseController | undefined;
 		try {

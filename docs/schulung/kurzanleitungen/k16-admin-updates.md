@@ -15,7 +15,7 @@
 ## Update von Hand
 
 1. **Versionshinweise** im Hinweis lesen (Link).
-2. Optional eine **Ankündigung** bzw. **Wartung planen …** unter **System & Betrieb** → **Hinweise & Wartung**.
+2. Optional eine **Ankündigung** bzw. **Wartung planen …** unter **Verwaltung** → **Hinweise & Wartung**.
 3. Auf dem Server den Befehl aus dem Hinweis ausführen, z. B. `sudo /opt/estrichone/update.sh 0.1.2`. Das Skript
    sichert vorher, wartet auf gesunde Dienste und prüft die gemeldete Version.
 4. **Zusatzserver nachziehen:** **Backup-Ziele** bzw. **Archiv** → **Aktualisierung der Zusatzserver** →

@@ -18,6 +18,22 @@ export const mp4 = Buffer.concat([Buffer.from([0, 0, 0, 24]), Buffer.from('ftypi
 /** Eintrag der Seitennavigation (sap.tnt.SideNavigation). */
 export const nav = (page: Page, name: string) => page.locator('.sapTntSideNavigation').getByText(name, { exact: true });
 
+/**
+ * Verwaltungsbereich öffnen: Navigation unten „Verwaltung“ → Karte auf der Übersichtsseite (die Verwaltungsseiten stehen
+ * gesammelt dort, nicht einzeln in der Seitennavigation).
+ */
+export async function adminNav(page: Page, name: string) {
+  await nav(page, 'Verwaltung').click();
+  await page.locator('.eoAdminTile').filter({ has: page.getByRole('heading', { name, exact: true }) }).first().click();
+}
+
+/** Eintrag der Gruppe „IT-Service/Helpdesk“ unten öffnen (Gruppe bei Bedarf aufklappen). */
+export async function helpNav(page: Page, name: string) {
+  const entry = nav(page, name);
+  if (!(await entry.isVisible())) await nav(page, 'IT-Service/Helpdesk').click();
+  await entry.click();
+}
+
 /** Seitentitel (DynamicPage, Objektseite). */
 export const pageTitle = (page: Page) => page.locator('.sapFDynamicPageTitle .sapMTitle, .sapUxAPObjectPageHeaderTitle .sapMTitle').first();
 

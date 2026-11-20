@@ -66,8 +66,8 @@ Anmeldezeit und letzter Aktivität. Unbekannte Anmeldungen beenden Sie mit **Abm
 | 3 | **Glocke** | Benachrichtigungen mit Anzahl der ungelesenen (Abschnitt 8.3). |
 | 4 | **Chat** | Öffnet den Chat; eine Zahl zeigt ungelesene Nachrichten (Abschnitt 8.2). |
 | 5 | **Telefon** | Schnellerfassung eines Anrufs während des Gesprächs (Abschnitt 4.2). Die Zahl zeigt fällige Wiedervorlagen. |
-| 6 | **Benutzermenü** | Einstellungen, Benachrichtigungen, Passwort, Anmeldung und Sicherheit, Was gibt’s Neues, Abmelden. |
-| 7 | **Seitennavigation** | Alle Bereiche, gruppiert nach Auftragsbearbeitung, Planung, Material, Büro, Personal und – für die Verwaltung – Organisation, Benutzer & Geräte, Datensicherung & Archiv, System & Betrieb sowie Integrationen. |
+| 6 | **Benutzermenü** | Mein Konto (Einstellungen, Benachrichtigungen, Passwort, Anmeldung und Sicherheit), Hilfe (Was gibt’s Neues, Problem melden, Fehler melden / Funktion wünschen, Meine Fehler & Wünsche), Abmelden. |
+| 7 | **Seitennavigation** | Oben die Fachgruppen Auftragsbearbeitung, Planung, Material, Büro und Personal; unten fest **IT-Service/Helpdesk** und – für die Administration – **Verwaltung**. |
 | 8 | **Cards** | Das Wichtigste für Sie auf einen Blick, jeweils mit Sprung in die passende Liste. |
 
 Unten zeigt die **Statuszeile**, mit welchem Server Sie verbunden sind, dessen Version sowie Ihren Namen und das Datum.
@@ -83,9 +83,27 @@ Bauaktenliste.
 
 ### Navigation
 
-Die Seitennavigation lässt sich mit dem Menüsymbol links oben ein- und ausklappen. Gruppen öffnen und schließen Sie mit
-dem Pfeil neben dem Gruppennamen. Jede Seite hat eine eigene Adresse: Sie können sie als Lesezeichen speichern, in einem
-neuen Tab öffnen (<kbd>Strg</kbd> + Klick) oder per E-Mail an Kollegen schicken.
+Die Seitennavigation ist so aufgebaut (Sie sehen nur, wofür Sie Rechte haben und was eingeschaltet ist):
+
+| Gruppe | Einträge |
+|---|---|
+| – | **Übersicht** (Startseite), **Chat** (bzw. **Chat-Archiv**), **Microsoft Teams** (wenn Teams genutzt wird) |
+| **Auftragsbearbeitung** | Tagesübersicht, Bauakten, Dokumente, Anfragen, Baustellenkarte, Altakten |
+| **Planung** | Planungs-Cockpit, Kolonnenplanung, Teamplaner, Terminkalender, Arbeitsplan, Kolonnen, Geräte & Fahrzeuge |
+| **Material** | Bestellungen, Materialstamm, Lieferanten |
+| **Büro** | Kunden, Anrufe, Nachrichten senden |
+| **Personal** | Mitarbeiter, Urlaubsplan, Urlaubsanträge, Krankmeldungen, Fristen & Qualifikationen, Mein Urlaub |
+| unten: **IT-Service/Helpdesk** | Helpdesk, Problem melden, Wissensdatenbank, Meine Fehler & Wünsche, Fehler & Wünsche, Helpdesk-Einstellungen |
+| unten: **Verwaltung** | Übersicht aller Verwaltungsbereiche mit Suche (Kapitel 9) |
+
+Der Name im Menü ist auch der Titel der Seite. Die geöffnete Seite ist in der Navigation markiert; Verwaltungsseiten
+markieren **Verwaltung** und zeigen über dem Titel den Pfad (z. B. **Verwaltung / Sicherung**). Fährt die Maus über
+einen Eintrag, erklärt ein kurzer Hinweis, was sich dahinter verbirgt.
+
+Die Seitennavigation lässt sich mit dem Menüsymbol links oben ein- und ausklappen; eingeklappt bleiben nur die Symbole.
+Gruppen öffnen und schließen Sie mit dem Pfeil neben dem Gruppennamen, **IT-Service/Helpdesk** unten mit einem Klick auf
+den Eintrag. Jede Seite hat eine eigene Adresse: Sie können sie als Lesezeichen speichern, in einem neuen Tab öffnen
+(<kbd>Strg</kbd> + Klick) oder per E-Mail an Kollegen schicken. Alte Lesezeichen funktionieren weiter.
 
 ### Benutzermenü und Einstellungen
 

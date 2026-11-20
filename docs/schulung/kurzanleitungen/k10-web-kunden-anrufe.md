@@ -13,12 +13,12 @@
 5. **Speichern** (<kbd>Strg</kbd> + <kbd>Enter</kbd>) – oder **Als Anfrage speichern**, wenn ein neues Bauvorhaben
    angefragt wird.
 
-![Anrufe](../../handbuch/bilder/anrufe.png "Büro und Stammdaten → Anrufe: Gesprächsnotizen mit Wiedervorlage"){mittel}
+![Anrufe](../../handbuch/bilder/anrufe.png "Büro → Anrufe: Gesprächsnotizen mit Wiedervorlage"){mittel}
 
 ## Wiedervorlagen abarbeiten
 
 1. Die Zahl am Telefon-Symbol zeigt die heute fälligen Wiedervorlagen.
-2. **Büro und Stammdaten** → **Anrufe** → **Nur fällige Wiedervorlagen**.
+2. **Büro** → **Anrufe** → **Nur fällige Wiedervorlagen**.
 3. Je Eintrag: **Erledigt**, **Als Aufgabe in die Bauakte**, **Bearbeiten**.
 
 ## Anfrage zur Bauakte machen
@@ -29,7 +29,7 @@
 
 ## Kundenstamm
 
-- **Büro und Stammdaten** → **Kunden**: Suche nach Name, Nummer, Ort, Telefon, E-Mail.
+- **Büro** → **Kunden**: Suche nach Name, Nummer, Ort, Telefon, E-Mail.
 - **Neuer Kunde** (mit Dublettenprüfung), **CSV importieren**, **Serien-E-Mail** an markierte Kunden.
 - Kundenakte: **Anrufen**, **E-Mail**, **Neue Bauakte** (Kunde vorbelegt), alle Bauakten und Dokumente des Kunden.
 

@@ -19,7 +19,7 @@ Jede Bauakte hat einen **Status**. Er steuert, wo die Akte erscheint, und wird t
 
 Abgeschlossene und stornierte Bauakten heißen **Altakten**. Sie bleiben vollständig erhalten und sind über die Suche und
 **Auftragsbearbeitung** → **Altakten** jederzeit erreichbar. Wie der Status automatisch wechselt, legt die Administration
-unter **Organisation** → **Systemeinstellungen** → **Bauakten** fest.
+unter **Verwaltung** → **Systemeinstellungen** → **Bauakten** fest.
 
 ## Neue Bauakte anlegen {#bauakte-anlegen}
 
@@ -285,7 +285,7 @@ So führen Sie die Erstbegehung durch:
 
 ![Erstbegehungsprotokoll](bilder/bauakte-pruefungen.png "Reiter Erstbegehung mit Status, Eckdaten und Protokoll")
 
-Welche Prüfpunkte und Felder erscheinen, legt die Administration unter **Organisation** → **Stammdaten** → **Formulare**
+Welche Prüfpunkte und Felder erscheinen, legt die Administration unter **Verwaltung** → **Stammdaten** → **Formulare**
 → **Erstbegehung** fest. **CM-Messungen** (Messstelle, Estrich, Dicke, CM-Wert, Ergebnis) erfassen Sie im Reiter
 **Dokumentation** → **CM-Messungen** mit **CM-Messung erfassen**.
 

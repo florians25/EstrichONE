@@ -1,19 +1,26 @@
 # Administration
 
-Dieses Kapitel richtet sich an Inhaber und Administratoren. Die Verwaltungsseiten sind in der Seitennavigation nach
-Themen gruppiert und brauchen besondere Rechte (z. B. „Benutzer verwalten“, „Einstellungen verwalten“, „Backups
-verwalten“). Jede Änderung wird im **Protokoll** festgehalten (Abschnitt 9.14).
+Dieses Kapitel richtet sich an Inhaber und Administratoren. Alle Verwaltungsseiten erreichen Sie über **Verwaltung**
+unten in der Seitennavigation; sie brauchen besondere Rechte (z. B. „Benutzer verwalten“, „Einstellungen verwalten“,
+„Backups verwalten“). Ohne solche Rechte erscheint **Verwaltung** nicht. Jede Änderung wird im **Protokoll** festgehalten
+(Abschnitt 9.14).
+
+Die Übersichtsseite **Verwaltung** ordnet die Bereiche nach Themen:
 
 | Gruppe | Seiten |
 |---|---|
-| **Organisation** | Verwaltung (Übersicht), Systemeinstellungen, Stammdaten, Module |
+| **Organisation** | Systemeinstellungen, Stammdaten, Module |
 | **Benutzer & Geräte** | Benutzer, Rollen und Rechte, Geräte, App-Updates |
-| **IT-Service/Helpdesk** | Helpdesk, Problem melden, Helpdesk-Einstellungen, Wissensdatenbank, Fehler & Wünsche |
+| **IT-Service/Helpdesk** | Helpdesk, Helpdesk-Einstellungen, Wissensdatenbank, Fehler & Wünsche (auch unten in der Seitennavigation) |
 | **Datensicherung & Archiv** | Sicherung (Backup Center), Backup-Ziele, Archiv, Aktenarchiv |
-| **System & Betrieb** | Überwachung, Speicher, Hinweise & Wartung, Protokoll |
-| **Integrationen** | E-Mail, Pushnachrichten |
+| **System & Betrieb** | Überwachung, Speicher, Speicher-Auslagerung, Hinweise & Wartung, Protokoll |
+| **Integrationen** | E-Mail, Pushnachrichten, Microsoft Teams |
 
-**Organisation** → **Verwaltung** zeigt alle Bereiche, die Sie sehen dürfen, als Karten – je Bereich mit kurzer
+Auf jeder Verwaltungsseite steht über dem Titel der Pfad **Verwaltung / Seite**; ein Klick auf **Verwaltung** führt
+zurück zur Übersicht. In der Seitennavigation bleibt dabei **Verwaltung** markiert. Bookmarks und Links auf einzelne
+Verwaltungsseiten (z. B. `/system/sicherung`) funktionieren unverändert.
+
+**Verwaltung** zeigt alle Bereiche, die Sie sehen dürfen, als Karten – je Bereich mit kurzer
 Beschreibung und, wo sinnvoll, dem Zustand (z. B. Sicherung „aktuell“, Archiv „verbunden“, Helpdesk „2 neu“). Das
 Suchfeld findet Bereiche auch über Stichwörter: „Logo“ führt zu den Systemeinstellungen, „Push“ zu den
 Pushnachrichten, „Passwort“ zu den Benutzern. Mit <kbd>Enter</kbd> öffnet sich der Bereich, wenn genau einer passt.
@@ -33,7 +40,7 @@ Aktionen** bzw. in einem rot umrandeten Abschnitt. Lange Seiten wie das Archiv b
 
 ## Benutzer
 
-**Benutzer & Geräte** → **Benutzer** verwaltet die Konten, ihre Rollen und Zugänge.
+**Verwaltung** → **Benutzer** verwaltet die Konten, ihre Rollen und Zugänge.
 
 ![Benutzer](bilder/benutzer.png "Benutzerliste mit Rollen, Status, letzter Anmeldung und Aktionen")
 
@@ -65,7 +72,7 @@ gesperrt – so bleiben Verlauf und Protokoll nachvollziehbar.
 
 ## Rollen und Rechte
 
-**Benutzer & Geräte** → **Rollen und Rechte** zeigt die **Rechtematrix**: Zeilen sind die Rechte (gruppiert nach Bauakten,
+**Verwaltung** → **Rollen und Rechte** zeigt die **Rechtematrix**: Zeilen sind die Rechte (gruppiert nach Bauakten,
 Kontakte, Dokumentation, Planung, Personal, Material, Verwaltung …), Spalten die Rollen.
 
 ![Rollen und Rechte](bilder/rollen.png "Die Rechtematrix mit den vier Standardrollen")
@@ -93,7 +100,7 @@ Wichtige Rechte im Überblick:
 
 ## Stammdaten
 
-**Organisation** → **Stammdaten** pflegt die Grundlagen, auf denen Formulare und Listen aufbauen:
+**Verwaltung** → **Stammdaten** pflegt die Grundlagen, auf denen Formulare und Listen aufbauen:
 
 - **Wertelisten** – Auswahllisten wie Objektart, Estrichart, Festigkeitsklasse, Aufbau, Dämmung, Heizungsart, Priorität
   und Dokumentart, jeweils mit Bezeichnung, Kurzform, Schlüssel, Reihenfolge und Aktiv-Schalter.
@@ -108,7 +115,7 @@ Wichtige Rechte im Überblick:
 
 ## Geräte und App-Einrichtung (QR-Code) {#geraete}
 
-**Benutzer & Geräte** → **Geräte** listet alle iPhones, iPads, Android-Geräte und Windows-Arbeitsplätze, die mit EstrichONE
+**Verwaltung** → **Geräte** listet alle iPhones, iPads, Android-Geräte und Windows-Arbeitsplätze, die mit EstrichONE
 verbunden sind – mit Nutzung, Status, App-Version und Betriebssystem sowie dem Zeitpunkt der letzten Verbindung.
 
 So richten Sie ein neues Gerät ein:
@@ -136,7 +143,7 @@ neuen Code für dasselbe Gerät.
 
 ## App-Updates {#app-updates}
 
-**Benutzer & Geräte** → **App-Updates** (auch unter Systemeinstellungen → Weitere Bereiche) zeigt, welche App-Versionen
+**Verwaltung** → **App-Updates** (auch unter Systemeinstellungen → Weitere Bereiche) zeigt, welche App-Versionen
 bereitstehen, welche Regeln gelten und welche Geräte eine ältere App haben.
 
 **Verfügbare Versionen.** Die Android-App liefert der Server selbst aus – sie ist im Server-Update enthalten und hat
@@ -166,7 +173,7 @@ Benachrichtigung (einmal je Version). Steht dort **Neuer als der Server**, aktua
 
 ## Firmendaten und Logo
 
-**Organisation** → **Systemeinstellungen** → **Firma** enthält die Firmendaten für den Briefkopf: Firmenname, Straße, PLZ, Ort,
+**Verwaltung** → **Systemeinstellungen** → **Firma** enthält die Firmendaten für den Briefkopf: Firmenname, Straße, PLZ, Ort,
 Telefon, E-Mail und Website.
 
 ![Firmendaten](bilder/systemeinstellungen.png "Systemeinstellungen, Reiter Firma mit Firmenlogo")
@@ -182,7 +189,7 @@ Die **Systemeinstellungen** gelten für alle Benutzer. Links stehen die Bereiche
 Arbeitsweise, Zugang & Meldungen, Technik), rechts die Einstellungen des gewählten Bereichs mit Überschrift und
 Kurzbeschreibung. **Speichern** oben rechts übernimmt die Änderungen aller Bereiche. Die Statuszeile meldet fehlende
 Angaben für den Briefkopf (Anschrift, Telefon oder E-Mail) und weist auf ein fehlendes Logo oder Apple Push hin.
-Speicher, Module und Pushnachrichten haben zusätzlich einen eigenen Eintrag in der Seitennavigation.
+Speicher, Module und Pushnachrichten haben zusätzlich eine eigene Karte auf der Übersichtsseite **Verwaltung**.
 
 | Bereich | Einstellungen |
 |---|---|
@@ -272,7 +279,7 @@ Dokumentation, Kommunikation und Service). Die Schalter wirken **sofort** für a
 
 ## E-Mail
 
-**Integrationen** → **E-Mail** richtet das E-Mail-Konto ein, über das EstrichONE Benachrichtigungen (Freigaben, Helpdesk),
+**Verwaltung** → **E-Mail** richtet das E-Mail-Konto ein, über das EstrichONE Benachrichtigungen (Freigaben, Helpdesk),
 Zugangsbriefe und Fehlermeldungen verschickt.
 
 ![E-Mail](bilder/e-mail.png "E-Mail-Konto mit SMTP-Server, Verschlüsselung und Testmail")
@@ -290,7 +297,7 @@ Im Reiter **Vorlagen** passen Sie Betreff und Text jeder E-Mail an (**Standardte
 
 ## Microsoft Teams {#teams}
 
-**Integrationen** → **Microsoft Teams** verlagert Unterhaltungen nach Microsoft Teams: je Bauakte ein Kanal im Team
+**Verwaltung** → **Microsoft Teams** verlagert Unterhaltungen nach Microsoft Teams: je Bauakte ein Kanal im Team
 „Baustellen“ oder ein Gruppenchat mit dem Bauakten-Team, **In Teams öffnen** in Web und Apps und – auf Wunsch – Karten bei
 neuen Mängeln, Abnahmen und Terminänderungen. Ohne Einrichtung ändert sich nichts. Recht: **Integrationen einrichten**
 (`settings.integrations`, ab Werk nur Administrator).
@@ -394,7 +401,7 @@ Teams“** sehen alle einmal einen Hinweis auf der Startseite und in den Apps, m
 
 ## Backup Center {#backup}
 
-**Datensicherung & Archiv** → **Sicherung** ist das **Backup Center**. EstrichONE sichert täglich vollständig: Datenbank (alle Bauakten,
+**Verwaltung** → **Sicherung** ist das **Backup Center**. EstrichONE sichert täglich vollständig: Datenbank (alle Bauakten,
 Kontakte, Planung, Zeiten, Benutzer, Archiv-Nachweise), alle Dateien (Fotos, Dokumente, Videos, Pläne – Originale und
 Vorschaubilder) und die Einstellungen (Konfiguration des Servers, Zeitplan, Backup-Ziele, Schlüsselbund). Die Sicherung
 ist mit AES-256 verschlüsselt, jeder Block hat eine Prüfsumme; wöchentlich wird geprüft und probeweise wiederhergestellt.
@@ -450,7 +457,7 @@ EstrichONE.
 
 ## Backup-Ziele {#backup-ziele}
 
-**Datensicherung & Archiv** → **Backup-Ziele** richtet eine zusätzliche Sicherung auf einem **anderen Rechner** ein (NAS, alter PC,
+**Verwaltung** → **Backup-Ziele** richtet eine zusätzliche Sicherung auf einem **anderen Rechner** ein (NAS, alter PC,
 Raspberry Pi). Die Ziele arbeiten „nur anhängen“: Löschen ist dort unmöglich – Schutz vor Brand, Diebstahl und
 Verschlüsselungstrojanern.
 
@@ -501,7 +508,7 @@ den Seiten Backup-Ziele und Archiv) sehen Sie je Zusatzserver die installierte u
 
 ## Archiv (revisionssicher) {#archiv}
 
-**Datensicherung & Archiv** → **Archiv** bewahrt Dokumente revisionssicher nach GoBD auf: unveränderbar, mit Prüfsummen, Hash-Kette und
+**Verwaltung** → **Archiv** bewahrt Dokumente revisionssicher nach GoBD auf: unveränderbar, mit Prüfsummen, Hash-Kette und
 Löschsperre bis zum Fristende – auf einem eigenen **Archivserver**.
 
 ![Archiv](bilder/archiv.png "Archiv: gekoppelter Archivserver, Bestand, Einstellungen und Zusatzserver")
@@ -526,14 +533,14 @@ benachrichtigt wird.
 
 ### Aktenarchiv
 
-**Datensicherung & Archiv** → **Aktenarchiv** zeigt komplett ausgelagerte Bauakten. Sie liegen dauerhaft auf dem Archivserver; beim
+**Verwaltung** → **Aktenarchiv** zeigt komplett ausgelagerte Bauakten. Sie liegen dauerhaft auf dem Archivserver; beim
 **Abrufen** stehen sie 5 Tage im System zur Ansicht bereit. Änderungen sind erst nach **Entsperren** mit Passwort
 möglich, danach archivieren Sie sie mit **Jetzt neu archivieren** wieder. **Bauakte archivieren …** lagert eine Akte von
 Hand aus.
 
 ## Überwachung
 
-**System & Betrieb** → **Überwachung** zeigt den Zustand aller Systeme: Produktivsystem (Platte, Datenbank, Sicherung,
+**Verwaltung** → **Überwachung** zeigt den Zustand aller Systeme: Produktivsystem (Platte, Datenbank, Sicherung,
 Archiv-Warteschlange), Archivserver und Backup-Ziele. Warnschwellen: Platte ab 85 % (kritisch ab 95 % oder wenn sie in
 weniger als 14 Tagen voll wäre), Sicherung älter als 36 Stunden, Archivserver bzw. Backup-Ziel länger als die eingestellte
 Frist (Standard 3 Minuten) nicht erreichbar. Davor steht dort nur „kurzzeitig nicht erreichbar – wird weiter geprüft“.
@@ -545,7 +552,7 @@ der Startseite und als Pushnachricht an die Administratoren.
 
 ## Hinweise und Wartung {#wartung}
 
-**System & Betrieb** → **Hinweise & Wartung** verwaltet Ankündigungen und den Wartungsmodus dieser Instanz.
+**Verwaltung** → **Hinweise & Wartung** verwaltet Ankündigungen und den Wartungsmodus dieser Instanz.
 
 ![Hinweise und Wartung](bilder/hinweise-wartung.png "Wartungsmodus und Ankündigungen")
 
@@ -637,7 +644,7 @@ Das Backup-Passwort aus der Abschlussausgabe gehört außerhalb des Servers in d
 
 ## Protokoll
 
-**System & Betrieb** → **Protokoll** zeigt nachvollziehbar, wer wann was getan hat: Zeitpunkt, Ereignis mit Details, Bereich,
+**Verwaltung** → **Protokoll** zeigt nachvollziehbar, wer wann was getan hat: Zeitpunkt, Ereignis mit Details, Bereich,
 Person, Objekt und IP-Adresse. Einträge lassen sich nicht ändern oder löschen. Filtern Sie nach Bereich, Person und
 Zeitraum; **Bauakte öffnen** springt zum betroffenen Objekt, **Weitere laden** holt ältere Einträge. Ereignisse, Details
 und Werte stehen auf Deutsch, Personen mit Namen statt interner Kennung.

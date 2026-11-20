@@ -41,7 +41,7 @@ Nachschlagewerke sind das **Benutzerhandbuch Web** und das **Benutzerhandbuch Ap
 ### Zwei Wochen vorher
 
 - [ ] Termine je Zielgruppe festlegen; Kolonnen möglichst an einem Regentag oder vor Arbeitsbeginn schulen.
-- [ ] Rollen und Rechte klären (**Benutzer & Geräte** → **Rollen und Rechte**): Wer ist **Baustelle**, wer **Büro und
+- [ ] Rollen und Rechte klären (**Verwaltung** → **Rollen und Rechte**): Wer ist **Baustelle**, wer **Büro und
   Bauleitung**, wer **IT-Administration**, wer **Administrator**? Wer darf planen (Recht „Planung … planen“)?
 - [ ] Module festlegen: **Chat** (vorher mit dem Betriebsrat abstimmen, § 87 BetrVG) und **Material**
   (**Systemeinstellungen** → **Module**).
@@ -108,7 +108,7 @@ nur auf eine Übungskolonne und geben Sie diese Tage **nicht** frei, damit keine
 - [ ] WLAN für alle Geräte; für die Offline-Übung den Flugmodus erklären.
 - [ ] Geräte geladen, App aus dem App Store installiert (iOS/iPadOS 17 oder neuer).
 - [ ] Ausgedruckt: Arbeitsblätter, passende Kurzanleitungen, Wissenstests, Teilnahmebestätigungen.
-- [ ] Für die Echtsystem-Einrichtung: QR-Codes (**Benutzer & Geräte** → **Geräte** → **Gerät einrichten**) erst in der
+- [ ] Für die Echtsystem-Einrichtung: QR-Codes (**Verwaltung** → **Geräte** → **Gerät einrichten**) erst in der
   Schulung erzeugen – sie gelten nur kurz und nur einmal.
 
 ## Schulung Kolonne / Monteure (60 min)
@@ -278,7 +278,7 @@ Die Teilnehmenden können
 - sich anmelden, die Oberfläche bedienen (Suche, Navigation, Cards, Benutzermenü) und die Zwei-Faktor-Anmeldung einrichten,
 - Kunden pflegen, Anrufe mit Wiedervorlage erfassen und Anfragen in Bauakten überführen,
 - Bauakten anlegen und pflegen (Kontakte, Dokumente mit Fassungen, Freigaben, Notizen, Ausdrucke),
-- im Disponenten-Cockpit einplanen, Konflikte lösen und den Plan freigeben,
+- im Planungs-Cockpit einplanen, Konflikte lösen und den Plan freigeben,
 - Urlaubsanträge stellen und genehmigen, Material bestellen und Bestellungen verfolgen.
 
 ### Ablaufplan
@@ -290,7 +290,7 @@ Die Teilnehmenden können
 | 0:30 | Neue Bauakte mit Dublettenprüfung, Kontakte, Team | Übung U2 | Kurzanleitung 08 |
 | 0:45 | Dokumente: Hochladen, Fassungen, Freigaben; Ausdrucke unter **Aktionen** | Übung U3 | Handbuch Web 3.6 |
 | 1:00 | Pause | – | – |
-| 1:10 | Disponenten-Cockpit: Vorrat, Ziehen, Konflikte, Freigabe; Tastatur | Übung U4 | Kurzanleitung 09, Spickzettel |
+| 1:10 | Planungs-Cockpit: Vorrat, Ziehen, Konflikte, Freigabe; Tastatur | Übung U4 | Kurzanleitung 09, Spickzettel |
 | 1:35 | Urlaub beantragen/genehmigen, Urlaubsplan | Übung U5 | Kurzanleitung 11 |
 | 1:45 | Material bestellen (falls Modul aktiv), Tagesübersicht | Übung U6 | Kurzanleitung 12 |
 | 1:55 | Wissenstest, Fragen | Test | Wissenstest Büro |
@@ -304,7 +304,7 @@ Die Teilnehmenden können
 3. **Auftragsbearbeitung** → **Anfragen** → Anfrage öffnen → Status **In Bearbeitung** → in eine Bauakte übernehmen.
 
 > **Lösung:** Aus der Anfrage entsteht eine Bauakte (Status **Anfrage** oder direkt als Auftrag); die Anfrage
-> gilt damit als erledigt. Der Anruf steht unter **Büro und Stammdaten** → **Anrufe**.
+> gilt damit als erledigt. Der Anruf steht unter **Büro** → **Anrufe**.
 
 **Übung U2 – Neue Bauakte mit Dublettenprüfung**
 
@@ -330,7 +330,7 @@ Die Teilnehmenden können
 
 **Übung U4 – Cockpit**
 
-1. **Planung** → **Disponenten-Cockpit** → Ansicht **Woche**.
+1. **Planung** → **Planungs-Cockpit** → Ansicht **Woche**.
 2. Ein Bauvorhaben aus dem **Vorrat** auf eine Kolonne und Mittwoch ziehen.
 3. Den Einsatz mit <kbd>Strg</kbd> + Ziehen auf Donnerstag kopieren, dann <kbd>Strg</kbd> + <kbd>Z</kbd>.
 4. **Konflikte** öffnen und einen Konflikt durch Verschieben lösen (z. B. abwesende Person).
@@ -342,8 +342,8 @@ Die Teilnehmenden können
 
 **Übung U5 – Urlaub**
 
-1. **Personal (HR)** → **Mein Urlaub / Urlaubsantrag** → **Urlaub beantragen** (zwei Tage nächsten Monat).
-2. Partnerin/Partner mit Genehmigungsrecht: Reiter **Anträge** → **Genehmigen**.
+1. **Personal** → **Mein Urlaub** → **Urlaub beantragen** (zwei Tage nächsten Monat).
+2. Partnerin/Partner mit Genehmigungsrecht: Reiter **Urlaubsanträge** → **Genehmigen**.
 3. Reiter **Urlaubsplan** → Monat ansehen.
 
 > **Lösung:** Beantragte Tage sind schraffiert, genehmigte als **U** eingetragen. Die Planung zeigt die
@@ -409,7 +409,7 @@ Die Teilnehmenden können
 
 **Übung A2 – Benutzer und Rolle**
 
-1. **Benutzer & Geräte** → **Benutzer** → **Benutzer anlegen**: „Test Monteur“, Anmeldename „t.monteur“, Rolle **Baustelle**.
+1. **Verwaltung** → **Benutzer** → **Benutzer anlegen**: „Test Monteur“, Anmeldename „t.monteur“, Rolle **Baustelle**.
 2. **Zugangsbrief (PDF)** öffnen.
 3. **Rollen und Rechte** → **Rolle anlegen** „Disposition“ → passende Rechte setzen → **Änderungen speichern**.
 4. Den Testbenutzer **sperren**.
@@ -428,8 +428,8 @@ Die Teilnehmenden können
 
 **Übung A4 – Systemeinstellungen**
 
-1. **Organisation** → **Systemeinstellungen** → **Firma**: Firmendaten prüfen, **Logo hochladen …** → **Speichern**.
-2. **Integrationen** → **E-Mail**: SMTP-Daten eintragen → **Testmail senden**.
+1. **Verwaltung** → **Systemeinstellungen** → **Firma**: Firmendaten prüfen, **Logo hochladen …** → **Speichern**.
+2. **Verwaltung** → **E-Mail**: SMTP-Daten eintragen → **Testmail senden**.
 3. **Module**: Chat bzw. Material nach Betriebsentscheidung.
 4. **Stammdaten** → **Formulare** → **Erstbegehung**: einen Prüfpunkt ergänzen (**Feld hinzufügen**).
 
@@ -438,7 +438,7 @@ Die Teilnehmenden können
 
 **Übung A5 – Sicherung**
 
-1. **Datensicherung & Archiv** → **Sicherung** → **Jetzt sichern**.
+1. **Verwaltung** → **Sicherung** → **Jetzt sichern**.
 2. Reiter **Notfall** → **Notfallblatt (PDF)** öffnen (im Echtsystem ausdrucken und wegschließen).
 3. Reiter **Sicherungen** → Stand wählen → **Dokumentsymbol** → eine Datei zurückholen.
 
@@ -447,7 +447,7 @@ Die Teilnehmenden können
 
 **Übung A6 – Wartung und Update**
 
-1. **System & Betrieb** → **Hinweise & Wartung** → **Wartung planen …** (Nachricht, Beginn, Ende; Administratoren dürfen
+1. **Verwaltung** → **Hinweise & Wartung** → **Wartung planen …** (Nachricht, Beginn, Ende; Administratoren dürfen
    weiterarbeiten).
 2. Auf dem Server (Übungsinstanz nur zeigen): `sudo /opt/estrichone/update.sh --pruefen`.
 3. **Protokoll** → nach Bereich filtern und die eigenen Änderungen dieser Schulung finden.
@@ -474,4 +474,4 @@ Die Teilnehmenden können
   Administration (13–16).
 - Übungsdaten aufräumen: Demo beenden; im Echtsystem Übungsakten stornieren, Übungstage nicht freigeben, Testbenutzer
   sperren.
-- Nach zwei Wochen: kurze Nachschulung, Fragen aus dem Helpdesk (**Benutzer & Geräte** → **Helpdesk**) auswerten.
+- Nach zwei Wochen: kurze Nachschulung, Fragen aus dem Helpdesk (**IT-Service/Helpdesk** → **Helpdesk**) auswerten.

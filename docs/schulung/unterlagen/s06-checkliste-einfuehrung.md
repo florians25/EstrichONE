@@ -44,7 +44,7 @@ App (BH App), Kurzanleitungen (K).
 - [ ] Wissenstests ausgewertet, Teilnahmebestätigungen ausgestellt
 - [ ] Kurzanleitungen gedruckt: Fahrzeuge/Lager, Büro, Serverraum (Notfall)
 - [ ] Ansprechpartner für Fragen benannt und auf den Kurzanleitungen eingetragen
-- [ ] Helpdesk-Team festgelegt (**Benutzer & Geräte** → **Helpdesk**)
+- [ ] Helpdesk-Team festgelegt (**IT-Service/Helpdesk** → **Helpdesk**)
 
 ## Am Go-live-Tag
 

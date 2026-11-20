@@ -14,7 +14,7 @@ nimmt die Sicherungen „nur anhängen“ auf und archiviert Dokumente revisions
 `sudo docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v /opt/estrichone-kombi:/opt/estrichone-kombi ghcr.io/florians25/estrichone-installer:latest backup-archiv`
 
 2. Notieren: **Adresse**, Ports (Backup-Ziel 8444, Archiv 8443), **Kopplungscode** und beide **Fingerabdrücke**.
-3. In EstrichONE: **Datensicherung & Archiv** → **Backup-Ziele** → **Kombiserver koppeln**.
+3. In EstrichONE: **Verwaltung** → **Backup-Ziele** → **Kombiserver koppeln**.
 4. Adresse und Kopplungscode eingeben. Beide Dienste werden gekoppelt.
 5. **Fingerabdrücke vergleichen**.
 6. **Notfallzugang** herunterladen und mit dem Backup-Passwort getrennt vom Server aufbewahren.
@@ -27,7 +27,7 @@ nimmt die Sicherungen „nur anhängen“ auf und archiviert Dokumente revisions
   Sicherungen selbst (keine Portfreigabe); das Archiv koppeln Sie danach über eine weitergeleitete Adresse (Port 8443)
   oder eine Tunnel-Adresse mit demselben Code.
 - **Nur Backup-Ziel:** Installer-Modus `backup-ziel`, dann **Backup-Ziel koppeln**.
-- **Nur Archivserver:** Installer-Modus `archiv`, dann **Datensicherung & Archiv** → **Archiv** → **Archivserver koppeln**.
+- **Nur Archivserver:** Installer-Modus `archiv`, dann **Verwaltung** → **Archiv** → **Archivserver koppeln**.
 
 ## Danach
 

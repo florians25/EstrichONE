@@ -2,7 +2,7 @@
 
 ## Kundenstamm
 
-**Büro und Stammdaten** → **Kunden** ist der Kundenstamm für Bauakten und Anfragen – Privatkunden ebenso wie Firmen,
+**Büro** → **Kunden** ist der Kundenstamm für Bauakten und Anfragen – Privatkunden ebenso wie Firmen,
 Bauträger, Architekten und Gemeinden.
 
 ![Kundenliste](bilder/kunden.png "Der Kundenstamm mit Filter Firmen/Privat, Sortierung und Suche")
@@ -84,7 +84,7 @@ Während eines Gesprächs zählt jede Sekunde. Klicken Sie oben in der Kopfzeile
 
 Der Zeitpunkt des Gesprächsbeginns wird übernommen; Details ergänzen Sie später.
 
-**Büro und Stammdaten** → **Anrufe** listet alle Gesprächsnotizen. Fällige Wiedervorlagen sind orange markiert; **Nur
+**Büro** → **Anrufe** listet alle Gesprächsnotizen. Fällige Wiedervorlagen sind orange markiert; **Nur
 fällige Wiedervorlagen** blendet den Rest aus. Je Eintrag stehen **Erledigt**, **Als Aufgabe in die Bauakte**,
 **Bearbeiten** und **Löschen** bereit. **Anruf mit allen Feldern** erfasst einen Anruf ausführlich, **Liste drucken**
 erstellt eine PDF-Liste.

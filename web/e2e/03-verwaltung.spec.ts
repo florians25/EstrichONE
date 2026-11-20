@@ -1,11 +1,11 @@
 import { expect, test } from '@playwright/test';
-import { adminPassword, apiCall, choose, nav, pageTitle, signIn, toast, onWeekday } from './helpers';
+import { adminNav, adminPassword, apiCall, choose, nav, pageTitle, signIn, toast, onWeekday } from './helpers';
 
 test.describe.configure({ mode: 'serial' });
 
 test('Benutzer anlegen, Einmalpasswort, Pflichtwechsel bei der ersten Anmeldung', async ({ page }) => {
   await signIn(page, 'admin', adminPassword);
-  await nav(page, 'Benutzer').click();
+  await adminNav(page, 'Benutzer');
   await expect(pageTitle(page)).toHaveText('Benutzer');
   await page.getByRole('button', { name: 'Benutzer anlegen' }).click();
 
@@ -43,12 +43,12 @@ test('Benutzer anlegen, Einmalpasswort, Pflichtwechsel bei der ersten Anmeldung'
   await page.getByRole('button', { name: 'Passwort ändern' }).click();
   await expect(pageTitle(page)).toContainText('Lukas Brandl');
   // Rolle „Baustelle“: keine Verwaltung in der Navigation.
-  await expect(nav(page, 'Benutzer')).toHaveCount(0);
+  await expect(nav(page, 'Verwaltung')).toHaveCount(0);
 });
 
 test('Gerät einrichten (QR-Code) und Sicherung zeigt ihren Zustand', async ({ page }) => {
   await signIn(page, 'admin', adminPassword);
-  await nav(page, 'Geräte').click();
+  await adminNav(page, 'Geräte');
   await page.getByRole('button', { name: 'Gerät einrichten' }).click();
   await page.getByText('Poolgerät (mehrere Personen)').click();
   await page.getByLabel('Gerätename (optional)').fill('Fahrzeug 3');
@@ -56,7 +56,7 @@ test('Gerät einrichten (QR-Code) und Sicherung zeigt ihren Zustand', async ({ p
   await expect(page.getByTestId('enrollment-code')).toHaveText(/^[A-Z2-9]{4}-[A-Z2-9]{4}$/);
   await page.getByRole('button', { name: 'Fertig' }).click();
 
-  await nav(page, 'Sicherung').click();
+  await adminNav(page, 'Sicherung');
   await expect(pageTitle(page)).toHaveText('Sicherung');
   await expect(page.getByText('Letzte Sicherung', { exact: true })).toBeVisible();
   await expect(page.getByText('Wiederherstellungstest', { exact: true })).toBeVisible();
@@ -153,7 +153,7 @@ test('Disposition: Vorrat einplanen, Terminart, Tag-, Monatsansicht und Arbeitsp
 
 test('Rollen und Rechte: eigene Rolle anlegen, Rechtematrix bearbeiten', async ({ page }) => {
   await signIn(page, 'admin', adminPassword);
-  await nav(page, 'Rollen und Rechte').click();
+  await adminNav(page, 'Rollen und Rechte');
   await expect(pageTitle(page)).toHaveText('Rollen und Rechte');
   await page.getByRole('button', { name: 'Rolle anlegen' }).click();
   const dialog = page.getByRole('dialog', { name: 'Rolle anlegen' });
@@ -171,7 +171,7 @@ test('Rollen und Rechte: eigene Rolle anlegen, Rechtematrix bearbeiten', async (
 
 test('Stammdaten: Textbaustein, Ordnervorlage und Bauakten-Vorlage', async ({ page }) => {
   await signIn(page, 'admin', adminPassword);
-  await nav(page, 'Stammdaten').click();
+  await adminNav(page, 'Stammdaten');
   await expect(pageTitle(page)).toHaveText('Stammdaten');
   await page.getByRole('button', { name: 'Textbaustein anlegen' }).click();
   let dialog = page.getByRole('dialog', { name: 'Textbaustein anlegen' });

@@ -40,7 +40,7 @@ Welche Fassung zeigt die Liste? Wo liegt der Ausdruck danach?
 
 <div class="linien n2"></div>
 
-## Übung 5 – Disponenten-Cockpit
+## Übung 5 – Planungs-Cockpit
 
 1. Ansicht **Woche**. Ein Bauvorhaben aus dem **Vorrat** auf Kolonne und Mittwoch ziehen.
 2. Mit <kbd>Strg</kbd> + Ziehen auf Donnerstag kopieren, dann mit <kbd>Strg</kbd> + <kbd>Z</kbd> zurücknehmen.
@@ -53,7 +53,7 @@ Welche Fassung zeigt die Liste? Wo liegt der Ausdruck danach?
 
 ## Übung 6 – Urlaub und Material
 
-1. **Mein Urlaub / Urlaubsantrag** → **Urlaub beantragen**; Partner genehmigt im Reiter **Anträge**.
+1. **Mein Urlaub** → **Urlaub beantragen**; Partner genehmigt im Reiter **Urlaubsanträge**.
 2. Bauakte → **Material** → Reserve 5 % → **Auswahl bestellen** → Lieferant, Termin → **Speichern**.
 3. In welchem Status ist die Bestellung jetzt? Wie wird sie „Bestellt“?
 

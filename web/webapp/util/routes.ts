@@ -1,6 +1,6 @@
 /** Seiten der Anwendung mit Pfad, View, Recht und Navigationseintrag. */
 import type { RouteDef } from "./router";
-import { adminAreas, adminGroups, companyTabKeys } from "./adminCatalog";
+import { adminAreas } from "./adminCatalog";
 
 export const routes: RouteDef[] = [
 	{ name: "login", pattern: "/anmelden", view: "auth.Login", public: true, title: "login.title" },
@@ -83,9 +83,18 @@ export interface NavEntry {
 	children?: NavEntry[];
 }
 
-const adminPermissions = [...new Set(adminAreas.map((a) => a.permission).filter((p): p is string => !!p))];
+/** Bereiche der Verwaltung (ohne IT-Service/Helpdesk, das eine eigene Gruppe unten hat). */
+const adminOnly = adminAreas.filter((a) => a.group !== "groupHelpdesk");
+const adminPermissions = [...new Set(adminOnly.map((a) => a.permission).filter((p): p is string => !!p))];
+const helpdeskArea = (key: string): NavEntry => {
+	const a = adminAreas.find((x) => x.key === key)!;
+	return { key: a.key, path: a.path, icon: a.icon, permission: a.permission };
+};
 
-/** Gruppierte Seitennavigation (Texte: i18n „nav.<key>“). */
+/**
+ * Seitennavigation oben (Texte: i18n „nav.<key>“, Tooltips: „nav.<key>.tip“): Übersicht und Chat, darunter die Fachgruppen
+ * mit höchstens sieben Einträgen. Hilfe und Verwaltung stehen unten fest (fixedNavigation).
+ */
 export const navigation: NavEntry[] = [
 	{ key: "start", path: "/start", icon: "sap-icon://home" },
 	{ key: "chat", path: "/chat", icon: "sap-icon://discussion-2", permission: "chat.use" },
@@ -101,6 +110,7 @@ export const navigation: NavEntry[] = [
 			{ key: "oldFiles", path: "/bauakten?status=old", icon: "sap-icon://attachment-zip-file", permission: "bauakten.read" },
 		],
 	},
+	// Planung: alles unter /planung, auch die Ressourcen (Kolonnen, Geräte & Fahrzeuge).
 	{
 		key: "groupPlanning", children: [
 			{ key: "cockpit", path: "/planung/cockpit", icon: "sap-icon://manager-insight", permission: "planning.read" },
@@ -108,6 +118,8 @@ export const navigation: NavEntry[] = [
 			{ key: "teamPlanner", path: "/planung/teamplaner", icon: "sap-icon://time-entry-request", permission: "planning.read" },
 			{ key: "calendar", path: "/planung/kalender", icon: "sap-icon://calendar", permission: "planning.read" },
 			{ key: "workPlan", path: "/planung/arbeitsplan", icon: "sap-icon://list", permission: "planning.read" },
+			{ key: "crews", path: "/planung/kolonnen", icon: "sap-icon://group", permission: "planning.read" },
+			{ key: "vehicles", path: "/planung/geraete", icon: "sap-icon://shipping-status", permission: "planning.read" },
 		],
 	},
 	{
@@ -122,47 +134,53 @@ export const navigation: NavEntry[] = [
 			{ key: "customers", path: "/kunden", icon: "sap-icon://customer", permission: "contacts.read" },
 			{ key: "calls", path: "/anrufe", icon: "sap-icon://call", permission: "contacts.read" },
 			{ key: "messages", path: "/verwaltung/nachrichten", icon: "sap-icon://paper-plane", permission: "notifications.send" },
-			{ key: "crews", path: "/planung/kolonnen", icon: "sap-icon://group", permission: "planning.read" },
-			{ key: "vehicles", path: "/planung/geraete", icon: "sap-icon://shipping-status", permission: "planning.read" },
 		],
 	},
 	{
 		key: "groupHr", children: [
 			{ key: "staff", path: "/personal", icon: "sap-icon://employee-lookup", permission: "hr.read" },
-			{ key: "vacationPlan", path: "/personal/urlaub?reiter=plan", icon: "sap-icon://calendar", permission: "hr.read" },
+			{ key: "vacationPlan", path: "/personal/urlaub?reiter=plan", icon: "sap-icon://appointment-2", permission: "hr.read" },
 			{ key: "vacationRequests", path: "/personal/urlaub?reiter=antraege", icon: "sap-icon://approvals", permission: "absence.approve" },
 			{ key: "sickNotes", path: "/personal/urlaub?reiter=krank", icon: "sap-icon://stethoscope", permission: "hr.manage" },
 			{ key: "hrReminders", path: "/personal/urlaub?reiter=fristen", icon: "sap-icon://lateness", permission: "hr.read" },
 			{ key: "vacation", path: "/personal/urlaub", icon: "sap-icon://general-leave-request", permission: "absence.request" },
 		],
 	},
-	// IT-Service/Helpdesk: eigene Gruppe (Einträge je nach Modul Helpdesk bzw. Feedback; Einstellungen nur für die Bearbeitung,
-	// „Fehler & Wünsche“ nur mit feedback.manage).
+];
+
+/**
+ * Feste Einträge unten (SAP Fiori: Hilfe und Verwaltung am Fuß der Seitennavigation).
+ * IT-Service/Helpdesk: Tickets, Problem melden, Wissen, Fehler & Wünsche (eigene und – mit feedback.manage – alle),
+ * Einstellungen des Helpdesks (nur Bearbeitung). Verwaltung: eine Übersichtsseite mit Suche über alle Verwaltungsbereiche.
+ */
+export const fixedNavigation: NavEntry[] = [
 	{
-		key: "groupHelpdesk", children: [
-			...adminAreas.filter((a) => a.group === "groupHelpdesk" && a.key === "helpdesk")
-				.map((a) => ({ key: a.key, path: a.path, icon: a.icon, permission: a.permission })),
+		key: "groupHelpdesk", icon: "sap-icon://sys-help", children: [
+			helpdeskArea("helpdesk"),
 			{ key: "helpdeskNew", path: "/it-center/helpdesk?neu=1", icon: "sap-icon://add-activity" },
-			...adminAreas.filter((a) => a.group === "groupHelpdesk" && a.key !== "helpdesk")
-				.map((a) => ({ key: a.key, path: a.path, icon: a.icon, permission: a.permission })),
+			helpdeskArea("knowledge"),
+			{ key: "myFeedback", path: "/meine-meldungen", icon: "sap-icon://feedback" },
+			helpdeskArea("feedbackAdmin"),
+			helpdeskArea("helpdeskSettings"),
 		],
 	},
-	// Verwaltung: Gruppen und Einträge aus dem Verwaltungskatalog; vorneweg die Übersicht mit Suche.
-	...adminGroups.filter((g) => g.key !== "groupHelpdesk").map((g, i): NavEntry => ({
-		key: g.key,
-		children: [
-			...(i === 0 ? [{ key: "adminHub", path: "/verwaltung", icon: "sap-icon://action-settings", anyPermission: adminPermissions }] : []),
-			...adminAreas.filter((a) => a.group === g.key).map((a) => ({ key: a.key, path: a.path, icon: a.icon, permission: a.permission })),
-		],
-	})),
+	{ key: "adminHub", path: "/verwaltung", icon: "sap-icon://action-settings", anyPermission: adminPermissions },
 ];
+
+/** Alle Einträge mit Ziel (oben und unten), z. B. für die Auswahl in der Navigation. */
+export const navTargets = (): NavEntry[] => [...navigation, ...fixedNavigation].flatMap((e) => e.children ? [e, ...e.children] : [e]);
+
+/** Verwaltungsseiten markieren in der Navigation „Verwaltung“ (sie stehen gesammelt auf der Übersichtsseite). */
+const adminKeys = new Set(["adminHub", ...adminOnly.map((a) => a.key)]);
+export const isAdminKey = (key: string): boolean => adminKeys.has(key);
 
 /** Personal (HR): Reiter der Urlaubsseite als eigene Navigationseinträge markieren. */
 const vacationTabs: Record<string, string> = { plan: "vacationPlan", antraege: "vacationRequests", krank: "sickNotes", fristen: "hrReminders" };
 
+/** Schlüssel des Navigationseintrags zu einer Seite (Reiter und Verwaltungsseiten auf ihren Eintrag abgebildet). */
 export function navKeyFor(nav: string | undefined, query: URLSearchParams): string {
 	if (nav === "crews" && query.get("reiter") === "geraete") return "vehicles";
-	if (nav === "company") return companyTabKeys[query.get("bereich") ?? ""] ?? "company";
+	if (nav && isAdminKey(nav)) return "adminHub";
 	if (nav === "vacation") return vacationTabs[query.get("reiter") ?? ""] ?? "vacation";
 	if (nav === "bauakten" && query.get("status") === "old") return "oldFiles";
 	if (nav === "helpdesk" && query.get("neu")) return "helpdeskNew";

@@ -66,7 +66,7 @@ test('Abwesenheiten: Betriebsferien, halber Tag mit Vorschau, Genehmigung, Ände
   if (await ok.isVisible().catch(() => false)) await ok.click();
 
   // Genehmigung (offene Anträge).
-  await page.getByRole('tab', { name: /Anträge/ }).click();
+  await page.getByRole('tab', { name: /Urlaubsanträge/ }).click();
   const row = page.getByRole('row', { name: /Familienfeier/ });
   await expect(row).toBeVisible();
   await expect(row).toContainText('2,5');
@@ -78,7 +78,7 @@ test('Abwesenheiten: Betriebsferien, halber Tag mit Vorschau, Genehmigung, Ände
   await expect(toast(page)).toContainText('Genehmigt');
 
   // Änderungsantrag: einen Tag länger.
-  await page.getByRole('tab', { name: 'Meine Übersicht' }).click();
+  await page.getByRole('tab', { name: 'Mein Urlaub' }).click();
   const mine = page.getByRole('row', { name: /Familienfeier/ }).filter({ hasText: 'Genehmigt' });
   await mine.getByRole('button', { name: 'Ändern' }).click();
   const change = await dialog(page, 'Änderung beantragen');
@@ -90,14 +90,14 @@ test('Abwesenheiten: Betriebsferien, halber Tag mit Vorschau, Genehmigung, Ände
   await change.getByRole('button', { name: 'Beantragen' }).click();
   await page.waitForTimeout(800);
   if (await ok.isVisible().catch(() => false)) await ok.click();
-  await page.getByRole('tab', { name: /Anträge/ }).click();
+  await page.getByRole('tab', { name: /Urlaubsanträge/ }).click();
   const changeRow = page.getByRole('row', { name: /Änderungsantrag/ });
   await expect(changeRow).toBeVisible();
   await changeRow.getByRole('button', { name: 'Genehmigen' }).click();
   const confirm = await dialog(page, /genehmigen$/);
   await confirm.getByRole('button', { name: 'Genehmigen' }).click();
   await expect(toast(page)).toContainText('Genehmigt');
-  await page.getByRole('tab', { name: 'Meine Übersicht' }).click();
+  await page.getByRole('tab', { name: 'Mein Urlaub' }).click();
   await expect(page.getByRole('row', { name: /Ersetzt/ })).toBeVisible();
   await expect(page.getByText('Urlaubskonto', { exact: false }).first()).toBeVisible();
   await shot(page, 'web-meine-uebersicht');

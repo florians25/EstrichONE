@@ -4,10 +4,11 @@
 
 Klemmt etwas – am iPad der Kolonne, an der App oder im Büro –, melden Mitarbeiter es als **Ticket**. Die Apps senden auf
 Wunsch technische Angaben (Gerät, Version, Abgleich, Fehlercodes) mit; Fotos und Bildschirmfotos lassen sich anhängen.
-Alles rund um den Helpdesk steht in der Seitennavigation in der eigenen Gruppe **IT-Service/Helpdesk**: **Helpdesk**
-(Tickets), **Problem melden**, **Helpdesk-Einstellungen** (nur für die Bearbeitung), **Wissensdatenbank** und **Fehler &
-Wünsche** (Fehlermeldungen und Funktionswünsche aller Benutzer, nur mit dem Recht „Fehlermeldungen und Funktionswünsche
-verwalten“). Die Einträge erscheinen, wenn das Modul Helpdesk bzw. Feedback eingeschaltet ist.
+Alles rund um Hilfe und Rückmeldungen steht unten in der Seitennavigation unter **IT-Service/Helpdesk** (ein Klick klappt
+die Gruppe auf): **Helpdesk** (Tickets), **Problem melden**, **Wissensdatenbank**, **Meine Fehler & Wünsche** (eigene
+Fehlermeldungen und Funktionswünsche), **Fehler & Wünsche** (alle Meldungen, nur mit dem Recht „Fehlermeldungen und
+Funktionswünsche verwalten“) und **Helpdesk-Einstellungen** (nur für die Bearbeitung). Die Einträge erscheinen, wenn das
+Modul Helpdesk bzw. Feedback eingeschaltet ist. **Problem melden** steht zusätzlich im Benutzermenü.
 
 ![Helpdesk](bilder/helpdesk.png "Arbeitsplatz der IT mit Kennzahlen, Ansichten und Ticketliste")
 
@@ -155,7 +156,7 @@ Büro.
 
 ## Nachrichten senden
 
-Mit dem Recht „Nachrichten senden“ erreicht das Büro Mitarbeiter direkt: **Büro und Stammdaten** → **Nachrichten
+Mit dem Recht „Nachrichten senden“ erreicht das Büro Mitarbeiter direkt: **Büro** → **Nachrichten
 senden** (oder **Nachricht senden** auf der Seite Benachrichtigungen).
 
 ![Nachrichten senden](bilder/nachrichten.png "Gesendete Nachrichten mit Empfängern, Lesestand und Zustellung")

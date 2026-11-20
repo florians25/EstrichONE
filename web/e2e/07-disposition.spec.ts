@@ -83,7 +83,7 @@ test('Personal: aus Benutzerkonten übernehmen, Stammdaten, Qualifikation mit Ab
 
 test('Urlaub: beantragen, genehmigen, Urlaubsplan mit Feiertagen und PDF, Krankmeldung vertraulich, Fristen', async ({ page }) => {
   await signIn(page, 'admin', adminPassword);
-  await nav(page, 'Mein Urlaub / Urlaubsantrag').click();
+  await nav(page, 'Mein Urlaub').click();
   await expect(pageTitle(page)).toHaveText('Urlaub und Abwesenheiten');
   const start = new Date();
   start.setMonth(start.getMonth() + 2, 1);
@@ -102,7 +102,7 @@ test('Urlaub: beantragen, genehmigen, Urlaubsplan mit Feiertagen und PDF, Krankm
   await page.waitForTimeout(800);
   if (await ok.isVisible().catch(() => false)) await ok.click();
 
-  await page.getByRole('tab', { name: /Anträge/ }).click();
+  await page.getByRole('tab', { name: /Urlaubsanträge/ }).click();
   const row = page.getByRole('row', { name: /Sommerferien/ });
   await expect(row).toBeVisible();
   // Ein Klick genügt; nur bei Hinweisen (z. B. Kolonne dünn besetzt) folgt eine Bestätigung.
@@ -115,7 +115,7 @@ test('Urlaub: beantragen, genehmigen, Urlaubsplan mit Feiertagen und PDF, Krankm
   }
   await expect(toast(page)).toContainText('Genehmigt');
 
-  await page.getByRole('tab', { name: 'Meine Übersicht' }).click();
+  await page.getByRole('tab', { name: 'Mein Urlaub' }).click();
   await expect(page.getByRole('row', { name: /Genehmigt/ }).first()).toBeVisible();
 
   await page.goto(`/personal/urlaub?reiter=plan&monat=${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}`);

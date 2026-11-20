@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { adminPassword, apiCall, choose, jpeg, nav, signIn, toast } from './helpers';
+import { adminPassword, apiCall, choose, helpNav, jpeg, nav, signIn, toast } from './helpers';
 
 // Fehler melden / Funktion wünschen: geführtes Formular (normaler Benutzer), Verwaltung durch die IT, Antwort beim Einreicher.
 test.describe.configure({ mode: 'serial' });
@@ -72,7 +72,7 @@ test('Fehler melden als normaler Benutzer: Art, Pflichtfelder, Bildschirmfoto, Z
   await expect(page).toHaveURL(/\/start$/);
 });
 
-test('Funktionswunsch über das Benutzermenü, „Meine Meldungen“ filtert', async ({ page }) => {
+test('Funktionswunsch über das Benutzermenü, „Meine Fehler & Wünsche“ filtert', async ({ page }) => {
   await signIn(page, user.login, user.password);
   await page.goto('/start');
   await page.locator('[id$="profileAvatar"]').click();
@@ -88,7 +88,7 @@ test('Funktionswunsch über das Benutzermenü, „Meine Meldungen“ filtert', a
   await expect(dialog(page).getByRole('heading', { name: /ist eingegangen/ })).toBeVisible();
   await page.locator('#feedbackClose').click();
 
-  await nav(page, 'Meine Meldungen').click();
+  await helpNav(page, 'Meine Fehler & Wünsche');
   await expect(page).toHaveURL(/\/meine-meldungen$/);
   const list = page.locator('[id$="fbList"] li');
   await expect(list.filter({ hasText: 'Bauakten als Excel exportieren' })).toBeVisible();
@@ -108,7 +108,7 @@ test('Funktionswunsch über das Benutzermenü, „Meine Meldungen“ filtert', a
 
 test('IT verwaltet: Zähler, Filter, Status, Priorität, Zuständigkeit, interne Notiz, Antwort, Duplikat', async ({ page }) => {
   await signIn(page, 'admin', adminPassword);
-  await nav(page, 'Fehler & Wünsche').click();
+  await helpNav(page, 'Fehler & Wünsche');
   await expect(page).toHaveURL(/\/it-center\/meldungen$/);
   await expect(page.locator('[id$="fbTitle"]')).toHaveText('Fehler & Wünsche');
   await expect(page.locator('.eoFbCounters').getByText('Neu')).toBeVisible();

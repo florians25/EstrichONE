@@ -16,8 +16,9 @@ test('App-Updates: Versionen, Regeln mit Prüfung, erzwungene Mindestversion spe
   test.setTimeout(120_000);
   await signIn(page, 'admin', adminPassword);
   try {
-    // Über die Navigation und die Systemeinstellungen erreichbar.
-    await expect(nav(page, 'App-Updates')).toBeVisible();
+    // Über die Verwaltung (unten in der Navigation) und die Systemeinstellungen erreichbar.
+    await nav(page, 'Verwaltung').click();
+    await expect(page.locator('.eoAdminTile').filter({ hasText: 'App-Updates' })).toBeVisible();
     await page.goto('/system/firmendaten?bereich=system');
     await page.locator('.sapMLIB').filter({ hasText: 'iOS- und Android-App: Versionen' }).click();
     await expect(page).toHaveURL(/\/it-center\/app-updates/);

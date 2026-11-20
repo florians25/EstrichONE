@@ -1,11 +1,11 @@
 import { expect, test } from '@playwright/test';
-import { adminPassword, apiCall, choose, jpeg, nav, pageTitle, signIn, toast } from './helpers';
+import { adminNav, adminPassword, apiCall, choose, helpNav, jpeg, nav, pageTitle, signIn, toast } from './helpers';
 
 test.describe.configure({ mode: 'serial' });
 
 test('IT-Ticket als normaler Benutzer im Web anlegen (Kategorie, Priorität, Bildschirmfoto), eigene Tickets mit Verlauf', async ({ page }) => {
   await signIn(page, 'l.brandl', 'Estrich-Lukas-2026!');
-  await nav(page, 'Helpdesk').click();
+  await helpNav(page, 'Helpdesk');
   await expect(page.getByText('Ihre IT-Meldungen mit Verlauf')).toBeVisible();
   await page.getByRole('button', { name: 'Neues Ticket' }).click();
   const dialog = page.getByRole('dialog', { name: 'Neues IT-Ticket' });
@@ -46,7 +46,7 @@ test('Helpdesk: Meldung bearbeiten, interne Notiz, Lösung dokumentieren', async
   });
   expect(created.status).toBe(201);
 
-  await nav(page, 'Helpdesk').click();
+  await helpNav(page, 'Helpdesk');
   await expect(page.locator('[id$="hdTitle"]')).toHaveText('Helpdesk');
   // Arbeitsplatz der IT: Liste mit Ansichten; ein Klick öffnet das Ticket.
   const row = page.locator('[id$="hdTable"] tr').filter({ hasText: 'Drucker im Büro druckt nicht' });
@@ -154,10 +154,10 @@ test('Kunden bearbeiten, Baustellenkarte, Firmendaten und Protokoll', async ({ p
   await nav(page, 'Baustellenkarte').click();
   await expect(page.getByRole('heading', { name: 'Baustellenkarte' }).first()).toBeVisible();
 
-  await nav(page, 'Systemeinstellungen').click();
+  await adminNav(page, 'Systemeinstellungen');
   await expect(pageTitle(page)).toHaveText('Systemeinstellungen');
 
-  await nav(page, 'Protokoll').click();
+  await adminNav(page, 'Protokoll');
   await expect(pageTitle(page)).toHaveText('Protokoll');
   await expect(page.getByText('Benutzer angelegt').first()).toBeVisible();
 });

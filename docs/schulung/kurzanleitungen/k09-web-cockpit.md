@@ -4,11 +4,11 @@
 
 # Web: Cockpit, Disposition und Freigabe
 
-![Disponenten-Cockpit](../../handbuch/bilder/cockpit.png "Planung → Disponenten-Cockpit, Wochenansicht"){mittel}
+![Planungs-Cockpit](../../handbuch/bilder/cockpit.png "Planung → Planungs-Cockpit, Wochenansicht"){mittel}
 
 ## Einplanen
 
-1. **Planung** → **Disponenten-Cockpit** öffnen. Ansicht wählen: **Tag**, **Woche**, **2 Wochen** oder **Monat**.
+1. **Planung** → **Planungs-Cockpit** öffnen. Ansicht wählen: **Tag**, **Woche**, **2 Wochen** oder **Monat**.
 2. Links im **Vorrat** stehen ungeplante Bauvorhaben. Karte auf **Kolonne und Tag ziehen** – oder **Einplanen** klicken.
 3. Einsatz ändern: **Doppelklick** (bearbeiten), **ziehen** (verschieben), <kbd>Strg</kbd> + ziehen (kopieren),
    **Rechtsklick** (Tagesbesetzung, Kolonne tauschen, Reihenfolge …).

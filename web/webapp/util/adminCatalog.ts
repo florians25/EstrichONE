@@ -58,7 +58,7 @@ export const adminAreas: AdminArea[] = [
 	{ key: "helpdesk", group: "groupHelpdesk", title: "Helpdesk", path: "/it-center/helpdesk", icon: "sap-icon://headset",
 		description: "Tickets der Mitarbeiter: Probleme melden, beantworten, erledigen",
 		keywords: "tickets support hilfe problem" },
-	{ key: "helpdeskSettings", group: "groupHelpdesk", title: "Helpdesk-Einstellungen", path: "/it-center/helpdesk-einstellungen", icon: "sap-icon://action-settings",
+	{ key: "helpdeskSettings", group: "groupHelpdesk", title: "Helpdesk-Einstellungen", path: "/it-center/helpdesk-einstellungen", icon: "sap-icon://wrench",
 		permission: "helpdesk.agent", description: "Reaktions- und Lösungsziele, Geschäftszeiten, Gruppen, Unterkategorien, Zuweisungsregeln und Textbausteine",
 		keywords: "sla ziele geschäftszeiten gruppen unterkategorien regeln zuweisung textbausteine helpdesk" },
 	{ key: "knowledge", group: "groupHelpdesk", title: "Wissensdatenbank", path: "/wissen", icon: "sap-icon://course-book",

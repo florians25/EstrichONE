@@ -124,7 +124,7 @@ test('Formular-Überschriften in allen Fenstern', async ({ page }) => {
     ['/planung/geraete', 'Fahrzeuge und Geräte'], ['/personal', 'Personal'], ['/personal/urlaub', 'Urlaub'], ['/chat', 'Chat'],
     ['/verwaltung/nachrichten', 'Nachrichten'], ['/verwaltung/stammdaten', 'Stammdaten'], ['/verwaltung/rollen', 'Rollen'],
     ['/verwaltung/benutzer', 'Benutzer'], ['/it-center/geraete', 'Geräte'], ['/it-center/helpdesk', 'Helpdesk'],
-    ['/it-center/meldungen', 'Fehler & Wünsche'], ['/meine-meldungen', 'Meine Meldungen'],
+    ['/it-center/meldungen', 'Fehler & Wünsche'], ['/meine-meldungen', 'Meine Fehler & Wünsche'],
     ['/system/sicherung', 'Backup Center'], ['/system/backup-ziele', 'Backup-Ziele'], ['/system/archiv', 'Archiv'], ['/system/e-mail', 'E-Mail'],
     ['/system/aktenarchiv', 'Aktenarchiv'], ['/system/ueberwachung', 'Überwachung'], ['/system/hinweise', 'Hinweise'],
     ['/system/firmendaten', 'Systemeinstellungen'], ['/konto/passwort', 'Passwort'],
@@ -246,7 +246,7 @@ test('Weitere Fenster: Aktionen der Bauakte, Erstbegehung, Helpdesk, Chat', asyn
   await dialogVia(page, page.getByRole('button', { name: /Neues Ticket/ }).filter({ visible: true }).first(), 'Helpdesk › Neues Ticket');
   await page.goto('/meine-meldungen');
   await settle(page);
-  await dialogVia(page, page.locator('[id$="fbNew"]').filter({ visible: true }).first(), 'Meine Meldungen › Neue Meldung');
+  await dialogVia(page, page.locator('[id$="fbNew"]').filter({ visible: true }).first(), 'Meine Fehler & Wünsche › Neue Meldung');
   await page.goto('/chat');
   await settle(page);
   for (const name of [/Neuer Einzelchat/, /Neue Gruppe|Gruppe anlegen|Gruppenchat/]) {

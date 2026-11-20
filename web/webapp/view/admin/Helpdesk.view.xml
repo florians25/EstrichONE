@@ -422,7 +422,7 @@
 								<OverflowToolbar style="Clear">
 									<Title text="Geräte des Melders" level="H3"/>
 									<ToolbarSpacer/>
-									<Link text="Im IT Center öffnen" press=".onDevices" visible="{view>/canDevices}"/>
+									<Link text="In Verwaltung › Geräte öffnen" press=".onDevices" visible="{view>/canDevices}"/>
 								</OverflowToolbar>
 							</headerToolbar>
 							<columns>

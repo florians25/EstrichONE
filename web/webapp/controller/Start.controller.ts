@@ -39,7 +39,6 @@ const groups: { label: string; tiles: Tile[] }[] = [
 		{ label: "Arbeitsplan", icon: "sap-icon://list", to: "/planung/arbeitsplan", permission: "planning.read" },
 		{ label: "Kolonnen", icon: "sap-icon://group", to: "/planung/kolonnen", permission: "planning.read" },
 		{ label: "Geräte & Fahrzeuge", icon: "sap-icon://shipping-status", to: "/planung/geraete", permission: "planning.read" },
-		{ label: "Abwesenheiten", icon: "sap-icon://general-leave-request", to: "/personal/urlaub?reiter=plan", permission: "hr.read" },
 	] },
 	{ label: "Material", tiles: [
 		{ label: "Bestellungen", icon: "sap-icon://cart", to: "/bestellungen", permission: "materials.read" },
@@ -50,16 +49,22 @@ const groups: { label: string; tiles: Tile[] }[] = [
 		{ label: "Kunden", icon: "sap-icon://customer", to: "/kunden", permission: "contacts.read" },
 		{ label: "Anrufe", icon: "sap-icon://call", to: "/anrufe", permission: "contacts.read" },
 	] },
-	{ label: "IT Center", tiles: [
-		{ label: "Benutzer", icon: "sap-icon://employee", to: "/verwaltung/benutzer", permission: "users.manage" },
-		{ label: "Geräte", icon: "sap-icon://iphone", to: "/it-center/geraete", permission: "devices.read" },
+	{ label: "Personal", tiles: [
+		{ label: "Urlaubsplan", icon: "sap-icon://appointment-2", to: "/personal/urlaub?reiter=plan", permission: "hr.read" },
+		{ label: "Mein Urlaub", icon: "sap-icon://general-leave-request", to: "/personal/urlaub", permission: "absence.request" },
+	] },
+	{ label: "IT-Service/Helpdesk", tiles: [
 		{ label: "Helpdesk", icon: "sap-icon://headset", to: "/it-center/helpdesk", permission: "helpdesk.agent" },
 		{ label: "Fehler & Wünsche", icon: "sap-icon://quality-issue", to: "/it-center/meldungen", permission: "feedback.manage" },
 	] },
-	{ label: "System", tiles: [
-		{ label: "Firmendaten", icon: "sap-icon://building", to: "/system/firmendaten", permission: "settings.manage" },
+	{ label: "Verwaltung", tiles: [
+		{ label: "Systemeinstellungen", icon: "sap-icon://building", to: "/system/firmendaten", permission: "settings.manage" },
+		{ label: "Benutzer", icon: "sap-icon://employee", to: "/verwaltung/benutzer", permission: "users.manage" },
+		{ label: "Geräte", icon: "sap-icon://iphone", to: "/it-center/geraete", permission: "devices.read" },
 		{ label: "Sicherung", icon: "sap-icon://upload-to-cloud", to: "/system/sicherung", permission: "backup.manage" },
 		{ label: "Protokoll", icon: "sap-icon://activities", to: "/system/protokoll", permission: "audit.read" },
+	] },
+	{ label: "Mein Konto", tiles: [
 		{ label: "Passwort ändern", icon: "sap-icon://key", to: "/konto/passwort" },
 		{ label: "Anmeldung und Sicherheit", icon: "sap-icon://shield", to: "/konto/sicherheit" },
 	] },

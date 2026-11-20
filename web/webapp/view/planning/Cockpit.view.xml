@@ -5,7 +5,7 @@
 			<!-- Kopf: Titel und Zeitraum, Kennzahlen, Aktionen -->
 			<HBox class="eoCkHeader" renderType="Bare">
 				<VBox class="eoCkTitleBlock" renderType="Bare">
-					<Title text="Disponenten-Cockpit" level="H1" class="eoCkPageTitle" wrapping="false"/>
+					<Title text="{i18n>nav.cockpit}" level="H1" class="eoCkPageTitle" wrapping="false"/>
 					<Text text="{view>/subtitle}" class="eoCkPeriodText eoTabular" wrapping="false"/>
 				</VBox>
 				<HBox class="eoCkKpis" renderType="Bare">

@@ -6,17 +6,17 @@ EstrichONE bietet dafür mehrere Ansichten auf dieselben Daten:
 
 | Ansicht | Wofür |
 |---|---|
-| **Disponenten-Cockpit** | Die Plantafel für die Disposition: Vorrat einplanen, ziehen, Konflikte lösen, Plan freigeben |
+| **Planungs-Cockpit** | Die Plantafel für die Disposition: Vorrat einplanen, ziehen, Konflikte lösen, Plan freigeben |
 | **Kolonnenplanung** | Plantafel nach Kolonnen oder Mitarbeitern über Tag, Woche oder Monat, mit Wochen-PDF |
 | **Teamplaner** | Zeitachse in Stunden je Kolonne bzw. Mitarbeiter, mit Terminen und Abwesenheiten |
 | **Terminkalender** | Termine (Besprechungen, Kundentermine, Lieferungen) in gemeinsamen und eigenen Kalendern |
 | **Arbeitsplan** | Liste „wer ist wann wo“ für 7 oder 14 Tage, mit Navigation und Druck |
 
-## Disponenten-Cockpit {#cockpit}
+## Planungs-Cockpit {#cockpit}
 
-**Planung** → **Disponenten-Cockpit** ist der Arbeitsplatz der Disposition.
+**Planung** → **Planungs-Cockpit** ist der Arbeitsplatz der Disposition.
 
-![Disponenten-Cockpit](bilder/cockpit.png "Das Disponenten-Cockpit in der Wochenansicht")
+![Planungs-Cockpit](bilder/cockpit.png "Das Planungs-Cockpit in der Wochenansicht")
 
 1. **Vorrat** – Bauvorhaben, die noch eingeplant werden müssen (**Ungeplant**) bzw. alle offenen. Sortieren Sie nach
    Dringlichkeit und suchen Sie nach Name oder Nummer. Ziehen Sie eine Karte auf eine Kolonne und einen Tag, um sie
@@ -106,7 +106,7 @@ Baustelle, Tätigkeit, Gerät und Hinweisen (z. B. „Jonas Schmid ist im Urlaub
 - Einsätze lassen sich wie im Cockpit per Ziehen verschieben.
 - Die Filter oben grenzen nach Bauakte, Kolonne, Status und Terminart ein.
 - **Wochen-PDF** druckt die Woche, **Baustellen-Vorrat** zeigt noch nicht eingeplante Bauvorhaben, **Cockpit** wechselt
-  in das Disponenten-Cockpit.
+  in das Planungs-Cockpit.
 
 ## Teamplaner
 
@@ -146,7 +146,7 @@ aus.
 
 ## Kolonnen
 
-**Büro und Stammdaten** → **Kolonnen** listet die Kolonnen mit Kolonnenführer, Mitgliedern, **Auslastung (Woche)** und
+**Planung** → **Kolonnen** listet die Kolonnen mit Kolonnenführer, Mitgliedern, **Auslastung (Woche)** und
 Status. **Kolonne anlegen** bzw. **Bearbeiten**: Name, Farbe (erscheint in allen Plantafeln), Kolonnenführer, Mitglieder
 und Reihenfolge. **Deaktivieren** blendet eine Kolonne aus der Planung aus, ohne ihre Einsätze zu löschen.
 
@@ -159,7 +159,7 @@ App-Registrierung öffnet **Teams-Chat** einen Gruppenchat direkt in Teams (nich
 
 ## Geräte und Fahrzeuge
 
-**Büro und Stammdaten** → **Geräte & Fahrzeuge** verwaltet **Fahrzeuge** sowie **Pumpen & Maschinen** (z. B.
+**Planung** → **Geräte & Fahrzeuge** verwaltet **Fahrzeuge** sowie **Pumpen & Maschinen** (z. B.
 Estrichboy, Fließestrichpumpe, Glättmaschine) mit Kennzeichen, Typ, Führerscheinklasse, **TÜV**- und **Wartungstermin**,
 zugeordneter Kolonne, Bild und Dokumenten (Fahrzeugschein, Prüfberichte). Geräte werden in den Einsätzen mit geplant;
 EstrichONE erkennt, wenn ein Gerät an zwei Orten gleichzeitig eingeplant ist.

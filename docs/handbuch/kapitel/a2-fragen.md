@@ -65,12 +65,12 @@ einrichten** → **Pushnachrichten in diesem Browser** ein und senden Sie eine *
 Im Protokoll des Servers beim ersten Start: `docker compose logs api`.
 
 **Ein Mitarbeiter hat sein Handy mit der Authenticator-App verloren.**
-**Benutzer & Geräte** → **Benutzer** → **Zwei-Faktor-Anmeldung zurücksetzen (Handy verloren)**. Danach richtet er die App neu ein.
+**Verwaltung** → **Benutzer** → **Zwei-Faktor-Anmeldung zurücksetzen (Handy verloren)**. Danach richtet er die App neu ein.
 
 **Ein iPad wurde gestohlen.**
-**Benutzer & Geräte** → **Geräte** → **Sperren**. Das Gerät kann sich nicht mehr verbinden. Ändern Sie zusätzlich die Passwörter
+**Verwaltung** → **Geräte** → **Sperren**. Das Gerät kann sich nicht mehr verbinden. Ändern Sie zusätzlich die Passwörter
 der Personen, die das Gerät genutzt haben.
 
 **Die Startseite meldet „Bisher wurde keine Sicherung abgeschlossen“.**
-Der Backup-Dienst läuft nicht oder ist nicht eingerichtet. Prüfen Sie **Datensicherung & Archiv** → **Sicherung** und starten Sie
+Der Backup-Dienst läuft nicht oder ist nicht eingerichtet. Prüfen Sie **Verwaltung** → **Sicherung** und starten Sie
 **Jetzt sichern**. Bleibt der Fehler, sehen Sie im Protokoll des Backup-Dienstes nach (`docker compose logs backup`).

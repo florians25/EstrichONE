@@ -7,7 +7,7 @@
 				<f:expandedContent>
 					<HBox alignItems="Center" wrap="Wrap">
 						<Text text="{view>/subtitle}" class="sapUiSmallMarginEnd"/>
-						<Link text="Abwesenheiten: Personal (HR) › Urlaubsplan" href="/personal/urlaub?reiter=plan" visible="{= ${session>/permissions/hr.read} === true &amp;&amp; ${view>/tab} === 'kolonnen' }"/>
+						<Link text="Abwesenheiten: Personal › Urlaubsplan" href="/personal/urlaub?reiter=plan" visible="{= ${session>/permissions/hr.read} === true &amp;&amp; ${view>/tab} === 'kolonnen' }"/>
 					</HBox>
 				</f:expandedContent>
 				<f:actions>

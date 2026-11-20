@@ -2,7 +2,7 @@
 
 ## Personalstamm
 
-**Personal (HR)** → **Mitarbeiter** ist der Personalstamm: Kontakt, Beschäftigung, Qualifikationen, Urlaub, ausgegebene
+**Personal** → **Mitarbeiter** ist der Personalstamm: Kontakt, Beschäftigung, Qualifikationen, Urlaub, ausgegebene
 Geräte und vertrauliche Personaldokumente.
 
 ![Personal](bilder/personal.png "Der Personalstamm mit Tätigkeit, Kolonne, Resturlaub und Status")
@@ -33,7 +33,7 @@ Ein Klick öffnet die Mitarbeiterakte mit den Abschnitten:
 
 ## Urlaub und Abwesenheiten
 
-**Personal (HR)** → **Mein Urlaub / Urlaubsantrag** ist die Seite für alle Mitarbeiter. Oben stehen **Mein Resturlaub
+**Personal** → **Mein Urlaub** ist die Seite für alle Mitarbeiter. Oben stehen **Mein Resturlaub
 (Tage)**, **Offene Anträge** und **Heute abwesend**.
 
 ![Urlaub und Abwesenheiten](bilder/urlaub.png "Die Seite Urlaub und Abwesenheiten")
@@ -46,7 +46,7 @@ Ein Klick öffnet die Mitarbeiterakte mit den Abschnitten:
 3. Senden Sie den Antrag. Er erscheint unter **Meine Anträge** mit Status; solange er offen ist, können Sie ihn
    **zurückziehen**.
 
-Die Genehmigenden werden benachrichtigt. Sie sehen den Antrag im Reiter **Anträge** unter **Warten auf Genehmigung** –
+Die Genehmigenden werden benachrichtigt. Sie sehen den Antrag im Reiter **Urlaubsanträge** unter **Warten auf Genehmigung** –
 mit den Tagen, dem Resturlaub danach und Hinweisen (z. B. wenn schon viele aus derselben Kolonne fehlen) – und
 entscheiden mit **Genehmigen** oder **Ablehnen**. **Für Mitarbeiter beantragen** erfasst einen Antrag stellvertretend.
 
@@ -66,6 +66,6 @@ dem eingestellten Bundesland. **PDF Monat** und **PDF Jahr** drucken den Plan.
 **Krankmeldungen** erfasst die Personalverwaltung mit **Krankmeldung erfassen** – auf Wunsch mit AU-Bescheinigung.
 Krankmeldungen sind vertraulich: Sie sieht nur die Personalverwaltung; in der Planung erscheint lediglich „abwesend“.
 
-Der Reiter **Fristen** (Navigation: **Fristen & Qualifikationen**) erinnert an ablaufende Qualifikationen und
+Der Reiter **Fristen & Qualifikationen** erinnert an ablaufende Qualifikationen und
 Führerscheine, Probezeitende, Geburtstage und Jubiläen. Über das Zahnrad stellen Sie **Bundesland**, die
 **Kolonnen-Grenze** (wie viel Prozent einer Kolonne gleichzeitig fehlen dürfen) und die **Erinnerungen** ein.

@@ -4,18 +4,18 @@
 
 # Urlaub beantragen und genehmigen
 
-![Urlaub](../../handbuch/bilder/urlaub.png "Personal (HR) → Mein Urlaub / Urlaubsantrag"){mittel}
+![Urlaub](../../handbuch/bilder/urlaub.png "Personal → Mein Urlaub"){mittel}
 
 ## Urlaub beantragen
 
-1. Im Browser **Personal (HR)** → **Mein Urlaub / Urlaubsantrag** öffnen. Oben: **Mein Resturlaub (Tage)**.
+1. Im Browser **Personal** → **Mein Urlaub** öffnen. Oben: **Mein Resturlaub (Tage)**.
 2. **Urlaub beantragen** klicken.
 3. **Zeitraum** und **Art** wählen (Urlaub, Schulung, Berufsschule, Sonderurlaub, Sonstiges), bei Bedarf eine Notiz.
 4. Antrag senden. Er steht unter **Meine Anträge** – solange er offen ist, können Sie ihn **zurückziehen**.
 
 ## Antrag genehmigen
 
-1. Sie werden benachrichtigt. Reiter **Anträge** → **Warten auf Genehmigung** öffnen.
+1. Sie werden benachrichtigt. Reiter **Urlaubsanträge** → **Warten auf Genehmigung** öffnen.
 2. Tage, **Resturlaub danach** und Hinweise prüfen (z. B. wenn schon viele aus derselben Kolonne fehlen).
 3. **Genehmigen** oder **Ablehnen**.
 

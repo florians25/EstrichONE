@@ -12,8 +12,8 @@ function monday(): string {
 
 test('Disponenten-Cockpit: Raster, Verschieben per Ziehen mit Rückgängig, Schnellansicht, Tagesbesetzung, Konflikte, Freigabe, Legende', async ({ page }) => {
   await signIn(page, 'admin', adminPassword);
-  await nav(page, 'Disponenten-Cockpit').click();
-  await expect(page.locator('.eoCkPageTitle')).toHaveText('Disponenten-Cockpit');
+  await nav(page, 'Planungs-Cockpit').click();
+  await expect(page.locator('.eoCkPageTitle')).toHaveText('Planungs-Cockpit');
   await page.goto(`/planung/cockpit?ansicht=week&datum=${monday()}`);
   const row = page.locator('.eoCkRow').filter({ has: page.locator('.eoCkLaneName', { hasText: 'Kolonne Admin' }) });
   const card = row.locator('.eoCkCard').first();

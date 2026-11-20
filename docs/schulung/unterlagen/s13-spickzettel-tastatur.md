@@ -37,7 +37,7 @@
 | <kbd>Strg</kbd> + <kbd>V</kbd> im Antwortfeld | Bildschirmfoto anhängen |
 | <kbd>Strg</kbd> + <kbd>Enter</kbd> | Antwort senden |
 
-## Disponenten-Cockpit
+## Planungs-Cockpit
 
 | Tasten | Wirkung |
 |---|---|
