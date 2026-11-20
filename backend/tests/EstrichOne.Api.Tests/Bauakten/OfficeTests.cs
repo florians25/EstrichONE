@@ -73,15 +73,18 @@ public sealed class OfficeTests(PostgresFixture postgres) : IAsyncLifetime
     }
 
     [Fact]
-    public async Task SiteWorker_CannotSeeRoomsOfForeignBauakte()
+    public async Task SiteWorker_SeesRoomsOfForeignBauakte_ButCannotChangeThem()
     {
         using var office = await _factory.CreateClientAsAsync("buero", StandardRoles.OfficeId);
         using var worker = await _factory.CreateClientAsAsync("baustelle", StandardRoles.SiteWorkerId);
         var bauakte = await CreateAsync(office, new { id = Guid.CreateVersion7(), title = "Halle" });
 
         using var response = await worker.GetAsync(new Uri($"/api/v1/bauakten/{bauakte.Id}/rooms", UriKind.Relative), Ct);
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
 
-        response.StatusCode.ShouldBe(HttpStatusCode.NotFound);
+        using var save = await worker.PutAsJsonAsync($"/api/v1/bauakten/{bauakte.Id}/rooms/{Guid.CreateVersion7()}", new { name = "Bad" }, Ct);
+        save.StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+        (await save.ReadProblemAsync()).Code.ShouldBe("BAUAKTE_NOT_ASSIGNED");
     }
 
     [Fact]

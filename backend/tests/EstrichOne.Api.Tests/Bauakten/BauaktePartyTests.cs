@@ -51,7 +51,10 @@ public sealed class BauaktePartyTests(PostgresFixture postgres) : IAsyncLifetime
 
         // Fremde Bauakte: wie nicht vorhanden.
         using var site = await _factory.CreateClientAsAsync("baustelle", StandardRoles.SiteWorkerId);
-        (await site.GetAsync(new Uri($"/api/v1/bauakten/{bauakte}/parties", UriKind.Relative), Ct)).StatusCode.ShouldBe(HttpStatusCode.NotFound);
+        // Alle sehen alle Bauakten samt Beteiligten; ändern nur Zugeteilte.
+        (await site.GetAsync(new Uri($"/api/v1/bauakten/{bauakte}/parties", UriKind.Relative), Ct)).StatusCode.ShouldBe(HttpStatusCode.OK);
+        (await site.DeleteAsync(new Uri($"/api/v1/bauakten/{bauakte}/parties/{Guid.CreateVersion7()}", UriKind.Relative), Ct)).StatusCode
+            .ShouldBe(HttpStatusCode.Forbidden);
     }
 
     [Fact]

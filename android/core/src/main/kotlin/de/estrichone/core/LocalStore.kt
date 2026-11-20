@@ -184,11 +184,37 @@ class LocalStore(val backend: StorageBackend) {
     fun children(type: String, bauakteId: String): List<LocalEntity> =
         backend.entitiesOfBauakte(bauakteId.lowercase()).filter { it.type == type }
 
+    // Zuteilung („Nur ansehen“)
+
+    /**
+     * Bauakten auf dem Gerät, die man nur ansehen darf (sichtbar, aber nicht zugeteilt – nur mit „alle Bauakten offline“).
+     * Der Server meldet mit `includeScope` die bearbeitbaren; ohne diese Angabe gilt alles als bearbeitbar.
+     */
+    fun isViewOnly(bauakteId: String): Boolean = bauakteId.lowercase() in viewOnly()
+
+    /** Nach „Mich als Beteiligten eintragen“ (`false`) bzw. „Austragen“ (`true`) sofort lokal übernehmen. */
+    fun setViewOnly(bauakteId: String, viewOnly: Boolean) {
+        val set = viewOnly().toMutableSet()
+        if (viewOnly) set += bauakteId.lowercase() else set -= bauakteId.lowercase()
+        backend.transaction { backend.setMeta(VIEW_ONLY, set.sorted().joinToString(",")) }
+        changed()
+    }
+
+    private fun viewOnly(): Set<String> = backend.meta(VIEW_ONLY).orEmpty().split(',').filter { it.isNotBlank() }.toSet()
+
+    /** Änderungen an nicht zugeteilten Bauakten gar nicht erst in die Warteschlange (der Server lehnte sie ab). */
+    private fun ensureAssigned(type: String, key: String, data: JsonObject?) {
+        if (type != EntityTypes.BAUAKTE && type !in EntityTypes.childTypes) return
+        val owner = if (type == EntityTypes.BAUAKTE) key else (data ?: backend.getEntity(type, key)?.data)?.let { bauakteOf(type, key, it) }
+        if (owner != null && owner in viewOnly()) throw BauakteNotAssignedException()
+    }
+
     // Lokale Änderungen
 
     /** Neuer Datensatz plus `<typ>.create` mit den Nutzdaten. */
     fun create(type: String, id: String, data: JsonObject, payload: JsonObject = data, operation: String = "${EntityTypes.operationPrefix(type)}.create") {
         val key = id.lowercase()
+        if (type != EntityTypes.BAUAKTE) ensureAssigned(type, key, data)
         backend.transaction {
             backend.putEntity(LocalEntity(type, key, data.merged(mapOf("id" to toJson(key))), SyncState.Pending), bauakteOf(type, key, data))
             backend.insertOperation(OutboxOperation(0, Ids.v7(), operation, type, key, null, payload))
@@ -202,6 +228,8 @@ class LocalStore(val backend: StorageBackend) {
      */
     fun update(type: String, id: String, changes: Map<String, JsonElement>, operation: String = "${EntityTypes.operationPrefix(type)}.update") {
         val key = id.lowercase()
+        // Aufgaben: Wer sie zugewiesen bekommen hat, darf sie auch ohne Zuteilung zur Bauakte erledigen (der Server prüft).
+        if (type != EntityTypes.WORK_ITEM) ensureAssigned(type, key, null)
         backend.transaction {
             val current = backend.getEntity(type, key) ?: throw IllegalStateException("Datensatz nicht gefunden")
             val base = changes.keys.associateWith { current.data[it] ?: JsonNull }
@@ -225,6 +253,7 @@ class LocalStore(val backend: StorageBackend) {
     /** Operation mit eigenen Nutzdaten (z. B. `bauakte.setStatus`) und lokaler Vorschau der Daten. */
     fun operation(type: String, id: String, operation: String, payload: JsonObject, localChanges: Map<String, JsonElement> = emptyMap()) {
         val key = id.lowercase()
+        ensureAssigned(type, key, if (payload.str("bauakteId") != null) payload else null)
         backend.transaction {
             backend.getEntity(type, key)?.let { current ->
                 backend.putEntity(current.copy(data = current.data.merged(localChanges), syncState = SyncState.Pending), bauakteOf(type, key, current.data))
@@ -237,6 +266,7 @@ class LocalStore(val backend: StorageBackend) {
     /** Löschen (`<typ>.delete`): lokal sofort entfernt. */
     fun delete(type: String, id: String) {
         val key = id.lowercase()
+        ensureAssigned(type, key, null)
         backend.transaction {
             backend.deleteEntity(type, key)
             backend.insertOperation(OutboxOperation(0, Ids.v7(), "${EntityTypes.operationPrefix(type)}.delete", type, key, null, JsonObject(emptyMap())))
@@ -247,6 +277,7 @@ class LocalStore(val backend: StorageBackend) {
     /** Datei ankündigen und in die Upload-Warteschlange stellen (Abschnitt 6). */
     fun announceFile(data: JsonObject, upload: PendingUpload) {
         val key = upload.fileId.lowercase()
+        ensureAssigned(EntityTypes.FILE, key, data)
         backend.transaction {
             backend.putEntity(LocalEntity(EntityTypes.FILE, key, data.merged(mapOf("id" to toJson(key))), SyncState.Pending), data.str("bauakteId")?.lowercase())
             backend.insertOperation(OutboxOperation(0, Ids.v7(), "file.announce", EntityTypes.FILE, key, null, data))
@@ -334,9 +365,14 @@ class LocalStore(val backend: StorageBackend) {
         set(value) = backend.transaction { backend.setMeta("cursor", value) }
 
     /** Seite des Änderungsfeeds übernehmen. Datensätze mit ungesendeten lokalen Änderungen bleiben unverändert. */
-    fun applyPage(changes: List<SyncChange>, cursor: String?, visible: List<String>?) {
+    fun applyPage(changes: List<SyncChange>, cursor: String?, visible: List<String>?, assigned: List<String>? = null) {
         backend.transaction {
             applyChanges(changes)
+            if (visible != null && assigned != null) {
+                // Sichtbar, aber nicht zugeteilt (nur mit „alle Bauakten offline“): auf dem Gerät nur ansehen.
+                val viewOnly = visible.map { it.lowercase() }.toSet() - assigned.map { it.lowercase() }.toSet()
+                backend.setMeta(VIEW_ONLY, viewOnly.sorted().joinToString(","))
+            }
             if (visible != null) {
                 val keep = visible.map { it.lowercase() }.toSet()
                 val pendingIds = backend.outbox().filter { it.state != OutboxState.Rejected }.map { it.entityId }.toSet()
@@ -462,4 +498,22 @@ class LocalStore(val backend: StorageBackend) {
 
     private fun bauakteOf(type: String, id: String, data: JsonObject): String? =
         if (type == EntityTypes.BAUAKTE) id else data.str("bauakteId")?.lowercase()
+
+    private companion object {
+        const val VIEW_ONLY = "viewOnlyBauakten"
+    }
+}
+
+/** Änderung an einer Bauakte, der man nicht zugeteilt ist (Server: abgelehnt mit BAUAKTE_NOT_ASSIGNED). */
+class BauakteNotAssignedException : IllegalStateException("Nur ansehen – trag dich als Beteiligter ein, um zu bearbeiten.") {
+    companion object {
+        const val CODE = "BAUAKTE_NOT_ASSIGNED"
+        const val MESSAGE = "Nur ansehen – trag dich als Beteiligter ein, um zu bearbeiten."
+        const val JOIN = "Mich als Beteiligten eintragen"
+        const val LEAVE = "Als Beteiligter austragen"
+
+        /** Verständliche Meldung zu einer abgelehnten Operation mit diesem Code. */
+        fun messageFor(code: String?): String? = if (code == CODE)
+            "Nicht übertragen: Du bist dieser Bauakte nicht (mehr) zugeteilt. Trag dich als Beteiligter ein und sende die Änderung erneut." else null
+    }
 }

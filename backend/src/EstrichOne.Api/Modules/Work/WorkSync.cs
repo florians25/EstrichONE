@@ -44,6 +44,11 @@ internal sealed class WorkSync(EstrichOneDbContext db, IBauakteAccess access, IU
             return SyncOperationResult.Rejected(op.OpId, "BAUAKTE_NOT_FOUND", "Die Bauakte existiert nicht (mehr) oder ist nicht sichtbar.");
         }
 
+        if (bauakteId is { } writable && !await access.CanWriteAsync(writable, cancellationToken))
+        {
+            return SyncOperationResult.NotAssigned(op.OpId);
+        }
+
         var existing = await db.Set<WorkItem>().IgnoreQueryFilters([QueryFilters.NotDeleted]).SingleOrDefaultAsync(w => w.Id == op.EntityId, cancellationToken);
         if (existing is not null)
         {
@@ -85,6 +90,12 @@ internal sealed class WorkSync(EstrichOneDbContext db, IBauakteAccess access, IU
             || (item.BauakteId is null && item.CreatedByUserId != currentUser.UserId && item.AssigneeUserId != currentUser.UserId))
         {
             return SyncOperationResult.Rejected(op.OpId, "NOT_FOUND", "Die Aufgabe existiert nicht (mehr) oder ist nicht sichtbar.");
+        }
+
+        // Wer die Aufgabe zugewiesen bekommen hat, darf sie bearbeiten (z. B. erledigen) – auch ohne Zuteilung zur Bauakte.
+        if (item.BauakteId is { } itemBauakte && item.AssigneeUserId != currentUser.UserId && !await access.CanWriteAsync(itemBauakte, cancellationToken))
+        {
+            return SyncOperationResult.NotAssigned(op.OpId);
         }
 
         var current = (JsonObject)SyncPayload.ToNode(WorkItemDto.From(item))!;

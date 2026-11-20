@@ -20,6 +20,9 @@ public enum FileFailure
     TypeNotAllowed,
     BauakteNotFound,
 
+    /// <summary>Bauakte sichtbar, aber nicht zugeteilt (nur ansehen).</summary>
+    BauakteNotAssigned,
+
     /// <summary>Bild mit zu vielen Bildpunkten (Schutz vor Bildbomben, siehe ImageSafety).</summary>
     ImageTooLarge,
 }
@@ -52,6 +55,11 @@ public sealed class FileService(
         if (bauakteId is { } target && !await bauakten.CanReadAsync(target, cancellationToken))
         {
             return (null, false, FileFailure.BauakteNotFound);
+        }
+
+        if (bauakteId is { } writable && !await bauakten.CanWriteAsync(writable, cancellationToken))
+        {
+            return (null, false, FileFailure.BauakteNotAssigned);
         }
 
         var existing = await db.Set<FileRecord>().IgnoreQueryFilters([QueryFilters.NotDeleted])
@@ -241,6 +249,10 @@ public sealed class FileService(
         var file = await FindOwnAsync(id, cancellationToken);
         return file is null ? null : file.State == FileState.Stored ? file.SizeBytes : storage.PartialLength(id);
     }
+
+    /// <summary>Darf der Benutzer die (sichtbare) Datei ändern oder löschen? An einer Bauakte nur, wenn er ihr zugeteilt ist.</summary>
+    public async Task<bool> CanWriteAsync(FileRecord file, CancellationToken cancellationToken) =>
+        file.BauakteId is not { } bauakteId || await bauakten.CanWriteAsync(bauakteId, cancellationToken);
 
     /// <summary>Datei, die der Benutzer sehen darf: über die Bauakte bzw. – ohne Bauakte – nur eigene Dateien.</summary>
     public async Task<FileRecord?> FindReadableAsync(Guid id, CancellationToken cancellationToken)

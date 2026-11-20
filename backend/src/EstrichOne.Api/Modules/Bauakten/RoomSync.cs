@@ -67,6 +67,11 @@ internal sealed class RoomSync(
             return NotFound(op);
         }
 
+        if (!await access.CanWriteAsync(bauakteId, cancellationToken))
+        {
+            return SyncOperationResult.NotAssigned(op.OpId);
+        }
+
         var existing = await db.Set<Room>().IgnoreQueryFilters([QueryFilters.NotDeleted]).SingleOrDefaultAsync(r => r.Id == op.EntityId, cancellationToken);
         if (existing is not null)
         {
@@ -92,6 +97,11 @@ internal sealed class RoomSync(
             return NotFound(op);
         }
 
+        if (!await access.CanWriteAsync(room.BauakteId, cancellationToken))
+        {
+            return SyncOperationResult.NotAssigned(op.OpId);
+        }
+
         var current = (JsonObject)SyncPayload.ToNode(RoomDto.From(room))!;
         var (accepted, conflicts) = SyncPayload.Merge(op.Payload, current.ToDictionary(pair => pair.Key, pair => pair.Value), EditableFields);
         var changes = (JsonObject)op.Payload["changes"]!;
@@ -115,6 +125,11 @@ internal sealed class RoomSync(
         if (room is null || !await access.CanReadAsync(room.BauakteId, cancellationToken))
         {
             return NotFound(op);
+        }
+
+        if (!await access.CanWriteAsync(room.BauakteId, cancellationToken))
+        {
+            return SyncOperationResult.NotAssigned(op.OpId);
         }
 
         room.Delete(clock.GetUtcNow());

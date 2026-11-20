@@ -67,6 +67,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
@@ -106,8 +107,19 @@ import de.estrichone.core.InitialInspectionStatus
 import de.estrichone.core.PlannedJob
 import java.time.LocalDate
 
+/** Bauakte nur ansehen (nicht zugeteilt): keine Erfassen- und Bearbeiten-Knöpfe. */
+val LocalViewOnly = androidx.compose.runtime.staticCompositionLocalOf { false }
+
 @Composable
 fun AreaScreen(bauakteId: String, area: AreaKind) {
+    val session = LocalSession.current
+    val revision by session.store.revision.collectAsState()
+    val viewOnly = remember(revision, bauakteId) { session.store.isViewOnly(bauakteId) }
+    androidx.compose.runtime.CompositionLocalProvider(LocalViewOnly provides viewOnly) { AreaContent(bauakteId, area) }
+}
+
+@Composable
+private fun AreaContent(bauakteId: String, area: AreaKind) {
     when (area) {
         AreaKind.Notes -> NotesArea(bauakteId)
         AreaKind.Photos -> PhotosArea(bauakteId)
@@ -124,6 +136,7 @@ fun AreaScreen(bauakteId: String, area: AreaKind) {
 
 @Composable
 private fun AddButton(text: String, onClick: () -> Unit) {
+    if (LocalViewOnly.current) return
     ExtendedFloatingActionButton(onClick = onClick, icon = { Icon(Icons.Filled.Add, null) }, text = { Text(text) })
 }
 
@@ -148,7 +161,7 @@ private fun NotesArea(id: String) {
                                 SyncMark(note.syncState)
                             }
                         }
-                        if (note.authorUserId == session.user.id) {
+                        if (note.authorUserId == session.user.id && !LocalViewOnly.current) {
                             IconButton(onClick = { session.service.setNotePinned(note, !note.isPinned) }) {
                                 Icon(if (note.isPinned) Icons.Filled.PushPin else Icons.Outlined.PushPin, if (note.isPinned) "Lösen" else "Anheften")
                             }
@@ -250,6 +263,7 @@ fun PhotoScreen(fileId: String) {
     var loading by remember { mutableStateOf<String?>(null) }
     val f = file ?: run { ScreenScaffold("Foto") { EmptyState(Icons.Outlined.PhotoLibrary, "Foto nicht gefunden", null, Modifier.padding(it)) }; return }
     val bitmap by produceState<android.graphics.Bitmap?>(null, fileId) { value = session.thumbnail(f, 1600) }
+    val editable = remember(f) { (f.entity.data["bauakteId"] as? JsonPrimitive)?.content?.let { session.service.canEdit(it) } ?: true }
     ScreenScaffold(f.displayName, actions = {
         IconButton(onClick = {
             scope.launch {
@@ -262,7 +276,7 @@ fun PhotoScreen(fileId: String) {
         }, enabled = loading == null) {
             Icon(Icons.Filled.Share, if (f.isVideo) "Video teilen" else "Teilen")
         }
-        if (f.entity.data["uploadedByUserId"] == null || (f.entity.data["uploadedByUserId"] as? JsonPrimitive)?.content == session.user.id) {
+        if (editable && (f.entity.data["uploadedByUserId"] == null || (f.entity.data["uploadedByUserId"] as? JsonPrimitive)?.content == session.user.id)) {
             IconButton(onClick = { deleting = true }) { Icon(Icons.Filled.Delete, "Löschen") }
         }
     }) { padding ->
@@ -302,7 +316,7 @@ fun PhotoScreen(fileId: String) {
             }
             OutlinedTextField(caption, { caption = it }, label = { Text("Beschriftung") }, modifier = Modifier.fillMaxWidth(),
                 trailingIcon = { DictationButton { caption = appendDictation(caption, it) } })
-            Button(onClick = { session.service.updateFile(f, caption, f.category); nav.back() }, enabled = caption != (f.caption ?: ""),
+            Button(onClick = { session.service.updateFile(f, caption, f.category); nav.back() }, enabled = editable && caption != (f.caption ?: ""),
                 modifier = Modifier.fillMaxWidth()) { Text("Beschriftung speichern") }
         }
     }
@@ -667,8 +681,9 @@ private fun ProjectArea(id: String) {
     fun key(field: FormField) = field.path.removePrefix("project.")
     fun current(field: FormField) = (bauakte.project[key(field)] as? JsonPrimitive)
 
+    val viewOnly = LocalViewOnly.current
     ScreenScaffold("Basisdaten", actions = {
-        androidx.compose.material3.TextButton(onClick = {
+        if (!viewOnly) androidx.compose.material3.TextButton(onClick = {
             val project = bauakte.project.toMutableMap()
             schema?.groups?.flatMap { it.fields }?.forEach { field ->
                 val k = key(field)

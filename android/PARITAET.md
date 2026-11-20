@@ -77,7 +77,8 @@ Legende: ✅ umgesetzt · 🟡 teilweise (siehe Bemerkung) · ❌ fehlt noch
 | Kontakte und Beteiligte | ✅ | ✅ | |
 | Bauakte als PDF | ✅ | ✅ | nur mit Verbindung |
 | Stornieren mit Begründung | ✅ | ✅ | |
-| Verlauf (Historie), „Mir zuweisen“ | 🟡 | ❌ | |
+| Verlauf (Historie) | 🟡 | ❌ | |
+| Alle Bauakten sehen (online), „Nur ansehen“, „Mich als Beteiligten eintragen“/„Austragen“ | ✅ | ✅ | nicht zugeteilte nur online als Kopf |
 
 ## Erfassen
 

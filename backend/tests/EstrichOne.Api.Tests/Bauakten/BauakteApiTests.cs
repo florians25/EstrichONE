@@ -61,7 +61,7 @@ public sealed class BauakteApiTests(PostgresFixture postgres) : IAsyncLifetime
     }
 
     [Fact]
-    public async Task SiteWorker_SeesOnlyOwnBauakten_OfficeSeesAll()
+    public async Task EveryoneSeesAllBauakten_OnlyOwnAreEditable()
     {
         using var worker = await _factory.CreateClientAsAsync("baustelle", StandardRoles.SiteWorkerId);
         using var colleague = await _factory.CreateClientAsAsync("kollege", StandardRoles.SiteWorkerId);
@@ -73,9 +73,14 @@ public sealed class BauakteApiTests(PostgresFixture postgres) : IAsyncLifetime
         var officeList = await office.GetFromJsonAsync<BauaktePage>("/api/v1/bauakten", TestJson.Options, TestContext.Current.CancellationToken);
         using var foreignDetail = await worker.GetAsync(new Uri($"/api/v1/bauakten/{foreign.Id}", UriKind.Relative), TestContext.Current.CancellationToken);
 
-        workerList!.Items.Select(i => i.Id).ShouldBe([mine.Id]);
+        workerList!.Items.Select(i => i.Id).ShouldBe([mine.Id, foreign.Id], ignoreOrder: true);
+        workerList.Items.Single(i => i.Id == mine.Id).CanEdit.ShouldBeTrue();
+        workerList.Items.Single(i => i.Id == foreign.Id).CanEdit.ShouldBeFalse();
         officeList!.Items.Select(i => i.Id).ShouldBe([mine.Id, foreign.Id], ignoreOrder: true);
-        foreignDetail.StatusCode.ShouldBe(HttpStatusCode.NotFound, "Fremde Bauakten dürfen nicht einmal ihre Existenz verraten.");
+        officeList.Items.ShouldAllBe(i => i.CanEdit);
+        foreignDetail.StatusCode.ShouldBe(HttpStatusCode.OK, "Alle mit Bauakten-Zugriff sehen alle Bauakten.");
+        using var unknown = await worker.GetAsync(new Uri($"/api/v1/bauakten/{Guid.CreateVersion7()}", UriKind.Relative), TestContext.Current.CancellationToken);
+        unknown.StatusCode.ShouldBe(HttpStatusCode.NotFound);
     }
 
     [Fact]

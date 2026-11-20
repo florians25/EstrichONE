@@ -138,6 +138,6 @@ public sealed class RoomSyncTests(PostgresFixture postgres) : IAsyncLifetime
 
         // Die Bauakte des Büros ist der Baustelle nicht zugewiesen und damit nicht sichtbar.
         var hidden = (await site.PushAsync(SyncClient.Op("room.create", Guid.CreateVersion7(), new { bauakteId = bauakte, name = "Bad" }))).Results.Single();
-        hidden.Code.ShouldBe("NOT_FOUND");
+        hidden.Code.ShouldBe("BAUAKTE_NOT_ASSIGNED");
     }
 }

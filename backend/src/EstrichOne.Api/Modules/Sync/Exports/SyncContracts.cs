@@ -29,6 +29,12 @@ public sealed record SyncOperationResult(
 {
     public static SyncOperationResult Rejected(Guid opId, string code, string message) =>
         new(opId, SyncOperationStatus.Rejected, code, message);
+
+    /// <summary>Code für Änderungen an einer sichtbaren, aber nicht zugeteilten Bauakte (wie 403 BAUAKTE_NOT_ASSIGNED).</summary>
+    public const string NotAssignedCode = "BAUAKTE_NOT_ASSIGNED";
+
+    public static SyncOperationResult NotAssigned(Guid opId) => Rejected(opId, NotAssignedCode,
+        "Sie sind dieser Bauakte nicht zugeteilt und können sie nur ansehen. Tragen Sie sich als Beteiligter ein, um sie zu bearbeiten.");
 }
 
 /// <summary>Führt Operationen eines Typs aus (je Modul). Speichert selbst; die Transaktion stellt der Aufrufer.</summary>

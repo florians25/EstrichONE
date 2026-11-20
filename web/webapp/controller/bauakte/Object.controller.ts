@@ -14,8 +14,9 @@ import MessageStrip from "sap/m/MessageStrip";
 import MessageBox from "sap/m/MessageBox";
 import VBox from "sap/m/VBox";
 import { ValueState } from "sap/ui/core/library";
-import { get, post, problemMessage, put } from "../../util/api";
+import { del, get, post, problemMessage, put } from "../../util/api";
 import { akte } from "../../util/akteStore";
+import { akteAccess } from "../../util/akteAccess";
 import { saveBauakte, type BauakteChanges } from "../../util/bauakte";
 import { isoDay, parseDay } from "../../util/days";
 import { address, area, cmNumber, date } from "../../util/format";
@@ -172,7 +173,7 @@ export default class ObjectController extends BaseController {
 	private apply(b: BauakteDetail): void {
 		const m = this.m();
 		m.setProperty("/bauakte", b);
-		m.setProperty("/canEdit", session.has("bauakten.edit"));
+		this.applyAccess();
 		const place = address(b);
 		m.setProperty("/routeUrl", b.latitude !== null && b.longitude !== null
 			? `https://www.openstreetmap.org/directions?to=${b.latitude}%2C${b.longitude}`
@@ -280,20 +281,51 @@ export default class ObjectController extends BaseController {
 		m.setProperty("/createdDate", b ? new Intl.DateTimeFormat("de-DE", { dateStyle: "medium" }).format(new Date(b.createdAt)) : "");
 		m.setProperty("/createdText", b ? `${session.name(b.createdByUserId)} · ${new Intl.DateTimeFormat("de-DE", { dateStyle: "medium" }).format(new Date(b.createdAt))}` : "");
 		m.setProperty("/assignedText", members.length === 0 ? responsible : members.length === 1 ? members[0].displayName : `${responsible} +${members.length - 1}`);
-		const me = session.userId;
-		m.setProperty("/canAssignMe", !!b && !!me && b.status !== "cancelled" && b.responsibleUserId !== me && !members.some((x) => x.userId === me));
+		this.applyAccess();
 	}
 
-	/** „Mir zuweisen“: sich selbst als Mitarbeiter eintragen (wie in der App). */
+	/** Bearbeiten nur, wenn zugeteilt (oder „Alle Bauakten bearbeiten“); sonst „Nur ansehen“ mit Eintragen-Knopf. */
+	private applyAccess(): void {
+		const m = this.m();
+		const access = akteAccess(this.cur(), (m.getProperty("/members") as BauakteMember[]) ?? [], session.userId, session.has("bauakten.edit"));
+		m.setProperty("/writable", access.writable);
+		m.setProperty("/readOnly", access.readOnly);
+		m.setProperty("/canEdit", access.canEdit);
+		m.setProperty("/canAssignMe", access.canJoin);
+		m.setProperty("/canLeave", access.canLeave);
+	}
+
+	/** „Mich als Beteiligten eintragen“ (wie in der App): danach darf man die Bauakte bearbeiten. */
 	async onAssignMe(): Promise<void> {
 		const b = this.cur();
 		try {
 			await post(`bauakten/${b.id}/members/me`);
-			this.toast("Die Bauakte ist Ihnen zugewiesen.");
-			await this.loadSide();
+			this.toast(this.t("akte.joined"));
+			await this.refreshAccess();
 		} catch (error) {
 			this.showError(error);
 		}
+	}
+
+	/** „Als Beteiligter austragen“: Bauakte bleibt sichtbar, ist danach (ohne andere Zuteilung) nur noch zum Ansehen. */
+	async onLeave(): Promise<void> {
+		const b = this.cur();
+		if (!await this.confirm(this.t("akte.leaveConfirm"), { action: this.t("akte.leave") })) return;
+		try {
+			await del(`bauakten/${b.id}/members/me`);
+			this.toast(this.t("akte.left"));
+			await this.refreshAccess();
+		} catch (error) {
+			this.showError(error);
+		}
+	}
+
+	/** Nach Ein- oder Austragen: Bearbeitbarkeit neu laden, Abschnitte aktualisieren. */
+	private async refreshAccess(): Promise<void> {
+		const id = this.cur().id;
+		this.apply(await get<BauakteDetail>(`bauakten/${id}`));
+		await this.loadSide();
+		EventBus.getInstance().publish("bauakte", "reload", { id });
 	}
 
 	/** Letzte Aktivitäten im eigenen Fenster (Wer/Wann/Was, alt → neu). */

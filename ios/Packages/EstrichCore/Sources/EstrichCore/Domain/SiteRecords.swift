@@ -234,15 +234,19 @@ public enum SiteRecordError: Error, Equatable, Sendable {
     case storage
     /// „Nur Ansicht“: Server länger nicht erreichbar, Ändern gesperrt.
     case readOnly
+    /// Bauakte nicht zugeteilt: nur ansehen.
+    case notAssigned
 
     static func from(_ error: any Error) -> Self {
         if let error = error as? Self { return error }
+        if error is BauakteNotAssignedError { return .notAssigned }
         return error is ReadOnlyModeError ? .readOnly : .storage
     }
 
     public var message: String {
         switch self {
         case .readOnly: ReadOnlyModeError.message
+        case .notAssigned: BauakteNotAssignedError.message
         case .textRequired: "Bitte beschreiben, was heute auf der Baustelle geschah."
         case .locationRequired: "Bitte den Messort (Raum) angeben."
         case .reasonRequired: "Bitte begründen, warum keine Erstbegehung notwendig ist."

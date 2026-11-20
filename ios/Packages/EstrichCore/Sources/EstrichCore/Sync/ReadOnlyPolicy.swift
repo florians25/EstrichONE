@@ -55,3 +55,11 @@ public struct ReadOnlyModeError: LocalizedError, Equatable, Sendable {
     public var errorDescription: String? { Self.message }
     public static let message = "Nur Ansicht: Der Server ist seit über 5 Minuten nicht erreichbar. Erfassen und Ändern sind gesperrt, bis die Verbindung wieder steht."
 }
+
+/// Änderung an einer Bauakte, der man nicht zugeteilt ist (wie 403/abgelehnt mit BAUAKTE_NOT_ASSIGNED).
+public struct BauakteNotAssignedError: LocalizedError, Equatable, Sendable {
+    public init() {}
+    public var errorDescription: String? { Self.message }
+    public static let code = "BAUAKTE_NOT_ASSIGNED"
+    public static let message = "Nur ansehen – trag dich als Beteiligter ein, um zu bearbeiten."
+}

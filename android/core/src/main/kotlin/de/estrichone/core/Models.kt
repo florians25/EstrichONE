@@ -79,6 +79,10 @@ data class BauakteListItem(
     val postalCode: String? = null,
     val city: String? = null,
     val updatedAt: String,
+    /** Zugeteilt (zuständig, Beteiligter, eingeplant); ältere Server: `false`. */
+    val isAssigned: Boolean = false,
+    /** Darf ändern (zugeteilt oder „Alle Bauakten bearbeiten“); ältere Server: `true`. */
+    val canEdit: Boolean = true,
 )
 
 @Serializable
@@ -102,6 +106,8 @@ data class BauakteDetail(
     val siteContactPhone: String? = null,
     val siteNotes: String? = null,
     val version: Long,
+    val isAssigned: Boolean? = null,
+    val canEdit: Boolean? = null,
 )
 
 @Serializable

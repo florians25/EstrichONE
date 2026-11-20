@@ -41,6 +41,10 @@ export interface BauakteListItem {
   responsibleUserId: string | null;
   latitude: number | null;
   longitude: number | null;
+  /** Zugeteilt (zuständig, Beteiligter oder eingeplant). Ältere Server liefern das Feld nicht. */
+  isAssigned?: boolean | null;
+  /** Darf der Benutzer die Bauakte ändern (zugeteilt oder „Alle Bauakten bearbeiten“)? Sonst „Nur ansehen“. */
+  canEdit?: boolean | null;
 }
 
 export interface BauakteMapPoint {

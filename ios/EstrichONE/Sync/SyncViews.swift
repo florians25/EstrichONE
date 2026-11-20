@@ -62,7 +62,8 @@ struct SyncView: View {
                     ForEach(rejected, id: \.seq) { operation in
                         VStack(alignment: .leading, spacing: 4) {
                             Text(Self.describe(operation)).font(.headline)
-                            Text(operation.errorMessage ?? operation.errorCode ?? "Vom Server abgelehnt").foregroundStyle(Theme.danger)
+                            Text(BauakteViewOnly.message(forCode: operation.errorCode) ?? operation.errorMessage ?? operation.errorCode ?? "Vom Server abgelehnt")
+                                .foregroundStyle(Theme.danger)
                             HStack(spacing: 8) {
                                 Button {
                                     Task {

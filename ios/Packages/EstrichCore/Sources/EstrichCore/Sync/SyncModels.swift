@@ -125,6 +125,8 @@ public struct PullResponse: Codable, Sendable {
     public let cursor: String
     public let hasMore: Bool
     public let visibleBauakteIds: [UUID]?
+    /// Mit `includeScope`: davon die bearbeitbaren (zugeteilt oder „Alle Bauakten bearbeiten“). Ältere Server: `nil`.
+    public var assignedBauakteIds: [UUID]? = nil
 }
 
 /// Stand ganzer Bauakten (`POST /sync/snapshot`): schließt Lücken, wenn eine Bauakte neu sichtbar wird.

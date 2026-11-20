@@ -11,8 +11,8 @@ tatsächlich kann.
 | **Einrichtung** | Serveradresse eingeben (**Verbinden**), Anmeldung mit Anmeldename oder E-Mail und Passwort, optional mit **Einrichtungscode** (dann ist das Gerät sofort freigegeben, sonst wartet es auf die Freigabe durch die IT: „Gerät wartet auf Freigabe“, **Erneut prüfen**) |
 | **Anmeldung** | Zwei-Faktor-Anmeldung mit Code aus der Authenticator-App, Wechsel eines Einmalpassworts (**Passwort ändern**, mindestens 12 Zeichen), **Abmelden**, **Anderen Server wählen** |
 | **Heute** | Begrüßung und **Mein Einsatz – die nächsten 7 Tage** mit Zeit, Kolonne und Bauakte |
-| **Bauakten** | Suche nach Nummer, Bauvorhaben oder Ort; **Neue Bauakte** mit Bauvorhaben und Adresse |
-| **Bauakte** | Hinweise, Übersicht, **Notizen** (neue Notiz), **Aufgaben und Mängel** anlegen, Kunde **anrufen**, **Route** starten |
+| **Bauakten** | Suche nach Nummer, Bauvorhaben oder Ort – mit Verbindung auch nicht zugeteilte Bauakten (**Weitere Bauakten (online) – nur ansehen**); **Neue Bauakte** mit Bauvorhaben und Adresse |
+| **Bauakte** | Hinweise, Übersicht, **Notizen** (neue Notiz), **Aufgaben und Mängel** anlegen, Kunde **anrufen**, **Route** starten; nicht zugeteilte Bauakten mit Hinweis **„Nur ansehen“** und **Mich als Beteiligten eintragen**, im Menü **Als Beteiligter austragen** |
 | **Support** | **Problem melden** an die IT (mit Kennzeichnung „Ich kann deshalb nicht weiterarbeiten“); mitgeschickt werden nur App- und Android-Version |
 
 Die Anmeldung ist wie unter iOS an das Gerät gebunden: Der Geräteschlüssel liegt im Android Keystore (wo vorhanden im

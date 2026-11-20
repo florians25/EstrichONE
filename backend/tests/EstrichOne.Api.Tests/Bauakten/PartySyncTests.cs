@@ -78,7 +78,7 @@ public sealed class PartySyncTests(PostgresFixture postgres) : IAsyncLifetime
 
         // Baustelle ohne Zuweisung: Bauakte unsichtbar.
         using var site = await _factory.CreateClientAsAsync("baustelle", StandardRoles.SiteWorkerId);
-        (await site.PushAsync(SyncClient.Op("bauakteParty.delete", party, new { }))).Results.Single().Code.ShouldBe("NOT_FOUND");
+        (await site.PushAsync(SyncClient.Op("bauakteParty.delete", party, new { }))).Results.Single().Code.ShouldBe("BAUAKTE_NOT_ASSIGNED");
 
         (await office.PushAsync(SyncClient.Op("bauakteParty.delete", party, new { }))).Results.Single().Status.ShouldBe(SyncOperationStatus.Applied);
         (await office.GetFromJsonAsync<List<EstrichOne.Api.Modules.Bauakten.BauaktePartyResponse>>($"/api/v1/bauakten/{bauakte}/parties",

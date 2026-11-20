@@ -291,6 +291,8 @@ class BauakteService(val store: LocalStore, private val files: FileVault, privat
         bauakteId: String?, kind: String, bytes: ByteArray, originalName: String, contentType: String, caption: String? = null,
         category: DocumentCategory? = null, capturedAt: Instant = Instant.now(), latitude: Double? = null, longitude: Double? = null,
     ): String {
+        // Nicht zugeteilte Bauakte: nur ansehen – gar nicht erst speichern (Aufrufer werten "" als „nicht gespeichert“).
+        if (bauakteId != null && store.isViewOnly(bauakteId)) return ""
         val id = Ids.v7()
         files.write(id, bytes)
         val sha = sha256(bytes)
@@ -302,6 +304,9 @@ class BauakteService(val store: LocalStore, private val files: FileVault, privat
         store.announceFile(data.merged(mapOf("createdAt" to toJson(ApiDate.format(Instant.now())))), PendingUpload(id, bytes.size.toLong(), sha, contentType))
         return id
     }
+
+    /** Bauakte bearbeitbar (zugeteilt oder „Alle Bauakten bearbeiten“)? Sonst nur ansehen. */
+    fun canEdit(bauakteId: String): Boolean = !store.isViewOnly(bauakteId)
 
     fun updateFile(file: FileItem, caption: String?, category: DocumentCategory?) {
         val changes = mutableMapOf<String, JsonElement>()

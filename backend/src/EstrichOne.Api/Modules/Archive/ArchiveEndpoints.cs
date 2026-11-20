@@ -57,7 +57,7 @@ internal static class ArchiveEndpoints
             .RequirePermission(Permissions.BauaktenRead);
         archive.MapPost("/bauakten/{bauakteId:guid}", QueueBauakteAsync).WithName("ArchiveBauakte")
             .WithSummary("Alle Dokumente der Bauakte archivieren (bzw. Fehlgeschlagene erneut versuchen); reason=completion beim Abschluss")
-            .RequirePermission(Permissions.BauaktenEdit);
+            .RequirePermission(Permissions.BauaktenEdit).RequireBauakteWrite("bauakteId");
         archive.MapGet("/files/{fileId:guid}", FileRecordAsync).WithName("GetFileArchiveRecord").RequirePermission(Permissions.BauaktenRead);
         archive.MapPost("/files/{fileId:guid}", QueueFileAsync).WithName("ArchiveFile").RequirePermission(Permissions.BauaktenEdit);
     }

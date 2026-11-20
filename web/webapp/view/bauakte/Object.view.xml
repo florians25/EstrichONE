@@ -51,7 +51,8 @@
 						visible="{= ${akte>/canEdit} &amp;&amp; ${akte>/bauakte/status} === 'inquiry' }"/>
 					<Button text="{i18n>akte.complete}" type="Success" icon="sap-icon://complete" press=".onComplete"
 						visible="{= ${akte>/canEdit} &amp;&amp; ['planned','inProgress','drying'].indexOf(${akte>/bauakte/status}) >= 0 }"/>
-					<Button id="assignMeButton" text="Mir zuweisen" icon="sap-icon://add-employee" press=".onAssignMe" visible="{= ${akte>/canAssignMe} === true }"/>
+					<Button id="assignMeButton" text="{i18n>akte.join}" icon="sap-icon://add-employee" press=".onAssignMe"
+						type="{= ${akte>/readOnly} ? 'Emphasized' : 'Default' }" visible="{= ${akte>/canAssignMe} === true }"/>
 					<Button id="chatGroupButton" text="{= ${akte>/chatGroup/conversationId} ? 'Baustellen-Chat' : 'Baustellen-Chat anlegen' }"
 						icon="sap-icon://discussion" press=".onChatGroup"
 						visible="{= !!${akte>/chatGroup} &amp;&amp; (${akte>/chatGroup/member} || ${akte>/chatGroup/canCreate}) }"
@@ -66,12 +67,12 @@
 						<menu>
 							<Menu itemSelected=".onTeamsMenu">
 								<MenuItem text="In Teams öffnen" key="open" icon="sap-icon://action" visible="{= !!${akte>/teams/link} }"/>
-								<MenuItem text="Teams-Chat anlegen …" key="create" icon="sap-icon://add" visible="{= !${akte>/teams/link} &amp;&amp; ${akte>/teams/canManage} }"/>
-								<MenuItem text="Per Link verknüpfen …" key="link" icon="sap-icon://chain-link" visible="{= !${akte>/teams/link} &amp;&amp; ${akte>/teams/canManage} }"/>
+								<MenuItem text="Teams-Chat anlegen …" key="create" icon="sap-icon://add" visible="{= !${akte>/teams/link} &amp;&amp; (${akte>/teams/canManage} &amp;&amp; ${akte>/writable} !== false) }"/>
+								<MenuItem text="Per Link verknüpfen …" key="link" icon="sap-icon://chain-link" visible="{= !${akte>/teams/link} &amp;&amp; (${akte>/teams/canManage} &amp;&amp; ${akte>/writable} !== false) }"/>
 								<MenuItem text="Teams-Chat löschen …" key="delete" icon="sap-icon://delete" startsSection="true"
 									visible="{= !!${akte>/teams/link} &amp;&amp; ${akte>/teams/canDelete} === true }"/>
 								<MenuItem text="Verknüpfung lösen" key="unlink" icon="sap-icon://broken-link" startsSection="true"
-									visible="{= !!${akte>/teams/link} &amp;&amp; ${akte>/teams/canManage} &amp;&amp; ${akte>/teams/canDelete} !== true }"/>
+									visible="{= !!${akte>/teams/link} &amp;&amp; (${akte>/teams/canManage} &amp;&amp; ${akte>/writable} !== false) &amp;&amp; ${akte>/teams/canDelete} !== true }"/>
 							</Menu>
 						</menu>
 					</MenuButton>
@@ -81,7 +82,7 @@
 							<Menu>
 								<MenuItem text="Letzte Aktivitäten …" icon="sap-icon://history" press=".onActivities"/>
 								<MenuItem text="Abnahmeprotokoll erstellen …" icon="sap-icon://signature" press=".onAcceptance"
-									visible="{= ${session>/permissions/inspections.write} === true &amp;&amp; ${session>/modules/acceptance} !== false }"/>
+									visible="{= (${session>/permissions/inspections.write} === true &amp;&amp; ${akte>/writable} !== false) &amp;&amp; ${session>/modules/acceptance} !== false }"/>
 								<MenuItem text="Erstbegehungsprotokoll (PDF)" icon="sap-icon://inspection" press=".onInspectionPdf"
 									visible="{= ${session>/modules/inspections} !== false }"/>
 								<!-- „Schreiben an den Kunden …“ vorerst ausgeblendet (Nutzerwunsch, wird später überarbeitet) -->
@@ -98,7 +99,10 @@
 									visible="{= ${akte>/canEdit} &amp;&amp; ${akte>/bauakte/status} !== 'cancelled' }"/>
 								<MenuItem text="{i18n>akte.reactivate}" icon="sap-icon://undo" press=".onReactivate"
 									visible="{= ${akte>/canEdit} &amp;&amp; ${akte>/bauakte/status} === 'cancelled' }"/>
-								<MenuItem text="{i18n>akte.delete}" icon="sap-icon://delete" press=".onDelete" visible="{= ${session>/permissions/bauakten.delete} === true }"/>
+								<MenuItem id="leaveMenuItem" text="{i18n>akte.leave}" icon="sap-icon://employee-rejections" press=".onLeave" startsSection="true"
+									visible="{= ${akte>/canLeave} === true }"/>
+								<MenuItem text="{i18n>akte.delete}" icon="sap-icon://delete" press=".onDelete"
+									visible="{= ${session>/permissions/bauakten.delete} === true &amp;&amp; ${akte>/writable} !== false }"/>
 							</Menu>
 						</menu>
 					</MenuButton>
@@ -113,6 +117,11 @@
 		</uxap:headerTitle>
 		<uxap:headerContent>
 			<VBox width="100%">
+			<!-- Nicht zugeteilt: nur ansehen; Eintragen schaltet das Bearbeiten frei (Server prüft: 403 BAUAKTE_NOT_ASSIGNED) -->
+			<MessageStrip id="readOnlyStrip" type="Information" showIcon="true" visible="{= ${akte>/readOnly} === true }"
+				text="{i18n>akte.readOnly}" class="sapUiTinyMarginBottom">
+				<link><Link text="{i18n>akte.join}" press=".onAssignMe" visible="{= ${akte>/canAssignMe} === true }"/></link>
+			</MessageStrip>
 			<VBox id="dossierBox" renderType="Bare"/>
 			<HBox wrap="Wrap" alignItems="Center" class="eoHintBadges eoBadgeRow">
 				<HBox items="{akte>/projectBadges}" wrap="Wrap" class="eoHintBadges">
@@ -126,7 +135,7 @@
 					</ObjectStatus>
 				</HBox>
 				<Button id="waiveInitialHintButton" text="{i18n>inspections.waive}" icon="sap-icon://decline" type="Transparent" press=".onWaiveInitialInspection"
-					visible="{= !!${akte>/inspectionMissing} &amp;&amp; ${session>/permissions/bauakten.edit} === true &amp;&amp; ${session>/modules/inspections} !== false }"/>
+					visible="{= !!${akte>/inspectionMissing} &amp;&amp; (${session>/permissions/bauakten.edit} === true &amp;&amp; ${akte>/writable} !== false) &amp;&amp; ${session>/modules/inspections} !== false }"/>
 			</HBox>
 			<FlexBox class="eoHeadRow" alignItems="Start" justifyContent="SpaceBetween" width="100%">
 				<FlexBox class="eoHeadFields" wrap="Wrap">

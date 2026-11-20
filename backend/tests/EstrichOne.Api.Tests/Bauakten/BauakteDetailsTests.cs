@@ -94,23 +94,23 @@ public sealed class BauakteDetailsTests(PostgresFixture postgres) : IAsyncLifeti
     }
 
     [Fact]
-    public async Task Members_GrantAccess_AndAreListedWithResponsible()
+    public async Task Members_GrantEditing_AndAreListedWithResponsible()
     {
         using var office = await _factory.CreateClientAsAsync("buero", StandardRoles.OfficeId);
         using var worker = await _factory.CreateClientAsAsync("baustelle", StandardRoles.SiteWorkerId);
         var workerId = (await worker.GetFromJsonAsync<UserSummaryDto>("/api/v1/auth/me", TestJson.Options, Ct))!.Id;
         var bauakte = await CreateAsync(office, "MFH Lindenstraße");
-        (await worker.GetAsync(new Uri($"/api/v1/bauakten/{bauakte.Id}", UriKind.Relative), Ct)).StatusCode.ShouldBe(HttpStatusCode.NotFound);
+        (await worker.GetFromJsonAsync<BauakteDetail>($"/api/v1/bauakten/{bauakte.Id}", TestJson.Options, Ct))!.CanEdit.ShouldBe(false);
 
         using var set = await office.PutAsJsonAsync($"/api/v1/bauakten/{bauakte.Id}/members", new { userIds = new[] { workerId } }, Ct);
         set.EnsureSuccessStatusCode();
         var members = (await set.Content.ReadFromJsonAsync<List<BauakteMemberResponse>>(TestJson.Options, Ct))!;
 
         members.Select(m => (m.UserName(), m.Role)).ShouldBe([("Max Huber", BauakteMemberRole.Responsible), ("Max Huber", BauakteMemberRole.Member)]);
-        (await worker.GetAsync(new Uri($"/api/v1/bauakten/{bauakte.Id}", UriKind.Relative), Ct)).StatusCode.ShouldBe(HttpStatusCode.OK);
+        (await worker.GetFromJsonAsync<BauakteDetail>($"/api/v1/bauakten/{bauakte.Id}", TestJson.Options, Ct))!.CanEdit.ShouldBe(true);
 
         (await office.PutAsJsonAsync($"/api/v1/bauakten/{bauakte.Id}/members", new { userIds = Array.Empty<Guid>() }, Ct)).EnsureSuccessStatusCode();
-        (await worker.GetAsync(new Uri($"/api/v1/bauakten/{bauakte.Id}", UriKind.Relative), Ct)).StatusCode.ShouldBe(HttpStatusCode.NotFound);
+        (await worker.GetFromJsonAsync<BauakteDetail>($"/api/v1/bauakten/{bauakte.Id}", TestJson.Options, Ct))!.CanEdit.ShouldBe(false);
         var history = await office.GetFromJsonAsync<List<BauakteHistoryEntry>>($"/api/v1/bauakten/{bauakte.Id}/history", TestJson.Options, Ct);
         history!.Count(h => h.Text == "Max Huber hat die zugewiesenen Mitarbeiter geändert.").ShouldBe(2);
     }

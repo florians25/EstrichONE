@@ -87,8 +87,10 @@ Wichtige Rechte im Überblick:
 
 | Recht | Bedeutung |
 |---|---|
-| Eigene Bauakten sehen / Alle Bauakten sehen | Nur Bauakten, bei denen man Mitglied oder zuständig ist – oder alle |
-| Bauakten anlegen, bearbeiten, löschen, Kollegen zuordnen | Arbeiten an Bauakten |
+| Bauakten sehen | Alle Bauakten sehen und sich selbst als Beteiligter eintragen |
+| Alle Bauakten offline speichern | Auf Handy und Tablet alle Bauakten statt nur der zugeteilten (mehr Speicher) |
+| Bauakten anlegen, bearbeiten, löschen, Kollegen zuordnen | Arbeiten an Bauakten – bearbeiten nur, wenn zugeteilt |
+| Alle Bauakten bearbeiten | Jede Bauakte ändern, auch ohne Zuteilung (Standard: Büro und Bauleitung) |
 | Fotos, Videos und Dokumente hochladen bzw. löschen | Ablage |
 | Über alle Dokumentfreigaben entscheiden | Auch fremde Freigaben erledigen |
 | Planung sehen bzw. planen | Plantafeln, Cockpit, Freigabe des Plans |

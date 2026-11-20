@@ -20,7 +20,7 @@ export default class List extends BaseController {
 
 	onInit(): void {
 		this.local({ items: [] as BauakteListItem[], cursor: null as string | null, busy: false, search: "", status: "", statusKey: "all",
-			responsible: "", customer: "", countText: "" });
+			responsible: "", customer: "", countText: "", scope: "all" });
 	}
 
 	async show(match: RouteMatch): Promise<void> {
@@ -31,6 +31,7 @@ export default class List extends BaseController {
 		m.setProperty("/statusKey", q.get("status") || "all");
 		m.setProperty("/responsible", q.get("zustaendig") ?? "");
 		m.setProperty("/customer", q.get("kunde") ?? "");
+		m.setProperty("/scope", q.get("meine") === "1" ? "mine" : "all");
 		void this.fillPeople();
 		this.ensureCustomer(q.get("kunde"));
 		const neu = q.get("neu");
@@ -38,7 +39,7 @@ export default class List extends BaseController {
 			this.setQuery({ neu: null });
 			void this.create(neu === "anfrage" ? "inquiry" : "planned");
 		}
-		const key = ["search", "status", "zustaendig", "kunde"].map((k) => q.get(k) ?? "").join("|");
+		const key = ["search", "status", "zustaendig", "kunde", "meine"].map((k) => q.get(k) ?? "").join("|");
 		if (key !== this.lastQuery || match.route.name === "bauakten" || m.getProperty("/items").length === 0) {
 			this.lastQuery = key;
 			await this.load(false);
@@ -73,7 +74,7 @@ export default class List extends BaseController {
 			const page = await get<BauaktePage>("bauakten", {
 				limit: 50, status: m.getProperty("/status") || "active", search: m.getProperty("/search") || undefined,
 				cursor: more ? m.getProperty("/cursor") : undefined, responsibleUserId: m.getProperty("/responsible") || undefined,
-				customerId: m.getProperty("/customer") || undefined,
+				customerId: m.getProperty("/customer") || undefined, assigned: m.getProperty("/scope") === "mine" ? true : undefined,
 			});
 			const items = more ? [...m.getProperty("/items"), ...page.items] : page.items;
 			m.setProperty("/items", items);
@@ -90,6 +91,7 @@ export default class List extends BaseController {
 		const m = this.model();
 		this.nav(`/bauakten?${new URLSearchParams(Object.entries({
 			search: m.getProperty("/search"), status: m.getProperty("/status"), zustaendig: m.getProperty("/responsible"), kunde: m.getProperty("/customer"),
+			meine: m.getProperty("/scope") === "mine" ? "1" : "",
 		}).filter(([, v]) => !!v) as [string, string][]).toString()}`.replace(/\?$/, ""), true);
 	}
 
@@ -98,6 +100,11 @@ export default class List extends BaseController {
 	}
 
 	onFilter(): void {
+		this.applyFilters();
+	}
+
+	/** Alle Bauakten oder nur die, denen man zugeteilt ist (zuständig, Beteiligter, eingeplant). */
+	onScope(): void {
 		this.applyFilters();
 	}
 

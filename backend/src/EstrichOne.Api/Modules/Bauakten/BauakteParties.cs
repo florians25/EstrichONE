@@ -153,15 +153,15 @@ internal static class BauaktePartyEndpoints
         group.MapPut("/{partyId:guid}", SaveAsync).WithName("SaveBauakteParty")
             .WithSummary("Beteiligten anlegen oder ändern (aus dem Kundenstamm verknüpft oder frei erfasst); auch Rolle und Hauptkontakt")
             .ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status412PreconditionFailed)
-            .ProducesProblem(StatusCodes.Status422UnprocessableEntity).RequirePermission(Permissions.BauaktenEdit);
+            .ProducesProblem(StatusCodes.Status422UnprocessableEntity).RequirePermission(Permissions.BauaktenEdit).RequireBauakteWrite();
         group.MapPost("/{partyId:guid}/primary", SetPrimaryAsync).WithName("SetBauaktePartyPrimary")
             .WithSummary("Als Hauptkontakt der Bauakte markieren (ein bisheriger Hauptkontakt verliert die Markierung)")
-            .ProducesProblem(StatusCodes.Status404NotFound).RequirePermission(Permissions.BauaktenEdit);
+            .ProducesProblem(StatusCodes.Status404NotFound).RequirePermission(Permissions.BauaktenEdit).RequireBauakteWrite();
         group.MapDelete("/{partyId:guid}/primary", ClearPrimaryAsync).WithName("ClearBauaktePartyPrimary")
             .WithSummary("Markierung als Hauptkontakt entfernen")
-            .ProducesProblem(StatusCodes.Status404NotFound).RequirePermission(Permissions.BauaktenEdit);
+            .ProducesProblem(StatusCodes.Status404NotFound).RequirePermission(Permissions.BauaktenEdit).RequireBauakteWrite();
         group.MapDelete("/{partyId:guid}", DeleteAsync).WithName("DeleteBauakteParty")
-            .ProducesProblem(StatusCodes.Status404NotFound).RequirePermission(Permissions.BauaktenEdit);
+            .ProducesProblem(StatusCodes.Status404NotFound).RequirePermission(Permissions.BauaktenEdit).RequireBauakteWrite();
     }
 
     internal static async Task<bool> VisibleAsync(Guid id, IBauakteAccess access, EstrichOneDbContext db, CancellationToken cancellationToken) =>

@@ -7,7 +7,7 @@
 			<OverflowToolbar style="Clear">
 				<Title text="{i18n>docs.folders}" level="H3"/>
 				<ToolbarSpacer/>
-				<Button icon="sap-icon://add-folder" tooltip="{i18n>docs.newFolder}" press=".onNewFolder" visible="{= ${session>/permissions/files.upload} === true }"/>
+				<Button icon="sap-icon://add-folder" tooltip="{i18n>docs.newFolder}" press=".onNewFolder" visible="{= (${session>/permissions/files.upload} === true &amp;&amp; ${akte>/writable} !== false) }"/>
 			</OverflowToolbar>
 			<Tree id="folderTree" items="{path: 'doc>/tree', parameters: {arrayNames: ['nodes']}}" mode="SingleSelectMaster"
 				selectionChange=".onFolder" includeItemInSelection="true" ariaLabelledBy="foldersLabel">
@@ -21,7 +21,7 @@
 				<Title text="{doc>/title}" level="H3"/>
 				<ToolbarSpacer/>
 				<Button id="docUpload" text="{i18n>docs.uploadButton}" icon="sap-icon://upload" type="Emphasized" press=".onUpload"
-					visible="{= ${session>/permissions/files.upload} === true }">
+					visible="{= (${session>/permissions/files.upload} === true &amp;&amp; ${akte>/writable} !== false) }">
 					<layoutData><OverflowToolbarLayoutData priority="NeverOverflow"/></layoutData>
 				</Button>
 				<SearchField width="14rem" placeholder="{i18n>docs.search}" liveChange=".onSearch" value="{doc>/query}">
@@ -39,9 +39,9 @@
 				</Select>
 				<ToggleButton text="{i18n>docs.allVersions}" pressed="{doc>/allVersions}" press=".refreshRows" icon="sap-icon://history"/>
 				<Button text="{i18n>docs.download}" icon="sap-icon://download" enabled="{= ${doc>/selectedCount} > 0 }" press=".onDownloadSelected"/>
-				<Button text="{i18n>docs.move}" icon="sap-icon://move" enabled="{= ${doc>/selectedCount} > 0 &amp;&amp; ${session>/permissions/files.upload} === true }" press=".onMoveSelected"/>
+				<Button text="{i18n>docs.move}" icon="sap-icon://move" enabled="{= ${doc>/selectedCount} > 0 &amp;&amp; (${session>/permissions/files.upload} === true &amp;&amp; ${akte>/writable} !== false) }" press=".onMoveSelected"/>
 				<Button text="{i18n>common.delete}" icon="sap-icon://delete" type="Reject"
-					enabled="{= ${doc>/selectedCount} > 0 &amp;&amp; ${session>/permissions/files.delete} === true }" press=".onDeleteSelected"/>
+					enabled="{= ${doc>/selectedCount} > 0 &amp;&amp; (${session>/permissions/files.delete} === true &amp;&amp; ${akte>/writable} !== false) }" press=".onDeleteSelected"/>
 			</OverflowToolbar>
 			<Table id="docTable" contextualWidth="Auto" items="{path: 'doc>/rows', templateShareable: false}" mode="MultiSelect" selectionChange=".onSelection"
 				sticky="ColumnHeaders" growing="true" growingThreshold="100" noDataText="{doc>/noData}" popinLayout="GridSmall"
@@ -85,13 +85,13 @@
 							<MenuButton icon="sap-icon://overflow" type="Transparent" tooltip="{i18n>docs.more}">
 								<menu>
 									<Menu>
-										<MenuItem text="{i18n>docs.rename}" icon="sap-icon://edit" press=".onRename" visible="{= ${session>/permissions/files.upload} === true }"/>
-										<MenuItem text="{i18n>docs.moveOne}" icon="sap-icon://move" press=".onMove" visible="{= ${session>/permissions/files.upload} === true }"/>
-										<MenuItem text="{i18n>docs.newVersion}" icon="sap-icon://upload" press=".onNewVersion" visible="{= ${session>/permissions/files.upload} === true }"/>
+										<MenuItem text="{i18n>docs.rename}" icon="sap-icon://edit" press=".onRename" visible="{= (${session>/permissions/files.upload} === true &amp;&amp; ${akte>/writable} !== false) }"/>
+										<MenuItem text="{i18n>docs.moveOne}" icon="sap-icon://move" press=".onMove" visible="{= (${session>/permissions/files.upload} === true &amp;&amp; ${akte>/writable} !== false) }"/>
+										<MenuItem text="{i18n>docs.newVersion}" icon="sap-icon://upload" press=".onNewVersion" visible="{= (${session>/permissions/files.upload} === true &amp;&amp; ${akte>/writable} !== false) }"/>
 										<MenuItem text="Archivnachweis …" icon="sap-icon://attachment-zip-file" press=".onArchiveProof"/>
 										<MenuItem text="Freigabe anfordern" icon="sap-icon://approvals" press=".onRequestApproval"
-											visible="{= ${session>/permissions/files.upload} === true &amp;&amp; ${doc>approvalStatus} !== 'pending' &amp;&amp; !${doc>superseded} }"/>
-										<MenuItem text="{i18n>common.delete}" icon="sap-icon://delete" press=".onDelete" visible="{= ${session>/permissions/files.delete} === true }" startsSection="true"/>
+											visible="{= (${session>/permissions/files.upload} === true &amp;&amp; ${akte>/writable} !== false) &amp;&amp; ${doc>approvalStatus} !== 'pending' &amp;&amp; !${doc>superseded} }"/>
+										<MenuItem text="{i18n>common.delete}" icon="sap-icon://delete" press=".onDelete" visible="{= (${session>/permissions/files.delete} === true &amp;&amp; ${akte>/writable} !== false) }" startsSection="true"/>
 									</Menu>
 								</menu>
 							</MenuButton>

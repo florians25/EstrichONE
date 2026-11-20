@@ -260,6 +260,11 @@ internal sealed class AcceptanceSync(EstrichOneDbContext db, IBauakteAccess acce
             return SyncOperationResult.Rejected(op.OpId, "BAUAKTE_NOT_FOUND", "Die Bauakte existiert nicht (mehr) oder ist nicht sichtbar.");
         }
 
+        if (!await access.CanWriteAsync(bauakteId, cancellationToken))
+        {
+            return SyncOperationResult.NotAssigned(op.OpId);
+        }
+
         var existing = await db.Set<AcceptanceProtocol>().AsNoTracking().SingleOrDefaultAsync(a => a.Id == op.EntityId, cancellationToken);
         if (existing is not null)
         {
