@@ -172,9 +172,9 @@ public sealed class CustomerRecordTests(PostgresFixture postgres) : IAsyncLifeti
         // Unbekannter Kunde: leere Kennzahlen.
         (await _office.GetFromJsonAsync<CustomerKeyFigures>($"/api/v1/contacts/{Guid.CreateVersion7()}/key-figures", TestJson.Options, Ct))!.BauaktenTotal.ShouldBe(0);
 
-        // Baustellenkraft sieht nur eigene Bauakten: die Bauakten des Büros zählen für sie nicht.
+        // Alle mit Bauakten-Zugriff sehen alle Bauakten – auch in den Kennzahlen des Kunden.
         using var worker = await _factory.CreateClientAsAsync("baustelle.kennzahlen", StandardRoles.SiteWorkerId);
-        (await worker.GetFromJsonAsync<CustomerKeyFigures>($"/api/v1/contacts/{customer.Id}/key-figures", TestJson.Options, Ct))!.BauaktenTotal.ShouldBe(0);
+        (await worker.GetFromJsonAsync<CustomerKeyFigures>($"/api/v1/contacts/{customer.Id}/key-figures", TestJson.Options, Ct))!.BauaktenTotal.ShouldBe(2);
 
         // Bauakten an derselben Adresse (PLZ-Filter der Liste).
         var page = await _office.GetFromJsonAsync<BauaktePage>("/api/v1/bauakten?postalCode=84028&status=all", TestJson.Options, Ct);

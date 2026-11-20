@@ -76,7 +76,7 @@ internal static partial class ChatEndpoints
             .ProducesProblem(StatusCodes.Status404NotFound);
         chat.MapGet("/attachments/{id:guid}/content", AttachmentContentAsync).WithName("DownloadChatAttachment")
             .WithSummary("Anhang (entschlüsselt); ?thumbnail=true für das Vorschaubild, ?download=true als Download").ProducesProblem(StatusCodes.Status404NotFound);
-        chat.MapPost("/attachments/{id:guid}/bauakte", ToBauakteAsync).WithName("CopyChatAttachmentToBauakte")
+        chat.MapPost("/attachments/{id:guid}/bauakte", ToBauakteAsync).WithName("CopyChatAttachmentToBauakte").ProducesProblem(StatusCodes.Status403Forbidden)
             .WithSummary("Anhang als Foto/Dokument in die Bauakte übernehmen").RequirePermission(Permissions.FilesUpload)
             .ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status422UnprocessableEntity);
         chat.MapPost("/conversations/{id:guid}/leave", LeaveAsync).WithName("LeaveChatGroup").WithSummary("Gruppe verlassen")
@@ -581,6 +581,11 @@ internal static partial class ChatEndpoints
         {
             return TypedResults.Problem(statusCode: StatusCodes.Status404NotFound, title: "Bauakte nicht gefunden",
                 extensions: new Dictionary<string, object?> { ["code"] = "NOT_FOUND" });
+        }
+
+        if (!await bauakten.CanWriteAsync(bauakteId, cancellationToken))
+        {
+            return BauakteWriteProblems.NotAssigned();
         }
 
         var content = await chat.Blobs.ReadAsync(attachment.StorageKey, thumbnail: false, cancellationToken);

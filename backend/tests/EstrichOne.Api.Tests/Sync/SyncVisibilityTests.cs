@@ -9,7 +9,7 @@ namespace EstrichOne.Api.Tests.Sync;
 
 /// <summary>
 /// „Daten nicht verfügbar“ auf Handy und Tablet: Eingeplante sehen ihre Bauakte, der Snapshot liefert den bisherigen
-/// Inhalt einer neu sichtbaren Bauakte nach, „Mir zuweisen“ macht sie dauerhaft sichtbar.
+/// Inhalt einer neu sichtbaren Bauakte nach, „Mich als Beteiligten eintragen“ nimmt sie dauerhaft in den Offline-Umfang.
 /// </summary>
 public sealed class SyncVisibilityTests(PostgresFixture postgres) : IAsyncLifetime
 {
@@ -91,7 +91,7 @@ public sealed class SyncVisibilityTests(PostgresFixture postgres) : IAsyncLifeti
     }
 
     [Fact]
-    public async Task AssignMe_WorksForPlannedBauakten_ButNotForForeignOnes()
+    public async Task AssignMe_WorksForPlannedAndForeignBauakten()
     {
         var (worker, site) = await WorkerAsync();
         using var siteClient = site;
@@ -99,8 +99,11 @@ public sealed class SyncVisibilityTests(PostgresFixture postgres) : IAsyncLifeti
         var (foreign, _) = await OfficeBauakteWithNoteAsync("Fremde Baustelle");
         await PlanAsync(planned, worker.Id);
 
-        using var denied = await site.PostAsync($"/api/v1/bauakten/{foreign}/members/me", null, Ct);
-        denied.StatusCode.ShouldBe(HttpStatusCode.NotFound);
+        // Alle sehen alle Bauakten und können sich selbst eintragen.
+        using var foreignJoin = await site.PostAsync($"/api/v1/bauakten/{foreign}/members/me", null, Ct);
+        foreignJoin.StatusCode.ShouldBe(HttpStatusCode.OK);
+        using var unknown = await site.PostAsync($"/api/v1/bauakten/{Guid.CreateVersion7()}/members/me", null, Ct);
+        unknown.StatusCode.ShouldBe(HttpStatusCode.NotFound);
 
         using var assigned = await site.PostAsync($"/api/v1/bauakten/{planned}/members/me", null, Ct);
         assigned.StatusCode.ShouldBe(HttpStatusCode.OK);

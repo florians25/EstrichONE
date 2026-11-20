@@ -15,7 +15,11 @@ public sealed record PushResponse(IReadOnlyList<SyncOperationResult> Results);
 
 public sealed record SyncChange(string EntityType, Guid Id, bool Deleted, JsonNode? Data);
 
-public sealed record PullResponse(IReadOnlyList<SyncChange> Changes, string Cursor, bool HasMore, IReadOnlyList<Guid>? VisibleBauakteIds);
+/// <param name="VisibleBauakteIds">Mit includeScope: Bauakten, die offline auf dem Gerät liegen (zugeteilte; mit „alle offline“ alle).</param>
+/// <param name="AssignedBauakteIds">Mit includeScope: davon die, die der Benutzer bearbeiten darf (zugeteilt bzw. „Alle Bauakten bearbeiten“).
+/// Die übrigen zeigen die Apps schreibgeschützt.</param>
+public sealed record PullResponse(IReadOnlyList<SyncChange> Changes, string Cursor, bool HasMore, IReadOnlyList<Guid>? VisibleBauakteIds,
+    IReadOnlyList<Guid>? AssignedBauakteIds = null);
 
 /// <summary>
 /// Verarbeitet Outbox-Operationen und liefert Änderungen (docs/sync-protokoll.md, docs/reengineering/15).
@@ -184,7 +188,8 @@ internal sealed partial class SyncService(
         var hasMore = rows.Count > take;
         rows = rows.Take(take).ToList();
 
-        var visible = (await (await bauakten.VisibleAsync(db.Set<Bauakte>().IgnoreQueryFilters([QueryFilters.NotDeleted]), cancellationToken))
+        // Offline nur der Abgleichsumfang (zugeteilte Bauakten); alle übrigen sehen die Apps online (Liste, Suche, Kopf).
+        var visible = (await (await bauakten.SyncScopeAsync(db.Set<Bauakte>().IgnoreQueryFilters([QueryFilters.NotDeleted]), cancellationToken))
             .Select(b => b.Id).ToListAsync(cancellationToken)).ToHashSet();
         var granted = await permissions.GetAsync(cancellationToken);
 
@@ -204,7 +209,14 @@ internal sealed partial class SyncService(
         var last = rows.LastOrDefault();
         var nextCursor = last is null ? cursor ?? Encode(epoch, 0, 0) : Encode(epoch, (ulong)last.Txid, last.Seq);
         var ordered = changes.OrderBy(change => rows.FindIndex(row => row.EntityId == change.Id && row.EntityType == change.EntityType)).ToList();
-        return (new PullResponse(ordered, nextCursor, hasMore, includeScope ? visible.Order().ToList() : null), false);
+        List<Guid>? writable = null;
+        if (includeScope)
+        {
+            writable = (await (await bauakten.WritableAsync(db.Set<Bauakte>(), cancellationToken)).Select(b => b.Id).ToListAsync(cancellationToken))
+                .Where(visible.Contains).Order().ToList();
+        }
+
+        return (new PullResponse(ordered, nextCursor, hasMore, includeScope ? visible.Order().ToList() : null, writable), false);
     }
 
     /// <summary>
@@ -214,7 +226,7 @@ internal sealed partial class SyncService(
     /// </summary>
     public async Task<SnapshotResponse> SnapshotAsync(IReadOnlyList<Guid> bauakteIds, CancellationToken cancellationToken)
     {
-        var visible = await (await bauakten.VisibleAsync(db.Set<Bauakte>(), cancellationToken))
+        var visible = await (await bauakten.SyncScopeAsync(db.Set<Bauakte>(), cancellationToken))
             .Where(b => bauakteIds.Contains(b.Id)).Select(b => b.Id).ToListAsync(cancellationToken);
         var missing = bauakteIds.Except(visible).ToList();
         if (visible.Count == 0)

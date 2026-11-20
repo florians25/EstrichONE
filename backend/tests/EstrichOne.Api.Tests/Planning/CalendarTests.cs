@@ -155,7 +155,7 @@ public sealed class CalendarTests(PostgresFixture postgres) : IAsyncLifetime
         seen.Title.ShouldBe("Staplerschulung");
         seen.CanEdit.ShouldBeFalse();
         seen.People.ShouldHaveSingleItem().Id.ShouldBe(lukas.Id);
-        seen.BauakteTitle.ShouldBeNull("Die Bauakte ist für den Monteur nicht sichtbar.");
+        seen.BauakteTitle.ShouldBe("Halle Nord", "Alle mit Bauakten-Zugriff sehen alle Bauakten.");
 
         // Nachmittags-Einsatz überschneidet sich nicht, vormittags schon.
         var afternoon = await SendAsync<AssignmentView>(office, HttpMethod.Put, $"/api/v1/planning/assignments/{Guid.CreateVersion7()}", new

@@ -22,6 +22,8 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
+import de.estrichone.core.onlineBauakten
+import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -105,6 +107,17 @@ fun BauaktenScreen(selected: String?) {
     val counts = remember(all) { Filter.entries.associateWith { f -> all.count { it.status in f.statuses } } }
     val status by session.status.collectAsState()
     val scope = rememberCoroutineScope()
+    // Alle sehen alle Bauakten: Bei der Suche auch nicht zugeteilte vom Server (nicht auf dem Gerät, nur ansehen).
+    val others by produceState<List<de.estrichone.core.BauakteListItem>>(emptyList(), search, all) {
+        if (search.isBlank()) {
+            value = emptyList()
+            return@produceState
+        }
+        kotlinx.coroutines.delay(400)
+        val local = all.map { it.id.lowercase() }.toSet()
+        value = runCatching { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { session.api.onlineBauakten(search) } }
+            .getOrDefault(emptyList()).filter { it.id.lowercase() !in local }
+    }
 
     ScreenScaffold("Baustellen", root = true, floating = {
         ExtendedFloatingActionButton(onClick = { creating = true }, icon = { Icon(Icons.Filled.Add, null) }, text = { Text("Neue Bauakte") })
@@ -140,6 +153,22 @@ fun BauaktenScreen(selected: String?) {
             val rest = list.filter { it !in todayList }
             rest.groupBy { it.status }.toSortedMap(compareBy { it.order }).forEach { (status, rows) ->
                 group(status.name, "${if (status == BauakteStatus.Drying) "Trocknung" else status.label} (${rows.size})", rows)
+            }
+            if (others.isNotEmpty()) {
+                item(key = "label-online", contentType = "label") { GroupLabel("Weitere Bauakten (online) – nur ansehen") }
+                itemsIndexed(others, key = { _, b -> "online-${b.id}" }, contentType = { _, _ -> "online" }) { index, b ->
+                    CardSlot(index, others.size) {
+                        Row(Modifier.fillMaxWidth().clickable { nav.set(nav.tab, listOf(Route.Bauakte(b.id.lowercase()))) }
+                            .padding(horizontal = 16.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                Text(b.title, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Secondary(listOfNotNull(b.number, listOfNotNull(b.street, b.city).joinToString(", ").ifBlank { null }).joinToString(" · "), maxLines = 1)
+                                StatusLabel(b.status)
+                            }
+                            Icon(Icons.Outlined.Visibility, "Nur ansehen", tint = tones.textSecondary)
+                        }
+                    }
+                }
             }
         }
         }

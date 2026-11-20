@@ -10,7 +10,7 @@
 					<Title text="{i18n>diary.chronicle}" level="H3"/>
 					<ToolbarSpacer/>
 					<SearchField width="14rem" placeholder="{i18n>diary.search}" value="{dc>/diaryQuery}" liveChange=".refreshDiary"/>
-					<Button text="{i18n>diary.add}" icon="sap-icon://add" type="Emphasized" press=".onAddDiary" visible="{= ${session>/permissions/diary.write} === true }"/>
+					<Button text="{i18n>diary.add}" icon="sap-icon://add" type="Emphasized" press=".onAddDiary" visible="{= (${session>/permissions/diary.write} === true &amp;&amp; ${akte>/writable} !== false) }"/>
 				</OverflowToolbar>
 				<List id="diaryList" items="{dc>/diaryShown}" noDataText="{i18n>diary.none}" showSeparators="All" growing="true" growingThreshold="50">
 					<CustomListItem>
@@ -47,14 +47,14 @@
 					<Button id="planInitialButton" text="{= ${dc>/ib/appointment} ? 'Termin ändern' : 'Termin planen' }" icon="sap-icon://appointment-2" press=".onPlanInitial"
 						visible="{= ${dc>/ib/canPlan} &amp;&amp; (${dc>/ib/status} === 'open' || ${dc>/ib/status} === 'planned') }"/>
 					<Button id="waiveInitialButton" text="Nicht erforderlich" icon="sap-icon://decline" press=".onWaiveInitial" tooltip="{i18n>inspections.waive}"
-						visible="{= (${dc>/ib/status} === 'open' || ${dc>/ib/status} === 'planned') &amp;&amp; ${session>/permissions/bauakten.edit} === true }"/>
+						visible="{= (${dc>/ib/status} === 'open' || ${dc>/ib/status} === 'planned') &amp;&amp; (${session>/permissions/bauakten.edit} === true &amp;&amp; ${akte>/writable} !== false) }"/>
 					<Button id="undoWaiverButton" text="Vermerk aufheben" icon="sap-icon://undo" press=".onUndoWaiver"
-						visible="{= ${dc>/ib/status} === 'waived' &amp;&amp; ${session>/permissions/bauakten.edit} === true }"/>
+						visible="{= ${dc>/ib/status} === 'waived' &amp;&amp; (${session>/permissions/bauakten.edit} === true &amp;&amp; ${akte>/writable} !== false) }"/>
 					<Button id="initialPdfButton" text="Protokoll (PDF)" icon="sap-icon://pdf-attachment" press=".onInitialPdf" visible="{= ${dc>/ib/status} === 'done' }"/>
 					<Button id="correctInitialButton" text="{i18n>inspections.correct}" icon="sap-icon://edit" press=".onCorrectInitial"
-						visible="{= ${dc>/ib/status} === 'done' &amp;&amp; ${session>/permissions/inspections.write} === true }"/>
+						visible="{= ${dc>/ib/status} === 'done' &amp;&amp; (${session>/permissions/inspections.write} === true &amp;&amp; ${akte>/writable} !== false) }"/>
 					<Button id="startInitialButton" text="Erstbegehung durchführen" icon="sap-icon://inspection" type="Emphasized" press=".onAddInitial"
-						visible="{= (${dc>/ib/status} === 'open' || ${dc>/ib/status} === 'planned') &amp;&amp; ${session>/permissions/inspections.write} === true }"/>
+						visible="{= (${dc>/ib/status} === 'open' || ${dc>/ib/status} === 'planned') &amp;&amp; (${session>/permissions/inspections.write} === true &amp;&amp; ${akte>/writable} !== false) }"/>
 				</OverflowToolbar>
 				<!-- Eckdaten in einer Zeile: Status, Termin, durchgeführt, Ergebnis -->
 				<grid:CSSGrid gridTemplateColumns="repeat(auto-fit, minmax(min(100%, 11rem), 1fr))" gridGap="0.5rem 1.5rem" class="sapUiSmallMarginTopBottom">
@@ -155,7 +155,7 @@
 				<OverflowToolbar style="Clear">
 					<Title text="{i18n>inspections.cmTitle}" level="H3"/>
 					<ToolbarSpacer/>
-					<Button text="{i18n>inspections.addCm}" icon="sap-icon://lab" type="Emphasized" press=".onAddCm" visible="{= ${session>/permissions/inspections.write} === true }"/>
+					<Button text="{i18n>inspections.addCm}" icon="sap-icon://lab" type="Emphasized" press=".onAddCm" visible="{= (${session>/permissions/inspections.write} === true &amp;&amp; ${akte>/writable} !== false) }"/>
 				</OverflowToolbar>
 				<Table id="cmTable" items="{dc>/cm}" noDataText="{i18n>inspections.noneCm}" popinLayout="GridSmall">
 					<columns>
@@ -189,7 +189,7 @@
 					<Title text="Abnahmeprotokolle" level="H3"/>
 					<ToolbarSpacer/>
 					<Button id="addAcceptance" text="Abnahmeprotokoll erstellen" icon="sap-icon://signature" type="Emphasized" press=".onAddAcceptance"
-						visible="{= ${session>/permissions/inspections.write} === true }"/>
+						visible="{= (${session>/permissions/inspections.write} === true &amp;&amp; ${akte>/writable} !== false) }"/>
 				</OverflowToolbar>
 				<List id="acceptanceList" items="{dc>/acceptances}" noDataText="Noch keine Abnahme. Bei der Abnahme vor Ort den Assistenten starten; Unterschriften werden auf dem Gerät erfasst.">
 					<CustomListItem>
@@ -205,7 +205,7 @@
 							<HBox class="eoEntryRow">
 								<Button text="PDF" icon="sap-icon://pdf-attachment" press=".onAcceptancePdf" visible="{= !!${dc>pdfFileId} }"/>
 								<Button text="Freigabelink" icon="sap-icon://share-2" press=".onAcceptanceLink"
-									visible="{= ${dc>state} !== 'completed' &amp;&amp; ${session>/permissions/inspections.write} === true }"/>
+									visible="{= ${dc>state} !== 'completed' &amp;&amp; (${session>/permissions/inspections.write} === true &amp;&amp; ${akte>/writable} !== false) }"/>
 							</HBox>
 						</FlexBox>
 					</CustomListItem>

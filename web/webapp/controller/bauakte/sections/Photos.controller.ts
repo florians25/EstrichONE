@@ -272,7 +272,7 @@ export default class Photos extends SectionBase {
 		this.dropReady = true;
 		const files = (event: DragEvent) => [...(event.dataTransfer?.types ?? [])].includes("Files");
 		dom.addEventListener("dragover", (event) => {
-			if (!files(event) || !session.has("files.upload")) return;
+			if (!files(event) || !session.has("files.upload") || !this.writable()) return;
 			event.preventDefault();
 			dom.classList.add("eoDropActive");
 		});
@@ -280,7 +280,7 @@ export default class Photos extends SectionBase {
 			if (event.target === dom) dom.classList.remove("eoDropActive");
 		});
 		dom.addEventListener("drop", (event) => {
-			if (!files(event) || !session.has("files.upload")) return;
+			if (!files(event) || !session.has("files.upload") || !this.writable()) return;
 			event.preventDefault();
 			dom.classList.remove("eoDropActive");
 			this.openUpload([...(event.dataTransfer?.files ?? [])]);

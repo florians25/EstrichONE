@@ -30,7 +30,7 @@ internal static class CustomerLetterEndpoints
         api.MapPost("/bauakten/{id:guid}/letters", CreateAsync).WithTags("Bautagebuch und Prüfungen").WithName("CreateCustomerLetter")
             .WithSummary("Schreiben an den Kunden als PDF (DIN 5008) in der Bauakte ablegen (Kundendokumente/Schreiben), optional per E-Mail senden")
             .ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status422UnprocessableEntity)
-            .RequirePermission(Permissions.BauaktenEdit);
+            .RequirePermission(Permissions.BauaktenEdit).RequireBauakteWrite();
     }
 
     /// <summary>Platzhalter im Text ersetzen.</summary>

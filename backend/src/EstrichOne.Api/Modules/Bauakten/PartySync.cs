@@ -66,6 +66,11 @@ internal sealed class BauaktePartySync(EstrichOneDbContext db, IBauakteAccess ac
             return SyncOperationResult.Rejected(op.OpId, "NOT_FOUND", "Die Bauakte existiert nicht (mehr).");
         }
 
+        if (!await access.CanWriteAsync(bauakteId, cancellationToken))
+        {
+            return SyncOperationResult.NotAssigned(op.OpId);
+        }
+
         if (op.Type == "bauakteParty.delete")
         {
             await BauaktePartyEndpoints.RemoveAsync(db, history, bauakteId, op.EntityId, cancellationToken);

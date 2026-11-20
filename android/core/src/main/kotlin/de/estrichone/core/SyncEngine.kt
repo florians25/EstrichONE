@@ -34,7 +34,11 @@ data class PushResponse(val results: List<PushResult>)
 data class SyncChange(val entityType: String, val id: String, val deleted: Boolean = false, val data: JsonElement? = null)
 
 @Serializable
-data class PullResponse(val changes: List<SyncChange>, val cursor: String, val hasMore: Boolean = false, val visibleBauakteIds: List<String>? = null)
+data class PullResponse(
+    val changes: List<SyncChange>, val cursor: String, val hasMore: Boolean = false, val visibleBauakteIds: List<String>? = null,
+    /** Mit `includeScope`: davon die bearbeitbaren (zugeteilt oder „Alle Bauakten bearbeiten“); ältere Server: `null`. */
+    val assignedBauakteIds: List<String>? = null,
+)
 
 @Serializable
 data class SnapshotResponse(val changes: List<SyncChange>, val missing: List<String> = emptyList())
@@ -202,7 +206,7 @@ class SyncEngine(
                 throw e
             }
             first = false
-            store.applyPage(page.changes, page.cursor, page.visibleBauakteIds)
+            store.applyPage(page.changes, page.cursor, page.visibleBauakteIds, page.assignedBauakteIds)
             page.visibleBauakteIds?.let { visible = it }
             if (!page.hasMore) break
         }

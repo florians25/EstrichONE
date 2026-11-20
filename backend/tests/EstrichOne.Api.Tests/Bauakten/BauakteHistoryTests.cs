@@ -71,15 +71,18 @@ public sealed class BauakteHistoryTests(PostgresFixture postgres) : IAsyncLifeti
     }
 
     [Fact]
-    public async Task History_OfForeignBauakte_IsNotFound()
+    public async Task History_OfForeignBauakte_IsVisible_UnknownIsNotFound()
     {
         using var owner = await _factory.CreateClientAsAsync("baustelle", StandardRoles.SiteWorkerId);
         using var colleague = await _factory.CreateClientAsAsync("kollege", StandardRoles.SiteWorkerId);
         var bauakte = Guid.CreateVersion7();
         Applied(await owner.PushAsync(SyncClient.Op("bauakte.create", bauakte, new { title = "Halle" })));
 
-        using var response = await colleague.GetAsync(new Uri($"/api/v1/bauakten/{bauakte}/history", UriKind.Relative), TestContext.Current.CancellationToken);
+        // Alle sehen alle Bauakten – auch ihren Verlauf.
+        using var visible = await colleague.GetAsync(new Uri($"/api/v1/bauakten/{bauakte}/history", UriKind.Relative), TestContext.Current.CancellationToken);
+        visible.StatusCode.ShouldBe(HttpStatusCode.OK);
 
+        using var response = await colleague.GetAsync(new Uri($"/api/v1/bauakten/{Guid.CreateVersion7()}/history", UriKind.Relative), TestContext.Current.CancellationToken);
         response.StatusCode.ShouldBe(HttpStatusCode.NotFound);
         (await response.ReadProblemAsync()).Code.ShouldBe("BAUAKTE_NOT_FOUND");
     }

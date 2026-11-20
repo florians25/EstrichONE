@@ -62,6 +62,10 @@ public sealed class BauakteReportTests(PostgresFixture postgres) : IAsyncLifetim
         pdf.Length.ShouldBeGreaterThan(30_000); // Schrift, Logo und Foto eingebettet
 
         using var other = await _factory.CreateClientAsAsync("fremd", StandardRoles.SiteWorkerId);
-        (await other.GetAsync(new Uri($"/api/v1/bauakten/{bauakte.Id}/report.pdf", UriKind.Relative), Ct)).StatusCode.ShouldBe(HttpStatusCode.NotFound);
+        // Alle mit Bauakten-Zugriff sehen alle Bauakten – auch den Bericht; ohne Rolle nicht.
+        (await other.GetAsync(new Uri($"/api/v1/bauakten/{bauakte.Id}/report.pdf", UriKind.Relative), Ct)).StatusCode.ShouldBe(HttpStatusCode.OK);
+        using var nobody = await _factory.CreateClientAsAsync("ohne.rolle");
+        (await nobody.GetAsync(new Uri($"/api/v1/bauakten/{bauakte.Id}/report.pdf", UriKind.Relative), Ct)).StatusCode
+            .ShouldBeOneOf(HttpStatusCode.NotFound, HttpStatusCode.Forbidden);
     }
 }

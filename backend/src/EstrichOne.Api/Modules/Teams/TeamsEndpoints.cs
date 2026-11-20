@@ -188,26 +188,26 @@ internal static partial class TeamsEndpoints
             .WithSummary("Kanal oder Gruppenchat anlegen bzw. vorhandenen per Link verknüpfen")
             .ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status409Conflict)
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity).ProducesProblem(StatusCodes.Status424FailedDependency)
-            .RequirePermission(Permissions.BauaktenEdit);
+            .RequirePermission(Permissions.BauaktenEdit).RequireBauakteWrite();
         bauakte.MapGet("/participants", ParticipantsAsync).WithName("ListBauakteTeamsParticipants")
             .WithSummary("Auswahl für „Teams-Chat anlegen“: Bauakten-Team, Kolonnen, Gruppen (Rollen), Personen mit Microsoft-Konto")
             .ProducesProblem(StatusCodes.Status404NotFound).RequirePermission(Permissions.BauaktenEdit);
         bauakte.MapPost("/sync", SyncAsync).WithName("SyncBauakteTeamsMembers").WithSummary("Mitglieder jetzt abgleichen (Ergebnis an der Verknüpfung)")
             .ProducesProblem(StatusCodes.Status404NotFound).RequirePermission(Permissions.BauaktenEdit);
         bauakte.MapDelete("/", UnlinkAsync).WithName("UnlinkBauakteTeams").WithSummary("Verknüpfung lösen (in Teams wird nichts gelöscht)")
-            .ProducesProblem(StatusCodes.Status404NotFound).RequirePermission(Permissions.BauaktenEdit);
+            .ProducesProblem(StatusCodes.Status404NotFound).RequirePermission(Permissions.BauaktenEdit).RequireBauakteWrite();
         bauakte.MapPost("/archive", ArchiveAsync).WithName("ArchiveBauakteTeams")
             .WithSummary("Kanal in Teams archivieren (nur lesen, wiederherstellbar; Gruppenchats: nicht möglich)")
             .ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status409Conflict).ProducesProblem(StatusCodes.Status424FailedDependency)
-            .ProducesProblem(StatusCodes.Status503ServiceUnavailable).RequirePermission(Permissions.TeamsDelete);
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable).RequirePermission(Permissions.TeamsDelete).RequireBauakteWrite();
         bauakte.MapPost("/unarchive", UnarchiveAsync).WithName("UnarchiveBauakteTeams").WithSummary("Archivierten Kanal wiederherstellen")
             .ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status409Conflict).ProducesProblem(StatusCodes.Status424FailedDependency)
-            .ProducesProblem(StatusCodes.Status503ServiceUnavailable).RequirePermission(Permissions.TeamsDelete);
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable).RequirePermission(Permissions.TeamsDelete).RequireBauakteWrite();
         bauakte.MapPost("/delete", DeleteRemoteAsync).WithName("DeleteBauakteTeams")
             .WithSummary("Kanal bzw. Gruppenchat in Teams löschen und Verknüpfung lösen (Bestätigung mit Bauaktennummer)")
             .ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status409Conflict).ProducesProblem(StatusCodes.Status422UnprocessableEntity)
             .ProducesProblem(StatusCodes.Status424FailedDependency).ProducesProblem(StatusCodes.Status503ServiceUnavailable)
-            .RequirePermission(Permissions.TeamsDelete);
+            .RequirePermission(Permissions.TeamsDelete).RequireBauakteWrite();
         var crews = api.MapGroup("/teams/crews").WithTags("Microsoft Teams").AddEndpointFilter(GuardAsync);
         crews.MapGet("/", CrewChatsAsync).WithName("ListTeamsCrewChats").WithSummary("Teams-Chats der Kolonnen (einer je Kolonne)")
             .RequirePermission(Permissions.PlanningRead);

@@ -26,6 +26,8 @@ struct BauakteContent {
     var warnMissingInspection = true
     /// Recht „Bauakte bearbeiten“ (nur für die Oberfläche; der Server prüft selbst).
     var canEditBauakte = false
+    /// Auf dem Gerät, aber nicht zugeteilt (nur mit „alle Bauakten offline“): nur ansehen, Eintragen anbieten.
+    var viewOnly = false
 
     var openItems: [WorkItem] { workItems.filter { !$0.isDone } }
     var openDefects: Int { openItems.filter { $0.kind == .defect }.count }
@@ -59,7 +61,8 @@ struct BauakteContent {
         content.customer = if let customerId = bauakte.customerId { try? await service.contact(customerId) } else { nil }
         if let store = model.active?.sync?.store {
             content.warnMissingInspection = await InspectionHintSetting(store: store).cached()
-            content.canEditBauakte = await MyPermissions(store: store).cached().contains("bauakten.edit")
+            content.viewOnly = (try? await store.isViewOnly(bauakte: id)) ?? false
+            content.canEditBauakte = await MyPermissions(store: store).cached().contains("bauakten.edit") && !content.viewOnly
             let today = CalendarDay.string(.now)
             content.assignments = (await MyPlanning(store: store).cached())?.range.assignments
                 .filter { $0.bauakteId == id && $0.day >= today }

@@ -118,12 +118,53 @@ public actor LocalStore {
         if isReadOnly { throw ReadOnlyModeError() }
     }
 
+    // MARK: Zuteilung („Nur ansehen“)
+
+    /// Datensatzarten, die zu einer Bauakte gehören: Ändern nur, wenn man der Bauakte zugeteilt ist.
+    static let bauakteContent: Set<EntityType> = [.bauakte, .note, .file, .workItem, .diaryEntry, .inspection, .acceptance, .room, .bauakteParty]
+
+    /// Bauakten auf dem Gerät, die der Benutzer nur ansehen darf (sichtbar, aber nicht zugeteilt). Der Server meldet
+    /// mit `includeScope` die bearbeitbaren; ohne diese Angabe (ältere Server) gilt alles als bearbeitbar.
+    public func isViewOnly(bauakte id: UUID) throws -> Bool {
+        try viewOnlyBauakten().contains(id.key)
+    }
+
+    /// Nach „Mich als Beteiligten eintragen“ (`false`) bzw. „Austragen“ (`true`) sofort lokal übernehmen.
+    public func setViewOnly(bauakte id: UUID, _ viewOnly: Bool) throws {
+        var set = try viewOnlyBauakten()
+        if viewOnly { set.insert(id.key) } else { set.remove(id.key) }
+        try setMeta("view_only_bauakten", set.sorted().joined(separator: ","))
+    }
+
+    private func viewOnlyBauakten() throws -> Set<String> {
+        Set((try meta("view_only_bauakten") ?? "").split(separator: ",").map(String.init))
+    }
+
+    /// Änderungen an nicht zugeteilten Bauakten gar nicht erst in die Warteschlange (der Server lehnte sie mit
+    /// BAUAKTE_NOT_ASSIGNED ab).
+    private func ensureAssigned(_ db: SQLiteDatabase, _ type: EntityType, id: UUID, bauakteId: String? = nil) throws {
+        guard Self.bauakteContent.contains(type) else { return }
+        var owner = bauakteId
+        if owner == nil, type == .bauakte {
+            owner = id.key
+        } else if owner == nil {
+            let row = try db.query("SELECT parent_id FROM entity WHERE type = ? AND id = ?", [.text(type.rawValue), .text(id.key)]).first
+            owner = row?["parent_id"]?.string
+        }
+        let viewOnly = Set((try db.scalar("SELECT value FROM meta WHERE key = 'view_only_bauakten'").string ?? "").split(separator: ",").map(String.init))
+        guard let owner, viewOnly.contains(owner.lowercased()) else { return }
+        throw BauakteNotAssignedError()
+    }
+
     /// Legt einen Datensatz an. `data` ist die lokale Darstellung (wie vom Server), `payload` die Nutzdaten der
     /// Operation `<typ>.create` bzw. `file.announce`.
     public func create(_ type: EntityType, id: UUID, data: JSONValue, payload: [String: JSONValue],
                        operation: String? = nil) throws {
         try ensureWritable()
         try db.write { db in
+            if type != .bauakte {
+                try ensureAssigned(db, type, id: id, bauakteId: data["bauakteId"]?.string ?? payload["bauakteId"]?.string)
+            }
             try db.execute("""
                 INSERT INTO entity (type, id, server, local, parent_id, search, sort_key) VALUES (?, ?, NULL, ?, ?, ?, ?)
                 """, [.text(type.rawValue), .text(id.key), .text(try data.encoded())] + derived(type, data))
@@ -138,6 +179,8 @@ public actor LocalStore {
         guard !changes.isEmpty else { return }
         try ensureWritable()
         try db.write { db in
+            // Aufgaben: Wer sie zugewiesen bekommen hat, darf sie auch ohne Zuteilung zur Bauakte erledigen (der Server prüft).
+            if type != .workItem { try ensureAssigned(db, type, id: id) }
             guard let row = try db.query("SELECT * FROM entity WHERE type = ? AND id = ?", [.text(type.rawValue), .text(id.key)]).first,
                   let localText = row["local"]?.string else { return }
             let server = try row["server"]?.string.map(JSONValue.decode)
@@ -175,6 +218,7 @@ public actor LocalStore {
     public func setStatus(_ status: String, reason: String?, of bauakteId: UUID) throws {
         try ensureWritable()
         try db.write { db in
+            try ensureAssigned(db, .bauakte, id: bauakteId)
             guard let row = try db.query("SELECT * FROM entity WHERE type = 'bauakte' AND id = ?", [.text(bauakteId.key)]).first,
                   let localText = row["local"]?.string else { return }
             let local = try JSONValue.decode(localText)
@@ -192,6 +236,7 @@ public actor LocalStore {
         try ensureWritable()
         let operation = "\(type.operationPrefix).save"
         try db.write { db in
+            try ensureAssigned(db, type, id: id, bauakteId: payload["bauakteId"]?.string)
             let row = try db.query("SELECT server, local FROM entity WHERE type = ? AND id = ?", [.text(type.rawValue), .text(id.key)]).first
             let server = try row?["server"]?.string.map(JSONValue.decode)
             let pending = try db.query("""
@@ -222,6 +267,7 @@ public actor LocalStore {
     public func delete(_ type: EntityType, id: UUID) throws {
         try ensureWritable()
         try db.write { db in
+            try ensureAssigned(db, type, id: id)
             let unsentCreate = try db.query("""
                 SELECT seq FROM outbox WHERE entity_type = ? AND entity_id = ? AND state = 'pending'
                   AND (type LIKE '%.create' OR type = 'file.announce'
@@ -375,6 +421,11 @@ public actor LocalStore {
                 } else if let data = change.data {
                     try storeServerState(db, type, change.id, data)
                 }
+            }
+            if let visible = page.visibleBauakteIds, let assigned = page.assignedBauakteIds {
+                // Sichtbar, aber nicht zugeteilt (nur mit „alle Bauakten offline“): auf dem Gerät nur ansehen.
+                let viewOnly = Set(visible.map(\.key)).subtracting(assigned.map(\.key))
+                try db.execute("INSERT OR REPLACE INTO meta (key, value) VALUES ('view_only_bauakten', ?)", [.text(viewOnly.sorted().joined(separator: ","))])
             }
             if let visible = page.visibleBauakteIds {
                 // Rechte entzogen: lokale Bauakten, die nicht mehr sichtbar sind, samt Inhalt entfernen (15, Abschnitt 3).

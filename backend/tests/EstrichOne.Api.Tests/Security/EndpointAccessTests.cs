@@ -160,7 +160,9 @@ public sealed class EndpointAccessTests(PostgresFixture postgres) : IAsyncLifeti
         foreach (var (key, endpoint, method) in Routes().Where(r => !Anonymous.ContainsKey(r.Key)))
         {
             var ids = setup.IdsFor(endpoint.RoutePattern.RawText!);
-            if (ids is null || key.Contains("logout", StringComparison.Ordinal) || key.Contains("revoke-others", StringComparison.Ordinal))
+            // Selbst eintragen (members/me) ist erlaubt – gesondert unten, sonst wären danach alle Änderungen zulässig.
+            if (ids is null || key.Contains("logout", StringComparison.Ordinal) || key.Contains("revoke-others", StringComparison.Ordinal)
+                || key.Contains("/members/me", StringComparison.Ordinal))
             {
                 continue;
             }
@@ -173,8 +175,15 @@ public sealed class EndpointAccessTests(PostgresFixture postgres) : IAsyncLifeti
 
             using var response = await attacker.SendAsync(request, Ct);
             var status = (int)response.StatusCode;
-            // Lesen: nur 403/404. Schreiben: nie Erfolg (400/422 = Eingabe abgelehnt, ohne Wirkung – geprüft unten).
-            var allowed = method == "GET" ? status is 403 or 404 : status is 400 or 403 or 404 or 405 or 409 or 415 or 422;
+            // Lesen: nur 403/404 – außer Bauakten samt Inhalt (Dateien, Aufgaben): die sieht jeder mit Bauakten-Zugriff.
+            // Schreiben: nie Erfolg (400/422 = Eingabe abgelehnt, ohne Wirkung – geprüft unten; 403 BAUAKTE_NOT_ASSIGNED).
+            var route = endpoint.RoutePattern.RawText!;
+            var bauakteContent = route.Contains("/bauakten/{", StringComparison.Ordinal) || route.Contains("{bauakteId", StringComparison.Ordinal)
+                || route.StartsWith("/api/v1/files/{", StringComparison.Ordinal) || route.Contains("{fileId", StringComparison.Ordinal)
+                || route.StartsWith("/api/v1/work-items/{", StringComparison.Ordinal);
+            var allowed = method == "GET"
+                ? status is 403 or 404 || (bauakteContent && status < 500)
+                : status is 400 or 403 or 404 or 405 or 409 or 415 or 422;
             if (!allowed)
             {
                 problems.Add($"{key}: {status}");
@@ -194,7 +203,6 @@ public sealed class EndpointAccessTests(PostgresFixture postgres) : IAsyncLifeti
         }
 
         await Expect(await attacker.PutAsJsonAsync($"/api/v1/bauakten/{setup.Bauakte}", new { title = "Übernommen", version = 1 }, Ct), "Bauakte ändern");
-        await Expect(await attacker.PostAsync(new Uri($"/api/v1/bauakten/{setup.Bauakte}/members/me", UriKind.Relative), null, Ct), "Selbst zuweisen");
         await Expect(await attacker.PutAsJsonAsync($"/api/v1/bauakten/{setup.Bauakte}/members", new { userIds = new[] { ForeignObjects.AttackerId(_factory) } }, Ct), "Mitglieder setzen");
         await Expect(await attacker.PostAsJsonAsync($"/api/v1/bauakten/{setup.Bauakte}/notes", new { id = Guid.CreateVersion7(), text = "x" }, Ct), "Notiz schreiben");
         await Expect(await attacker.DeleteAsync(new Uri($"/api/v1/files/{setup.File}", UriKind.Relative), Ct), "Datei löschen");
@@ -206,10 +214,16 @@ public sealed class EndpointAccessTests(PostgresFixture postgres) : IAsyncLifeti
         await Expect(await attacker.PostAsync(new Uri($"/api/v1/notifications/{setup.Notification}/read", UriKind.Relative), null, Ct), "Fremde Benachrichtigung");
         await Expect(await attacker.PatchAsJsonAsync($"/api/v1/work-items/{setup.WorkItem}", new { status = "done" }, Ct), "Fremde Aufgabe");
 
-        // Über die Synchronisation kommt nichts Fremdes.
+        // Über die Synchronisation kommt nichts Fremdes (offline nur zugeteilte Bauakten).
         var pulled = await attacker.GetStringAsync(new Uri("/api/v1/sync/pull?limit=500&includeScope=true", UriKind.Relative), Ct);
         pulled.ShouldNotContain(setup.Bauakte.ToString());
         pulled.ShouldNotContain(setup.File.ToString());
+
+        // Selbst eintragen ist für jede sichtbare Bauakte erlaubt (wird protokolliert) – andere eintragen nicht.
+        using (var join = await attacker.PostAsync(new Uri($"/api/v1/bauakten/{setup.Bauakte}/members/me", UriKind.Relative), null, Ct))
+        {
+            join.StatusCode.ShouldBe(HttpStatusCode.OK);
+        }
 
         problems.ShouldBeEmpty();
 
@@ -219,7 +233,7 @@ public sealed class EndpointAccessTests(PostgresFixture postgres) : IAsyncLifeti
         bauakte.Title.ShouldBe("Fremde Baustelle");
         (await admin.GetAsync(new Uri($"/api/v1/files/{setup.File}", UriKind.Relative), Ct)).StatusCode.ShouldBe(HttpStatusCode.OK);
         var members = await admin.GetStringAsync(new Uri($"/api/v1/bauakten/{setup.Bauakte}/members", UriKind.Relative), Ct);
-        members.ShouldNotContain("angreifer", Case.Insensitive);
+        members.ShouldContain("angreifer", Case.Insensitive);
     }
 
     private sealed record ForeignObjects(HttpClient Admin, Guid Bauakte, Guid File, Guid Conversation, Guid Message, Guid Attachment,

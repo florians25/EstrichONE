@@ -40,10 +40,10 @@ internal static class WorkEndpoints
         var group = api.MapGroup("/work-items").WithTags("Aufgaben").RequireModule(AppModules.Tasks, AppModules.Defects);
         group.MapGet("/mine", MineAsync).WithName("ListMyWorkItems").WithSummary("Offene Aufgaben, die mir zugewiesen sind")
             .RequirePermission(Permissions.WorkRead);
-        group.MapPost("/", CreateAsync).WithName("CreateWorkItem").WithSummary("Aufgabe oder Mangel anlegen (idempotent über die ID)")
+        group.MapPost("/", CreateAsync).WithName("CreateWorkItem").ProducesProblem(StatusCodes.Status403Forbidden).WithSummary("Aufgabe oder Mangel anlegen (idempotent über die ID)")
             .ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status409Conflict)
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity).RequirePermission(Permissions.WorkEdit);
-        group.MapPatch("/{id:guid}", UpdateAsync).WithName("UpdateWorkItem")
+        group.MapPatch("/{id:guid}", UpdateAsync).WithName("UpdateWorkItem").ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status422UnprocessableEntity)
             .RequirePermission(Permissions.WorkEdit);
     }
@@ -119,6 +119,11 @@ internal static class WorkEndpoints
             return BauakteNotFound();
         }
 
+        if (request.BauakteId is { } writable && !await access.CanWriteAsync(writable, cancellationToken))
+        {
+            return BauakteWriteProblems.NotAssigned();
+        }
+
         var existing = await db.Set<WorkItem>().IgnoreQueryFilters([QueryFilters.NotDeleted]).AsNoTracking().SingleOrDefaultAsync(w => w.Id == request.Id, cancellationToken);
         if (existing is not null)
         {
@@ -158,13 +163,19 @@ internal static class WorkEndpoints
 
     private static async Task<Results<Ok<WorkItemDto>, ProblemHttpResult>> UpdateAsync(
         Guid id, UpdateWorkItemRequest request, IBauakteAccess access, IBauakteHistory history, EstrichOneDbContext db, TimeProvider clock,
-        INotifier notifier, IBauakteReportSource bauakten, CancellationToken cancellationToken)
+        INotifier notifier, IBauakteReportSource bauakten, ICurrentUser currentUser, CancellationToken cancellationToken)
     {
         var item = await db.Set<WorkItem>().SingleOrDefaultAsync(w => w.Id == id, cancellationToken);
         if (item is null || (item.BauakteId is { } bauakteId && !await access.CanReadAsync(bauakteId, cancellationToken)))
         {
             return TypedResults.Problem(statusCode: StatusCodes.Status404NotFound, title: "Aufgabe nicht gefunden",
                 extensions: new Dictionary<string, object?> { ["code"] = "NOT_FOUND" });
+        }
+
+        // Wer die Aufgabe zugewiesen bekommen hat, darf sie bearbeiten (z. B. erledigen) – auch ohne Zuteilung zur Bauakte.
+        if (item.BauakteId is { } itemBauakte && item.AssigneeUserId != currentUser.UserId && !await access.CanWriteAsync(itemBauakte, cancellationToken))
+        {
+            return BauakteWriteProblems.NotAssigned();
         }
 
         var previousAssignee = item.AssigneeUserId;

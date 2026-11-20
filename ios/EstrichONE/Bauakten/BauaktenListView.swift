@@ -6,13 +6,14 @@ import SwiftUI
 /// iPad: Liste links, Bauakte rechts.
 struct BauaktenListView: View {
     enum Scope: String, CaseIterable, Identifiable {
-        case running, archive, all
+        case running, archive, all, company
         var id: String { rawValue }
         var title: String {
             switch self {
             case .running: "Laufende"
             case .archive: "Abgeschlossen und storniert"
             case .all: "Alle"
+            case .company: "Alle im Betrieb (online)"
             }
         }
     }
@@ -32,6 +33,8 @@ struct BauaktenListView: View {
     @State private var creating = false
     @State private var captureFor: Bauakte?
     @State private var inspectFor: Bauakte?
+    /// Nicht zugeteilte Bauakten vom Server (nur online, nur ansehen) – bei Suche und „Alle im Betrieb“.
+    @State private var others: [RemoteBauakte] = []
 
     private static let groups: [BauakteStatus] = [.inProgress, .drying, .planned, .inquiry]
 
@@ -80,7 +83,7 @@ struct BauaktenListView: View {
         .sheet(item: $inspectFor) { bauakte in
             InspectionEntryView(bauakte: bauakte) { inspectFor = nil }
         }
-        .task(id: "\(search)|\(model.active?.sync?.revision ?? 0)") { await reload() }
+        .task(id: "\(search)|\(scope.rawValue)|\(model.active?.sync?.revision ?? 0)") { await reload() }
     }
 
     // MARK: Liste
@@ -121,11 +124,37 @@ struct BauaktenListView: View {
         case .running: return all.filter { !archived($0) }
         case .archive: return all.filter(archived)
         case .all: return all
+        case .company: return all.filter { !archived($0) }
         }
     }
 
     @ViewBuilder
     private var content: some View {
+        localContent
+        if !others.isEmpty {
+            Section {
+                ForEach(others) { item in
+                    NavigationLink(value: item.id) {
+                        HStack(spacing: Space.s) {
+                            BauakteRow(bauakte: item.bauakte)
+                            Spacer(minLength: 0)
+                            Image(systemName: "eye")
+                                .foregroundStyle(Theme.textSecondary)
+                                .accessibilityLabel("Nur ansehen")
+                        }
+                    }
+                    .accessibilityIdentifier("onlineBauakteRow")
+                }
+            } header: {
+                Text("Weitere Bauakten (online)")
+            } footer: {
+                Text("Nicht zugeteilt – nur ansehen. Zum Bearbeiten in der Bauakte „\(BauakteViewOnly.join)“ wählen.")
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var localContent: some View {
         let shown = visible
         if !loaded {
             Section {
@@ -226,6 +255,14 @@ struct BauaktenListView: View {
     private func reload() async {
         guard let service = model.active?.service else { return }
         all = (try? await service.bauakten(search: search)) ?? []
+        // Alle sehen alle Bauakten: nicht zugeteilte (nicht auf dem Gerät) online dazuholen.
+        if (scope == .company || !search.isEmpty), let client = model.active?.client {
+            let local = Set(all.map(\.id))
+            let found = (try? await client.onlineBauakten(search: search, includeOld: scope == .archive || scope == .all)) ?? []
+            others = found.filter { !local.contains($0.id) }
+        } else {
+            others = []
+        }
         let contacts = (try? await service.contacts()) ?? []
         customers = Dictionary(contacts.map { ($0.id, $0.name) }, uniquingKeysWith: { first, _ in first })
         if let store = model.active?.sync?.store {

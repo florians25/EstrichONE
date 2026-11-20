@@ -144,7 +144,7 @@ public sealed class FileApiTests(PostgresFixture postgres) : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Files_AreVisibleOnlyWithAccessToTheBauakte()
+    public async Task Files_AreVisibleToAll_ChangeableOnlyWhenAssigned()
     {
         var jpeg = CreateJpeg(100, 100);
         var id = await AnnounceAsync(jpeg, FileKind.Photo, "x.jpg");
@@ -152,14 +152,14 @@ public sealed class FileApiTests(PostgresFixture postgres) : IAsyncLifetime
         using var colleague = await _factory.CreateClientAsAsync("kollege", StandardRoles.SiteWorkerId);
         using var office = await _factory.CreateClientAsAsync("buero", StandardRoles.OfficeId);
 
-        (await colleague.GetAsync(new Uri($"/api/v1/files/{id}/content", UriKind.Relative), TestContext.Current.CancellationToken)).StatusCode.ShouldBe(HttpStatusCode.NotFound);
+        (await colleague.GetAsync(new Uri($"/api/v1/files/{id}/content", UriKind.Relative), TestContext.Current.CancellationToken)).StatusCode.ShouldBe(HttpStatusCode.OK);
         (await office.GetAsync(new Uri($"/api/v1/files/{id}/content", UriKind.Relative), TestContext.Current.CancellationToken)).StatusCode.ShouldBe(HttpStatusCode.OK);
         var list = await office.GetFromJsonAsync<List<FileResponse>>($"/api/v1/bauakten/{_bauakteId}/files", TestJson.Options, TestContext.Current.CancellationToken);
         list.ShouldNotBeNull();
         list.ShouldHaveSingleItem().Id.ShouldBe(id);
 
         using var foreignAnnounce = await colleague.PostAsJsonAsync("/api/v1/files", Announcement(Guid.CreateVersion7(), jpeg, FileKind.Photo, "y.jpg", "image/jpeg"), TestContext.Current.CancellationToken);
-        (await foreignAnnounce.ReadProblemAsync()).Code.ShouldBe("BAUAKTE_NOT_FOUND");
+        (await foreignAnnounce.ReadProblemAsync()).Code.ShouldBe("BAUAKTE_NOT_ASSIGNED");
 
         (await office.DeleteAsync(new Uri($"/api/v1/files/{id}", UriKind.Relative), TestContext.Current.CancellationToken)).StatusCode.ShouldBe(HttpStatusCode.NoContent);
         (await office.GetAsync(new Uri($"/api/v1/files/{id}", UriKind.Relative), TestContext.Current.CancellationToken)).StatusCode.ShouldBe(HttpStatusCode.NotFound);
@@ -237,8 +237,12 @@ public sealed class FileApiTests(PostgresFixture postgres) : IAsyncLifetime
         zip.Entries.Select(e => e.FullName).Order().ShouldBe(["Fotos/foto (2).jpg", "Fotos/foto.jpg"]);
 
         using var other = await _factory.CreateClientAsAsync("fremd", StandardRoles.SiteWorkerId);
+        // Alle mit Bauakten-Zugriff sehen alle Bauakten samt Dateien.
         (await other.GetAsync(new Uri($"/api/v1/bauakten/{_bauakteId}/files/archive?ids={a}", UriKind.Relative),
-            TestContext.Current.CancellationToken)).StatusCode.ShouldBe(HttpStatusCode.NotFound);
+            TestContext.Current.CancellationToken)).StatusCode.ShouldBe(HttpStatusCode.OK);
+        using var nobody = await _factory.CreateClientAsAsync("ohne.rolle");
+        (await nobody.GetAsync(new Uri($"/api/v1/bauakten/{_bauakteId}/files/archive?ids={a}", UriKind.Relative),
+            TestContext.Current.CancellationToken)).StatusCode.ShouldBeOneOf(HttpStatusCode.NotFound, HttpStatusCode.Forbidden);
     }
 
     [Fact]

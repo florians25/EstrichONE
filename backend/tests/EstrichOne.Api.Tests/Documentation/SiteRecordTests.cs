@@ -163,7 +163,7 @@ public sealed class SiteRecordTests(PostgresFixture postgres) : IAsyncLifetime
     }
 
     [Fact]
-    public async Task ForeignBauakte_IsRejectedAndHidden()
+    public async Task ForeignBauakte_IsRejected_ButVisible()
     {
         using var owner = await _factory.CreateClientAsAsync("baustelle", StandardRoles.SiteWorkerId);
         using var colleague = await _factory.CreateClientAsAsync("kollege", StandardRoles.SiteWorkerId);
@@ -172,8 +172,9 @@ public sealed class SiteRecordTests(PostgresFixture postgres) : IAsyncLifetime
         var result = Single(await colleague.PushAsync(SyncClient.Op("diary.create", Guid.CreateVersion7(), new { bauakteId = bauakte, text = "x" })));
         using var list = await colleague.GetAsync(new Uri($"/api/v1/bauakten/{bauakte}/inspections", UriKind.Relative), TestContext.Current.CancellationToken);
 
-        result.Code.ShouldBe("BAUAKTE_NOT_FOUND");
-        list.StatusCode.ShouldBe(HttpStatusCode.NotFound);
+        // Alle sehen alle Bauakten; dokumentieren nur Zugeteilte.
+        result.Code.ShouldBe("BAUAKTE_NOT_ASSIGNED");
+        list.StatusCode.ShouldBe(HttpStatusCode.OK);
     }
 
     [Fact]

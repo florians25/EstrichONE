@@ -119,7 +119,7 @@ public sealed class SyncProtocolTests(PostgresFixture postgres) : IAsyncLifetime
     }
 
     [Fact]
-    public async Task NoteForInvisibleBauakte_IsRejectedAndRememberedForRetries()
+    public async Task NoteForUnassignedBauakte_IsRejectedAndRememberedForRetries()
     {
         var foreign = await CreateAsync(_office, "Bürobaustelle");
         var op = SyncClient.Op("note.create", Guid.CreateVersion7(), new { bauakteId = foreign, text = "Hallo" }, opId: Guid.CreateVersion7());
@@ -128,9 +128,9 @@ public sealed class SyncProtocolTests(PostgresFixture postgres) : IAsyncLifetime
         var retry = (await _site.PushAsync(op)).Results.Single();
 
         first.Status.ShouldBe(SyncOperationStatus.Rejected);
-        first.Code.ShouldBe("NOT_FOUND");
+        first.Code.ShouldBe("BAUAKTE_NOT_ASSIGNED");
         retry.Status.ShouldBe(SyncOperationStatus.Duplicate);
-        retry.Code.ShouldBe("NOT_FOUND");
+        retry.Code.ShouldBe("BAUAKTE_NOT_ASSIGNED");
     }
 
     [Fact]

@@ -44,8 +44,12 @@ arbeitet danach weiter. Administratoren können sich über **Als Administrator a
 ## Arbeiten mit Bauakten und Dateien
 
 **Eine Bauakte ist nicht in der Liste.**
-Prüfen Sie den Reiter (abgeschlossene Akten stehen unter **Altakten**) und die Filter (**Filter zurücksetzen**). Mit
-dem Recht „Eigene Bauakten sehen“ sehen Sie nur Bauakten, bei denen Sie zuständig oder Mitglied sind.
+Prüfen Sie den Reiter (abgeschlossene Akten stehen unter **Altakten**) und die Filter (**Filter zurücksetzen**,
+**Anzeigen: Alle Bauakten**). Alle mit Bauakten-Zugriff sehen alle Bauakten.
+
+**Ich kann eine Bauakte nicht bearbeiten („Nur ansehen“).**
+Sie sind ihr nicht zugeteilt. Mit **Mich als Beteiligten eintragen** im Kopf der Bauakte (oder im Hinweis) schalten Sie
+das Bearbeiten frei; die Leitung wird benachrichtigt.
 
 **Der Upload einer großen Datei bricht ab.**
 EstrichONE lädt in 4-MB-Teilen hoch und setzt bei einem erneuten Versuch fort. Liegt ein Proxy (z. B. Nginx Proxy

@@ -31,6 +31,8 @@ import de.estrichone.core.warnMissingInspection
 import de.estrichone.core.myTickets
 import de.estrichone.core.notifications
 import de.estrichone.core.systemNotices
+import de.estrichone.core.assignToMe
+import de.estrichone.core.leaveBauakte
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
@@ -169,6 +171,22 @@ class Session(
 
     fun synchronizeNow() {
         scope.launch { synchronize() }
+    }
+
+    /** „Mich als Beteiligten eintragen“: beim Server eintragen, danach die Bauakte vollständig aufs Gerät laden. */
+    suspend fun joinBauakte(id: String) {
+        withContext(Dispatchers.IO) {
+            api.assignToMe(id)
+            store.setViewOnly(id, false)
+            engine.load(id)
+        }
+    }
+
+    /** „Als Beteiligter austragen“: danach mit Umfang abgleichen (ohne andere Zuteilung verschwindet sie vom Gerät). */
+    suspend fun leaveBauakte(id: String) {
+        withContext(Dispatchers.IO) { api.leaveBauakte(id) }
+        firstRun = true
+        synchronize()
     }
 
     /** Hinweise neu laden und den Update-Ablauf nachführen (ohne Anmeldung lesbar, auch während des Updates). */

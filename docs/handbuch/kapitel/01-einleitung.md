@@ -34,7 +34,7 @@ Oberfläche aus; geprüft wird immer zusätzlich auf dem Server. Nach der Einric
 |---|---|
 | **Administrator** | Alle Rechte, auch Benutzer, Rollen, Einstellungen, Sicherung und Protokoll. Mindestens ein aktiver Benutzer muss diese Rolle haben. |
 | **Büro und Bauleitung** | Bauakten anlegen und bearbeiten, Kunden, Planung, Material, Freigaben, Personal |
-| **Baustelle** | Eigene Bauakten sehen, Fotos und Bautagebuch erfassen, Aufgaben erledigen – vor allem in der App |
+| **Baustelle** | Alle Bauakten sehen, zugeteilte bearbeiten (oder sich selbst eintragen), Fotos und Bautagebuch erfassen, Aufgaben erledigen – vor allem in der App |
 | **IT-Administration** | Geräte, Helpdesk und technische Einstellungen ohne Zugriff auf alle Geschäftsdaten |
 
 Die Rollen lassen sich in der Rechtematrix anpassen und um eigene Rollen ergänzen (Abschnitt 9.2).
