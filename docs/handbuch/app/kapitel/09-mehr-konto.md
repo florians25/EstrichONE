@@ -35,15 +35,15 @@ So erfassen Sie einen Beleg direkt an der Tankstelle:
 2. **Beleg fotografieren**: Die Dokumentkamera erkennt den Beleg und richtet ihn gerade aus (Android: Kamera-App).
    Alternativ **Foto aus der Mediathek** bzw. das Galerie-Symbol. Das Foto wird wie alle Fotos verkleinert gespeichert.
 3. Auf dem iPhone und iPad liest die App den Beleg auf dem Gerät (Texterkennung, ohne Internet) und **schlägt Betrag,
-   Liter, Datum und Kraftstoff vor** – bitte kurz prüfen. Android hat keine Texterkennung; dort tippen Sie die Werte ein.
+   Liter, Datum und Kraftstoff vor**. Bitte prüfen Sie die Werte kurz. Android hat keine Texterkennung; dort tippen Sie die Werte ein.
 4. **Fahrzeug** ist mit Ihrem Fahrzeug aus der heutigen Disposition vorbelegt. Dazu **Datum**, **Kilometerstand**
    (Tacho beim Tanken), **Kraftstoff** (Diesel, Benzin, AdBlue, Sonstiges), **Menge** in Litern, **Betrag brutto**,
-   **Bezahlt mit** (Tankkarte, Firmenkarte, **Privat ausgelegt** – dann erstattet das Büro den Betrag) und optional die
+   **Bezahlt mit** (Tankkarte, Firmenkarte, **Privat ausgelegt**: dann erstattet das Büro den Betrag) und optional die
    **Tankstelle**.
 5. **Speichern**. Die App zeigt vorher Hinweise, wenn der Kilometerstand kleiner als zuletzt ist, mehr getankt wurde,
    als in den Tank passt, oder der Literpreis ungewöhnlich wirkt.
 
-Der Beleg ist sofort auf dem Gerät gespeichert und wird mit dem Foto übertragen, sobald eine Verbindung besteht – auch
+Der Beleg ist sofort auf dem Gerät gespeichert und wird mit dem Foto übertragen, sobald eine Verbindung besteht. Auch
 ohne Netz an der Tankstelle geht nichts verloren. Die **Belegnummer** (z. B. TB-2026-0017) vergibt der Server. Lehnt
 das Büro einen Beleg ab, steht der Grund in der Liste.
 

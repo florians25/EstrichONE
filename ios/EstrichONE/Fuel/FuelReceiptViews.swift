@@ -23,8 +23,8 @@ struct FuelReceiptsView: View {
                     ForEach(unsent) { receipt in
                         HStack(spacing: Space.m) {
                             VStack(alignment: .leading, spacing: 2) {
-                                Text("\(FuelText.money(receipt.amountGross)) · \(FuelText.liters(receipt.liters))").font(Typo.body)
-                                Text("\(FuelText.day(receipt.date)) · \(receipt.vehicleName)").font(Typo.subhead).foregroundStyle(Theme.textSecondary)
+                                Text("\(FuelText.money(receipt.amountGross)), \(FuelText.liters(receipt.liters))").font(Typo.body)
+                                Text("\(FuelText.day(receipt.date)), \(receipt.vehicleName)").font(Typo.subhead).foregroundStyle(Theme.textSecondary)
                             }
                             Spacer()
                             Label(receipt.state == .problem ? "Bitte prüfen" : "wird übertragen",
@@ -49,7 +49,7 @@ struct FuelReceiptsView: View {
                 if receipts.isEmpty && unsent.isEmpty {
                     Section {
                         EmptyStateView(symbol: "fuelpump", title: "Noch keine Tankbelege",
-                                       message: "Beleg nach dem Tanken fotografieren – Fahrzeug, Liter und Betrag sind schnell erfasst.",
+                                       message: "Fotografieren Sie den Beleg nach dem Tanken. Fahrzeug, Liter und Betrag sind schnell erfasst.",
                                        actionTitle: "Beleg erfassen", actionSymbol: "camera") { creating = true }
                     }
                 } else if !receipts.isEmpty {
@@ -78,7 +78,7 @@ struct FuelReceiptsView: View {
             NewFuelReceiptView { saved in
                 creating = false
                 if saved {
-                    toast = "Tankbeleg gespeichert – er wird übertragen"
+                    toast = "Tankbeleg gespeichert. Er wird übertragen, sobald eine Verbindung besteht."
                     Task { await load() }
                 }
             }
@@ -111,8 +111,8 @@ private struct FuelReceiptRow: View {
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: Space.m) {
             VStack(alignment: .leading, spacing: 2) {
-                Text("\(FuelText.money(receipt.amountGross)) · \(FuelText.liters(receipt.liters)) \(receipt.fuelType.title)").font(Typo.body)
-                Text("\(FuelText.day(receipt.date)) · \(receipt.vehicleText)").font(Typo.subhead).foregroundStyle(Theme.textSecondary)
+                Text("\(FuelText.money(receipt.amountGross)), \(FuelText.liters(receipt.liters)) \(receipt.fuelType.title)").font(Typo.body)
+                Text("\(FuelText.day(receipt.date)), \(receipt.vehicleText)").font(Typo.subhead).foregroundStyle(Theme.textSecondary)
                 if let reason = receipt.rejectionReason, receipt.status == .rejected {
                     Text(reason).font(Typo.meta).foregroundStyle(Theme.danger)
                 }
@@ -326,7 +326,7 @@ struct NewFuelReceiptView: View {
             Text("Beleg")
         } footer: {
             if suggested {
-                Text("Betrag, Liter und Datum aus dem Beleg vorgeschlagen – bitte prüfen.")
+                Text("Betrag, Liter und Datum wurden aus dem Beleg vorgeschlagen. Bitte prüfen.")
             } else {
                 Text("Das Foto wird mit dem Beleg übertragen und im Büro geprüft.")
             }
