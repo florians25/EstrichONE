@@ -54,7 +54,7 @@ jobs:
           for os in debian:12 ubuntu:24.04; do
             echo "::group::$os"
             docker run --rm -v "$PWD/install.sh:/install.sh:ro" "$os" bash /install.sh pruefen --domain estrichone.example.org | tee pruefen.log
-            grep -q "Docker ist nicht installiert – die Installation bietet das an" pruefen.log
+            grep -q "Docker ist nicht installiert. Die Installation bietet das an" pruefen.log
             grep -q "Prüfung beendet" pruefen.log
             ! docker run --rm -v "$PWD/install.sh:/install.sh:ro" "$os" bash /install.sh --ja --domain estrichone.example.org > ohne-docker.log 2>&1
             cat ohne-docker.log

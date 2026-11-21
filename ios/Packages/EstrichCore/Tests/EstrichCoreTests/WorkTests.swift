@@ -27,6 +27,7 @@ struct WorkTests {
 
         await #expect(throws: BauakteError.textRequired) { try await service.addNote("  \n ", to: bauakte) }
         let first = try await service.addNote("Zugang über die Garage", to: bauakte)
+        try await Task.sleep(for: .milliseconds(20)) // eindeutige Zeitstempel für die Sortierung
         let second = try await service.addNote(" Schlüssel beim Nachbarn ", to: bauakte)
 
         let local = try await service.notes(of: bauakte)
