@@ -181,7 +181,7 @@ fun BauakteScreen(id: String, showBack: Boolean = true) {
     val join: () -> Unit = {
         scope.launch {
             runCatching { session.joinBauakte(id) }
-                .onSuccess { isMember = true; model.message("Als Beteiligter eingetragen – Bearbeiten ist freigeschaltet.") }
+                .onSuccess { isMember = true; model.message("Als Beteiligter eingetragen. Bearbeiten ist freigeschaltet.") }
                 .onFailure { model.message(it.message ?: "Eintragen nicht möglich. Bitte mit Verbindung erneut versuchen.") }
         }
     }
@@ -623,13 +623,13 @@ private fun OnlineBauakteScreen(id: String, showBack: Boolean) {
                     working = true
                     scope.launch {
                         runCatching { session.joinBauakte(id) }
-                            .onSuccess { model.message("Als Beteiligter eingetragen – Bearbeiten ist freigeschaltet.") }
+                            .onSuccess { model.message("Als Beteiligter eingetragen. Bearbeiten ist freigeschaltet.") }
                             .onFailure { model.message(it.message ?: "Eintragen nicht möglich. Bitte mit Verbindung erneut versuchen.") }
                         working = false
                     }
                 }, enabled = !working, modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp)) { Text(BauakteNotAssignedException.JOIN) }
             }
-            Secondary("Auf dem Gerät liegen nur Bauakten, denen Sie zugeteilt sind. Nach dem Eintragen wird die Bauakte vollständig geladen – auch für unterwegs ohne Verbindung.")
+            Secondary("Auf dem Gerät liegen nur Bauakten, denen Sie zugeteilt sind. Nach dem Eintragen wird die Bauakte vollständig geladen, auch für unterwegs ohne Verbindung.")
         }
     }
 }

@@ -19,7 +19,7 @@
 | Frage oder Meldung | Lösung |
 |---|---|
 | Eine Bauakte fehlt in der Liste. | Nach unten ziehen zum Aktualisieren. Abgeschlossene und stornierte Bauakten stehen unter **Abgeschlossen und storniert**. Auf dem Gerät liegen nur zugeteilte Bauakten: Suchen Sie mit Verbindung (Treffer unter **Weitere Bauakten (online)**) oder wählen Sie **Anzeigen** → **Alle im Betrieb (online)**. |
-| „Nur ansehen – trag dich als Beteiligter ein, um zu bearbeiten.“ | Sie sind der Bauakte nicht zugeteilt. **Mich als Beteiligten eintragen** antippen (Abschnitt „Nur ansehen oder bearbeiten“). |
+| „Nur ansehen: Trag dich als Beteiligter ein, um zu bearbeiten.“ | Sie sind der Bauakte nicht zugeteilt. **Mich als Beteiligten eintragen** antippen (Abschnitt „Nur ansehen oder bearbeiten“). |
 | „Foto gespeichert – wird übertragen, sobald Netz da ist.“ | Alles in Ordnung: Das Foto ist sicher auf dem Gerät und wird automatisch übertragen. |
 | Ein Upload ist fehlgeschlagen. | **Mehr** → **Synchronisation** → **Fehlgeschlagene Uploads erneut versuchen**. Freien Speicher auf dem iPhone prüfen. |
 | „Einige Änderungen wurden nicht übernommen.“ | **Mehr** → **Synchronisation** → **Bitte prüfen**: Grund lesen, Stand in der Bauakte prüfen, Eintrag nach links wischen zum Entfernen. |

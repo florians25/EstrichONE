@@ -22,7 +22,7 @@ public struct RemoteBauakte: Identifiable, Equatable, Sendable {
 
 /// Hinweis-Streifen „Nur ansehen“ – gleicher Wortlaut auf allen Plattformen.
 public enum BauakteViewOnly {
-    public static let banner = "Nur ansehen – trag dich als Beteiligter ein, um zu bearbeiten."
+    public static let banner = "Nur ansehen: Trag dich als Beteiligter ein, um zu bearbeiten."
     public static let join = "Mich als Beteiligten eintragen"
     public static let leave = "Als Beteiligter austragen"
 

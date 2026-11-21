@@ -12,7 +12,7 @@ Der Tab **Baustellen** zeigt oben **Heute im Einsatz** und darunter alle laufend
 (z. B. „In Ausführung“, „Trocknung“, „Geplant“, „Anfrage“). Jede Zeile nennt Nummer, Bauvorhaben, Adresse, Kunde und
 den nächsten Einsatz.
 
-- **Suchen**: Feld **Nummer, Bauvorhaben oder Adresse**. Gesucht wird auf dem Gerät – mit Verbindung zusätzlich auf
+- **Suchen**: Feld **Nummer, Bauvorhaben oder Adresse**. Gesucht wird auf dem Gerät, mit Verbindung zusätzlich auf
   dem Server: Unter **Weitere Bauakten (online)** stehen Bauakten, denen Sie nicht zugeteilt sind (Augen-Symbol).
 - **Anzeigen** → **Alle im Betrieb (online)** listet alle laufenden Bauakten des Betriebs, auch nicht zugeteilte.
 - **Abgeschlossen und storniert**: Ganz unten öffnet diese Zeile die abgeschlossenen und stornierten Bauakten.
@@ -275,18 +275,18 @@ er erhalten.
 
 ## Nur ansehen oder bearbeiten {#beteiligter}
 
-Alle sehen alle Bauakten. **Auf dem Gerät** liegen aber nur die Bauakten, denen Sie **zugeteilt** sind – als
+Alle sehen alle Bauakten. **Auf dem Gerät** liegen aber nur die Bauakten, denen Sie **zugeteilt** sind: als
 zuständige Person, als eingetragener Beteiligter oder über einen Einsatz bzw. Ihre Kolonne. So bleibt der Speicher auf
 dem iPhone klein und die Daten für unterwegs vollständig.
 
 - Öffnen Sie eine andere Bauakte (Suche, **Alle im Betrieb**, Link oder Benachrichtigung), zeigt die App ihren Kopf
-  online mit dem Hinweis **„Nur ansehen – trag dich als Beteiligter ein, um zu bearbeiten.“**
+  online mit dem Hinweis **„Nur ansehen: Trag dich als Beteiligter ein, um zu bearbeiten.“**
 - **Mich als Beteiligten eintragen** trägt Sie ein. Die App lädt die Bauakte danach vollständig aufs Gerät; Sie können
   sofort fotografieren, das Bautagebuch führen usw. Das Eintragen steht im Verlauf, die zuständige Person und die
   Disposition werden benachrichtigt.
 - **Weitere Aktionen** → **Als Beteiligter austragen** nimmt Sie wieder heraus. Ohne andere Zuteilung verschwindet die
   Bauakte danach vom Gerät (im Büro und online bleibt sie natürlich erhalten).
-- Ohne Zuteilung lassen sich keine Änderungen erfassen – auch nicht offline. Kommt doch einmal eine Ablehnung vom Server
+- Ohne Zuteilung lassen sich keine Änderungen erfassen, auch nicht offline. Kommt doch einmal eine Ablehnung vom Server
   (z. B. weil Sie inzwischen ausgetragen wurden), steht sie unter **Mehr** → **Synchronisation** mit der Meldung
   „Nicht übertragen: Du bist dieser Bauakte nicht (mehr) zugeteilt …“. Nach dem Eintragen **Erneut senden**.
 - Haben Sie das Recht, alle Bauakten offline zu speichern (Büro), liegen auch nicht zugeteilte Bauakten auf dem Gerät;

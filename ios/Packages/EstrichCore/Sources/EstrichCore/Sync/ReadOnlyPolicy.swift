@@ -61,5 +61,5 @@ public struct BauakteNotAssignedError: LocalizedError, Equatable, Sendable {
     public init() {}
     public var errorDescription: String? { Self.message }
     public static let code = "BAUAKTE_NOT_ASSIGNED"
-    public static let message = "Nur ansehen – trag dich als Beteiligter ein, um zu bearbeiten."
+    public static let message = "Nur ansehen: Trag dich als Beteiligter ein, um zu bearbeiten."
 }

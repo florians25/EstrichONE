@@ -71,7 +71,7 @@ Bauvorhaben und Adresse und filtern nach **Zuständig** und **Kunde**. **Anzeige
 und **Meine (zugeteilt)** um. **Filter zurücksetzen** hebt alle Filter auf.
 
 Alle, die Bauakten sehen dürfen, sehen **alle** Bauakten des Betriebs. Bearbeiten darf man eine Bauakte aber nur, wenn
-man ihr **zugeteilt** ist – als zuständige Person, als eingetragener Beteiligter oder über einen Einsatz bzw. die
+man ihr **zugeteilt** ist: als zuständige Person, als eingetragener Beteiligter oder über einen Einsatz bzw. die
 eigene Kolonne. Das Personen-Symbol hinter dem Bauvorhaben zeigt „zugeteilt“, das Augen-Symbol „nur ansehen“. Wer das
 Recht „Alle Bauakten bearbeiten“ hat (Standard: Administrator, Büro und Bauleitung), darf jede Bauakte ändern.
 
@@ -104,7 +104,7 @@ Die Schaltflächen im Kopf:
   und alle ihre Dokumente werden sofort revisionssicher archiviert (Fortschritt im Dialog, Nachweis unter
   **Aktionen** → **Archivnachweis**). Ist der Archivserver gerade nicht erreichbar, ist die Schaltfläche ausgegraut –
   dann nur abschließen und später archivieren.
-- **Mich als Beteiligten eintragen** – trägt Sie als Beteiligten (Mitarbeiter) der Bauakte ein; danach dürfen Sie sie
+- **Mich als Beteiligten eintragen**: trägt Sie als Beteiligten (Mitarbeiter) der Bauakte ein; danach dürfen Sie sie
   bearbeiten. Das Eintragen steht im Verlauf, die zuständige Person und die Disposition erhalten eine Benachrichtigung.
   Unter **Aktionen** → **Als Beteiligter austragen** tragen Sie sich wieder aus (die zuständige Person kann sich nicht
   austragen; sie übergibt zuerst die Zuständigkeit).
@@ -140,7 +140,7 @@ Die Schaltflächen im Kopf:
 Alle Ausdrucke erstellt der Server als PDF mit Ihrem Firmenlogo; sie werden zusätzlich automatisch in der Bauakte
 abgelegt.
 
-**Nur ansehen.** Sind Sie einer Bauakte nicht zugeteilt, steht oben der Hinweis „Nur ansehen – trag dich als
+**Nur ansehen.** Sind Sie einer Bauakte nicht zugeteilt, steht oben der Hinweis „Nur ansehen: Trag dich als
 Beteiligter ein, um zu bearbeiten.“ mit dem Link **Mich als Beteiligten eintragen**. Alle Inhalte (Fotos, Dokumente,
 Bautagebuch, Protokolle, Räume, Kontakte, Notizen, Verlauf) sind sichtbar, Ausdrucke und PDFs funktionieren; Knöpfe zum
 Ändern sind ausgeblendet. Auch der Server lehnt Änderungen ab (Meldung „Nur ansehen“). Ausnahme: Eine Aufgabe, die Ihnen
