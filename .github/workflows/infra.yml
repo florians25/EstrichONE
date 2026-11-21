@@ -22,7 +22,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - name: Images bauen
         run: |
           for image in api backup web archive backup-target; do
@@ -46,7 +46,7 @@ jobs:
     env:
       VERSION: 1.0.98-ci
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - name: Shellcheck
         run: shellcheck install.sh
       - name: Voraussetzungen auf frischem Debian und Ubuntu (ohne Docker) – verständliche Meldungen statt Abbruch mitten drin
@@ -178,7 +178,7 @@ jobs:
       matrix:
         os: ["debian:12", "ubuntu:24.04"]
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - name: Frischen Server starten (systemd als PID 1, ohne Docker, eigene Datenträger für /var/lib/docker und /var/lib/containerd)
         run: |
           printf 'FROM %s\nENV container=docker DEBIAN_FRONTEND=noninteractive\nRUN for i in 1 2 3; do apt-get update -qq && apt-get install -y -qq --no-install-recommends systemd systemd-sysv dbus ca-certificates curl iproute2 procps && break; sleep 10; done && rm -rf /var/lib/apt/lists/*\nSTOPSIGNAL SIGRTMIN+3\nCMD ["/sbin/init"]\n' \
@@ -227,7 +227,7 @@ jobs:
     env:
       VERSION: 1.0.99-ci
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - name: Images dieser Version lokal bauen (Namen wie in der Registry)
         run: |
           # Android-Paket wie im Release (release.yml): APK-Ersatz mit android.json, damit die API es ausliefert.
