@@ -116,7 +116,7 @@ fun FuelReceiptsScreen() {
                         SectionCard {
                             pending.forEachIndexed { index, r ->
                                 if (index > 0) RowDivider(16.dp)
-                                RowItem("${euro.format(r.amountGross)} · ${liters(r.liters)}", subtitle = "${AbsenceText.date(r.date)} · ${r.vehicleName}",
+                                RowItem("${euro.format(r.amountGross)}, ${liters(r.liters)}", subtitle = "${AbsenceText.date(r.date)}, ${r.vehicleName}",
                                     value = if (r.state == SyncState.Problem) "Bitte prüfen" else "wird übertragen")
                             }
                         }
@@ -133,7 +133,7 @@ fun FuelReceiptsScreen() {
                         if (receipts.isEmpty() && pending.isEmpty()) {
                             item(key = "empty") {
                                 EmptyState(Icons.Outlined.LocalGasStation, "Noch keine Tankbelege",
-                                    "Beleg nach dem Tanken fotografieren – Fahrzeug, Liter und Betrag sind schnell erfasst.")
+                                    "Fotografieren Sie den Beleg nach dem Tanken. Fahrzeug, Liter und Betrag sind schnell erfasst.")
                             }
                         } else if (receipts.isNotEmpty()) {
                             item(key = "mine-label") { GroupLabel("Meine Tankbelege") }
@@ -164,8 +164,8 @@ private fun statusColor(status: FuelReceiptStatus) = when (status) {
 
 @Composable
 private fun FuelRow(r: FuelReceipt, onClick: () -> Unit) {
-    RowItem("${euro.format(r.amountGross)} · ${liters(r.liters)} ${r.fuelType.title}",
-        subtitle = listOfNotNull("${AbsenceText.date(r.date)} · ${r.vehicleText}", r.rejectionReason?.takeIf { r.status == FuelReceiptStatus.Rejected })
+    RowItem("${euro.format(r.amountGross)}, ${liters(r.liters)} ${r.fuelType.title}",
+        subtitle = listOfNotNull("${AbsenceText.date(r.date)}, ${r.vehicleText}", r.rejectionReason?.takeIf { r.status == FuelReceiptStatus.Rejected })
             .joinToString("\n"),
         onClick = onClick,
         trailing = {
@@ -184,8 +184,8 @@ private fun FuelReceiptDialog(r: FuelReceipt, onDismiss: () -> Unit) {
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text("Status: ${r.statusText}", color = statusColor(r.status))
                 r.rejectionReason?.let { Text("Grund: $it", color = tones.danger) }
-                Secondary("${AbsenceText.date(r.date)} · ${r.vehicleText}")
-                Secondary("${r.fuelType.title} · ${liters(r.liters)} · ${euro.format(r.amountGross)} · ${r.paymentMethod.title}")
+                Secondary("${AbsenceText.date(r.date)}, ${r.vehicleText}")
+                Secondary("${r.fuelType.title}, ${liters(r.liters)}, ${euro.format(r.amountGross)}, ${r.paymentMethod.title}")
                 r.odometerKm?.let { Secondary("Kilometerstand ${FuelReceiptDraft.grouped(it)} km") }
                 r.consumptionPer100Km?.let { Secondary("Verbrauch ${FuelReceiptDraft.decimal(it)} l/100 km") }
                 r.warnings.filter { it.code != "missing_image" }.forEach { w ->
@@ -373,7 +373,7 @@ fun FuelReceiptNewScreen() {
             }, enabled = draft.validate() == null && !saving, modifier = Modifier.fillMaxWidth().height(56.dp)) {
                 Text(if (saving) "Wird gespeichert …" else "Speichern")
             }
-            if (photo == null) Secondary("Ohne Foto speichern geht auch – das Büro sieht dann einen Hinweis.", Modifier.fillMaxWidth())
+            if (photo == null) Secondary("Sie können auch ohne Foto speichern. Das Büro sieht dann einen Hinweis.", Modifier.fillMaxWidth())
         }
     }
     if (pickingDate) {

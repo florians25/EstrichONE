@@ -39,8 +39,8 @@ export default class FuelReceipts extends BaseController {
 		const manage = this.has("fuel.manage");
 		m.setProperty("/manage", manage);
 		m.setProperty("/subtitle", manage
-			? "Belege aus den Apps prüfen, freigeben und erstatten bzw. buchen – mit Hinweisen zur Plausibilität und Export für die Buchhaltung"
-			: "Ihre Tankbelege – erfassen in der App oder hier");
+			? "Belege aus den Apps prüfen, freigeben und erstatten bzw. buchen. Mit Hinweisen zur Plausibilität und Export für die Buchhaltung."
+			: "Ihre Tankbelege. Erfassen Sie neue Belege in der App oder hier.");
 		const vehicle = match.query.get("fahrzeug");
 		if (vehicle) m.setProperty("/filter/vehicleId", vehicle);
 		const status = match.query.get("status");
@@ -79,7 +79,7 @@ export default class FuelReceipts extends BaseController {
 		const manage = m.getProperty("/manage") as boolean;
 		const filter = this.filter();
 		m.setProperty("/busy", true);
-		m.setProperty("/rangeText", `${date(filter.from)} – ${date(filter.to)}`);
+		m.setProperty("/rangeText", `${date(filter.from)} bis ${date(filter.to)}`);
 		try {
 			const [items, stats] = await Promise.all([
 				manage ? get<FuelReceiptResponse[]>("fuel-receipts", fuelQuery(filter)) : get<FuelReceiptResponse[]>("fuel-receipts/mine", { limit: 300 }),
@@ -95,19 +95,19 @@ export default class FuelReceipts extends BaseController {
 			m.setProperty("/kpis", [
 				{ title: "Zu prüfen", value: String(k.open), unit: "", color: k.open ? "Critical" : "Neutral" },
 				...(manage ? [{ title: "Mit Hinweis", value: String(k.flagged), unit: "", color: k.flagged ? "Error" : "Neutral" }] : []),
-				{ title: "Offene Erstattungen", value: money(k.refundAmount).replace(/\s?€$/, ""), unit: `€ · ${k.refundOpen} Belege`, color: "Neutral" },
+				{ title: "Offene Erstattungen", value: money(k.refundAmount).replace(/\s?€$/, ""), unit: `€ (${k.refundOpen} Belege)`, color: "Neutral" },
 				{ title: "Kosten im Zeitraum", value: money(k.cost).replace(/\s?€$/, ""), unit: "€", color: "Neutral" },
 				{ title: "Kraftstoff", value: liters(k.liters).replace(/\s?l$/, ""), unit: "l", color: "Neutral" },
 			]);
 			if (stats) {
 				m.setProperty("/statVehicles", stats.map((s) => ({
 					...s, title: s.identifier ? `${s.vehicleName} (${s.identifier})` : s.vehicleName, litersText: liters(s.liters),
-					adBlueText: s.adBlueLiters ? liters(s.adBlueLiters) : "–", costText: money(s.cost), distanceText: s.distanceKm ? km(s.distanceKm) : "–",
+					adBlueText: s.adBlueLiters ? liters(s.adBlueLiters) : "", costText: money(s.cost), distanceText: s.distanceKm ? km(s.distanceKm) : "",
 					consumptionText: consumption(s.averageConsumption),
 					monthsText: s.months.length ? `${monthText(s.months[0].month)} bis ${monthText(s.months[s.months.length - 1].month)}` : "",
 				})));
 				m.setProperty("/statRows", statisticRows(stats).map((r) => ({
-					...r, litersText: liters(r.liters), costText: money(r.cost), distanceText: r.distanceKm ? km(r.distanceKm) : "–",
+					...r, litersText: liters(r.liters), costText: money(r.cost), distanceText: r.distanceKm ? km(r.distanceKm) : "",
 					consumptionText: consumption(r.averageConsumption),
 				})));
 			}
@@ -123,7 +123,7 @@ export default class FuelReceipts extends BaseController {
 		const status = fuelStatus(r.status, r.paymentMethod);
 		const warning = warningSummary(r.warnings);
 		return {
-			...r, dateText: date(r.date), vehicleText: r.vehicleIdentifier ? `${r.vehicleName} · ${r.vehicleIdentifier}` : r.vehicleName,
+			...r, dateText: date(r.date), vehicleText: r.vehicleIdentifier ? `${r.vehicleName} (${r.vehicleIdentifier})` : r.vehicleName,
 			litersText: `${liters(r.liters)} ${fuelTypes[r.fuelType]}`, kmText: r.odometerKm ? km(r.odometerKm) : "ohne km-Stand",
 			consumptionText: r.consumptionPer100Km ? consumption(r.consumptionPer100Km) : "", amountText: money(r.amountGross),
 			paymentText: paymentMethods[r.paymentMethod], statusText: status.text, statusTone: status.tone,

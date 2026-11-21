@@ -26,7 +26,7 @@ Angaben, den Hinweisen und dem Verlauf der Prüfung. Je nach Stand gibt es:
 |---|---|
 | **Freigeben** | Beleg ist geprüft (Status **Geprüft**) |
 | **Ablehnen** | mit Grund, den der Mitarbeiter in der App sieht; korrigiert er den Beleg, liegt er wieder als **Neu** vor |
-| **Erstattet** bzw. **Gebucht** | nach der Freigabe: privat ausgelegte Beträge erstattet, Karten-Belege gebucht – danach unveränderlich |
+| **Erstattet** bzw. **Gebucht** | nach der Freigabe: privat ausgelegte Beträge erstattet, Karten-Belege gebucht. Danach ist der Beleg unveränderlich. |
 | **Zurücknehmen** | Freigabe oder Ablehnung zurücknehmen (wieder **Neu**) |
 | **Bearbeiten**, **Löschen** | Angaben korrigieren bzw. Fehlerfassung entfernen (nicht mehr nach der Erstattung/Buchung) |
 
@@ -43,8 +43,8 @@ blockieren nichts, Sie entscheiden):
 
 | Hinweis | Bedeutung |
 |---|---|
-| **Kilometerstand rückwärts** | kleiner als bei einem früheren Beleg (oder größer als bei einem späteren) – oft ein Tippfehler |
-| **Verbrauch auffällig** | Verbrauch seit dem vorigen Tanken (voll zu voll) liegt deutlich unter der Hälfte oder über dem 1,6-Fachen des üblichen Werts dieses Fahrzeugs; ohne genug Vergleichswerte außerhalb von 3–45 l/100 km |
+| **Kilometerstand rückwärts** | kleiner als bei einem früheren Beleg (oder größer als bei einem späteren), oft ein Tippfehler |
+| **Verbrauch auffällig** | Verbrauch seit dem vorigen Tanken (voll zu voll) liegt deutlich unter der Hälfte oder über dem 1,6-Fachen des üblichen Werts dieses Fahrzeugs; ohne genug Vergleichswerte unter 3 oder über 45 l/100 km |
 | **Möglicher Doppelbeleg** | gleiches Fahrzeug, gleicher Tag, gleicher Betrag |
 | **Mehr als der Tank fasst** | Liter größer als die **Tankgröße** des Fahrzeugs (in **Geräte & Fahrzeuge** beim Fahrzeug pflegen; AdBlue zählt nicht) |
 | **Ohne Foto** | kein Belegfoto vorhanden |
@@ -68,7 +68,7 @@ Auch in **Planung** → **Geräte & Fahrzeuge** öffnet das Belegsymbol bei eine
 
 ## Export für die Buchhaltung
 
-**Export (CSV)** lädt die Belege des aktuellen Filters (ohne abgelehnte) als CSV-Datei herunter – Semikolon getrennt,
+**Export (CSV)** lädt die Belege des aktuellen Filters (ohne abgelehnte) als CSV-Datei herunter: Semikolon getrennt,
 Komma als Dezimalzeichen, UTF-8, öffnet direkt in Excel. Die ersten Spalten folgen dem DATEV-Buchungsstapel: **Umsatz
 (brutto)**, **Soll/Haben-Kennzeichen**, **WKZ Umsatz**, **Belegdatum**, **Belegfeld 1** (Belegnummer), **Buchungstext**
 (z. B. „Diesel 61,37 l LA-EM 214“) und **KOST1 - Kostenstelle** (Inventarnummer des Fahrzeugs); danach Steuersatz,
@@ -84,6 +84,6 @@ ausgelegten Belegen), Mitarbeiter, Tankstelle und Status. Konten ordnet Ihre Buc
 | **Tankbelege exportieren** | CSV für die Buchhaltung. Standardrolle Büro und Bauleitung |
 
 Belegfotos liegen wie alle Dateien im Speicher von EstrichONE (Sicherung, Auslagerung). Ist ein **Archivserver**
-gekoppelt, gehen sie nach der Regel **Tankbelege** sofort nach dem Hochladen ins revisionssichere Archiv – mit
+gekoppelt, gehen sie nach der Regel **Tankbelege** sofort nach dem Hochladen ins revisionssichere Archiv, mit
 **10 Jahren** Aufbewahrung (Buchungsbelege, § 147 AO); Frist und Auslöser lassen sich unter **System** → **Archiv**
 anpassen.

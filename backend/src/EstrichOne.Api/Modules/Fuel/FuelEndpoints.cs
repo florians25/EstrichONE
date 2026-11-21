@@ -60,7 +60,7 @@ internal static class FuelEndpoints
         fuel.MapDelete("/{id:guid}", DeleteAsync).WithName("DeleteFuelReceipt")
             .ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status409Conflict).RequirePermission(Permissions.FuelRecord);
         fuel.MapPost("/decisions", DecideAsync).WithName("DecideFuelReceipts")
-            .WithSummary("Prüfen/Freigeben, Ablehnen (mit Grund), als erstattet bzw. gebucht markieren oder zurücknehmen – auch für mehrere")
+            .WithSummary("Prüfen/Freigeben, Ablehnen (mit Grund), als erstattet bzw. gebucht markieren oder zurücknehmen, auch für mehrere Belege")
             .ProducesProblem(StatusCodes.Status409Conflict).ProducesProblem(StatusCodes.Status422UnprocessableEntity)
             .RequirePermission(Permissions.FuelManage);
     }
