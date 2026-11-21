@@ -22,7 +22,7 @@
             <StackPanel Spacing="12">
                 <TextBlock Text="Problem melden" Style="{StaticResource CardTitle}" />
                 <TextBlock TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                           Text="Mitgeschickt werden nur App-Version und Windows-Version – keine Inhalte aus Bauakten." />
+                           Text="Mitgeschickt werden nur App-Version und Windows-Version, keine Inhalte aus Bauakten." />
                 <TextBox Header="Was funktioniert nicht?" Text="{x:Bind ViewModel.ProblemTitle, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                 <TextBox Header="Beschreibung (optional)" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="96"
                          Text="{x:Bind ViewModel.ProblemDescription, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
@@ -52,7 +52,7 @@
                             <StackPanel Grid.Column="1">
                                 <TextBlock Text="{x:Bind Title}" TextTrimming="CharacterEllipsis" />
                                 <TextBlock Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}">
-                                    <Run Text="{x:Bind Category}" /><Run Text=" · " /><Run Text="{x:Bind Reporter}" /><Run Text=" · " /><Run Text="{x:Bind Priority}" />
+                                    <Run Text="{x:Bind Category}" /><Run Text=", " /><Run Text="{x:Bind Reporter}" /><Run Text=", " /><Run Text="{x:Bind Priority}" />
                                 </TextBlock>
                             </StackPanel>
                             <TextBlock Grid.Column="2" Text="{x:Bind Status}" />

@@ -177,7 +177,7 @@ public sealed partial class MainWindow : Window
         {
             await Task.Delay(250, token);
             var page = await App.Session.Client.ListBauaktenAsync(text, limit: 8, cancellationToken: token);
-            hits.AddRange(page.Items.Select(b => new SearchHit($"{b.Number ?? "neu"} · {b.Title} ({Labels.Of(b.Status)})", () => OpenBauakte(b.Id))));
+            hits.AddRange(page.Items.Select(b => new SearchHit($"{b.Number ?? "neu"}, {b.Title} ({Labels.Of(b.Status)})", () => OpenBauakte(b.Id))));
             if (!token.IsCancellationRequested)
             {
                 sender.ItemsSource = hits.ToList();

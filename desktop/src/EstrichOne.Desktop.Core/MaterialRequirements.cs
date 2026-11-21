@@ -52,8 +52,8 @@ public static class MaterialRequirements
             var (area, volume, missing) = screed[name];
             if (volume > 0)
             {
-                var detail = $"{Labels.Quantity(area)} m² · {Labels.Quantity(Math.Round(volume, 2))} m³ netto"
-                    + (missing > 0 ? $" · {missing} Räume ohne Dicke nicht berechnet" : string.Empty);
+                var detail = $"{Labels.Quantity(area)} m², {Labels.Quantity(Math.Round(volume, 2))} m³ netto"
+                    + (missing > 0 ? $", {missing} Räume ohne Dicke nicht berechnet" : string.Empty);
                 needs.Add(new MaterialNeed($"screed-{name}", name, detail, RoundUp(volume * factor, 0.5m), "m³"));
             }
         }

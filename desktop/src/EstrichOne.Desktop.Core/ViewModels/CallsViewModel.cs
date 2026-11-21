@@ -108,7 +108,7 @@ public sealed partial class CallsViewModel(AppSession session, TimeProvider? clo
 
     public static CallRow ToRow(CallRecord c, DateOnly today) => new(
         c.Id,
-        string.Join(" · ", new[] { c.CallerName, c.Company ?? c.CustomerName }.Where(s => !string.IsNullOrWhiteSpace(s))) is { Length: > 0 } who ? who : "–",
+        string.Join(", ", new[] { c.CallerName, c.Company ?? c.CustomerName }.Where(s => !string.IsNullOrWhiteSpace(s))) is { Length: > 0 } who ? who : "–",
         c.CallerPhone ?? string.Empty, c.Subject ?? c.Notes ?? string.Empty, Labels.DateTime(c.CalledAt),
         c.FollowUp ? (c.DueDate is { } d ? $"Wiedervorlage {Labels.Date(d)}" : "Wiedervorlage") : string.Empty,
         c.FollowUp && c.DueDate is { } due && due < today, c.Kind == CallKind.Inquiry ? Labels.Of(c.InquiryStatus) : string.Empty,

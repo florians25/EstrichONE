@@ -61,7 +61,7 @@
                                 </TextBlock>
                                 <TextBlock Text="{x:Bind Subject}" TextWrapping="Wrap" MaxLines="3" />
                                 <TextBlock Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}">
-                                    <Run Text="{x:Bind When}" /><Run Text="  ·  " /><Run Text="{x:Bind Handler}" /><Run Text="   " /><Run Text="{x:Bind Due}" Foreground="#C25700" />
+                                    <Run Text="{x:Bind When}" /><Run Text=", " /><Run Text="{x:Bind Handler}" /><Run Text="   " /><Run Text="{x:Bind Due}" Foreground="#C25700" />
                                 </TextBlock>
                             </StackPanel>
                             <Button Grid.Column="1" Content="Erledigt" VerticalAlignment="Center" Click="OnDone"

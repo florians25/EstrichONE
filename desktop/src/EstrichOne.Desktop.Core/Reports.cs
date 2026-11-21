@@ -81,9 +81,9 @@ public static class Reports
 
     private static string Header(Company? company, string kind, string title, string? sub = null)
     {
-        var address = company is null ? string.Empty : string.Join(" · ", new[] { company.Street, string.Join(' ', new[] { company.PostalCode, company.City }.Where(s => !string.IsNullOrWhiteSpace(s))) }
+        var address = company is null ? string.Empty : string.Join(", ", new[] { company.Street, string.Join(' ', new[] { company.PostalCode, company.City }.Where(s => !string.IsNullOrWhiteSpace(s))) }
             .Where(s => !string.IsNullOrWhiteSpace(s)));
-        var contact = company is null ? string.Empty : string.Join(" · ", new[] { company.Phone is null ? null : $"Tel. {company.Phone}", company.Email, company.Website }
+        var contact = company is null ? string.Empty : string.Join(", ", new[] { company.Phone is null ? null : $"Tel. {company.Phone}", company.Email, company.Website }
             .Where(s => !string.IsNullOrWhiteSpace(s)));
         return $"""
             <header class="brand"><div><div class="company">{Encode(company?.Name ?? "EstrichONE")}</div><div class="small">{Encode(address)}</div><div class="small">{Encode(contact)}</div></div>
@@ -102,18 +102,18 @@ public static class Reports
         var b = data.Bauakte;
         string Name(Guid id) => data.People.GetValueOrDefault(id, "–");
         var html = new StringBuilder();
-        html.Append(Header(data.Company, "Baustellenbericht", $"{b.Number ?? "neu"} · {b.Title}", $"Stand {Labels.DateTime(data.PrintedAt)}"));
+        html.Append(Header(data.Company, "Baustellenbericht", $"{b.Number ?? "neu"}, {b.Title}", $"Stand {Labels.DateTime(data.PrintedAt)}"));
 
         html.Append("<h2>Bauvorhaben</h2><div class=\"facts\">");
         html.Append(Fact("Bauakte", Or(b.Number)));
         html.Append(Fact("Status", Badge(Labels.Of(b.Status), Palette.Of(b.Status))));
         html.Append(Fact("Zuständig", Or(data.Responsible)));
         html.Append(Fact("Baustelle", Encode(Labels.Address(b.Street, b.PostalCode, b.City))));
-        html.Append(Fact("Ausführung", b.PlannedStart is null && b.PlannedEnd is null ? "–" : $"{Labels.Date(b.PlannedStart)} – {Labels.Date(b.PlannedEnd)}"));
+        html.Append(Fact("Ausführung", b.PlannedStart is null && b.PlannedEnd is null ? "–" : $"{Labels.Date(b.PlannedStart)} bis {Labels.Date(b.PlannedEnd)}"));
         html.Append(Fact("Mitarbeiter", Or(string.Join(", ", data.Members.Select(m => m.DisplayName)))));
         html.Append(Fact("Kunde", Or(data.Customer?.Name)));
-        html.Append(Fact("Kunde Kontakt", Or(string.Join(" · ", new[] { data.Customer?.Phone, data.Customer?.Email }.Where(s => !string.IsNullOrWhiteSpace(s))))));
-        html.Append(Fact("Vor Ort", Or(string.Join(" · ", new[] { b.SiteContactName, b.SiteContactPhone }.Where(s => !string.IsNullOrWhiteSpace(s))))));
+        html.Append(Fact("Kunde Kontakt", Or(string.Join(", ", new[] { data.Customer?.Phone, data.Customer?.Email }.Where(s => !string.IsNullOrWhiteSpace(s))))));
+        html.Append(Fact("Vor Ort", Or(string.Join(", ", new[] { b.SiteContactName, b.SiteContactPhone }.Where(s => !string.IsNullOrWhiteSpace(s))))));
         html.Append("</div>");
         if (!string.IsNullOrWhiteSpace(b.SiteNotes))
         {
@@ -136,7 +136,7 @@ public static class Reports
                 html.Append(CultureInfo.InvariantCulture, $"<td>{(r.UnderfloorHeating ? "ja" : "nein")}</td><td>{Badge(Labels.Of(r.Status), Palette.Of(r.Status))}</td></tr>");
             }
 
-            html.Append(CultureInfo.InvariantCulture, $"</tbody><tfoot><tr><td colspan=\"3\">{rooms.Rooms.Count} Räume · davon beheizt {Labels.Area(rooms.HeatedAreaSquareMeters)}</td><td class=\"num\">{Labels.Area(rooms.TotalAreaSquareMeters)}</td><td colspan=\"5\"></td></tr></tfoot></table>");
+            html.Append(CultureInfo.InvariantCulture, $"</tbody><tfoot><tr><td colspan=\"3\">{rooms.Rooms.Count} Räume, davon beheizt {Labels.Area(rooms.HeatedAreaSquareMeters)}</td><td class=\"num\">{Labels.Area(rooms.TotalAreaSquareMeters)}</td><td colspan=\"5\"></td></tr></tfoot></table>");
         }
 
         if (options.Work && data.Work.Count > 0)
@@ -183,7 +183,7 @@ public static class Reports
             html.Append("<h2>Notizen</h2>");
             foreach (var n in data.Notes.OrderByDescending(n => n.IsPinned).ThenByDescending(n => n.CreatedAt))
             {
-                html.Append(CultureInfo.InvariantCulture, $"<div class=\"note{(n.IsPinned ? " pinned" : string.Empty)}\"><div class=\"muted\" style=\"font-size:8pt\">{Encode(Name(n.AuthorUserId))} · {Encode(Labels.DateTime(n.CreatedAt))}{(n.IsPinned ? " · angeheftet" : string.Empty)}</div><div class=\"pre\">{Encode(n.Text)}</div></div>");
+                html.Append(CultureInfo.InvariantCulture, $"<div class=\"note{(n.IsPinned ? " pinned" : string.Empty)}\"><div class=\"muted\" style=\"font-size:8pt\">{Encode(Name(n.AuthorUserId))}, {Encode(Labels.DateTime(n.CreatedAt))}{(n.IsPinned ? ", angeheftet" : string.Empty)}</div><div class=\"pre\">{Encode(n.Text)}</div></div>");
             }
         }
 
@@ -205,7 +205,7 @@ public static class Reports
     public static string WeatherLine(DiaryEntry entry)
     {
         ArgumentNullException.ThrowIfNull(entry);
-        return string.Join(" · ", new[]
+        return string.Join(", ", new[]
         {
             Labels.Weather(entry.Weather), entry.TemperatureCelsius is { } t ? $"{t} °C" : null, entry.WorkersPresent is { } w ? $"{w} anwesend" : null,
         }.Where(s => !string.IsNullOrWhiteSpace(s)));
@@ -260,7 +260,7 @@ public static class Reports
         ArgumentNullException.ThrowIfNull(bauakte);
         ArgumentNullException.ThrowIfNull(people);
         var html = new StringBuilder();
-        html.Append(Header(company, "Protokoll", "Erstbegehung & CM-Messung", $"{bauakte.Number ?? "neu"} · {bauakte.Title}"));
+        html.Append(Header(company, "Protokoll", "Erstbegehung & CM-Messung", $"{bauakte.Number ?? "neu"}, {bauakte.Title}"));
         html.Append("<div class=\"facts\">");
         html.Append(Fact("Bauvorhaben", Encode(bauakte.Title)));
         html.Append(Fact("Baustelle", Encode(Labels.Address(bauakte.Street, bauakte.PostalCode, bauakte.City))));
@@ -349,12 +349,12 @@ public static class Reports
         ArgumentNullException.ThrowIfNull(assignments);
         ArgumentNullException.ThrowIfNull(absences);
         var html = new StringBuilder();
-        html.Append(Header(company, "Planung", title, days.Count > 0 ? $"{Labels.Date(days[0])} – {Labels.Date(days[^1])}" : null));
+        html.Append(Header(company, "Planung", title, days.Count > 0 ? $"{Labels.Date(days[0])} bis {Labels.Date(days[^1])}" : null));
         foreach (var day in days)
         {
             var items = assignments.Where(a => a.Day == day).OrderBy(a => a.StartTime ?? TimeOnly.MinValue).ThenBy(a => a.CrewName).ToList();
             var absent = absences.Where(a => a.From <= day && a.To >= day).ToList();
-            html.Append(CultureInfo.InvariantCulture, $"<h2>{Encode(Labels.LongDay(day))} <span class=\"muted\" style=\"font-weight:400\">· {items.Count} {(items.Count == 1 ? "Einsatz" : "Einsätze")}</span></h2>");
+            html.Append(CultureInfo.InvariantCulture, $"<h2>{Encode(Labels.LongDay(day))} <span class=\"muted\" style=\"font-weight:400\">({items.Count} {(items.Count == 1 ? "Einsatz" : "Einsätze")})</span></h2>");
             if (absent.Count > 0)
             {
                 html.Append(CultureInfo.InvariantCulture, $"<div class=\"muted\" style=\"margin-bottom:6px\">Abwesend: {Encode(string.Join(", ", absent.Select(a => $"{a.UserName} ({Labels.Of(a.Kind)})")))}</div>");

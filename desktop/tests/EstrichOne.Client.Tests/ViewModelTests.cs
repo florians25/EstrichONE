@@ -118,7 +118,7 @@ public sealed class ViewModelTests(PostgresFixture postgres) : IAsyncLifetime
         await vm.SetStatusCommand.ExecuteAsync(BauakteStatus.Completed);
 
         vm.Error.ShouldBeNull();
-        vm.Heading.ShouldEndWith("· EFH Kraus");
+        vm.Heading.ShouldEndWith(", EFH Kraus");
         vm.Notes.ShouldHaveSingleItem().Author.ShouldBe("Max Huber");
         vm.NewNote.ShouldBeEmpty();
         vm.WorkItems.ShouldHaveSingleItem().Kind.ShouldBe("Mangel");
@@ -154,9 +154,9 @@ public sealed class ViewModelTests(PostgresFixture postgres) : IAsyncLifetime
         vm.Error.ShouldBeNull();
         monday.DayOfWeek.ShouldBe(DayOfWeek.Monday);
         vm.Days.Count.ShouldBe(5);
-        card.Time.ShouldBe("07:00–15:30");
+        card.Time.ShouldBe("07:00 bis 15:30");
         card.Kind.ShouldBe("Estrich / Ausführung");
-        card.Title.ShouldEndWith("· EFH Kraus");
+        card.Title.ShouldEndWith(", EFH Kraus");
         vm.WeekStart.ShouldBe(monday.AddDays(7));
         vm.Rows.Single(r => r.Name == "Kolonne Nord").Cells.ShouldAllBe(c => c.Items.Count == 0);
         vm.ShowWeekend = true;

@@ -23,9 +23,9 @@ public sealed partial class OrderItem(MaterialOrder order) : ObservableObject
 
     public string Supplier => Order.SupplierName;
 
-    public string Site => Order.BauakteId is null ? "Lager / ohne Bauakte" : $"{Order.BauakteNumber} · {Order.BauakteTitle}";
+    public string Site => Order.BauakteId is null ? "Lager / ohne Bauakte" : $"{Order.BauakteNumber}, {Order.BauakteTitle}";
 
-    public string Lines => string.Join(" · ", Order.Lines.Select(l => $"{Labels.Quantity(l.Quantity)} {l.Unit} {l.Description}"));
+    public string Lines => string.Join(", ", Order.Lines.Select(l => $"{Labels.Quantity(l.Quantity)} {l.Unit} {l.Description}"));
 
     public string Total => Labels.Money(Order.Total);
 

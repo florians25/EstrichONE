@@ -48,13 +48,13 @@ public sealed partial class BauakteViewModel(AppSession session, Guid id) : Page
     [ObservableProperty]
     public partial Contact? Customer { get; set; }
 
-    public string Heading => Bauakte is null ? string.Empty : $"{Bauakte.Number ?? "neu"} · {Bauakte.Title}";
+    public string Heading => Bauakte is null ? string.Empty : $"{Bauakte.Number ?? "neu"}, {Bauakte.Title}";
 
     public string StatusLabel => Bauakte is null ? string.Empty : Labels.Of(Bauakte.Status);
 
     public string Address => Bauakte is null ? string.Empty : Labels.Address(Bauakte.Street, Bauakte.PostalCode, Bauakte.City);
 
-    public string Period => Bauakte?.PlannedStart is null ? "–" : $"{Labels.Date(Bauakte.PlannedStart)} – {Labels.Date(Bauakte.PlannedEnd)}";
+    public string Period => Bauakte?.PlannedStart is null ? "–" : $"{Labels.Date(Bauakte.PlannedStart)} bis {Labels.Date(Bauakte.PlannedEnd)}";
 
     public string SiteContact => Bauakte is null ? "–"
         : string.Join(", ", new[] { Bauakte.SiteContactName, Bauakte.SiteContactPhone }.Where(s => !string.IsNullOrWhiteSpace(s))) is { Length: > 0 } c ? c : "–";
@@ -120,14 +120,14 @@ public sealed partial class BauakteViewModel(AppSession session, Guid id) : Page
             Replace(Notes, notes.Result.OrderByDescending(n => n.IsPinned).ThenByDescending(n => n.CreatedAt).Select(ToRow));
             Replace(Rooms, rooms.Result.Rooms.Select(r => new RoomRow(r.Name, r.Floor ?? "–", r.AreaSquareMeters is { } a ? Labels.Area(a) : "–",
                 r.ScreedTypeName ?? "–", r.ThicknessMillimeters is { } t ? $"{t} mm" : "–", r.UnderfloorHeating ? "ja" : "nein", Labels.Of(r.Status))));
-            RoomSummary = $"{rooms.Result.Rooms.Count} Räume · {Labels.Area(rooms.Result.TotalAreaSquareMeters)} gesamt · {Labels.Area(rooms.Result.HeatedAreaSquareMeters)} beheizt";
+            RoomSummary = $"{rooms.Result.Rooms.Count} Räume, {Labels.Area(rooms.Result.TotalAreaSquareMeters)} gesamt, {Labels.Area(rooms.Result.HeatedAreaSquareMeters)} beheizt";
             Replace(WorkItems, work.Result.OrderBy(w => w.Status == WorkItemStatus.Done).ThenBy(w => w.DueDate).Select(w => new WorkItemRow(w)));
             Replace(Files, files.Result.Where(f => f.IsStored)
                 .OrderByDescending(f => f.CreatedAt)
                 .Select(f => new FileRow(f.Id, f.DisplayName, Labels.Of(f.Kind), FileTypes.Size(f.SizeBytes), Labels.DateTime(f.CreatedAt))));
             Replace(Orders, orders.Result.Select(o => new OrderRow(o.Id, o.Number,
                 o.DeliveryDate is { } d ? Labels.Date(d) + (o.DeliveryTime is { } t ? $", {t}" : string.Empty) : "nach Absprache", o.SupplierName,
-                string.Join(" · ", o.Lines.Select(l => $"{Labels.Quantity(l.Quantity)} {l.Unit} {l.Description}")), Labels.Money(o.Total), Labels.Of(o.Status))));
+                string.Join(", ", o.Lines.Select(l => $"{Labels.Quantity(l.Quantity)} {l.Unit} {l.Description}")), Labels.Money(o.Total), Labels.Of(o.Status))));
             OnPropertyChanged(nameof(Responsible));
         });
     }

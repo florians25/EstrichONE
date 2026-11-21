@@ -190,7 +190,7 @@ public sealed record Contact(
     string? Email, string? Notes, long Version)
 {
     /// <summary>Für Auswahllisten: Name · Kundennummer · Ort.</summary>
-    public string Label => string.Join(" · ", new[] { Name, CustomerNumber, City }.Where(s => !string.IsNullOrWhiteSpace(s)));
+    public string Label => string.Join(", ", new[] { Name, CustomerNumber, City }.Where(s => !string.IsNullOrWhiteSpace(s)));
 
     public override string ToString() => Label;
 }

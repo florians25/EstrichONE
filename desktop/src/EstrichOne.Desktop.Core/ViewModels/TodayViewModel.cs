@@ -52,12 +52,12 @@ public sealed partial class TodayViewModel(AppSession session, TimeProvider? clo
             await Task.WhenAll(planning, due, inquiries, deliveries, work);
 
             Fill(Assignments, (planning.Result?.Assignments ?? []).OrderBy(a => a.CrewName).ThenBy(a => a.StartTime).Select(PlanningViewModel.ToCard));
-            Fill(Absences, (planning.Result?.Absences ?? []).Select(a => $"{a.UserName} · {Labels.Of(a.Kind)}"));
+            Fill(Absences, (planning.Result?.Absences ?? []).Select(a => $"{a.UserName}, {Labels.Of(a.Kind)}"));
             Fill(DueCalls, due.Result.Select(c => CallsViewModel.ToRow(c, today)));
             Fill(Inquiries, inquiries.Result.Select(c => CallsViewModel.ToRow(c, today)));
             Fill(Deliveries, deliveries.Result.Where(o => o.Status != OrderStatus.Cancelled).Select(o => new DeliveryRow(o.Id, o.DeliveryTime ?? "–",
-                o.SupplierName, o.BauakteId is null ? "Lager" : $"{o.BauakteNumber} · {o.BauakteTitle}",
-                string.Join(" · ", o.Lines.Select(l => $"{Labels.Quantity(l.Quantity)} {l.Unit} {l.Description}")), Labels.Of(o.Status))));
+                o.SupplierName, o.BauakteId is null ? "Lager" : $"{o.BauakteNumber}, {o.BauakteTitle}",
+                string.Join(", ", o.Lines.Select(l => $"{Labels.Quantity(l.Quantity)} {l.Unit} {l.Description}")), Labels.Of(o.Status))));
             Fill(MyWork, work.Result.Where(w => w.Status != WorkItemStatus.Done).OrderBy(w => w.DueDate ?? DateOnly.MaxValue).Take(15).Select(w => new WorkItemRow(w)));
         });
     }

@@ -89,8 +89,8 @@
                                     <DataTemplate x:DataType="vm:DeliveryRow">
                                         <StackPanel Margin="0,0,0,8">
                                             <TextBlock>
-                                                <Run Text="{x:Bind Time}" FontWeight="SemiBold" /><Run Text=" · " /><Run Text="{x:Bind Supplier}" />
-                                                <Run Text=" · " /><Run Text="{x:Bind Status}" />
+                                                <Run Text="{x:Bind Time}" FontWeight="SemiBold" /><Run Text=", " /><Run Text="{x:Bind Supplier}" />
+                                                <Run Text=", " /><Run Text="{x:Bind Status}" />
                                             </TextBlock>
                                             <TextBlock Text="{x:Bind Bauakte}" TextTrimming="CharacterEllipsis" />
                                             <TextBlock Text="{x:Bind Lines}" Style="{StaticResource CaptionTextBlockStyle}" TextWrapping="Wrap"

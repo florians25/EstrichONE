@@ -195,10 +195,10 @@ public sealed class ExtendedClientTests(PostgresFixture postgres) : IAsyncLifeti
         var diary = (await client.GetDiaryAsync(bauakte.Id, Ct)).ShouldHaveSingleItem();
         diary.Text.ShouldBe("Estrich EG eingebracht, 64 m²");
         diary.Weather.ShouldBe("rain");
-        Reports.WeatherLine(diary).ShouldBe("Regen · 11 °C · 3 anwesend");
+        Reports.WeatherLine(diary).ShouldBe("Regen, 11 °C, 3 anwesend");
         var inspections = await client.GetInspectionsAsync(bauakte.Id, Ct);
         var initial = inspections.Single(i => i.Kind == InspectionKind.InitialInspection);
-        Labels.InspectionResult(initial).ShouldBe("Mit Mängeln – Klärung nötig");
+        Labels.InspectionResult(initial).ShouldBe("Mit Mängeln, Klärung erforderlich");
         var cm = inspections.Single(i => i.Kind == InspectionKind.CmMeasurement);
         cm.LimitCmPercent.ShouldNotBeNull();
         cm.IsReadyForCovering.ShouldBe(cm.MeasuredCmPercent <= cm.LimitCmPercent);
@@ -266,7 +266,7 @@ public sealed class ExtendedClientTests(PostgresFixture postgres) : IAsyncLifeti
         var needs = MaterialRequirements.Calculate(overview, 5);
         var screed = needs.First(n => n.Unit == "m³");
         screed.Amount.ShouldBe(3.5m); // 48,5 m² × 0,065 m = 3,15 m³ + 5 % = 3,31 → 3,5
-        screed.Detail.ShouldBe("48,5 m² · 3,15 m³ netto");
+        screed.Detail.ShouldBe("48,5 m², 3,15 m³ netto");
         needs.Single(n => n.Key == "ins-40").Amount.ShouldBe(51m);
         needs.ShouldNotContain(n => n.Description == "Estrich (Art offen)"); // Garage ohne Dicke: kein Volumen
     }

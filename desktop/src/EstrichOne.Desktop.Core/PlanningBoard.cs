@@ -44,7 +44,7 @@ public static class PlanningBoard
         return view switch
         {
             PlanningView.Day => Labels.LongDay(anchor),
-            PlanningView.Week => $"KW {Labels.Week(days[0])} · {Labels.Date(days[0])} – {Labels.Date(days[^1])}",
+            PlanningView.Week => $"KW {Labels.Week(days[0])}, {Labels.Date(days[0])} bis {Labels.Date(days[^1])}",
             _ => Labels.Month(anchor),
         };
     }
@@ -110,6 +110,6 @@ public static class PlanningBoard
     public static string TimeRange(Assignment a)
     {
         ArgumentNullException.ThrowIfNull(a);
-        return a.StartTime is null ? "ganztags" : a.EndTime is null ? Labels.Time(a.StartTime) : $"{Labels.Time(a.StartTime)}–{Labels.Time(a.EndTime)}";
+        return a.StartTime is null ? "ganztags" : a.EndTime is null ? Labels.Time(a.StartTime) : $"{Labels.Time(a.StartTime)} bis {Labels.Time(a.EndTime)}";
     }
 }

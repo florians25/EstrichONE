@@ -36,7 +36,7 @@ public sealed partial class PlanningViewModel(AppSession session, TimeProvider? 
     [ObservableProperty]
     public partial int WarningCount { get; set; }
 
-    public string Title => $"KW {Labels.Week(WeekStart)} · {Labels.Date(WeekStart)} – {Labels.Date(WeekStart.AddDays(ShowWeekend ? 6 : 4))}";
+    public string Title => $"KW {Labels.Week(WeekStart)}, {Labels.Date(WeekStart)} bis {Labels.Date(WeekStart.AddDays(ShowWeekend ? 6 : 4))}";
 
     private DateOnly Today => DateOnly.FromDateTime(_clock.GetLocalNow().DateTime);
 
@@ -118,8 +118,8 @@ public sealed partial class PlanningViewModel(AppSession session, TimeProvider? 
 
     public static AssignmentCard ToCard(Assignment a) => new(
         a.Id, a.BauakteId,
-        a.StartTime is null ? "ganztags" : a.EndTime is null ? Labels.Time(a.StartTime) : $"{Labels.Time(a.StartTime)}–{Labels.Time(a.EndTime)}",
-        Labels.Of(a.Kind), $"{a.BauakteNumber ?? "neu"} · {a.BauakteTitle}", a.Activity, a.BauakteAddress ?? string.Empty,
+        a.StartTime is null ? "ganztags" : a.EndTime is null ? Labels.Time(a.StartTime) : $"{Labels.Time(a.StartTime)} bis {Labels.Time(a.EndTime)}",
+        Labels.Of(a.Kind), $"{a.BauakteNumber ?? "neu"}, {a.BauakteTitle}", a.Activity, a.BauakteAddress ?? string.Empty,
         string.Join(", ", a.People.Select(p => p.Name)), string.Join(", ", a.Resources.Select(r => r.Name)), a.CrewColor,
         a.Warnings.Count > 0, string.Join(Environment.NewLine, a.Warnings));
 }

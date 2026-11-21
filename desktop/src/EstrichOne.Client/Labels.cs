@@ -148,7 +148,7 @@ public static class Labels
             return "Nicht notwendig";
         }
 
-        return inspection.Checks.Values.Contains(CheckResult.NotOk) ? "Mit Mängeln – Klärung nötig" : "Bestanden / freigegeben";
+        return inspection.Checks.Values.Contains(CheckResult.NotOk) ? "Mit Mängeln, Klärung erforderlich" : "Bestanden / freigegeben";
     }
 
     public static string Cm(decimal? value) => value is { } v ? v.ToString("0.0#", German) : "–";
@@ -178,7 +178,7 @@ public static class Labels
     public static IReadOnlyList<string> Units { get; } = ["t", "m³", "Sack", "Palette", "m²", "lfm", "Rolle", "Stk", "kg", "l", "Eimer"];
 
     public static IReadOnlyList<string> DeliveryWindows { get; } =
-        ["6:00–7:00", "7:00–8:00", "8:00–10:00", "vormittags", "nachmittags", "nach telefonischer Absprache"];
+        ["6 bis 7 Uhr", "7 bis 8 Uhr", "8 bis 10 Uhr", "vormittags", "nachmittags", "nach telefonischer Absprache"];
 
     public static string Of(CallSource source) => source switch
     {
