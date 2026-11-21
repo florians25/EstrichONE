@@ -49,7 +49,7 @@ public sealed class ConsoleUpdater(IDockerHost docker, IOptions<HostingOptions> 
         {
             Message = options.Value.IsFake
                 ? $"Simulation: Installer für {version} wäre jetzt gestartet."
-                : $"Installer für {version} läuft – die Konsole startet in Kürze neu. Seite danach neu laden.",
+                : $"Installer für {version} läuft. Die Konsole startet in Kürze neu. Seite danach neu laden.",
             Running = !options.Value.IsFake,
             Success = options.Value.IsFake ? true : null,
         };

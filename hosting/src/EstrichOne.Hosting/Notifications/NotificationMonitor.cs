@@ -166,7 +166,7 @@ public sealed class NotificationMonitor(IServiceScopeFactory scopes, StatusServi
             var delivery = await sender.SendAsync(settings, $"[EstrichONE Hosting] Behoben: {notification.Title}",
                 $"{notification.Title} ist behoben (seit {notification.RaisedAt:dd.MM.yyyy HH:mm} UTC gemeldet).", "info",
                 notification.TenantSlug, resolved: true, cancellationToken);
-            notification.Delivery = $"{notification.Delivery} · behoben: {delivery.Summary}";
+            notification.Delivery = $"{notification.Delivery}, behoben: {delivery.Summary}";
         }
 
         await db.SaveChangesAsync(cancellationToken);

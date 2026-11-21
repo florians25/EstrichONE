@@ -20,7 +20,7 @@ x-web-image: &web-image
     dockerfile: docker/web.Dockerfile
 
 x-database: &database
-  ConnectionStrings__Default: Host=postgres;Port=5432;Database=${POSTGRES_DB:-estrichone};Username=${POSTGRES_USER:-estrichone};Password=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD fehlt – bitte ./setup.sh ausführen};Gss Encryption Mode=Disable
+  ConnectionStrings__Default: Host=postgres;Port=5432;Database=${POSTGRES_DB:-estrichone};Username=${POSTGRES_USER:-estrichone};Password=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD fehlt. Bitte ./setup.sh ausführen};Gss Encryption Mode=Disable
 
 x-backup-image: &backup-image
   image: estrichone/backup:${ESTRICHONE_VERSION:-dev}
@@ -38,8 +38,8 @@ x-backup-environment: &backup-environment
   PGHOST: postgres
   PGDATABASE: ${POSTGRES_DB:-estrichone}
   PGUSER: ${POSTGRES_USER:-estrichone}
-  PGPASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD fehlt – bitte ./setup.sh ausführen}
-  RESTIC_PASSWORD: ${RESTIC_PASSWORD:?RESTIC_PASSWORD fehlt – bitte ./setup.sh ausführen}
+  PGPASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD fehlt. Bitte ./setup.sh ausführen}
+  RESTIC_PASSWORD: ${RESTIC_PASSWORD:?RESTIC_PASSWORD fehlt. Bitte ./setup.sh ausführen}
   RESTIC_CACHE_DIR: /cache
   BACKUP_REPOSITORY: ${BACKUP_REPOSITORY:-/repository}
   BACKUP_REPOSITORY_2: ${BACKUP_REPOSITORY_2:-}
@@ -82,7 +82,7 @@ services:
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-estrichone}
       POSTGRES_USER: ${POSTGRES_USER:-estrichone}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD fehlt – bitte ./setup.sh ausführen}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD fehlt. Bitte ./setup.sh ausführen}
     volumes:
       - ${ESTRICHONE_DATA_DIR:-./data}/postgres:/var/lib/postgresql/data
     healthcheck:
@@ -109,7 +109,7 @@ services:
       EstrichOne__MigrateOnStartup: "true"
       EstrichOne__Backup__StatusPath: /status
       # Notfallblatt (Backup Center → Notfall) und Backup-Ziele, die ziehen (docs/backup.md)
-      EstrichOne__Backup__RepositoryPassword: ${RESTIC_PASSWORD:?RESTIC_PASSWORD fehlt – bitte ./setup.sh ausführen}
+      EstrichOne__Backup__RepositoryPassword: ${RESTIC_PASSWORD:?RESTIC_PASSWORD fehlt. Bitte ./setup.sh ausführen}
       EstrichOne__Backup__Repository: ${BACKUP_REPOSITORY:-/repository}
       EstrichOne__Backup__Repository2: ${BACKUP_REPOSITORY_2:-}
       EstrichOne__Backup__HostBackupDir: ${ESTRICHONE_BACKUP_DIR:-./backup-repository}

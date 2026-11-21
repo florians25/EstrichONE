@@ -83,7 +83,7 @@ public sealed class NoticeDistributor(IServiceScopeFactory scopes, IInstanceProb
                 var hasMaintenance = document.GetProperty("maintenance").ValueKind != JsonValueKind.Null;
                 if (string.IsNullOrEmpty(token))
                 {
-                    states[tenant.Id] = new NoticeSyncState(false, now, "Instanz hat noch keinen Schlüssel – „Neu konfigurieren“ bzw. nächster Vorgang legt ihn an.", hash, count, hasMaintenance);
+                    states[tenant.Id] = new NoticeSyncState(false, now, "Die Instanz hat noch keinen Schlüssel. „Neu konfigurieren“ oder der nächste Vorgang legt ihn an.", hash, count, hasMaintenance);
                     continue;
                 }
 

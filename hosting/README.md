@@ -11,7 +11,7 @@ Internet ──80/443──▶ Caddy (estrichone-hosting-proxy) ──┬─ kon
                                                         └─ firma-b.example.de  ▶ estrichone-firma-b-caddy-1:8181 (Netz estrichone-firma-b-edge)
 ```
 
-## Installation – ein Befehl
+## Installation: ein Befehl
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/florians25/EstrichONE/main/install.sh | sudo bash -s -- konsole
@@ -29,7 +29,7 @@ Der Assistent fragt mit sinnvollen Vorschlägen ab (Enter übernimmt den Vorschl
 | Datenverzeichnis | `/srv/estrichone-hosting` | Instanzen, Sicherungen, Konsole (gleicher Pfad im Container) |
 | Basis-Domain | Domain des Servers | Instanzen erhalten `<kürzel>.<basis-domain>` (Wildcard-DNS) |
 | Adresse der Konsole | `konsole.<basis-domain>` | |
-| Betriebsart | `direkt` | **direkt** = eigenes HTTPS auf 80/443 (mitgelieferter Caddy, Let's Encrypt) · **proxy** = hinter vorhandenem Proxy (z. B. Nginx Proxy Manager) – wie beim Suite-Installer |
+| Betriebsart | `direkt` | **direkt** = eigenes HTTPS auf 80/443 (mitgelieferter Caddy, Let's Encrypt), **proxy** = hinter vorhandenem Proxy (z. B. Nginx Proxy Manager), wie beim Suite-Installer |
 | Zertifikate | `acme` | Let's Encrypt; `internal` = eigene CA (Test), `off` = nur HTTP |
 | E-Mail | – | für Let's Encrypt und als Empfänger der Benachrichtigungen |
 | Administrator | `admin` | erstes Konto; das **Startpasswort** erzeugt der Installer |
@@ -85,12 +85,12 @@ Der Installer richtet den Befehl `estrichone-hosting` auf dem Server ein:
 
 Nach der ersten Anmeldung mit dem Startpasswort führt die Konsole durch:
 
-1. **Passwort** – eigenes Passwort (Pflicht bei Konten aus dem Installer, mindestens 12 Zeichen).
-2. **Zwei-Faktor** (optional, empfohlen) – QR-Code für Authenticator-Apps.
+1. **Passwort**: eigenes Passwort (Pflicht bei Konten aus dem Installer, mindestens 12 Zeichen).
+2. **Zwei-Faktor** (optional, empfohlen), QR-Code für Authenticator-Apps.
 3. **Standardversion** der Suite für neue Instanzen (Liste aus der Registry).
-4. **Sicherung** – optional ein zweites Sicherungsziel außerhalb des Servers (restic: `sftp:…`, `rest:https://…`, `s3:…`,
+4. **Sicherung**: optional ein zweites Sicherungsziel außerhalb des Servers (restic: `sftp:…`, `rest:https://…`, `s3:…`,
    `b2:…`, `azure:…`, `gs:…`, `rclone:…`); je Instanz entsteht dort ein Unterordner, eingetragen als `BACKUP_REPOSITORY_2`.
-5. **Benachrichtigungen** – E-Mail (SMTP mit STARTTLS) und/oder Webhook (JSON mit `text`, passend für Slack/Mattermost/Teams),
+5. **Benachrichtigungen**: E-Mail (SMTP mit STARTTLS) und/oder Webhook (JSON mit `text`, passend für Slack/Mattermost/Teams),
    mit Testnachricht.
 
 Alles bleibt unter **Einstellungen** änderbar (System, Benachrichtigungen; Assistent erneut öffnen).
@@ -101,16 +101,16 @@ Alles bleibt unter **Einstellungen** änderbar (System, Benachrichtigungen; Assi
 
 **Mandanten → Mandant anlegen** (auch auf der Übersicht) führt in fünf Schritten durch:
 
-1. **Firma** – Name, Kundennummer, Ansprechpartner, E-Mail, Telefon, Notiz.
-2. **Adresse** – Kürzel (aus dem Firmennamen vorgeschlagen) und Subdomain `<kürzel>.<basis>` oder eigene Kunden-Domain
+1. **Firma**: Name, Kundennummer, Ansprechpartner, E-Mail, Telefon, Notiz.
+2. **Adresse**: Kürzel (aus dem Firmennamen vorgeschlagen) und Subdomain `<kürzel>.<basis>` oder eigene Kunden-Domain
    (Hinweis auf den nötigen CNAME).
-3. **Ressourcen** – Tarif mit Benutzer-, Speicher-, RAM- und CPU-Grenze; Version.
-4. **Erste Admin-Person** – Name, Benutzername (aus dem Namen vorgeschlagen), E-Mail.
+3. **Ressourcen**: Tarif mit Benutzer-, Speicher-, RAM- und CPU-Grenze; Version.
+4. **Erste Admin-Person**: Name, Benutzername (aus dem Namen vorgeschlagen), E-Mail.
 5. **Prüfen und anlegen**.
 
 Die Konsole legt Verzeichnis, `.env` mit Zufallspasswörtern, Netze und Proxy-Eintrag an, lädt die Images, startet die
 Instanz und richtet EstrichONE über dessen Ersteinrichtungs-API ein (Firma + erste Admin-Person mit Startpasswort).
-Auf der Detailseite liegt danach der **Zugangsbrief** (Adresse, Benutzername, Startpasswort – Öffnen nur nach erneuter
+Auf der Detailseite liegt danach der **Zugangsbrief** (Adresse, Benutzername, Startpasswort, Öffnen nur nach erneuter
 Passwortabfrage, druckbar, kopierbar); nach der Übergabe „Verwerfen“. Ohne Admin-Person zeigt die Detailseite wie bisher
 den **Einrichtungscode**, mit dem der Kunde selbst einrichtet.
 
@@ -143,9 +143,9 @@ den **Einrichtungscode**, mit dem der Kunde selbst einrichtet.
 |---|---|
 | Kopf | Starten, Stoppen, Neu starten, **Aktualisieren** (Version wählen, Vorab-Sicherung), **Zurücknehmen**, Sperren/Entsperren, **Ankündigung** und **Wartung planen** nur für diese Instanz, Bearbeiten, Löschen |
 | Übersicht | Zugangsbrief, Einrichtungscode bzw. „Erste Admin-Person jetzt anlegen“, Stammdaten |
-| Betrieb | Container mit Health, CPU, RAM; `/health/ready`, Serverversion; **Domain und Zertifikat** (DNS-Auflösung, Aussteller, gültig bis – echter TLS-Handshake am Proxy, stündlich, bei Problemen alle 5 Minuten) |
+| Betrieb | Container mit Health, CPU, RAM; `/health/ready`, Serverversion; **Domain und Zertifikat** (DNS-Auflösung, Aussteller, gültig bis, echter TLS-Handshake am Proxy, stündlich, bei Problemen alle 5 Minuten) |
 | Ressourcen | Speicher gegen Kontingent, aktive Benutzer gegen Tarif, CPU/RAM |
-| Apps und Module | Android- und iOS-App: neueste Version, Mindestversion, Bezugsquelle (APK vom Server, Store, Link) aus `/api/v1/app-updates/check` (ab Suite 1.0.13); **Module der Instanz** mit Bereich und Zustand, Kernmodule als „immer an“ – gemeldet von der Suite selbst (`GET /api/v1/system/modules` mit Instanz-Schlüssel, ab Suite 1.0.15), alle 15 Minuten bzw. „Jetzt prüfen“; Herkunft steht unter der Tabelle |
+| Apps und Module | Android- und iOS-App: neueste Version, Mindestversion, Bezugsquelle (APK vom Server, Store, Link) aus `/api/v1/app-updates/check` (ab Suite 1.0.13); **Module der Instanz** mit Bereich und Zustand, Kernmodule als „immer an“, gemeldet von der Suite selbst (`GET /api/v1/system/modules` mit Instanz-Schlüssel, ab Suite 1.0.15), alle 15 Minuten bzw. „Jetzt prüfen“; Herkunft steht unter der Tabelle |
 | Sicherung | letzter Lauf, Prüfung, Wiederherstellungstest, Archivserver, Backup-Ziele; **Wiederherstellungspunkte** mit „Wiederherstellen …“; Jetzt sichern; Sicherungsschlüssel; **Export herunterladen** |
 | Protokolle, Vorgänge, Technik, Ereignisse | Logs je Dienst mit Filter/Live/Download, Vorgangsprotokolle, Compose-Projekt und Proxy-Ziel, Audit |
 
@@ -154,25 +154,25 @@ den **Einrichtungscode**, mit dem der Kunde selbst einrichtet.
 **Aktualisieren mit Rücknahme:** Vor dem Wechsel sichert die Konsole die Instanz und merkt sich diesen Snapshot. Startet
 die neue Version nicht (`docker compose up --wait` scheitert) oder meldet sie sich danach nicht bereit (`/health/ready`
 liefert innerhalb von zwei Minuten kein 200, z. B. weil die Datenbankmigration scheitert), nimmt die Konsole die
-Aktualisierung **automatisch** zurück: alte Version, Datenbank und Dateien aus der Vorab-Sicherung, Start – der Vorgang ist „fehlgeschlagen“, die
+Aktualisierung **automatisch** zurück: alte Version, Datenbank und Dateien aus der Vorab-Sicherung, Start, der Vorgang ist „fehlgeschlagen“, die
 Instanz läuft wieder. Nach einer erfolgreichen Aktualisierung bleibt **Zurücknehmen** verfügbar (gleicher Ablauf per
 Knopf), bis zur nächsten Aktualisierung.
 
 **Update-Ablauf je Instanz (mindestens 2,5 Minuten):** Wie `update.sh` der Suite (deploy/README.md, „Update-Ablauf“)
 schreibt die Konsole den Stand nach `data/backup-status/update-maintenance.json` der Instanz:
 
-1. **Ankündigung** (60 s) – nach dem Laden der Images: Countdown für alle Benutzer, Apps gleichen ab, neue Anmeldungen gesperrt.
-2. **Update** (mindestens 60 s) – Sitzungen enden, Wartungsbildschirm; Vorab-Sicherung, `up --wait`, `/health/ready`.
-3. **Abschluss** (30 s) – danach Freigabe.
+1. **Ankündigung** (60 s), nach dem Laden der Images: Countdown für alle Benutzer, Apps gleichen ab, neue Anmeldungen gesperrt.
+2. **Update** (mindestens 60 s), Sitzungen enden, Wartungsbildschirm; Vorab-Sicherung, `up --wait`, `/health/ready`.
+3. **Abschluss** (30 s). Danach Freigabe.
 
-Schlägt der Start fehl, zeigt die Instanz „Update wird zurückgenommen“, nach der Rücknahme „Update fehlgeschlagen –
+Schlägt der Start fehl, zeigt die Instanz „Update wird zurückgenommen“, nach der Rücknahme „Update fehlgeschlagen,
 Version X läuft wieder“ und gibt nach der Abschlussdauer frei. Misslingt auch die Rücknahme, bleibt der
 Wartungsbildschirm stehen; **Neu starten**, **Starten** oder **Zurücknehmen** beenden ihn. Die Phase steht am Vorgang:
-in der Liste „Vorgänge“, bei den Vorgängen der Instanz und im Protokoll-Dialog („1/3 Ankündigung · noch 0:42“ …
-„Freigegeben“) – bei **Alle aktualisieren** also je Instanz. Gesperrte und angehaltene Instanzen werden ohne Ankündigung
+in der Liste „Vorgänge“, bei den Vorgängen der Instanz und im Protokoll-Dialog („1/3 Ankündigung, noch 0:42“ …
+„Freigegeben“), bei **Alle aktualisieren** also je Instanz. Gesperrte und angehaltene Instanzen werden ohne Ankündigung
 aktualisiert. Dauer: `Hosting__UpdateAnnounceSeconds`, `Hosting__UpdateMinimumSeconds`, `Hosting__UpdateFinishSeconds`
 (Standard je 60; nur für Tests verkürzen). Mehrere Instanzen laufen parallel bis `Hosting__MaxParallelOperations`
-(Standard 2) – bei vielen Instanzen für „Alle aktualisieren“ ggf. erhöhen.
+(Standard 2), bei vielen Instanzen für „Alle aktualisieren“ ggf. erhöhen.
 
 **Wiederherstellen:** beliebigen Wiederherstellungspunkt wählen; die Konsole sichert vorher den aktuellen Stand, hält
 API, Web und Sicherung an, spielt mit dem Dienst `restore` der Suite Datenbank (Tausch über eine neue Datenbank) und
@@ -194,7 +194,7 @@ einem beliebigen Server mit dem Suite-Installer (Modus „restore“).
   Änderungen, Zugangsbrief, Sicherungsschlüssel und Export mit 403 `READ_ONLY` ab. Neue Konten legen bei der ersten
   Anmeldung ein eigenes Passwort fest; Rollenwechsel beendet die Sitzungen des Kontos; ein Administrator bleibt immer.
 - **Sicherheit**: eigene Konten (PBKDF2, `__Host-`-Cookie, CSRF, Rate-Limit, Kontosperre, TOTP), Passwortregeln
-  (mind. 12 Zeichen, nicht gleichförmig, kein bekanntes Wort oder Benutzername – Passphrasen ausdrücklich erwünscht),
+  (mind. 12 Zeichen, nicht gleichförmig, kein bekanntes Wort oder Benutzername, Passphrasen ausdrücklich erwünscht),
   Passwortabfrage vor Zugangsbrief/Export/Schlüssel, strikte CSP, optionale IP-Allowlist (siehe unten).
 - **Oberfläche**: OpenUI5 (self-hosted), alle Themes mit „Systemeinstellung folgen“, nur das EstrichONE-Logo.
 
@@ -212,7 +212,7 @@ einem beliebigen Server mit dem Suite-Installer (Modus „restore“).
 |---|---|
 | `/srv/estrichone-hosting/instances/<kürzel>/` | Compose-Dateien, `.env` (Passwörter, Sicherungsschlüssel), `zugang.json` (bis zum Verwerfen), `data/`, `backup-repository/` |
 | `/srv/estrichone-hosting/proxy/` | von der Konsole erzeugtes Caddyfile und Wartungsseite |
-| `/srv/estrichone-hosting/console/` | Datenbank der Konsole (SQLite), Sitzungsschlüssel – nur root |
+| `/srv/estrichone-hosting/console/` | Datenbank der Konsole (SQLite), Sitzungsschlüssel, nur root |
 | `/srv/estrichone-hosting/archive/` | Endsicherungen gelöschter Mandanten (restic-Repository + `instanz.env`) |
 | `/etc/estrichone-hosting.conf`, `/usr/local/bin/estrichone-hosting` | Datenverzeichnis und Verwaltungsbefehl (vom Installer) |
 
@@ -235,14 +235,14 @@ Sperren hält in diesem Modus die Weboberfläche der Instanz an (keine eigene Wa
 - Der Docker-Socket ist nur im Konsolen-Container eingebunden; wer die Konsole bedient, kann den Host steuern.
   Konsole nur Administratoren zugänglich machen, 2FA einschalten.
 - Optionale **IP-Allowlist**: `HOSTING_ALLOWED_NETWORKS=203.0.113.7,10.0.0.0/8` in der `.env` (bzw. beim Installer
-  `-e HOSTING_ALLOWED_NETWORKS=…`) – andere Adressen erhalten 403, auch für Anmeldung und Oberfläche. Gilt hinter dem
+  `-e HOSTING_ALLOWED_NETWORKS=…`), andere Adressen erhalten 403, auch für Anmeldung und Oberfläche. Gilt hinter dem
   mitgelieferten Caddy bzw. Nginx Proxy Manager (private Netze) für die echte Client-Adresse; `127.0.0.1` (SSH-Tunnel
   auf Port 8099) bleibt als Notzugang immer erlaubt. Ungültige Einträge verhindern den Start (Protokoll prüfen).
 - `.env` der Konsole und jeder Instanz nur für root lesbar (0600, der Installer zieht das bei jedem Lauf nach).
 - Docker wird ohne Shell mit Argumentlisten aufgerufen; Kürzel, Domains und Versionen werden streng geprüft.
 - Der Konsolen-Container läuft schreibgeschützt mit minimalen Capabilities (CHOWN, DAC_OVERRIDE, DAC_READ_SEARCH,
   FOWNER), um Datenverzeichnisse der Instanzen (UID 1654) anzulegen, zu messen und zu löschen.
-- Die `.env` jeder Instanz enthält Datenbank-, Sicherungs- und Hinweis-Schlüssel – in Server-Backups verschlüsselt sichern.
+- Die `.env` jeder Instanz enthält Datenbank-, Sicherungs- und Hinweis-Schlüssel, in Server-Backups verschlüsselt sichern.
 
 ## Entwicklung
 
@@ -278,14 +278,14 @@ Ohne konfigurierten Schlüssel antworten beide mit 404, mit falschem Schlüssel 
 Die Konsole führt deshalb **keine eigene Kopie des Modulkatalogs** mehr: Neue Module erscheinen, sobald die Suite sie
 kennt. Nur bei Suite-Versionen ohne die Schnittstelle (404) liest sie die Schalter wie bisher per `psql` aus
 `system_settings` der Instanz (eingefrorener Katalog dieser Versionen) und sagt das unter der Tabelle („Aus der
-Datenbank gelesen …“). Lehnt die Instanz den Schlüssel ab, steht das ebenfalls dort – „Neu konfigurieren“ gleicht ihn an.
+Datenbank gelesen …“). Lehnt die Instanz den Schlüssel ab, steht das ebenfalls dort, „Neu konfigurieren“ gleicht ihn an.
 
 ## Archivserver und Backup-Ziele je Mandant
 
 Jede Instanz koppelt ihren Archivserver bzw. ihre Backup-Ziele selbst (Suite: System → Archiv, System → Backup-Ziele).
 Die Konsole zeigt je Mandant unter **Sicherung**: Archivserver (gekoppelt, Anzahl archiviert/wartend/fehlgeschlagen,
 letzter Fehler) und alle Backup-Ziele mit dem Ergebnis der letzten Sicherung dorthin. Quelle sind die Dateien im
-Statusverzeichnis der Instanz (`data/backup-status/archive.json`, `targets/*.conf`, `target-*.json`) – ohne Zugriff
+Statusverzeichnis der Instanz (`data/backup-status/archive.json`, `targets/*.conf`, `target-*.json`), ohne Zugriff
 auf die Datenbank und ohne Zugangsdaten auszulesen.
 
 Empfehlung für Hosting:

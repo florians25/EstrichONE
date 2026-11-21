@@ -43,7 +43,7 @@
 							<Input id="wDomain" value="{wiz>/domain}" placeholder="estrichone.kunde.de" maxLength="253" visible="{= ${wiz>/domainMode} === 1 }" />
 						</f:SimpleForm>
 						<MessageStrip type="Information" showIcon="true" class="sapUiSmallMarginTop"
-							text="{= ${wiz>/domainMode} === 1 ? 'Beim Kunden einen CNAME-Eintrag ' + (${wiz>/domain} || 'estrichone.kunde.de') + ' → ' + ${wiz>/suggestedDomain} + ' setzen lassen. Das Zertifikat holt der Proxy automatisch, sobald der Eintrag wirkt.' : 'Der Wildcard-Eintrag *.' + ${wiz>/baseDomain} + ' zeigt bereits auf diesen Server – die Adresse ist sofort nutzbar.' }" />
+							text="{= ${wiz>/domainMode} === 1 ? 'Beim Kunden einen CNAME-Eintrag ' + (${wiz>/domain} || 'estrichone.kunde.de') + ' → ' + ${wiz>/suggestedDomain} + ' setzen lassen. Das Zertifikat holt der Proxy automatisch, sobald der Eintrag wirkt.' : 'Der Wildcard-Eintrag *.' + ${wiz>/baseDomain} + ' zeigt bereits auf diesen Server. Die Adresse ist sofort nutzbar.' }" />
 					</Page>
 					<Page id="wpResources" showHeader="false" class="sapUiContentPadding">
 						<Title text="Tarif und Ressourcen" level="H3" class="sapUiSmallMarginBottom" />
@@ -54,7 +54,7 @@
 										<Text text="{wiz>name}" class="hostingStrong" />
 										<Text text="{wiz>description}" class="hostingHint" />
 									</VBox>
-									<Text text="{= ${wiz>maxUsers} ? ${wiz>maxUsers} + ' Benutzer' : 'unbegrenzt' } · {= ${wiz>storageGb} ? ${wiz>storageGb} + ' GB' : 'Speicher frei' } · {= ${wiz>memoryMb} ? ${wiz>memoryMb} + ' MB RAM' : 'RAM frei' } · {= ${wiz>cpuLimit} ? ${wiz>cpuLimit} + ' CPU' : 'CPU frei' }" class="hostingHint" />
+									<Text text="{= ${wiz>maxUsers} ? ${wiz>maxUsers} + ' Benutzer' : 'unbegrenzt' }, {= ${wiz>storageGb} ? ${wiz>storageGb} + ' GB' : 'Speicher frei' }, {= ${wiz>memoryMb} ? ${wiz>memoryMb} + ' MB RAM' : 'RAM frei' }, {= ${wiz>cpuLimit} ? ${wiz>cpuLimit} + ' CPU' : 'CPU frei' }" class="hostingHint" />
 								</HBox>
 							</CustomListItem>
 						</List>
@@ -81,13 +81,13 @@
 					<Page id="wpSummary" showHeader="false" class="sapUiContentPadding">
 						<f:SimpleForm editable="false" layout="ColumnLayout" columnsM="1" columnsL="1" columnsXL="1" labelSpanL="4" labelSpanM="4">
 							<core:Title text="Zusammenfassung" />
-							<Label text="Firma" /><Text text="{wiz>/companyName}{= ${wiz>/customerNumber} ? ' · Kd.-Nr. ' + ${wiz>/customerNumber} : '' }" />
-							<Label text="Kontakt" /><Text text="{= ${wiz>/contactName} ? ${wiz>/contactName} + ' · ' : '' }{wiz>/contactEmail}" />
+							<Label text="Firma" /><Text text="{wiz>/companyName}{= ${wiz>/customerNumber} ? ', Kd.-Nr. ' + ${wiz>/customerNumber} : '' }" />
+							<Label text="Kontakt" /><Text text="{= ${wiz>/contactName} ? ${wiz>/contactName} + ', ' : '' }{wiz>/contactEmail}" />
 							<Label text="Adresse" /><Text id="wSummaryDomain" text="{= ${wiz>/domainMode} === 1 ? ${wiz>/domain} : ${wiz>/suggestedDomain} }" />
 							<Label text="Kürzel" /><Text text="{wiz>/slug} (Compose-Projekt estrichone-{wiz>/slug})" />
 							<Label text="Tarif" /><Text text="{wiz>/planName}" />
 							<Label text="Version" /><Text text="{wiz>/version}" />
-							<Label text="Erste Admin-Person" /><Text text="{= ${wiz>/createAdmin} ? ${wiz>/firstAdminName} + ' (' + ${wiz>/firstAdminUserName} + ')' : 'keine – Einrichtungscode' }" />
+							<Label text="Erste Admin-Person" /><Text text="{= ${wiz>/createAdmin} ? ${wiz>/firstAdminName} + ' (' + ${wiz>/firstAdminUserName} + ')' : 'keine (Einrichtungscode)' }" />
 						</f:SimpleForm>
 						<CheckBox id="wProvision" text="Sofort bereitstellen (Images laden, Instanz starten)" selected="{wiz>/provisionNow}" enabled="{= !${wiz>/createAdmin} }" />
 					</Page>

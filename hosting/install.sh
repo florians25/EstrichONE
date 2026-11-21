@@ -78,7 +78,7 @@ pull_image() {
   say "Image $IMAGE laden …"
   if ! docker pull -q "$IMAGE" >/dev/null; then
     docker image inspect "$IMAGE" >/dev/null 2>&1 || fail "Image $IMAGE nicht ladbar (Netz/Registry prüfen)."
-    say "Hinweis: Laden fehlgeschlagen – vorhandenes lokales Image wird verwendet."
+    say "Hinweis: Laden fehlgeschlagen. Vorhandenes lokales Image wird verwendet."
   fi
 }
 
@@ -124,7 +124,7 @@ case "$COMMAND" in
     if [ -f "$ROOT/.env" ]; then
       port="$(grep -E '^HOSTING_CONSOLE_LOCAL_PORT=' "$ROOT/.env" | cut -d= -f2)"
       if curl -fsS "http://127.0.0.1:${port:-8099}/health" 2>/dev/null; then echo; else say "Konsole antwortet nicht auf http://127.0.0.1:${port:-8099}/health"; fi
-      say "Instanzen: $(find "$ROOT/instances" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | wc -l) · Datenverzeichnis: $ROOT"
+      say "Instanzen: $(find "$ROOT/instances" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | wc -l), Datenverzeichnis: $ROOT"
     else
       say "Keine Installation unter $ROOT gefunden."
     fi

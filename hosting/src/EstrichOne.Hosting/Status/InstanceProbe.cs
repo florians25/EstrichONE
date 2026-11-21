@@ -164,7 +164,7 @@ public sealed class HttpInstanceProbe(HttpClient http) : IInstanceProbe
             {
                 var code = (int)response.StatusCode;
                 return new ModuleQueryResult(null, false, code == 401
-                    ? "Die Instanz lehnt den Instanz-Schlüssel ab (HTTP 401) – „Neu konfigurieren“ gleicht ihn an."
+                    ? "Die Instanz lehnt den Instanz-Schlüssel ab (HTTP 401). „Neu konfigurieren“ gleicht ihn an."
                     : $"HTTP {code}");
             }
 
@@ -260,7 +260,7 @@ public sealed class FakeInstanceProbe(IDockerHost docker, InstanceFiles files) :
         var env = await files.ReadEnvAsync(slug, cancellationToken);
         if (!string.Equals(env.GetValueOrDefault("ESTRICHONE_NOTICE_TOKEN"), token, StringComparison.Ordinal))
         {
-            return new ModuleQueryResult(null, false, "Die Instanz lehnt den Instanz-Schlüssel ab (HTTP 401) – „Neu konfigurieren“ gleicht ihn an.");
+            return new ModuleQueryResult(null, false, "Die Instanz lehnt den Instanz-Schlüssel ab (HTTP 401). „Neu konfigurieren“ gleicht ihn an.");
         }
 
         if (!SupportsModuleApi(env.GetValueOrDefault("ESTRICHONE_VERSION", "0.0.0")))

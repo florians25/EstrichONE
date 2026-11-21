@@ -62,7 +62,7 @@ function phaseText(phase?: string | null, until?: string | null, now = Date.now(
 	const end = Date.parse(/[zZ]|[+-]\d\d:\d\d$/.test(until) ? until : `${until}Z`);
 	const left = Math.ceil((end - now) / 1000);
 	if (Number.isNaN(left) || left <= 0) return label;
-	return `${label} · noch ${Math.floor(left / 60)}:${String(left % 60).padStart(2, "0")}`;
+	return `${label}, noch ${Math.floor(left / 60)}:${String(left % 60).padStart(2, "0")}`;
 }
 
 export default {

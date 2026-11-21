@@ -96,13 +96,13 @@ export default class TenantWizard {
 			if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(d.contactEmail ?? "")) return this.error("wEmail", "Bitte eine gültige E-Mail-Adresse angeben.");
 		}
 		if (step === 1) {
-			if (!/^[a-z][a-z0-9-]{1,30}[a-z0-9]$/.test(d.slug ?? "")) return this.error("wSlug", "3–32 Zeichen a–z, 0–9 und Bindestrich, beginnt mit Buchstabe.");
+			if (!/^[a-z][a-z0-9-]{1,30}[a-z0-9]$/.test(d.slug ?? "")) return this.error("wSlug", "3 bis 32 Zeichen (a bis z, 0 bis 9 und Bindestrich), beginnt mit einem Buchstaben.");
 			if (d.domainMode === 1 && !/^([a-z0-9]([a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}$/.test((d.domain ?? "").trim().toLowerCase())) return this.error("wDomain", "Bitte eine gültige Domain angeben.");
 		}
 		if (step === 2 && !d.version?.trim()) return this.error("wVersion", "Bitte eine Version wählen.");
 		if (step === 3 && d.createAdmin) {
 			if (!d.firstAdminName?.trim()) return this.error("wAdminName", "Bitte den Namen angeben.");
-			if (!/^[a-z][a-z0-9._-]{2,31}$/.test(d.firstAdminUserName ?? "")) return this.error("wAdminUser", "3–32 Zeichen a–z, 0–9, Punkt, Bindestrich, Unterstrich.");
+			if (!/^[a-z][a-z0-9._-]{2,31}$/.test(d.firstAdminUserName ?? "")) return this.error("wAdminUser", "3 bis 32 Zeichen (a bis z, 0 bis 9, Punkt, Bindestrich, Unterstrich).");
 		}
 		return true;
 	}

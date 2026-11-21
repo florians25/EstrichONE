@@ -6,7 +6,7 @@
 				<HBox alignItems="Center" justifyContent="SpaceBetween">
 					<VBox>
 						<Label text="Systemeinstellung folgen" labelFor="themeAuto" design="Bold" />
-						<Text text="Hell, dunkel oder hoher Kontrast – wie im Betriebssystem eingestellt." class="sapUiTinyMarginTop" />
+						<Text text="Hell, dunkel oder hoher Kontrast, wie im Betriebssystem eingestellt." class="sapUiTinyMarginTop" />
 					</VBox>
 					<Switch id="themeAuto" state="{themeDialog>/auto}" change=".onThemeAuto" customTextOn="Ja" customTextOff="Nein" />
 				</HBox>

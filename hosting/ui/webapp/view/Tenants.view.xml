@@ -52,7 +52,7 @@
 				</columns>
 				<items>
 					<ColumnListItem type="Navigation" press=".onOpen" highlight="{= ${tenants>health} === 'Unhealthy' || ${tenants>state} === 'Failed' ? 'Error' : ${tenants>health} === 'Degraded' ? 'Warning' : 'None'}">
-						<ObjectIdentifier title="{tenants>companyName}" text="{tenants>slug}{= ${tenants>customerNumber} ? ' · Kd.-Nr. ' + ${tenants>customerNumber} : ''}" />
+						<ObjectIdentifier title="{tenants>companyName}" text="{tenants>slug}{= ${tenants>customerNumber} ? ', Kd.-Nr. ' + ${tenants>customerNumber} : ''}" />
 						<VBox>
 							<Link text="{tenants>domain}" href="{tenants>url}" target="_blank" wrapping="true" />
 							<Text text="{tenants>contactName}" visible="{= !!${tenants>contactName} }" class="hostingHint" />
@@ -74,7 +74,7 @@
 						<ProgressIndicator percentValue="{parts: ['tenants>diskBytes', 'tenants>storageLimitBytes'], formatter: '.formatter.usagePercent'}"
 							state="{parts: ['tenants>diskBytes', 'tenants>storageLimitBytes'], formatter: '.formatter.usageState'}"
 							displayValue="{parts: ['tenants>diskBytes', 'tenants>storageLimitBytes'], formatter: '.formatStorage'}" showValue="true" />
-						<Text text="{path: 'tenants>cpuPercent', formatter: '.formatter.percent'} · {path: 'tenants>memoryBytes', formatter: '.formatter.bytes'}" wrapping="false" />
+						<Text text="{path: 'tenants>cpuPercent', formatter: '.formatter.percent'}, {path: 'tenants>memoryBytes', formatter: '.formatter.bytes'}" wrapping="false" />
 						<ObjectStatus text="{parts: ['tenants>backupHealthy', 'tenants>backupLastSuccess'], formatter: '.formatter.backupText'}" state="{path: 'tenants>backupHealthy', formatter: '.formatter.backupState'}" />
 						<ObjectStatus text="{path: 'tenants>certificate', formatter: '.formatter.certificateText'}" state="{path: 'tenants>certificate', formatter: '.formatter.certificateState'}" icon="{path: 'tenants>certificate', formatter: '.formatter.certificateIcon'}" />
 					</ColumnListItem>

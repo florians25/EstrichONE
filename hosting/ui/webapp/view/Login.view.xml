@@ -4,7 +4,7 @@
 		<FlexBox width="100%" alignItems="Center" justifyContent="Center" class="loginOuter">
 			<VBox class="loginCard" width="24rem" visible="{session>/ready}">
 				<Image src="{ui>/wordmark}" alt="EstrichONE" height="3rem" class="loginLogo" decorative="false" />
-				<Title text="{= ${session>/setupRequired} ? 'Ersteinrichtung der Hosting-Konsole' : 'Hosting-Konsole – Anmeldung'}" level="H1" titleStyle="H4" wrapping="true" class="sapUiSmallMarginTop" />
+				<Title text="{= ${session>/setupRequired} ? 'Ersteinrichtung der Hosting-Konsole' : 'Anmeldung an der Hosting-Konsole'}" level="H1" titleStyle="H4" wrapping="true" class="sapUiSmallMarginTop" />
 				<Text visible="{session>/setupRequired}" class="sapUiSmallMarginTop"
 					text="Den Einrichtungscode zeigt das Protokoll der Konsole: docker logs estrichone-hosting-console" />
 				<MessageStrip id="loginError" type="Error" showIcon="true" visible="{= !!${login>/error} }" text="{login>/error}" class="sapUiSmallMarginTop" />
@@ -23,7 +23,7 @@
 				<VBox visible="{session>/setupRequired}">
 					<Label text="Passwort wiederholen" labelFor="password2" required="true" class="sapUiTinyMarginTop" />
 					<Input id="password2" type="Password" value="{login>/password2}" submit=".onSubmit" />
-					<Text text="Mindestens 12 Zeichen – am besten eine Passphrase." class="sapUiTinyMarginTop hostingHint" />
+					<Text text="Mindestens 12 Zeichen, am besten eine Passphrase." class="sapUiTinyMarginTop hostingHint" />
 				</VBox>
 				<VBox visible="{login>/totpRequired}">
 					<Label text="Code aus der Authenticator-App" labelFor="totp" required="true" class="sapUiTinyMarginTop" />

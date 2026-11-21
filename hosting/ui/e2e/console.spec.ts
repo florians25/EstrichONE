@@ -241,7 +241,7 @@ test.describe.serial('Hosting-Konsole', () => {
     await ui(page, 'aRole').getByText('Nur lesen', { exact: true }).click();
     await input(page, 'aPassword').fill('Start-Lesezugang-2026');
     await ui(page, 'adminSave').click();
-    await expect(ui(page, 'adminTable')).toContainText('Nur lesen · Startpasswort');
+    await expect(ui(page, 'adminTable')).toContainText('Nur lesen, Startpasswort');
     await page.screenshot({ path: 'test-results/10-konten-rollen.png', fullPage: true });
 
     const viewer = await (await browser.newContext()).newPage();
@@ -258,7 +258,7 @@ test.describe.serial('Hosting-Konsole', () => {
     await expect(ui(viewer, 'sTotpBegin')).toBeVisible();
     await ui(viewer, 'setupNext').click();
     await expect(ui(viewer, 'instanceTable')).toBeVisible();
-    await expect(viewer.getByText('Hosting-Konsole · nur lesen')).toBeVisible();
+    await expect(viewer.getByText('Hosting-Konsole, nur lesen')).toBeVisible();
     await expect(ui(viewer, 'dashboardCreate')).toBeHidden();
     await expect(ui(viewer, 'appTable')).toContainText('Estrichbau Müller GmbH');
     await viewer.goto('/#/mandanten');

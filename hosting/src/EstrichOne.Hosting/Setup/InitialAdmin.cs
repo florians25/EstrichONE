@@ -45,7 +45,7 @@ public static class InitialAdmin
         var userName = request?.UserName?.Trim().ToLowerInvariant();
         if (request is null || Validation.CheckUserName(userName) is not null || Validation.CheckPassword(request.Password) is not null)
         {
-            return "Admin-Konto aus dem Installer ungültig – Datei verworfen.";
+            return "Admin-Konto aus dem Installer ungültig. Datei verworfen.";
         }
 
         await using var scope = services.CreateAsyncScope();
@@ -57,7 +57,7 @@ public static class InitialAdmin
         {
             if (!request.Reset && await db.Admins.AnyAsync(cancellationToken))
             {
-                return "Es gibt bereits Administratoren – Admin-Konto aus dem Installer nicht angelegt (zum Zurücksetzen: reset-admin).";
+                return "Es gibt bereits Administratoren. Admin-Konto aus dem Installer nicht angelegt (zum Zurücksetzen: reset-admin).";
             }
 
             admin = new AdminUser { UserName = userName!, DisplayName = "Administrator", PasswordHash = string.Empty, MustChangePassword = true };

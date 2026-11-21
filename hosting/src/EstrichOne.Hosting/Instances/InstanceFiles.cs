@@ -80,7 +80,7 @@ public sealed partial class InstanceFiles(IOptions<HostingOptions> options, Inst
         var edge = InstanceLayout.EdgeNetwork(slug);
         var builder = new StringBuilder();
         builder.AppendLine("# Von der EstrichONE Hosting-Konsole erzeugt – Änderungen werden beim nächsten Vorgang überschrieben.");
-        builder.AppendLine(CultureInfo.InvariantCulture, $"# Mandant: {slug} · Tarif: {Sanitize(plan.Name)}");
+        builder.AppendLine(CultureInfo.InvariantCulture, $"# Mandant: {slug}, Tarif: {Sanitize(plan.Name)}");
         builder.AppendLine();
         builder.AppendLine("x-tenant-labels: &tenant-labels");
         builder.AppendLine(CultureInfo.InvariantCulture, $"  {InstanceLayout.TenantLabel}: \"{slug}\"");

@@ -100,7 +100,7 @@ export default class SettingsController extends BaseController {
 			this.settings.setProperty("/currentPassword", "");
 			this.settings.setProperty("/newPassword", "");
 			this.settings.setProperty("/repeatPassword", "");
-			this.toast("Passwort geändert – andere Sitzungen wurden abgemeldet");
+			this.toast("Passwort geändert. Andere Sitzungen wurden abgemeldet.");
 		}
 	}
 

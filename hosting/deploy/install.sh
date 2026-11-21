@@ -76,9 +76,9 @@ case "$COMMAND" in
     [ "${#PASSWORD}" -ge 12 ] || fail "Das Passwort muss mindestens 12 Zeichen lang sein."
     write_admin "$USER_NAME" "$PASSWORD" "" true
     docker restart "$CONSOLE" >/dev/null
-    wait_admin_applied || fail "Die Konsole hat das Konto nicht übernommen – Protokoll: docker logs $CONSOLE"
+    wait_admin_applied || fail "Die Konsole hat das Konto nicht übernommen. Protokoll: docker logs $CONSOLE"
     echo "Administrator „$USER_NAME“ zurückgesetzt (alle Sitzungen beendet, Zwei-Faktor ausgeschaltet)."
-    echo "  Startpasswort: $PASSWORD   – bei der nächsten Anmeldung wird ein neues Passwort verlangt."
+    echo "  Startpasswort: $PASSWORD   (bei der nächsten Anmeldung wird ein neues Passwort verlangt)"
     exit 0 ;;
   uninstall)
     [ -f "$ROOT/compose.yml" ] || fail "Keine Installation unter $ROOT."
@@ -87,10 +87,10 @@ case "$COMMAND" in
     if [ "$PURGE" = "1" ]; then
       CONFIRM="${HOSTING_PURGE_CONFIRM:-}"
       if [ -z "$CONFIRM" ] && [ -t 0 ]; then
-        echo "ACHTUNG: Entfernt ALLE Instanzen mit Datenbanken, Dateien und Sicherungen unter $ROOT – endgültig."
+        echo "ACHTUNG: Entfernt ALLE Instanzen mit Datenbanken, Dateien und Sicherungen unter $ROOT endgültig."
         printf 'Zum Bestätigen LÖSCHEN eingeben: '; read -r CONFIRM || true
       fi
-      [ "$CONFIRM" = "LÖSCHEN" ] || fail "Nicht bestätigt – nichts entfernt."
+      [ "$CONFIRM" = "LÖSCHEN" ] || fail "Nicht bestätigt. Nichts entfernt."
       for dir in "$ROOT"/instances/*/; do
         [ -f "$dir/.env" ] || continue
         slug="$(basename "$dir")"
@@ -113,12 +113,12 @@ case "$COMMAND" in
   *) fail "Unbekannter Befehl „$COMMAND“ (install, reset-admin, uninstall)." ;;
 esac
 
-echo "EstrichONE Hosting-Konsole – Installation nach $ROOT ($IMAGE)"
+echo "EstrichONE Hosting-Konsole: Installation nach $ROOT ($IMAGE)"
 cp /opt/estrichone-hosting/compose.yml "$ROOT/compose.yml"
 ADMIN_CREATED=0
 
 if [ -f "$ROOT/.env" ]; then
-  echo "Vorhandene Installation gefunden – Konfiguration bleibt, Konsole wird auf $IMAGE gesetzt (Reparatur/Aktualisierung)."
+  echo "Vorhandene Installation gefunden. Konfiguration bleibt, Konsole wird auf $IMAGE gesetzt (Reparatur/Aktualisierung)."
   set_env HOSTING_IMAGE "$IMAGE"
   FIRST=0
 else
@@ -149,7 +149,7 @@ else
   fi
   valid_email "${HOSTING_ACME_EMAIL:-}" || fail "Ungültige E-Mail-Adresse: $HOSTING_ACME_EMAIL"
   ask HOSTING_ADMIN_USER "Benutzername des ersten Administrators" "admin"
-  valid_user "$HOSTING_ADMIN_USER" || fail "Benutzername: 3–32 Zeichen a–z, 0–9, Punkt, Bindestrich, Unterstrich; beginnt mit Buchstabe."
+  valid_user "$HOSTING_ADMIN_USER" || fail "Benutzername: 3 bis 32 Zeichen (a bis z, 0 bis 9, Punkt, Bindestrich, Unterstrich), beginnt mit einem Buchstaben."
   HOSTING_ADMIN_EMAIL="${HOSTING_ADMIN_EMAIL:-${HOSTING_ACME_EMAIL:-}}"
   valid_email "$HOSTING_ADMIN_EMAIL" || fail "Ungültige E-Mail-Adresse: $HOSTING_ADMIN_EMAIL"
   ADMIN_PASSWORD="${HOSTING_ADMIN_PASSWORD:-$(new_password)}"
@@ -195,7 +195,7 @@ docker compose -p estrichone-hosting up -d --remove-orphans --wait --wait-timeou
 # shellcheck source=/dev/null
 set -a; . ./.env; set +a
 if [ "$ADMIN_CREATED" = "1" ] && ! wait_admin_applied; then
-  echo "WARNUNG: Die Konsole hat das Admin-Konto noch nicht übernommen – Protokoll: docker logs $CONSOLE" >&2
+  echo "WARNUNG: Die Konsole hat das Admin-Konto noch nicht übernommen. Protokoll: docker logs $CONSOLE" >&2
   ADMIN_CREATED=0
 fi
 
@@ -217,7 +217,7 @@ if [ "$ADMIN_CREATED" = "1" ]; then
 else
   echo "  Anmeldung:    mit dem bestehenden Administrator (vergessen? sudo estrichone-hosting reset-admin)"
 fi
-echo "  Daten:        $ROOT  (.env nur für root lesbar – in Server-Backups verschlüsselt sichern)"
+echo "  Daten:        $ROOT  (.env nur für root lesbar, in Server-Backups verschlüsselt sichern)"
 line
 echo "  Nächste Schritte:"
 echo "   1. DNS: A/AAAA für $HOSTING_CONSOLE_DOMAIN und Wildcard *.$HOSTING_BASE_DOMAIN auf diesen Server."
@@ -225,7 +225,7 @@ if [ "${HOSTING_PROXY:-caddy}" = "extern" ]; then
   echo "   2. Proxy: Proxy-Host $HOSTING_CONSOLE_DOMAIN → http://$CONSOLE:8080 anlegen und den Proxy-Container"
   echo "      verbinden: docker network connect estrichone-hosting $HOSTING_PROXY_CONTAINER"
 else
-  echo "   2. Ports 80 und 443 (TCP, 443 auch UDP) in der Firewall freigeben – Zertifikate holt Caddy automatisch."
+  echo "   2. Ports 80 und 443 (TCP, 443 auch UDP) in der Firewall freigeben. Zertifikate holt Caddy automatisch."
 fi
 echo "   3. Konsole öffnen, anmelden, Einrichtungsassistent abschließen, erste Instanz anlegen."
 echo "  Verwaltung: sudo estrichone-hosting status | update | logs | reset-admin | uninstall"

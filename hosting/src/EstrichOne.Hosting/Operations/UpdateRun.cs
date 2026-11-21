@@ -66,7 +66,7 @@ public sealed class UpdateRun
     /// <summary>1. Ankündigung: Countdown für alle Benutzer, neue Anmeldungen gesperrt, Apps gleichen ab.</summary>
     public async Task AnnounceAsync(CancellationToken cancellationToken)
     {
-        _log.Write($"Phase 1/3 – Ankündigung: Benutzer werden informiert, Update auf {_to} beginnt in {Clock(_settings.UpdateAnnounceSeconds)}.");
+        _log.Write($"Phase 1/3, Ankündigung: Benutzer werden informiert, Update auf {_to} beginnt in {Clock(_settings.UpdateAnnounceSeconds)}.");
         await WriteAsync(Announce, _settings.UpdateAnnounceSeconds, null, cancellationToken);
         await WaitAsync(_settings.UpdateAnnounceSeconds, cancellationToken);
     }
@@ -74,7 +74,7 @@ public sealed class UpdateRun
     /// <summary>2. Update: Die Suite beendet alle Sitzungen (prüft alle 2 s) und zeigt den Wartungsbildschirm.</summary>
     public async Task BeginUpdateAsync(CancellationToken cancellationToken)
     {
-        _log.Write("Phase 2/3 – Update: Sitzungen werden beendet, Wartungsbildschirm aktiv.");
+        _log.Write("Phase 2/3, Update: Sitzungen werden beendet, Wartungsbildschirm aktiv.");
         _updateStarted = _clock.GetUtcNow();
         await WriteAsync(Update, _settings.UpdateMinimumSeconds, null, cancellationToken);
         await WaitAsync(Math.Min(3, _settings.UpdateMinimumSeconds), cancellationToken);
@@ -92,11 +92,11 @@ public sealed class UpdateRun
             }
         }
 
-        _log.Write($"Phase 3/3 – Abschluss: Version {_to} läuft, Freigabe in {Clock(_settings.UpdateFinishSeconds)}.");
+        _log.Write($"Phase 3/3, Abschluss: Version {_to} läuft, Freigabe in {Clock(_settings.UpdateFinishSeconds)}.");
         await WriteAsync(Finish, _settings.UpdateFinishSeconds, null, cancellationToken);
         await WaitAsync(_settings.UpdateFinishSeconds, cancellationToken);
         Release();
-        _log.Write($"Freigegeben – Update-Ablauf insgesamt {(int)(_clock.GetUtcNow() - _started).TotalSeconds} s.");
+        _log.Write($"Freigegeben. Update-Ablauf insgesamt {(int)(_clock.GetUtcNow() - _started).TotalSeconds} s.");
     }
 
     /// <summary>Rücknahme läuft (Wartungsbildschirm bleibt).</summary>
@@ -119,7 +119,7 @@ public sealed class UpdateRun
 
         if (running)
         {
-            _log.Write($"Benutzer sehen „Update fehlgeschlagen – {_from} läuft weiter“, Freigabe in {Clock(_settings.UpdateFinishSeconds)}.");
+            _log.Write($"Benutzer sehen „Update fehlgeschlagen, {_from} läuft weiter“, Freigabe in {Clock(_settings.UpdateFinishSeconds)}.");
             await WriteAsync(Failed, _settings.UpdateFinishSeconds, message, cancellationToken);
             await WaitAsync(_settings.UpdateFinishSeconds, cancellationToken);
             Release();

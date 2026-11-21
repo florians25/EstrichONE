@@ -57,7 +57,7 @@ export default class PlansController extends BaseController {
 		}, dialog);
 		if (result) {
 			dialog.close();
-			this.toast(result.reconfigured ? `Gespeichert – auf ${result.reconfigured} Instanz(en) angewendet` : "Gespeichert");
+			this.toast(result.reconfigured ? `Gespeichert und auf ${result.reconfigured} Instanz(en) angewendet` : "Gespeichert");
 			await this.load();
 		}
 	}

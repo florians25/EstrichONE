@@ -74,10 +74,10 @@
 							<items>
 								<ColumnListItem>
 									<ObjectIdentifier title="{settings>userName}" text="{settings>displayName}" />
-									<ObjectStatus text="{= ${settings>role} === 'Viewer' ? 'Nur lesen' : 'Administrator' }{= ${settings>mustChangePassword} ? ' · Startpasswort' : '' }"
+									<ObjectStatus text="{= ${settings>role} === 'Viewer' ? 'Nur lesen' : 'Administrator' }{= ${settings>mustChangePassword} ? ', Startpasswort' : '' }"
 										icon="{= ${settings>role} === 'Viewer' ? 'sap-icon://show' : 'sap-icon://key-user-settings' }" />
 									<ObjectStatus text="{= ${settings>totpEnabled} ? 'an' : 'aus' }" state="{= ${settings>totpEnabled} ? 'Success' : 'Warning' }" />
-									<Text text="{path: 'settings>lastLoginAt', formatter: '.formatter.dateTime'}{= ${settings>locked} ? ' · gesperrt' : '' }" />
+									<Text text="{path: 'settings>lastLoginAt', formatter: '.formatter.dateTime'}{= ${settings>locked} ? ', gesperrt' : '' }" />
 									<HBox justifyContent="End" class="eoWrite">
 										<Button icon="sap-icon://switch-views" type="Transparent" tooltip="{= ${settings>role} === 'Viewer' ? 'Zum Administrator machen' : 'Auf „nur lesen“ setzen' }"
 											press=".onToggleRole" enabled="{= ${settings>id} !== ${session>/user/id} }" />
@@ -104,7 +104,7 @@
 							<Label text="Registry" /><Text text="{settings>/system/registry}" />
 							<Label text="Datenverzeichnis" /><Text text="{settings>/system/root}" />
 							<Label text="Sicherungen" /><Text text="{= ${settings>/system/backupRoot} || 'im Instanzverzeichnis (backup-repository)' }" />
-							<Label text="Konsolenversion" /><Text text="{settings>/system/consoleVersion}{= ${settings>/system/simulation} ? ' · Simulation' : '' }" />
+							<Label text="Konsolenversion" /><Text text="{settings>/system/consoleVersion}{= ${settings>/system/simulation} ? ', Simulation' : '' }" />
 						</f:SimpleForm>
 						<f:SimpleForm editable="true" layout="ColumnLayout" columnsM="1" columnsL="1" columnsXL="1" title="Konsole aktualisieren">
 							<Label text="Verfügbar" />
@@ -156,7 +156,7 @@
 						<Label text="Startpasswort (mind. 12 Zeichen)" required="true" labelFor="aPassword" />
 						<Input id="aPassword" type="Password" value="{settings>/newAdmin/password}" />
 						<Label text="" />
-						<Text class="hostingHint" text="„Nur lesen“ sieht Zustand, Protokolle und Ereignisse, ändert aber nichts – passend für Bereitschaft und Support. Bei der ersten Anmeldung legt die Person ein eigenes Passwort fest." />
+						<Text class="hostingHint" text="„Nur lesen“ sieht Zustand, Protokolle und Ereignisse, ändert aber nichts. Passend für Bereitschaft und Support. Bei der ersten Anmeldung legt die Person ein eigenes Passwort fest." />
 					</f:SimpleForm>
 				</content>
 				<beginButton><Button id="adminSave" text="Anlegen" type="Emphasized" press=".onAdminSave" /></beginButton>

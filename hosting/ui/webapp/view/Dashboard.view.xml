@@ -59,7 +59,7 @@
 					</GenericTile>
 				</FlexBox>
 				<Table id="instanceTable" items="{path: 'instances>/items', sorter: [{path: 'rank', descending: true}, {path: 'companyName'}]}" class="sapUiSmallMarginBottom"
-					noDataText="Noch keine Instanzen – mit „Mandant anlegen“ die erste bereitstellen." growing="true" growingThreshold="15" popinLayout="GridSmall">
+					noDataText="Noch keine Instanzen. Mit „Mandant anlegen“ stellen Sie die erste bereit." growing="true" growingThreshold="15" popinLayout="GridSmall">
 					<headerToolbar>
 						<OverflowToolbar>
 							<Title text="Zustand aller Instanzen" level="H2" />
@@ -97,13 +97,13 @@
 								<ObjectStatus text="{path: 'instances>certificate', formatter: '.formatter.certificateText'}" state="{path: 'instances>certificate', formatter: '.formatter.certificateState'}" icon="{path: 'instances>certificate', formatter: '.formatter.certificateIcon'}" />
 								<Text text="{instances>domain}" class="hostingHint" wrapping="false" />
 							</VBox>
-							<Text text="{= ${instances>hints}.join(' · ') || '–' }" maxLines="2" />
+							<Text text="{= ${instances>hints}.join(', ') || '–' }" maxLines="2" />
 						</ColumnListItem>
 					</items>
 				</Table>
 				<l:Grid defaultSpan="XL6 L6 M12 S12" hSpacing="1" vSpacing="1">
 					<Panel headerText="Handlungsbedarf" class="sapUiNoContentPadding">
-						<Table id="problemTable" items="{dashboard>/problems}" noDataText="Alles in Ordnung – keine gestörten Instanzen." mode="None">
+						<Table id="problemTable" items="{dashboard>/problems}" noDataText="Alles in Ordnung, keine gestörten Instanzen." mode="None">
 							<columns>
 								<Column><Text text="Mandant" /></Column>
 								<Column width="9rem"><Text text="Zustand" /></Column>
@@ -121,21 +121,21 @@
 					<Panel headerText="Server">
 						<f:SimpleForm editable="false" layout="ColumnLayout" columnsM="1" columnsL="1" columnsXL="1">
 							<Label text="Docker" />
-							<Text text="{dashboard>/system/docker/serverVersion} · Compose {dashboard>/system/docker/composeVersion}" />
+							<Text text="{dashboard>/system/docker/serverVersion}, Compose {dashboard>/system/docker/composeVersion}" />
 							<Label text="System" />
-							<Text text="{dashboard>/system/docker/operatingSystem} · {dashboard>/system/docker/cpus} CPU · {path: 'dashboard>/system/docker/memoryBytes', formatter: '.formatter.bytes'} RAM" />
+							<Text text="{dashboard>/system/docker/operatingSystem}, {dashboard>/system/docker/cpus} CPU, {path: 'dashboard>/system/docker/memoryBytes', formatter: '.formatter.bytes'} RAM" />
 							<Label text="Container" />
 							<Text text="{dashboard>/system/docker/containersRunning} laufend von {dashboard>/system/docker/containers}" />
 							<Label text="Last (Instanzen)" />
-							<Text text="CPU {path: 'dashboard>/cpuPercent', formatter: '.formatter.percent'} · RAM {path: 'dashboard>/memoryBytes', formatter: '.formatter.bytes'}" />
+							<Text text="CPU {path: 'dashboard>/cpuPercent', formatter: '.formatter.percent'}, RAM {path: 'dashboard>/memoryBytes', formatter: '.formatter.bytes'}" />
 							<Label text="Datenträger" />
 							<ProgressIndicator percentValue="{parts: [{path: 'dashboard>/diskUsedBytes'}, {path: 'dashboard>/system/diskTotalBytes'}], formatter: '.formatter.usagePercent'}"
 								state="{parts: [{path: 'dashboard>/diskUsedBytes'}, {path: 'dashboard>/system/diskTotalBytes'}], formatter: '.formatter.usageState'}"
 								displayValue="{path: 'dashboard>/system/diskFreeBytes', formatter: '.formatter.bytes'} frei" showValue="true" />
 							<Label text="Reverse Proxy" />
-							<Text text="{= ${dashboard>/system/proxyMode} === 'caddy' ? 'Mitgelieferter Caddy' : 'Externer Proxy'}{= ${dashboard>/system/proxyReloadedAt} ? ' · zuletzt neu geladen ' : ''}{path: 'dashboard>/system/proxyReloadedAt', formatter: '.formatter.ago'}" />
+							<Text text="{= ${dashboard>/system/proxyMode} === 'caddy' ? 'Mitgelieferter Caddy' : 'Externer Proxy'}{= ${dashboard>/system/proxyReloadedAt} ? ', zuletzt neu geladen ' : ''}{path: 'dashboard>/system/proxyReloadedAt', formatter: '.formatter.ago'}" />
 							<Label text="Konsole" />
-							<Text text="Version {dashboard>/system/consoleVersion} · {dashboard>/runningOperations} Vorgänge offen" />
+							<Text text="Version {dashboard>/system/consoleVersion}, {dashboard>/runningOperations} Vorgänge offen" />
 						</f:SimpleForm>
 					</Panel>
 					<Panel headerText="Versionen im Einsatz">
@@ -160,8 +160,8 @@
 							</Toolbar>
 						</headerToolbar>
 						<List items="{dashboard>/recentEvents}" noDataText="Noch keine Ereignisse.">
-							<StandardListItem title="{dashboard>action}{= ${dashboard>tenantSlug} ? ' · ' + ${dashboard>tenantSlug} : ''}"
-								description="{dashboard>actor} · {path: 'dashboard>at', formatter: '.formatter.dateTime'}"
+							<StandardListItem title="{dashboard>action}{= ${dashboard>tenantSlug} ? ', ' + ${dashboard>tenantSlug} : ''}"
+								description="{dashboard>actor}, {path: 'dashboard>at', formatter: '.formatter.dateTime'}"
 								icon="{= ${dashboard>success} ? 'sap-icon://accept' : 'sap-icon://error'}"
 								highlight="{= ${dashboard>success} ? 'None' : 'Error'}" />
 						</List>

@@ -12,13 +12,13 @@
 		<Label text="Benutzer" labelFor="nSmtpUser" />
 		<Input id="nSmtpUser" value="{notify>/smtpUser}" maxLength="200" />
 		<Label text="Passwort" labelFor="nSmtpPassword" />
-		<Input id="nSmtpPassword" type="Password" value="{notify>/smtpPassword}" placeholder="{= ${notify>/hasSmtpPassword} ? 'gespeichert – leer lassen zum Beibehalten' : '' }" />
+		<Input id="nSmtpPassword" type="Password" value="{notify>/smtpPassword}" placeholder="{= ${notify>/hasSmtpPassword} ? 'gespeichert, leer lassen zum Beibehalten' : '' }" />
 		<Label text="Absender" labelFor="nSmtpFrom" />
 		<Input id="nSmtpFrom" value="{notify>/smtpFrom}" placeholder="konsole@firma.de" maxLength="254" />
 		<core:Title text="Webhook" />
 		<Label text="Adresse" labelFor="nWebhook" />
 		<Input id="nWebhook" value="{notify>/webhookUrl}" placeholder="https://hooks.slack.com/… oder Mattermost/Teams" maxLength="500" />
 		<Label text="" />
-		<Text text="Die Konsole meldet gestörte Instanzen, veraltete Sicherungen, ablaufende Zertifikate, fehlgeschlagene Vorgänge und knappen Speicherplatz – einmal beim Auftreten und einmal, wenn es behoben ist." class="hostingHint" />
+		<Text text="Die Konsole meldet gestörte Instanzen, veraltete Sicherungen, ablaufende Zertifikate, fehlgeschlagene Vorgänge und knappen Speicherplatz: einmal beim Auftreten und einmal, wenn es behoben ist." class="hostingHint" />
 	</f:SimpleForm>
 </core:FragmentDefinition>

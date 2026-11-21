@@ -145,7 +145,7 @@ public static class NoticeEndpoints
         notice.UpdatedAt = now;
         var label = notice.Kind == NoticeKind.Maintenance ? "Wartung" : "Ankündigung";
         await audit.WriteAsync(id is null ? $"{label} angelegt" : $"{label} geändert",
-            details: $"{notice.Title} · {(all ? "alle Instanzen" : $"{targets.Count} Instanz(en)")} · {starts:yyyy-MM-dd HH:mm}–{ends:yyyy-MM-dd HH:mm} UTC",
+            details: $"{notice.Title}, {(all ? "alle Instanzen" : $"{targets.Count} Instanz(en)")}, {starts:yyyy-MM-dd HH:mm} bis {ends:yyyy-MM-dd HH:mm} UTC",
             cancellationToken: cancellationToken);
         await distributor.DistributeAsync(force: false, cancellationToken);
         return id is null ? Results.Created($"/api/notices/{notice.Id}", new { notice.Id }) : Results.NoContent();

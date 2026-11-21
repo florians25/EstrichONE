@@ -10,9 +10,9 @@
 				<CheckBox text="Vor jeder Aktualisierung sichern (empfohlen)" selected="{update>/backupFirst}" wrapping="true" />
 				<CheckBox text="Auch angehaltene Instanzen (Version wird beim nächsten Start aktiv)" selected="{update>/includeStopped}" wrapping="true" />
 				<Text class="hostingHint sapUiTinyMarginTop"
-					text="Neueste Version: {= ${update>/latest} || 'nicht ermittelbar' } · Standard für neue Instanzen: {update>/defaultVersion}" />
+					text="Neueste Version: {= ${update>/latest} || 'nicht ermittelbar' }, Standard für neue Instanzen: {update>/defaultVersion}" />
 				<MessageStrip id="updateAllAffected" type="{= ${update>/affected} > 0 ? 'Information' : 'Success' }" showIcon="true" class="sapUiSmallMarginTop"
-					text="{= ${update>/affected} > 0 ? 'Betroffen: ' + ${update>/affected} + ' Instanz(en) – ' + ${update>/affectedNames} : 'Alle Instanzen haben diese oder eine neuere Version.' }" />
+					text="{= ${update>/affected} > 0 ? 'Betroffen: ' + ${update>/affected} + ' Instanz(en): ' + ${update>/affectedNames} : 'Alle Instanzen haben diese oder eine neuere Version.' }" />
 			</VBox>
 		</content>
 		<beginButton>

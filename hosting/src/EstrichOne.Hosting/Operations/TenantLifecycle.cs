@@ -133,7 +133,7 @@ public sealed class TenantLifecycle(
         if (operation.Kind is OperationKind.Start or OperationKind.Restart or OperationKind.Rollback or OperationKind.Unlock or OperationKind.Reconfigure
             && UpdateRun.Clear(layout, tenant.Slug))
         {
-            log.Write("Wartungsbildschirm eines abgebrochenen Updates beendet – die Instanz ist wieder freigegeben.");
+            log.Write("Wartungsbildschirm eines abgebrochenen Updates beendet. Die Instanz ist wieder freigegeben.");
         }
 
         tenant.LastError = null;
@@ -186,7 +186,7 @@ public sealed class TenantLifecycle(
             var state = await probe.ProbeAsync(tenant.Slug, cancellationToken);
             if (state.SetupRequired == false)
             {
-                log.Write("Die Instanz ist bereits eingerichtet – nichts zu tun.");
+                log.Write("Die Instanz ist bereits eingerichtet. Nichts zu tun.");
                 return;
             }
 
@@ -266,7 +266,7 @@ public sealed class TenantLifecycle(
             // Images nicht ladbar: Version in der .env zurücksetzen, die Instanz läuft unverändert weiter.
             tenant.Version = previous;
             await files.UpdateEnvAsync(tenant.Slug, InstanceFiles.EnvValuesFor(tenant, Settings), cancellationToken);
-            log.Write($"Version {version} nicht verfügbar – {previous} bleibt aktiv.");
+            log.Write($"Version {version} nicht verfügbar. {previous} bleibt aktiv.");
             throw;
         }
 
@@ -292,17 +292,17 @@ public sealed class TenantLifecycle(
                     await BackupAsync(tenant, log, cancellationToken);
                     tenant.RollbackSnapshot = SnapshotReader.Read(StatusDirectory(tenant)) is [var newest, ..] ? newest.Id : null;
                     log.Write(tenant.RollbackSnapshot is null
-                        ? "Vorab-Sicherung erstellt (Snapshot-Liste nicht lesbar – Zurücksetzen nur ohne Datenstand)."
-                        : $"Vorab-Sicherung {tenant.RollbackSnapshot[..8]} – Grundlage für das Zurücksetzen.");
+                        ? "Vorab-Sicherung erstellt (Snapshot-Liste nicht lesbar, Zurücksetzen nur ohne Datenstand)."
+                        : $"Vorab-Sicherung {tenant.RollbackSnapshot[..8]} als Grundlage für das Zurücksetzen.");
                 }
                 catch (Exception exception)
                 {
                     tenant.Version = previous;
                     await files.UpdateEnvAsync(tenant.Slug, InstanceFiles.EnvValuesFor(tenant, Settings), cancellationToken);
-                    log.Write($"Vorab-Sicherung fehlgeschlagen – Aktualisierung abgebrochen, {previous} bleibt aktiv.");
+                    log.Write($"Vorab-Sicherung fehlgeschlagen. Aktualisierung abgebrochen, {previous} bleibt aktiv.");
                     if (run is not null && exception is not OperationCanceledException)
                     {
-                        await run.FailAsync($"Vorab-Sicherung fehlgeschlagen – Version {previous} läuft weiter.", running: true, cancellationToken);
+                        await run.FailAsync($"Vorab-Sicherung fehlgeschlagen. Version {previous} läuft weiter.", running: true, cancellationToken);
                     }
 
                     throw;
@@ -339,17 +339,17 @@ public sealed class TenantLifecycle(
                     }
                     catch (Exception rollbackError) when (rollbackError is not OperationCanceledException && run is not null)
                     {
-                        await run.FailAsync($"Update auf {version} fehlgeschlagen, Rücknahme ebenfalls – der Betreiber ist informiert.", running: false, cancellationToken);
+                        await run.FailAsync($"Update auf {version} fehlgeschlagen, Rücknahme ebenfalls. Der Betreiber ist informiert.", running: false, cancellationToken);
                         throw;
                     }
 
                     if (run is not null)
                     {
-                        await run.FailAsync($"Update auf {version} fehlgeschlagen – Version {previous} läuft wieder.", running: true, cancellationToken);
+                        await run.FailAsync($"Update auf {version} fehlgeschlagen. Version {previous} läuft wieder.", running: true, cancellationToken);
                     }
 
                     throw new RolledBackException(
-                        $"Aktualisierung auf {version} fehlgeschlagen ({exception.Message}). Automatisch auf {previous} zurückgesetzt – die Instanz läuft wieder.");
+                        $"Aktualisierung auf {version} fehlgeschlagen ({exception.Message}). Automatisch auf {previous} zurückgesetzt. Die Instanz läuft wieder.");
                 }
 
                 if (tenant.State == TenantState.Failed)
@@ -364,13 +364,13 @@ public sealed class TenantLifecycle(
             }
             else
             {
-                log.Write("Instanz ist angehalten – die neue Version wird beim nächsten Start aktiv.");
+                log.Write("Die Instanz ist angehalten. Die neue Version wird beim nächsten Start aktiv.");
             }
         }
         catch (Exception exception) when (run is { Active: true } && exception is not RolledBackException)
         {
             // Unerwarteter Abbruch mitten im Ablauf: Wartungsbildschirm mit Hinweis stehen lassen (Freigabe per Neustart).
-            await run.FailAsync("Update unterbrochen – der Betreiber ist informiert.", running: false, CancellationToken.None);
+            await run.FailAsync("Update unterbrochen. Der Betreiber ist informiert.", running: false, CancellationToken.None);
             throw;
         }
     }
@@ -405,7 +405,7 @@ public sealed class TenantLifecycle(
     {
         var target = tenant.PreviousVersion ?? throw new InvalidOperationException("Keine vorherige Version zum Zurücksetzen bekannt.");
         var snapshot = tenant.RollbackSnapshot;
-        log.Write($"Zurücksetzen {tenant.Version} → {target}{(snapshot is null ? " (ohne Datenstand – keine Vorab-Sicherung)" : $" mit Datenstand {snapshot[..8]}")}.");
+        log.Write($"Zurücksetzen {tenant.Version} → {target}{(snapshot is null ? " (ohne Datenstand, keine Vorab-Sicherung)" : $" mit Datenstand {snapshot[..8]}")}.");
         tenant.Version = target;
         await PrepareAsync(tenant, plan, log, cancellationToken);
         await ComposeAsync(tenant, ["pull", "--policy", "missing"], PullTimeout, log, cancellationToken);
@@ -452,7 +452,7 @@ public sealed class TenantLifecycle(
             await SetStateAsync(tenant, TenantState.Running, cancellationToken);
         }
 
-        log.Write("Wiederherstellung abgeschlossen – die Suite aktualisiert beim Start das Datenbankschema.");
+        log.Write("Wiederherstellung abgeschlossen. Die Suite aktualisiert beim Start das Datenbankschema.");
     }
 
     /// <summary>Dienst „restore“ der Suite: Datenbank in neue Datenbank einspielen und tauschen, Dateien zurückspielen.</summary>

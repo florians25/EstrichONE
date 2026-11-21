@@ -79,7 +79,7 @@ public static partial class Validation
 
         if (labels.Any(label => !LabelPattern().IsMatch(label)))
         {
-            return "Die Domain enthält unzulässige Zeichen (erlaubt: a–z, 0–9, Bindestrich; Umlaute als Punycode xn--…).";
+            return "Die Domain enthält unzulässige Zeichen (erlaubt: a bis z, 0 bis 9, Bindestrich; Umlaute als Punycode xn--…).";
         }
 
         if (labels.All(label => label.All(char.IsAsciiDigit)) || labels[^1].All(char.IsAsciiDigit))
@@ -161,7 +161,7 @@ public static partial class Validation
     public static string? CheckUserName(string? userName) =>
         userName is not null && UserNamePattern().IsMatch(userName)
             ? null
-            : "Der Benutzername muss 3–32 Zeichen lang sein (a–z, 0–9, Punkt, Bindestrich, Unterstrich) und mit einem Buchstaben beginnen.";
+            : "Der Benutzername muss 3 bis 32 Zeichen lang sein (a bis z, 0 bis 9, Punkt, Bindestrich, Unterstrich) und mit einem Buchstaben beginnen.";
 
     /// <summary>Häufige Passwörter und Muster, die trotz Länge sofort erraten werden.</summary>
     private static readonly string[] WeakPasswords =
@@ -183,7 +183,7 @@ public static partial class Validation
 
         if (password.Distinct().Count() < 6)
         {
-            return "Das Passwort ist zu gleichförmig – bitte mehr verschiedene Zeichen verwenden (z. B. eine Passphrase aus mehreren Wörtern).";
+            return "Das Passwort ist zu gleichförmig. Bitte mehr verschiedene Zeichen verwenden (z. B. eine Passphrase aus mehreren Wörtern).";
         }
 
         var core = new string(password.ToLowerInvariant().Where(char.IsLetter).ToArray());

@@ -204,7 +204,7 @@ cmd_snapshots() {
 cmd_prune() {
   while read -r repo; do
     # Backup-Ziele sind „nur anhängen“: Löschen ist dort absichtlich nicht möglich (Schutz vor Verschlüsselungstrojanern).
-    if [[ "$repo" == target:* ]]; then log "Aufbewahrung: $(label "$repo") ist nur-anhängen – übersprungen."; continue; fi
+    if [[ "$repo" == target:* ]]; then log "Aufbewahrung: $(label "$repo") ist nur-anhängen. Übersprungen."; continue; fi
     log "Aufbewahrung anwenden ($repo) …"
     # shellcheck disable=SC2086
     rr "$repo" forget --tag "$TAG" $KEEP --prune
@@ -266,7 +266,7 @@ cmd_restore() {
 
   log "Prüfe Snapshot $snapshot in $(label "$repo") …"
   rr "$repo" --no-lock snapshots --tag "$TAG" "$snapshot" >/dev/null || fail "Snapshot $snapshot nicht gefunden."
-  rr "$repo" --no-lock check --read-data-subset=5% || fail "Repository beschädigt – Wiederherstellung abgebrochen."
+  rr "$repo" --no-lock check --read-data-subset=5% || fail "Repository beschädigt. Wiederherstellung abgebrochen."
 
   log "Stelle Daten wieder her …"
   rr "$repo" --no-lock restore "$snapshot" --tag "$TAG" --target "$dir"
@@ -428,14 +428,14 @@ cmd_restore_request() {
 
   restore_status running "Sicherung prüfen" 5 "Sicherung wird geprüft"
   rr "$repo" --no-lock snapshots --tag "$TAG" "$RESTORE_SNAPSHOT" >/dev/null \
-    || { restore_status failed "Abgebrochen" 5 "Sicherung nicht gefunden – nichts verändert"; return 1; }
+    || { restore_status failed "Abgebrochen" 5 "Sicherung nicht gefunden. Nichts verändert"; return 1; }
   rr "$repo" --no-lock check --read-data-subset=2% >/dev/null \
-    || { restore_status failed "Abgebrochen" 10 "Repository beschädigt – nichts verändert"; return 1; }
+    || { restore_status failed "Abgebrochen" 10 "Repository beschädigt. Nichts verändert"; return 1; }
   restore_status running "Daten holen" 20 "Datenbank und Dateien werden aus der Sicherung geholt"
   rr "$repo" --no-lock restore "$RESTORE_SNAPSHOT" --tag "$TAG" --target "$dir" >/dev/null \
-    || { restore_status failed "Abgebrochen" 20 "Sicherung nicht lesbar – nichts verändert"; return 1; }
+    || { restore_status failed "Abgebrochen" 20 "Sicherung nicht lesbar. Nichts verändert"; return 1; }
   local dump; dump="$(find "$dir" -name database.dump | head -n 1)"
-  [[ -f "$dump" ]] || { restore_status failed "Abgebrochen" 40 "Im Snapshot fehlt der Datenbank-Dump – nichts verändert"; return 1; }
+  [[ -f "$dump" ]] || { restore_status failed "Abgebrochen" 40 "Im Snapshot fehlt der Datenbank-Dump. Nichts verändert"; return 1; }
 
   restore_status running "Datenbank einspielen" 50 "Datenbank wird in eine neue Datenbank eingespielt"
   local fresh="${PGDATABASE}_wiederherstellung" previous="${PGDATABASE}_vor_wiederherstellung"
@@ -443,7 +443,7 @@ cmd_restore_request() {
       && pg_restore --no-owner --exit-on-error --dbname="$fresh" "$dump" \
       && psql -v ON_ERROR_STOP=1 -q -d "$fresh" -c "UPDATE system_state SET instance_epoch = gen_random_uuid()"; }; then
     psql -q -d postgres -c "DROP DATABASE IF EXISTS $fresh"
-    restore_status failed "Abgebrochen" 50 "Datenbank nicht einspielbar – nichts verändert"; return 1
+    restore_status failed "Abgebrochen" 50 "Datenbank nicht einspielbar. Nichts verändert"; return 1
   fi
 
   restore_status running "Datenbank tauschen" 75 "Neue Datenbank wird aktiviert"
@@ -452,9 +452,9 @@ cmd_restore_request() {
   for attempt in 1 2 3 4 5 6 7 8 9 10; do
     psql -q -d postgres -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname IN ('$PGDATABASE', '$fresh') AND pid <> pg_backend_pid()" >/dev/null
     if psql -q -d postgres -c "ALTER DATABASE $PGDATABASE RENAME TO $previous" 2>/dev/null; then swapped=1; break; fi
-    log "Datenbank noch in Benutzung – Versuch $attempt"; sleep 1
+    log "Datenbank noch in Benutzung. Versuch $attempt"; sleep 1
   done
-  [[ $swapped -eq 1 ]] || { restore_status failed "Abgebrochen" 75 "Datenbank ließ sich nicht tauschen – nichts verändert"; return 1; }
+  [[ $swapped -eq 1 ]] || { restore_status failed "Abgebrochen" 75 "Datenbank ließ sich nicht tauschen. Nichts verändert"; return 1; }
   for attempt in 1 2 3 4 5 6 7 8 9 10; do
     psql -q -d postgres -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '$fresh' AND pid <> pg_backend_pid()" >/dev/null
     if psql -q -d postgres -c "ALTER DATABASE $fresh RENAME TO $PGDATABASE" 2>/dev/null; then swapped=2; break; fi
@@ -462,7 +462,7 @@ cmd_restore_request() {
   done
   if [[ $swapped -ne 2 ]]; then
     psql -q -d postgres -c "ALTER DATABASE $previous RENAME TO $PGDATABASE" >/dev/null 2>&1 || true
-    restore_status failed "Abgebrochen" 80 "Neue Datenbank ließ sich nicht aktivieren – alter Stand bleibt"; return 1
+    restore_status failed "Abgebrochen" 80 "Neue Datenbank ließ sich nicht aktivieren. Alter Stand bleibt"; return 1
   fi
 
   restore_status running "Dateien zurückspielen" 85 "Fotos, Dokumente und Videos werden zurückgespielt"
@@ -485,7 +485,7 @@ cmd_restore_request() {
     done
   fi
   rm -rf "$dir"
-  restore_status restored "Datenbankschema aktualisieren" 95 "Daten zurückgespielt – EstrichONE aktualisiert das Datenbankschema"
+  restore_status restored "Datenbankschema aktualisieren" 95 "Daten zurückgespielt. EstrichONE aktualisiert das Datenbankschema"
 }
 
 # .env der gesicherten Installation (Neuinstallation per Installer-Modus „restore“); RESTORE_FROM = Quelle.
@@ -494,7 +494,7 @@ cmd_dump_config() {
   # Meldungen nach stderr – stdout ist die .env.
   listing="$(rr "$repo" --no-lock ls latest --tag "$TAG")" || { log "FEHLER: Sicherung nicht lesbar (Quelle oder Schlüssel falsch)." >&2; exit 1; }
   path="$(grep -m 1 '/config/estrichone.env$' <<<"$listing")" \
-    || { log "FEHLER: Keine Konfiguration (config/estrichone.env) in der neuesten Sicherung – .env von Hand anlegen." >&2; exit 1; }
+    || { log "FEHLER: Keine Konfiguration (config/estrichone.env) in der neuesten Sicherung. .env von Hand anlegen." >&2; exit 1; }
   rr "$repo" --no-lock dump latest --tag "$TAG" "$path"
 }
 
@@ -506,7 +506,7 @@ cmd_pin_ca() {
   pem="$(sed -n 's/.*"caCertificatePem":"\([^"]*\)".*/\1/p' <<<"$json" | sed 's/\\n/\n/g; s/\\r//g; s/\\u002B/+/g; s/\\\//\//g')"
   [[ -n "$pem" ]] || fail "Antwort enthält kein Zertifikat."
   actual="$(openssl x509 -outform der <<<"$pem" | sha256sum | cut -d' ' -f1)"
-  [[ "$actual" == "$expected" ]] || fail "Fingerabdruck stimmt nicht (erwartet $expected, erhalten $actual) – Abbruch."
+  [[ "$actual" == "$expected" ]] || fail "Fingerabdruck stimmt nicht (erwartet $expected, erhalten $actual). Abbruch."
   printf '%s\n' "$pem"
 }
 

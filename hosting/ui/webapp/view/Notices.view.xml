@@ -30,7 +30,7 @@
 						</VBox>
 						<VBox>
 							<ObjectStatus text="{notices>status}" state="{= ${notices>status} === 'aktiv' ? 'Success' : ${notices>status} === 'geplant' ? 'Information' : 'None'}" />
-							<Text text="{path: 'notices>startsAt', formatter: '.formatter.dateTime'} – {path: 'notices>endsAt', formatter: '.formatter.dateTime'}" />
+							<Text text="{path: 'notices>startsAt', formatter: '.formatter.dateTime'} bis {path: 'notices>endsAt', formatter: '.formatter.dateTime'}" />
 						</VBox>
 						<Text text="{parts: ['notices>allTenants', 'notices>targets'], formatter: '.targetsText'}" />
 						<ObjectStatus text="{path: 'notices>targets', formatter: '.syncText'}" state="{path: 'notices>targets', formatter: '.syncState'}" tooltip="{path: 'notices>targets', formatter: '.syncDetails'}" />

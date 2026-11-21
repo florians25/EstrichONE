@@ -136,7 +136,7 @@ export default class TenantsController extends BaseController {
 		this.wizard ??= new TenantWizard(this.getView()!);
 		const created = await this.wizard.open();
 		if (created) {
-			this.toast("Mandant angelegt – Bereitstellung läuft");
+			this.toast("Mandant angelegt. Die Bereitstellung läuft.");
 			this.navTo("tenant", { id: created.id });
 		}
 	}

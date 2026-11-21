@@ -18,7 +18,7 @@
 						<Title text="{detail>/summary/companyName}" />
 					</uxap:snappedHeading>
 					<uxap:expandedContent>
-						<Text text="{detail>/summary/slug} · {detail>/summary/domain}" />
+						<Text text="{detail>/summary/slug}, {detail>/summary/domain}" />
 					</uxap:expandedContent>
 					<uxap:snappedContent>
 						<Text text="{detail>/summary/slug}" />
@@ -90,10 +90,10 @@
 									text="Gesperrt seit {path: 'detail>/lockedAt', formatter: '.formatter.dateTime'}: {detail>/summary/lockReason}. Besucher sehen die Wartungsseite." />
 								<MessageStrip type="Error" showIcon="true" visible="{= !!${detail>/summary/lastError} }" class="sapUiSmallMarginBottom" text="{detail>/summary/lastError}" />
 								<MessageStrip type="Warning" showIcon="true" visible="{= ${detail>/summary/problems}.length > 0 }" class="sapUiSmallMarginBottom"
-									text="{= ${detail>/summary/problems}.join(' · ') }" />
+									text="{= ${detail>/summary/problems}.join(', ') }" />
 								<Panel id="letterPanel" visible="{= !!${detail>/summary/accessLetterAvailable} }" class="sapUiSmallMarginBottom" headerText="Zugangsbrief der ersten Admin-Person">
 									<VBox>
-										<Text text="EstrichONE ist eingerichtet; {detail>/summary/firstAdminUserName} kann sich mit dem Startpasswort anmelden. Den Brief drucken oder sicher übermitteln und danach verwerfen – das Startpasswort ist dann nur noch beim Kunden." />
+										<Text text="EstrichONE ist eingerichtet; {detail>/summary/firstAdminUserName} kann sich mit dem Startpasswort anmelden. Den Brief drucken oder sicher übermitteln und danach verwerfen. Das Startpasswort ist dann nur noch beim Kunden." />
 										<HBox class="sapUiSmallMarginTop">
 											<Button id="openLetter" text="Zugangsbrief öffnen …" icon="sap-icon://letter" type="Emphasized" press=".onAccessLetter" class="eoWrite sapUiSmallMarginEnd" />
 											<Button id="discardLetter" text="Verwerfen" icon="sap-icon://delete" press=".onDiscardLetter" class="eoWrite" />
@@ -136,7 +136,7 @@
 									<Text text="erhoben {path: 'detail>/status/collectedAt', formatter: '.formatter.ago'}" class="hostingHint" />
 									<Button id="refreshStatus" icon="sap-icon://refresh" text="Jetzt prüfen" press=".onRefreshStatus" />
 								</Toolbar>
-								<Table id="containerTable" items="{detail>/status/containers}" noDataText="Keine Container – Instanz nicht bereitgestellt oder gelöscht.">
+								<Table id="containerTable" items="{detail>/status/containers}" noDataText="Keine Container. Die Instanz ist nicht bereitgestellt oder wurde gelöscht.">
 									<columns>
 										<Column width="8rem"><Text text="Dienst" /></Column>
 										<Column width="10rem"><Text text="Zustand" /></Column>
@@ -169,7 +169,7 @@
 									<Label text="Domain" /><Link text="{detail>/summary/domain}" href="{detail>/summary/url}" target="_blank" />
 									<Label text="DNS" /><Text text="{= ${detail>/summary/certificate/addresses}.length ? ${detail>/summary/certificate/addresses}.join(', ') : 'nicht auflösbar (vom Server aus)' }" />
 									<Label text="Zertifikat" />
-									<ObjectStatus text="{path: 'detail>/summary/certificate', formatter: '.formatter.certificateText'}{= ${detail>/summary/certificate/error} ? ' – ' + ${detail>/summary/certificate/error} : '' }" state="{path: 'detail>/summary/certificate', formatter: '.formatter.certificateState'}" />
+									<ObjectStatus text="{path: 'detail>/summary/certificate', formatter: '.formatter.certificateText'}{= ${detail>/summary/certificate/error} ? ': ' + ${detail>/summary/certificate/error} : '' }" state="{path: 'detail>/summary/certificate', formatter: '.formatter.certificateState'}" />
 									<Label text="Aussteller" /><Text text="{= ${detail>/summary/certificate/issuer} || '–' }" />
 									<Label text="Gültig bis" /><Text text="{path: 'detail>/summary/certificate/notAfter', formatter: '.formatter.dateTime'}" />
 									<Label text="Geprüft" /><Text text="{path: 'detail>/summary/certificate/checkedAt', formatter: '.formatter.ago'} (stündlich und bei „Jetzt prüfen“)" />
@@ -217,12 +217,12 @@
 								<l:Grid defaultSpan="XL4 L4 M6 S12" visible="{= !!${detail>/suite/android} }">
 									<VBox>
 										<Label text="Android-App" />
-										<ObjectStatus text="neueste {detail>/suite/android/latestVersion} · mindestens {detail>/suite/android/minimumVersion}" class="sapMObjectStatusLarge" icon="sap-icon://iphone" />
+										<ObjectStatus text="neueste {detail>/suite/android/latestVersion}, mindestens {detail>/suite/android/minimumVersion}" class="sapMObjectStatusLarge" icon="sap-icon://iphone" />
 										<ObjectStatus text="{path: 'detail>/suite/android', formatter: '.formatter.appSourceText'}" state="{= ${detail>/suite/android/packageAvailable} ? 'Success' : 'Warning' }" />
 									</VBox>
 									<VBox>
 										<Label text="iOS-App" />
-										<ObjectStatus text="neueste {detail>/suite/ios/latestVersion} · mindestens {detail>/suite/ios/minimumVersion}" class="sapMObjectStatusLarge" icon="sap-icon://iphone-2" />
+										<ObjectStatus text="neueste {detail>/suite/ios/latestVersion}, mindestens {detail>/suite/ios/minimumVersion}" class="sapMObjectStatusLarge" icon="sap-icon://iphone-2" />
 										<ObjectStatus text="{path: 'detail>/suite/ios', formatter: '.formatter.appSourceText'}" />
 									</VBox>
 									<VBox>
@@ -250,7 +250,7 @@
 								</Table>
 								<MessageStrip id="modulesNote" text="{detail>/suite/modulesNote}" visible="{= !!${detail>/suite/modulesNote} }" showIcon="true" class="sapUiSmallMarginTop"
 									type="{= ${detail>/suite/modulesSource} === 'database' ? 'Information' : 'Warning' }" />
-								<Text id="modulesSource" text="Module schaltet die Firma selbst in EstrichONE unter Einstellungen › Module. Herkunft: {path: 'detail>/suite/modulesSource', formatter: '.formatter.modulesSourceText'} · Stand: {path: 'detail>/suite/collectedAt', formatter: '.formatter.ago'}"
+								<Text id="modulesSource" text="Module schaltet die Firma selbst in EstrichONE unter Einstellungen › Module. Herkunft: {path: 'detail>/suite/modulesSource', formatter: '.formatter.modulesSourceText'}, Stand: {path: 'detail>/suite/collectedAt', formatter: '.formatter.ago'}"
 									visible="{= !!${detail>/suite} }" class="hostingHint sapUiSmallMarginTop" />
 							</VBox>
 						</uxap:ObjectPageSubSection>
@@ -264,21 +264,21 @@
 								<f:SimpleForm editable="false" layout="ColumnLayout" columnsM="2" columnsL="2" columnsXL="2">
 									<Label text="Tägliche Sicherung" /><Text text="{= ${detail>/backupTime} ? ${detail>/backupTime} + ' Uhr (Europe/Berlin), sonntags zusätzlich Prüfung und Wiederherstellungstest' : '–' }" />
 									<Label text="Letzter Lauf" />
-									<ObjectStatus text="{path: 'detail>/status/backup/lastRun/status', formatter: '.formatter.backupEntryText'} · {path: 'detail>/status/backup/lastRun/at', formatter: '.formatter.dateTime'} · {detail>/status/backup/lastRun/message}" state="{path: 'detail>/status/backup/lastRun/status', formatter: '.formatter.backupEntryState'}" />
+									<ObjectStatus text="{path: 'detail>/status/backup/lastRun/status', formatter: '.formatter.backupEntryText'}, {path: 'detail>/status/backup/lastRun/at', formatter: '.formatter.dateTime'}, {detail>/status/backup/lastRun/message}" state="{path: 'detail>/status/backup/lastRun/status', formatter: '.formatter.backupEntryState'}" />
 									<Label text="Letzte erfolgreiche" /><Text text="{path: 'detail>/status/backup/lastSuccess/at', formatter: '.formatter.dateTime'}" />
 									<Label text="Integritätsprüfung" />
-									<ObjectStatus text="{path: 'detail>/status/backup/lastCheck/status', formatter: '.formatter.backupEntryText'} · {path: 'detail>/status/backup/lastCheck/at', formatter: '.formatter.dateTime'}" state="{path: 'detail>/status/backup/lastCheck/status', formatter: '.formatter.backupEntryState'}" />
+									<ObjectStatus text="{path: 'detail>/status/backup/lastCheck/status', formatter: '.formatter.backupEntryText'}, {path: 'detail>/status/backup/lastCheck/at', formatter: '.formatter.dateTime'}" state="{path: 'detail>/status/backup/lastCheck/status', formatter: '.formatter.backupEntryState'}" />
 									<Label text="Wiederherstellungstest" />
-									<ObjectStatus text="{path: 'detail>/status/backup/lastRestoreTest/status', formatter: '.formatter.backupEntryText'} · {path: 'detail>/status/backup/lastRestoreTest/at', formatter: '.formatter.dateTime'}" state="{path: 'detail>/status/backup/lastRestoreTest/status', formatter: '.formatter.backupEntryState'}" />
+									<ObjectStatus text="{path: 'detail>/status/backup/lastRestoreTest/status', formatter: '.formatter.backupEntryText'}, {path: 'detail>/status/backup/lastRestoreTest/at', formatter: '.formatter.dateTime'}" state="{path: 'detail>/status/backup/lastRestoreTest/status', formatter: '.formatter.backupEntryState'}" />
 									<Label text="Archivserver" />
 									<ObjectStatus id="archiveState"
-										text="{= ${detail>/status/backup/archive/connected} ? ${detail>/status/backup/archive/serverName} + ' · ' + ${detail>/status/backup/archive/archived} + ' archiviert, ' + ${detail>/status/backup/archive/pending} + ' wartend, ' + ${detail>/status/backup/archive/failed} + ' fehlgeschlagen' + (${detail>/status/backup/archive/lastError} ? ' · ' + ${detail>/status/backup/archive/lastError} : '') : 'nicht gekoppelt (Suite: System → Archiv)' }"
+										text="{= ${detail>/status/backup/archive/connected} ? ${detail>/status/backup/archive/serverName} + ', ' + ${detail>/status/backup/archive/archived} + ' archiviert, ' + ${detail>/status/backup/archive/pending} + ' wartend, ' + ${detail>/status/backup/archive/failed} + ' fehlgeschlagen' + (${detail>/status/backup/archive/lastError} ? ', ' + ${detail>/status/backup/archive/lastError} : '') : 'nicht gekoppelt (Suite: System → Archiv)' }"
 										state="{= !${detail>/status/backup/archive/connected} ? 'None' : (${detail>/status/backup/archive/failed} > 0 || !!${detail>/status/backup/archive/lastError}) ? 'Warning' : 'Success' }" />
 								</f:SimpleForm>
 								<List id="backupTargets" headerText="Backup-Ziele auf anderer Hardware" items="{detail>/status/backup/targets}"
 									noDataText="Keine gekoppelt (Suite: System → Backup-Ziele). Für Hosting empfohlen: ein Backup-Ziel je Server, siehe hosting/README.md." class="sapUiSmallMarginBottom">
 									<StandardListItem title="{detail>name}"
-										description="{path: 'detail>lastRun/status', formatter: '.formatter.backupEntryText'} · {path: 'detail>lastRun/at', formatter: '.formatter.dateTime'}"
+										description="{path: 'detail>lastRun/status', formatter: '.formatter.backupEntryText'}, {path: 'detail>lastRun/at', formatter: '.formatter.dateTime'}"
 										icon="sap-icon://it-host" />
 								</List>
 								<Table id="snapshotTable" items="{snapshots>/items}" headerText="Sicherungen (Wiederherstellungspunkte)" growing="true" growingThreshold="10"
@@ -381,7 +381,7 @@
 								<Label text="Verzeichnis" /><Text text="{detail>/directory}" />
 								<Label text="Edge-Netz" /><Text text="{detail>/edgeNetwork}" />
 								<Label text="Proxy-Ziel" /><Text text="{detail>/proxyTarget}" />
-								<Label text="Tarif-Grenzen" /><Text text="{path: 'detail>/plan/maxUsers', formatter: '.formatter.limit'} Benutzer · {= ${detail>/plan/storageGb} ? ${detail>/plan/storageGb} + ' GB' : 'Speicher unbegrenzt' } · {= ${detail>/plan/memoryMb} ? ${detail>/plan/memoryMb} + ' MB RAM' : 'RAM unbegrenzt' }" />
+								<Label text="Tarif-Grenzen" /><Text text="{path: 'detail>/plan/maxUsers', formatter: '.formatter.limit'} Benutzer, {= ${detail>/plan/storageGb} ? ${detail>/plan/storageGb} + ' GB' : 'Speicher unbegrenzt' }, {= ${detail>/plan/memoryMb} ? ${detail>/plan/memoryMb} + ' MB RAM' : 'RAM unbegrenzt' }" />
 								<Label text="Manuell" /><Text text="cd {detail>/directory} &amp;&amp; docker compose ps | logs | exec" />
 							</f:SimpleForm>
 						</uxap:ObjectPageSubSection>

@@ -239,7 +239,7 @@ export default class TenantDetailController extends BaseController {
 		if (operation) {
 			this.toast("Löschen gestartet");
 			await this.showOperation(operation.id, () => {
-				this.toast(finalBackup ? "Mandant gelöscht – Endsicherung liegt im Archiv" : "Mandant gelöscht");
+				this.toast(finalBackup ? "Mandant gelöscht. Die Endsicherung liegt im Archiv." : "Mandant gelöscht");
 				this.navTo(finalBackup ? "archives" : "tenants");
 			});
 		}
@@ -250,7 +250,7 @@ export default class TenantDetailController extends BaseController {
 		const previous = this.detail.getProperty("/summary/previousVersion") as string;
 		const snapshot = this.snapshots.getProperty("/rollbackSnapshot") as string | null;
 		MessageBox.warning(
-			`Zurück auf Version ${previous}${snapshot ? ` mit dem Datenstand der Vorab-Sicherung (${snapshot.slice(0, 8)}). Änderungen seit der Aktualisierung gehen verloren.` : ". Es gibt keine Vorab-Sicherung – die Daten bleiben unverändert (nur möglich, wenn die neue Version das Schema nicht geändert hat)."}`,
+			`Zurück auf Version ${previous}${snapshot ? ` mit dem Datenstand der Vorab-Sicherung (${snapshot.slice(0, 8)}). Änderungen seit der Aktualisierung gehen verloren.` : ". Es gibt keine Vorab-Sicherung. Die Daten bleiben unverändert (nur möglich, wenn die neue Version das Schema nicht geändert hat)."}`,
 			{
 				title: "Aktualisierung zurücknehmen",
 				actions: ["Zurücknehmen", MessageBox.Action.CANCEL],

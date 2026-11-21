@@ -37,7 +37,7 @@
 			</Table>
 			<HBox justifyContent="Center" class="sapUiSmallMargin">
 				<Button icon="sap-icon://navigation-left-arrow" press=".onPrevious" enabled="{= ${audit>/skip} > 0 }" tooltip="Neuere" />
-				<Text text="{= ${audit>/skip} + 1 } – {= Math.min(${audit>/skip} + ${audit>/take}, ${audit>/total}) } von {audit>/total}" class="sapUiSmallMarginBeginEnd sapUiTinyMarginTop" />
+				<Text text="{= ${audit>/skip} + 1 } bis {= Math.min(${audit>/skip} + ${audit>/take}, ${audit>/total}) } von {audit>/total}" class="sapUiSmallMarginBeginEnd sapUiTinyMarginTop" />
 				<Button icon="sap-icon://navigation-right-arrow" press=".onNext" enabled="{= ${audit>/skip} + ${audit>/take} &lt; ${audit>/total} }" tooltip="Ältere" />
 			</HBox>
 		</content>

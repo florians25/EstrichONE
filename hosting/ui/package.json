@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "EstrichONE Hosting-Konsole – Weboberfläche (OpenUI5, TypeScript, sap_horizon, self-hosted)",
+  "description": "EstrichONE Hosting-Konsole: Weboberfläche (OpenUI5, TypeScript, sap_horizon, self-hosted)",
   "scripts": {
     "brand": "node scripts/brand.mjs",
     "start": "npm run brand && ui5 serve --port 4300 --accept-remote-connections",

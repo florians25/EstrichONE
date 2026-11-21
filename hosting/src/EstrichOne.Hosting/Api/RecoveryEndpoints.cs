@@ -84,7 +84,7 @@ public static partial class RecoveryEndpoints
 
         if (!await ConfirmPasswordAsync(context, db, request.Password, cancellationToken))
         {
-            await audit.WriteAsync("Zugangsbrief geöffnet", tenant, "Passwort falsch – abgewiesen", success: false, cancellationToken: cancellationToken);
+            await audit.WriteAsync("Zugangsbrief geöffnet", tenant, "Passwort falsch, abgewiesen", success: false, cancellationToken: cancellationToken);
             return ApiErrors.BadRequest("Das Passwort ist falsch.");
         }
 
@@ -123,7 +123,7 @@ public static partial class RecoveryEndpoints
 
         if (!await ConfirmPasswordAsync(context, db, request.Password, cancellationToken))
         {
-            await audit.WriteAsync("Export angefordert", tenant, "Passwort falsch – abgewiesen", success: false, cancellationToken: cancellationToken);
+            await audit.WriteAsync("Export angefordert", tenant, "Passwort falsch, abgewiesen", success: false, cancellationToken: cancellationToken);
             return ApiErrors.BadRequest("Das Passwort ist falsch.");
         }
 
@@ -178,7 +178,7 @@ public static partial class RecoveryEndpoints
 
         if (!await ConfirmPasswordAsync(context, db, request.Password, cancellationToken))
         {
-            await audit.WriteAsync("Archiv heruntergeladen", details: $"{name}: Passwort falsch – abgewiesen", success: false, cancellationToken: cancellationToken);
+            await audit.WriteAsync("Archiv heruntergeladen", details: $"{name}: Passwort falsch, abgewiesen", success: false, cancellationToken: cancellationToken);
             return ApiErrors.BadRequest("Das Passwort ist falsch.");
         }
 

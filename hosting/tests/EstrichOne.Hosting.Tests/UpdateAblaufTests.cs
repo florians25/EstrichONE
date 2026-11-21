@@ -81,9 +81,9 @@ public sealed class UpdateAblaufTests
         var log = operation.GetProperty("log").GetString()!;
         operation.GetProperty("status").GetString().ShouldBe("Succeeded", log);
         (DateTime.UtcNow - started).ShouldBeGreaterThanOrEqualTo(TimeSpan.FromSeconds(3));
-        log.ShouldContain("Phase 1/3 – Ankündigung");
-        log.ShouldContain("Phase 2/3 – Update");
-        log.ShouldContain("Phase 3/3 – Abschluss");
+        log.ShouldContain("Phase 1/3, Ankündigung");
+        log.ShouldContain("Phase 2/3, Update");
+        log.ShouldContain("Phase 3/3, Abschluss");
         log.IndexOf("Phase 2/3", StringComparison.Ordinal).ShouldBeLessThan(log.IndexOf("Vorab-Sicherung", StringComparison.Ordinal));
         seen.ShouldContain("exec:update:0.1.0");
         seen.ShouldContain("up:update:0.1.0");

@@ -56,7 +56,7 @@
 					</Page>
 					<Page id="spBackup" showHeader="false" class="sapUiContentPadding">
 						<Title text="Sicherungen" level="H3" />
-						<Text text="Jede Instanz sichert sich täglich verschlüsselt (restic) nach {setup>/backupRoot}. Ein zweites Ziel außerhalb dieses Servers schützt auch bei Totalausfall – je Instanz entsteht dort ein eigener Unterordner." class="sapUiSmallMarginBottom" />
+						<Text text="Jede Instanz sichert sich täglich verschlüsselt (restic) nach {setup>/backupRoot}. Ein zweites Ziel außerhalb dieses Servers schützt auch bei Totalausfall. Je Instanz entsteht dort ein eigener Unterordner." class="sapUiSmallMarginBottom" />
 						<f:SimpleForm editable="true" layout="ColumnLayout" columnsM="1" columnsL="1" columnsXL="1" labelSpanL="4" labelSpanM="4">
 							<Label text="Zweites Sicherungsziel" labelFor="sRepository" />
 							<Input id="sRepository" value="{setup>/secondaryRepository}" placeholder="sftp:backup@sicherung.example.de:/estrichone" maxLength="500" />
@@ -72,7 +72,7 @@
 					<Page id="spDone" showHeader="false" class="sapUiContentPadding">
 						<VBox alignItems="Center" class="sapUiLargeMarginTop">
 							<core:Icon src="sap-icon://sys-enter-2" size="3rem" color="Positive" />
-							<Title text="Fertig – die Konsole ist eingerichtet." level="H2" class="sapUiSmallMarginTop" />
+							<Title text="Die Konsole ist eingerichtet." level="H2" class="sapUiSmallMarginTop" />
 							<Text text="Nächster Schritt: den ersten Mandanten anlegen. Der Assistent führt durch Firma, Adresse, Ressourcen und die erste Admin-Person mit Zugangsbrief." textAlign="Center" class="sapUiSmallMarginTop" />
 							<Button id="sCreateTenant" text="Ersten Mandanten anlegen" type="Emphasized" icon="sap-icon://add" press=".onCreateTenant" class="sapUiMediumMarginTop" />
 							<Link text="Zur Übersicht" press=".onDashboard" class="sapUiSmallMarginTop" />

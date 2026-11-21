@@ -190,7 +190,7 @@ public static class AuthEndpoints
                 user.FailedLogins = 0;
             }
 
-            await audit.WriteAsync("Anmeldung fehlgeschlagen", details: reason + (locked ? " – Konto für 15 Minuten gesperrt" : string.Empty),
+            await audit.WriteAsync("Anmeldung fehlgeschlagen", details: reason + (locked ? ", Konto für 15 Minuten gesperrt" : string.Empty),
                 success: false, actor: user.UserName, cancellationToken: cancellationToken);
             return ApiErrors.Unauthorized(message, code);
         }

@@ -113,7 +113,7 @@ export ESTRICHONE_YES="${ESTRICHONE_YES:-0}"
 [ "$(id -u)" = "0" ] || fail "Bitte als root bzw. mit sudo ausführen." \
   "curl -fsSL https://raw.githubusercontent.com/$REPO/$REF/install.sh | sudo bash"
 
-printf '%sEstrichONE – Installation%s\n' "$B" "$N"
+printf '%sEstrichONE: Installation%s\n' "$B" "$N"
 
 # --- Prüfungen ----------------------------------------------------------------------------------------------------
 OS_ID=unbekannt; OS_LIKE=""; OS_NAME="Linux"
@@ -131,7 +131,7 @@ critical() { # Mindestanforderung verfehlt: abbrechen, außer mit --ohne-pruefun
 check_system() {
   step "Server prüfen"
   [ "$(uname -s)" = "Linux" ] || fail "EstrichONE läuft auf Linux-Servern." "Ubuntu 24.04 LTS oder Debian 12 verwenden."
-  if debian_like; then ok "Betriebssystem: $OS_NAME"; else warn "Betriebssystem: $OS_NAME – getestet sind Debian und Ubuntu; Docker bitte selbst installieren."; fi
+  if debian_like; then ok "Betriebssystem: $OS_NAME"; else warn "Betriebssystem: $OS_NAME. Getestet sind Debian und Ubuntu; Docker bitte selbst installieren."; fi
   case "$(uname -m)" in
     x86_64|amd64|aarch64|arm64) ok "Prozessor: $(uname -m), $(nproc 2>/dev/null || echo '?') Kerne" ;;
     *) fail "Prozessorarchitektur $(uname -m) wird nicht unterstützt." "Einen Server mit x86_64 (amd64) oder arm64 verwenden." ;;
@@ -141,7 +141,7 @@ check_system() {
   if [ "$ram_mb" -lt "$MIN_RAM_MB" ]; then
     critical "Arbeitsspeicher: $ram_mb MB" "Zu wenig Arbeitsspeicher: $ram_mb MB (mindestens 2 GB, empfohlen 4 GB)." "Einen größeren Server wählen oder mit --ohne-pruefung trotzdem installieren."
   elif [ "$ram_mb" -lt "$REC_RAM_MB" ]; then
-    warn "Arbeitsspeicher: $ram_mb MB – reicht für wenige Benutzer, empfohlen sind 4 GB."
+    warn "Arbeitsspeicher: $ram_mb MB. Reicht für wenige Benutzer, empfohlen sind 4 GB."
   else
     ok "Arbeitsspeicher: $ram_mb MB"
   fi
@@ -151,7 +151,7 @@ check_system() {
   if [ "$free_gb" -lt "$MIN_DISK_GB" ]; then
     critical "Speicherplatz: $free_gb GB frei" "Zu wenig Speicherplatz unter $base: $free_gb GB frei (mindestens $MIN_DISK_GB GB)." "Datenträger vergrößern oder Platz schaffen (z. B. docker system prune)."
   elif [ "$free_gb" -lt "$REC_DISK_GB" ]; then
-    warn "Speicherplatz: $free_gb GB frei – für Fotos, Videos und Sicherungen sind $REC_DISK_GB GB oder mehr empfohlen."
+    warn "Speicherplatz: $free_gb GB frei. Für Fotos, Videos und Sicherungen sind $REC_DISK_GB GB oder mehr empfohlen."
   else
     ok "Speicherplatz: $free_gb GB frei"
   fi
@@ -240,7 +240,7 @@ public_ips() { # öffentliche Adresse(n) dieses Servers, wie das Internet sie si
 check_dns() { # check_dns DOMAIN – zeigt die Domain auf diesen Server (direkt oder über die öffentliche Adresse hinter NAT)?
   local domain="$1" resolved addresses public="" public_list=""
   if is_ip_or_local "$domain"; then
-    warn "Adresse $domain: kein öffentlicher Name – Caddy stellt ein eigenes Zertifikat aus (Browserwarnung, Apps brauchen eine echte Domain)."
+    warn "Adresse $domain: kein öffentlicher Name. Caddy stellt ein eigenes Zertifikat aus (Browserwarnung, Apps brauchen eine echte Domain)."
     return
   fi
   resolved="$(getent ahosts "$domain" 2>/dev/null | awk '{print $1}' | sort -u | tr '\n' ' ' | sed 's/ $//' || true)"
@@ -265,11 +265,11 @@ check_dns() { # check_dns DOMAIN – zeigt die Domain auf diesen Server (direkt 
     ok "DNS: $domain → $resolved (öffentliche Adresse dieses Servers, Netz mit NAT bzw. Router)"
     hint "Am Router bzw. in der Cloud-Firewall die Ports 80 und 443 auf diesen Server weiterleiten bzw. freigeben."
   elif [ -n "$public_list" ]; then
-    warn "DNS: $domain → $resolved – dieser Server ist aber unter $public_list erreichbar."
+    warn "DNS: $domain → $resolved. Dieser Server ist aber unter $public_list erreichbar."
     hint "DNS-Eintrag auf $public_list ändern, damit Let's Encrypt das Zertifikat ausstellen kann (wirkt nach einigen Minuten)."
     hint "Läuft der Server bewusst hinter einem anderen Proxy oder Load-Balancer, kann dieser Hinweis entfallen."
   else
-    warn "DNS: $domain → $resolved – keine dieser Adressen gehört zu diesem Server; die öffentliche Adresse ist nicht ermittelbar (offline?)."
+    warn "DNS: $domain → $resolved. Keine dieser Adressen gehört zu diesem Server; die öffentliche Adresse ist nicht ermittelbar (offline?)."
     hint "Hinter einem Router (NAT) ist das normal: dort 80 und 443 auf diesen Server weiterleiten."
     hint "Sonst den DNS-Eintrag korrigieren, damit Let's Encrypt das Zertifikat ausstellen kann."
   fi
@@ -321,7 +321,7 @@ EOF
       warn "Caddy konnte nicht neu geladen werden: sudo systemctl status caddy"
     fi
   else
-    warn "Caddyfile mit EstrichONE-Eintrag ist ungültig – nichts geändert. Eintrag bitte selbst ergänzen:"
+    warn "Caddyfile mit EstrichONE-Eintrag ist ungültig. Nichts geändert. Eintrag bitte selbst ergänzen:"
     hint "$1 { reverse_proxy 127.0.0.1:$2 }"
   fi
   rm -f "$tmp"
@@ -353,7 +353,7 @@ case "$COMMAND" in
     check_docker
     for port in 80 443; do
       if port_in_use "$port" && ! docker ps --filter "publish=$port" --format '{{.Names}}' | grep -q '^estrichone-hosting'; then
-        warn "Port $port ist belegt ($(port_owner "$port")) – die Konsole braucht 80/443 für eigenes HTTPS."
+        warn "Port $port ist belegt ($(port_owner "$port")). Die Konsole braucht 80/443 für eigenes HTTPS."
         hint "Hinter einem vorhandenen Proxy installieren: HOSTING_MODE=proxy (siehe hosting/README.md)."
       fi
     done
@@ -372,7 +372,7 @@ if [ "$COMMAND" = "pruefen" ]; then
   elif command -v docker >/dev/null 2>&1; then
     warn "Docker ist installiert, der Dienst läuft aber nicht (sudo systemctl start docker)."
   else
-    warn "Docker ist nicht installiert – die Installation bietet das an (Debian/Ubuntu)."
+    warn "Docker ist nicht installiert. Die Installation bietet das an (Debian/Ubuntu)."
   fi
   for port in 80 443 8181 8143; do
     if port_in_use "$port"; then
@@ -393,7 +393,7 @@ check_docker
 VERSION="${ESTRICHONE_VERSION:-}"
 [ -n "$VERSION" ] || { [ "$EXISTING" = "1" ] && [ "$COMMAND" = "installieren" ] && VERSION="$(env_value ESTRICHONE_VERSION)"; } || true
 [ -n "$VERSION" ] || VERSION="$(latest_version)"
-[ -n "$VERSION" ] || { VERSION=latest; warn "Neueste Version nicht ermittelbar (GitHub nicht erreichbar) – verwende „latest“."; }
+[ -n "$VERSION" ] || { VERSION=latest; warn "Neueste Version nicht ermittelbar (GitHub nicht erreichbar). Verwende „latest“."; }
 VERSION="${VERSION#v}"
 [[ "$VERSION" =~ ^(latest|[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?)$ ]] || fail "Ungültige Version: $VERSION" "Beispiel: --version 1.0.13"
 IMAGE="$REGISTRY/estrichone-installer:$VERSION"
@@ -413,10 +413,10 @@ if [ "$COMMAND" = "installieren" ] && [ "$EXISTING" = "0" ]; then
   if [ -z "${ESTRICHONE_MODE:-}" ]; then
     if port_in_use 80 || port_in_use 443; then
       ESTRICHONE_MODE=proxy
-      ok "Ports 80/443 sind belegt ($(port_owner 443)) – EstrichONE läuft hinter diesem Proxy (Betriebsart proxy)."
+      ok "Ports 80/443 sind belegt ($(port_owner 443)). EstrichONE läuft hinter diesem Proxy (Betriebsart proxy)."
     else
       ESTRICHONE_MODE=direkt
-      ok "Ports 80/443 sind frei – EstrichONE holt das Zertifikat selbst (Betriebsart direkt, Let's Encrypt)."
+      ok "Ports 80/443 sind frei. EstrichONE holt das Zertifikat selbst (Betriebsart direkt, Let's Encrypt)."
     fi
   fi
   case "$ESTRICHONE_MODE" in direkt|proxy) ;; *) fail "Betriebsart muss „direkt“ oder „proxy“ sein." ;; esac
@@ -451,7 +451,7 @@ if [ "$COMMAND" = "installieren" ] && [ "$EXISTING" = "0" ]; then
   ask ESTRICHONE_AUTO_UPDATE "Sicherheitsupdates automatisch nachts einspielen? (sicherheit/patch/aus)" "sicherheit"
 elif [ "$EXISTING" = "1" ]; then
   step "Vorhandene Installation"
-  ok "$DIR – Version $(env_value ESTRICHONE_VERSION), Adresse $(env_value ESTRICHONE_DOMAIN) – wird repariert (Daten und .env bleiben)."
+  ok "$DIR: Version $(env_value ESTRICHONE_VERSION), Adresse $(env_value ESTRICHONE_DOMAIN). Wird repariert (Daten und .env bleiben)."
   [ "$COMMAND" = "installieren" ] && [ "$VERSION" != "$(env_value ESTRICHONE_VERSION)" ] \
     && hint "Zielversion $VERSION. Für Aktualisierungen mit Sicherung besser: sudo /opt/estrichone/update.sh"
 fi
@@ -465,7 +465,7 @@ if ! pull_error="$(docker pull -q "$IMAGE" 2>&1 >/dev/null)"; then
     || fail "Installer-Image $IMAGE nicht ladbar." "Docker meldet: $(printf '%s' "$pull_error" | tail -n 1 | cut -c1-300)" \
       "Internetverbindung und Version prüfen (Liste: https://github.com/$REPO/releases)." \
       "Firmennetz mit Proxy: Docker-Proxy einrichten (https://docs.docker.com/engine/daemon/proxy/)."
-  warn "Laden fehlgeschlagen – vorhandenes lokales Image wird verwendet."
+  warn "Laden fehlgeschlagen. Vorhandenes lokales Image wird verwendet."
 fi
 docker_args=(--rm -v /var/run/docker.sock:/var/run/docker.sock -v "$DIR:$DIR")
 while IFS= read -r name; do
@@ -496,13 +496,13 @@ if [ -n "${ESTRICHONE_AUTO_UPDATE:-}" ] && [ -x "$DIR/update.sh" ]; then
   if [ "$ESTRICHONE_AUTO_UPDATE" = "aus" ]; then
     "$DIR/update.sh" --automatik aus >/dev/null 2>&1 || true
   elif "$DIR/update.sh" --automatik "$ESTRICHONE_AUTO_UPDATE" >/dev/null 2>&1; then
-    ok "Automatische Updates: $ESTRICHONE_AUTO_UPDATE (nachts 02:00–05:00, mit Sicherung vorher)"
+    ok "Automatische Updates: $ESTRICHONE_AUTO_UPDATE (nachts 02:00 bis 05:00, mit Sicherung vorher)"
   else
-    warn "Automatische Updates nicht eingerichtet – später: sudo /opt/estrichone/update.sh --automatik sicherheit"
+    warn "Automatische Updates nicht eingerichtet. Später: sudo /opt/estrichone/update.sh --automatik sicherheit"
   fi
 fi
 
-printf '\n%sFertig.%s Verwalten: cd %s && sudo docker compose -p estrichone ps · Aktualisieren: sudo %s/update.sh\n' "$G" "$N" "$DIR" "$DIR"
+printf '\n%sFertig.%s Verwalten: cd %s && sudo docker compose -p estrichone ps, Aktualisieren: sudo %s/update.sh\n' "$G" "$N" "$DIR" "$DIR"
 printf 'Erneut ausführen repariert die Installation; „… | sudo bash -s -- pruefen“ prüft nur.\n'
 [ "$WARNINGS" -gt 0 ] && printf '%s%s Hinweis(e) oben beachten.%s\n' "$Y" "$WARNINGS" "$N"
 exit 0

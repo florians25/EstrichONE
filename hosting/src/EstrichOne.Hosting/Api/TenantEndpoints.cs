@@ -228,7 +228,7 @@ public static partial class TenantEndpoints
             case "restore":
                 plan = (OperationKind.Restore, new OperationParameters(Snapshot: request.Snapshot?.Trim(), BackupFirst: request.BackupFirst != false));
                 if (request.Snapshot?.Trim() is { } snapshot && snapshot != "latest" && !Recovery.SnapshotReader.IsSnapshotId(snapshot)) error = "Ungültige Sicherung.";
-                if (request.Confirm != true) error = "Bitte die Wiederherstellung ausdrücklich bestätigen – der aktuelle Datenstand wird ersetzt.";
+                if (request.Confirm != true) error = "Bitte die Wiederherstellung ausdrücklich bestätigen. Der aktuelle Datenstand wird ersetzt.";
                 if (state is not (TenantState.Running or TenantState.Failed or TenantState.Locked or TenantState.Stopped)) error = "Die Instanz kann in diesem Zustand nicht wiederhergestellt werden.";
                 break;
             case "rollback":
@@ -367,7 +367,7 @@ public static partial class TenantEndpoints
         var admin = Guid.TryParse(adminId, out var guid) ? await db.Admins.FindAsync([guid], cancellationToken) : null;
         if (admin is null || !AuthEndpoints.VerifyPassword(admin, request.Password ?? string.Empty))
         {
-            await audit.WriteAsync("Sicherungsschlüssel angezeigt", tenant, "Passwort falsch – abgewiesen", success: false, cancellationToken: cancellationToken);
+            await audit.WriteAsync("Sicherungsschlüssel angezeigt", tenant, "Passwort falsch, abgewiesen", success: false, cancellationToken: cancellationToken);
             return ApiErrors.BadRequest("Das Passwort ist falsch.");
         }
 

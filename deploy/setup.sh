@@ -53,7 +53,7 @@ else
   echo ".env angelegt (nur für root lesbar). Eine Kopie ist Teil jeder Sicherung (data/config); das Backup-Passwort zusätzlich getrennt aufbewahren."
   echo
   echo "======================================================================"
-  echo " BACKUP-PASSWORT – jetzt notieren und AUSSERHALB des Servers aufbewahren:"
+  echo " BACKUP-PASSWORT: jetzt notieren und AUSSERHALB des Servers aufbewahren:"
   echo
   echo "   ${BACKUP_PASSWORD}"
   echo
