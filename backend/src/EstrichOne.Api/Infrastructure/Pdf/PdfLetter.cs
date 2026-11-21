@@ -26,7 +26,7 @@ public static class PdfLetter
         }
 
         var address = Frame(section, 20, 45, 85, 45);
-        var sender = address.AddParagraph(string.Join(" · ", new[] { company.Name, company.AddressLine }.Where(v => !string.IsNullOrWhiteSpace(v))));
+        var sender = address.AddParagraph(string.Join(", ", new[] { company.Name, company.AddressLine }.Where(v => !string.IsNullOrWhiteSpace(v))));
         sender.Format.Font.Size = 7;
         sender.Format.Font.Color = PdfReport.Muted;
         sender.Format.SpaceAfter = Unit.FromMillimeter(4);

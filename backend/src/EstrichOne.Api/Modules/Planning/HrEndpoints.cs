@@ -208,7 +208,7 @@ internal static class HrEndpoints
         TypedResults.Ok(GermanHolidays.For(year is >= 2000 and <= 2100 ? year.Value : hr.Today.Year, (await hr.SettingsAsync(cancellationToken)).State));
 
     internal static string Range(DateOnly from, DateOnly to) =>
-        from == to ? from.ToString("dd.MM.yyyy", German) : $"{from.ToString(from.Year == to.Year ? "dd.MM." : "dd.MM.yyyy", German)} – {to.ToString("dd.MM.yyyy", German)}";
+        from == to ? from.ToString("dd.MM.yyyy", German) : $"{from.ToString(from.Year == to.Year ? "dd.MM." : "dd.MM.yyyy", German)} bis {to.ToString("dd.MM.yyyy", German)}";
 
     internal static string Days(decimal days) => $"{days.ToString("0.#", German)} {(days == 1 ? "Tag" : "Tage")}";
 
@@ -666,13 +666,13 @@ internal static class HrEndpoints
         {
             await notifier.NotifyAsync(await hr.ApproversAsync(item.UserId, cancellationToken), new NotificationRequest(NotificationCategory.Absence,
                 replaces is null ? "Abwesenheitsantrag eingegangen" : "Änderungsantrag eingegangen",
-                $"{view.UserName} · {type.Name} · {Range(item.From, item.To)} · {Days(view.WorkingDays)}", "/personal/urlaub?reiter=antraege", "absenceRequest", item.Id,
+                $"{view.UserName}, {type.Name}, {Range(item.From, item.To)}, {Days(view.WorkingDays)}", "/personal/urlaub?reiter=antraege", "absenceRequest", item.Id,
                 Event: NotificationEvents.AbsenceRequested), cancellationToken);
         }
         else if (item.UserId != currentUser.UserId)
         {
             await notifier.NotifyAsync([item.UserId], new NotificationRequest(NotificationCategory.Absence, "Abwesenheit eingetragen",
-                $"{type.Name} · {Range(item.From, item.To)}", "/personal/urlaub", "absenceRequest", item.Id, Event: NotificationEvents.AbsenceDecided), cancellationToken);
+                $"{type.Name}, {Range(item.From, item.To)}", "/personal/urlaub", "absenceRequest", item.Id, Event: NotificationEvents.AbsenceDecided), cancellationToken);
         }
 
         return TypedResults.Ok(view);
@@ -754,13 +754,13 @@ internal static class HrEndpoints
         var noun = type?.Kind == AbsenceKind.Vacation ? "Urlaubsantrag" : "Abwesenheitsantrag";
         await notifier.NotifyAsync([item.UserId], new NotificationRequest(NotificationCategory.Absence,
             item.ReplacesRequestId is null ? $"{noun} {(request.Approve ? "genehmigt" : "abgelehnt")}" : $"Änderungsantrag {(request.Approve ? "genehmigt" : "abgelehnt")}",
-            $"{type?.Name ?? "Abwesenheit"} · {Range(item.From, item.To)}", "/personal/urlaub", "absenceRequest", item.Id,
+            $"{type?.Name ?? "Abwesenheit"}, {Range(item.From, item.To)}", "/personal/urlaub", "absenceRequest", item.Id,
             Event: NotificationEvents.AbsenceDecided), cancellationToken);
         if (item.SubstituteUserId is { } substitute && request.Approve)
         {
             var name = await db.Set<User>().AsNoTracking().Where(u => u.Id == item.UserId).Select(u => u.DisplayName).SingleAsync(cancellationToken);
             await notifier.NotifyAsync([substitute], new NotificationRequest(NotificationCategory.Absence, "Vertretung eingetragen",
-                $"{name} · {Range(item.From, item.To)}", "/personal/urlaub", "absenceRequest", item.Id, Event: NotificationEvents.AbsenceDecided), cancellationToken);
+                $"{name}, {Range(item.From, item.To)}", "/personal/urlaub", "absenceRequest", item.Id, Event: NotificationEvents.AbsenceDecided), cancellationToken);
         }
 
         // E-Mail an den Mitarbeiter (nur wenn ein E-Mail-Konto eingerichtet ist).
@@ -768,7 +768,7 @@ internal static class HrEndpoints
         if (!string.IsNullOrWhiteSpace(user.Email))
         {
             var link = options.Value.PublicUrl is { } url ? new Uri(url, "/personal/urlaub").ToString() : string.Empty;
-            var range = $"{item.From.ToString("dd.MM.yyyy", German)} – {item.To.ToString("dd.MM.yyyy", German)}";
+            var range = $"{item.From.ToString("dd.MM.yyyy", German)} bis {item.To.ToString("dd.MM.yyyy", German)}";
             await mail.QueueAsync(new MailRequest(user.Email,
                 $"{noun} {(request.Approve ? "genehmigt" : "abgelehnt")}: {range}",
                 $"Guten Tag {user.DisplayName},\n\nIhr {noun} ({type?.Name ?? "Abwesenheit"}) für den Zeitraum {range} wurde {(request.Approve ? "genehmigt" : "abgelehnt")}."
@@ -816,7 +816,7 @@ internal static class HrEndpoints
         await db.SaveChangesAsync(cancellationToken);
 
         var view = (await ViewsAsync([item], db, hr, currentUser, false, cancellationToken))[0];
-        var text = $"{view.UserName} · {type?.Name ?? "Abwesenheit"} · {Range(item.From, item.To)}";
+        var text = $"{view.UserName}, {type?.Name ?? "Abwesenheit"}, {Range(item.From, item.To)}";
         if (item.UserId == currentUser.UserId)
         {
             // Genehmiger erfahren von zurückgezogenen offenen und stornierten genehmigten Anträgen.
@@ -827,7 +827,7 @@ internal static class HrEndpoints
         else
         {
             await notifier.NotifyAsync([item.UserId], new NotificationRequest(NotificationCategory.Absence, "Abwesenheit storniert",
-                $"{type?.Name ?? "Abwesenheit"} · {Range(item.From, item.To)}", "/personal/urlaub", "absenceRequest", item.Id, Event: NotificationEvents.AbsenceCancelled),
+                $"{type?.Name ?? "Abwesenheit"}, {Range(item.From, item.To)}", "/personal/urlaub", "absenceRequest", item.Id, Event: NotificationEvents.AbsenceCancelled),
                 cancellationToken);
         }
 

@@ -13,7 +13,7 @@ public static class CustomerAssignment
     public const string ArchivedCode = "CUSTOMER_ARCHIVED";
     public const string DeletedCode = "CUSTOMER_DELETED";
     public const string UnknownCode = "UNKNOWN_CUSTOMER";
-    public const string ArchivedMessage = "Kunde ist archiviert – zuerst reaktivieren.";
+    public const string ArchivedMessage = "Der Kunde ist archiviert. Bitte zuerst reaktivieren.";
     public const string DeletedMessage = "Der Kunde wurde gelöscht und kann nicht mehr zugeordnet werden.";
     public const string UnknownMessage = "Der angegebene Kunde existiert nicht.";
 

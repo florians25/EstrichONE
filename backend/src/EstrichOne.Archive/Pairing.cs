@@ -101,7 +101,7 @@ public sealed class ClientRegistry
         var stripped = new string([.. (code ?? string.Empty).Where(c => c is not ('-' or ' '))]);
         if (normalized.Length is < 12 or > 32 || normalized.Length != stripped.Length)
         {
-            throw new ArgumentException("Ungültiger Kopplungscode: 12 bis 32 Zeichen aus A–Z (ohne I, O) und 2–9.", nameof(code));
+            throw new ArgumentException("Ungültiger Kopplungscode: 12 bis 32 Zeichen aus A bis Z (ohne I, O) und 2 bis 9.", nameof(code));
         }
 
         var display = string.Join('-', Enumerable.Range(0, (normalized.Length + 3) / 4)

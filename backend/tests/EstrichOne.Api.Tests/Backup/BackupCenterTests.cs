@@ -108,7 +108,7 @@ public sealed class BackupCenterTests(PostgresFixture postgres) : IAsyncLifetime
         var db = scope.ServiceProvider.GetRequiredService<EstrichOneDbContext>();
         var titles = await db.Set<Notification>().AsNoTracking().OrderBy(n => n.CreatedAt).Select(n => new { n.Title, n.Body, n.Urgency }).ToListAsync(Ct);
         titles.Count(t => t.Title == "Sicherung erfolgreich").ShouldBe(1);
-        titles.Single(t => t.Title == "Sicherung erfolgreich").Body!.ShouldContain("Vollsicherung · 2 min · 2 Ziele");
+        titles.Single(t => t.Title == "Sicherung erfolgreich").Body!.ShouldContain("Vollsicherung, 2 min, 2 Ziele");
         titles.Single(t => t.Title == "Sicherung fehlgeschlagen").Urgency.ShouldBe(Modules.Notifications.Exports.NotificationUrgency.High);
     }
 

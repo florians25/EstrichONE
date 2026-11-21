@@ -235,7 +235,7 @@ internal static class ContactLifecycle
     /// <summary>409 mit Liste der Bezüge, z. B. „3 Bauakten, 2 Anrufe und Anfragen“.</summary>
     public static ProblemHttpResult HasReferences(IReadOnlyList<CustomerReference> references) =>
         TypedResults.Problem(statusCode: StatusCodes.Status409Conflict, title: "Kunde hat verknüpfte Daten",
-            detail: $"Der Kunde kann nicht gelöscht werden. Noch verknüpft: {Describe(references)}. Stattdessen archivieren (inaktiv setzen) oder – mit Berechtigung – anonymisieren.",
+            detail: $"Der Kunde kann nicht gelöscht werden. Noch verknüpft: {Describe(references)}. Stattdessen archivieren (inaktiv setzen) oder (mit Berechtigung) anonymisieren.",
             extensions: new Dictionary<string, object?> { ["code"] = HasReferencesCode, ["references"] = references });
 
     public static string Describe(IReadOnlyList<CustomerReference> references)

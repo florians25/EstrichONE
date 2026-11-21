@@ -278,7 +278,7 @@ test('Kunde mit Bauakte: Löschen verweigert mit Bezügen, archivieren, Filter �
     { id: crypto.randomUUID(), title: 'Neue Halle', customerId: customer.json.id });
   expect(refused.status).toBe(422);
   expect(refused.json.code).toBe('CUSTOMER_ARCHIVED');
-  expect(refused.json.detail).toBe('Kunde ist archiviert – zuerst reaktivieren.');
+  expect(refused.json.detail).toBe('Der Kunde ist archiviert. Bitte zuerst reaktivieren.');
   await page.goto('/kunden');
   await page.getByRole('button', { name: 'Neuer Kunde' }).click();
   const create = page.getByRole('dialog', { name: 'Neuer Kunde' });

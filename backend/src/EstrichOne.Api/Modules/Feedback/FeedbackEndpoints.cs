@@ -216,8 +216,8 @@ internal static class FeedbackEndpoints
             {
                 var kind = request.Kind ?? item.Kind;
                 var area = request.Area?.Trim() ?? item.Area;
-                var from = $"{FeedbackService.KindName(item.Kind)} · {item.Area}";
-                var to = $"{FeedbackService.KindName(kind)} · {area}";
+                var from = $"{FeedbackService.KindName(item.Kind)}, {item.Area}";
+                var to = $"{FeedbackService.KindName(kind)}, {area}";
                 item.Classify(kind, area);
                 Event("classify", from, to);
             }

@@ -323,7 +323,7 @@ internal static class CallEndpoints
 
         return calls.Select(c =>
         {
-            var linked = c.BauakteId is { } b && bauakten.TryGetValue(b, out var x) ? $"{x.Number ?? "neu"} · {x.Title}" : null;
+            var linked = c.BauakteId is { } b && bauakten.TryGetValue(b, out var x) ? $"{x.Number ?? "neu"}, {x.Title}" : null;
             var converted = c.ConvertedBauakteId is { } cb && bauakten.TryGetValue(cb, out var y) ? y.Number : null;
             return new CallResponse(c.Id, c.Kind, c.Direction, c.Source, c.Priority, c.CallerName, c.CallerPhone, c.CallerEmail, c.Company,
                 c.CustomerId, c.CustomerId is { } cid ? customers.GetValueOrDefault(cid) : null, c.BauakteId, linked, c.Subject, c.Notes,

@@ -18,7 +18,7 @@ public sealed class FeedbackNotifier(INotifier notifier, IRoleAssignments roles)
     {
         var managers = await roles.GetUserIdsWithPermissionAsync(Permissions.FeedbackManage, cancellationToken);
         await notifier.NotifyAsync(managers, new NotificationRequest(NotificationCategory.Ticket,
-            $"{(item.Kind == FeedbackKind.Bug ? "Neue Fehlermeldung" : "Neuer Funktionswunsch")} {item.Number}", $"{item.Title} · {item.Area}",
+            $"{(item.Kind == FeedbackKind.Bug ? "Neue Fehlermeldung" : "Neuer Funktionswunsch")} {item.Number}", $"{item.Title}, {item.Area}",
             ManageLink(item.Id), "feedback", item.Id, Event: NotificationEvents.FeedbackSubmitted), cancellationToken);
     }
 
@@ -36,6 +36,6 @@ public sealed class FeedbackNotifier(INotifier notifier, IRoleAssignments roles)
     public Task ReporterUpdatedAsync(FeedbackItem item, bool reply, CancellationToken cancellationToken) =>
         notifier.NotifyAsync([item.ReporterUserId], new NotificationRequest(NotificationCategory.Ticket,
             reply ? $"Antwort zu Meldung {item.Number}" : $"Status geändert: Meldung {item.Number}",
-            reply ? item.Title : $"{item.Title} · {FeedbackService.StatusName(item.Status)}",
+            reply ? item.Title : $"{item.Title}, {FeedbackService.StatusName(item.Status)}",
             ReporterLink(item.Id), "feedback", item.Id, Event: NotificationEvents.FeedbackUpdated), cancellationToken);
 }

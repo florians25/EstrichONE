@@ -94,8 +94,8 @@ internal sealed class BauakteReportBuilder(
 
         var pdfCompany = await branding.GetAsync(cancellationToken);
         var label = inspectionId is null
-            ? $"Bauakte {info.Number ?? "(ohne Nummer)"} – {info.Title}"
-            : $"Erstbegehungsprotokoll {info.Number ?? ""} – {info.Title}";
+            ? $"Bauakte {info.Number ?? "(ohne Nummer)"}: {info.Title}"
+            : $"Erstbegehungsprotokoll {info.Number ?? ""}: {info.Title}";
         var (document, section) = Create(label, "Bauakte", pdfCompany);
         const double width = 17.2;
 
@@ -126,7 +126,7 @@ internal sealed class BauakteReportBuilder(
                 ("Bauvorhaben", info.Title), ("Aktennummer", info.Number), ("Status", StatusText.GetValueOrDefault(info.Status, info.Status.ToString())),
                 ("Baustelle", Address(info.Street, info.PostalCode, info.City)), ("Ausführung", Period(info.PlannedStart, info.PlannedEnd)),
                 ("Zuständig", info.ResponsibleName), ("Team", info.Team.Count > 0 ? string.Join(", ", info.Team) : null),
-                ("Ansprechpartner vor Ort", string.Join(" · ", new[] { info.SiteContactName, info.SiteContactPhone }.Where(v => !string.IsNullOrWhiteSpace(v)))),
+                ("Ansprechpartner vor Ort", string.Join(", ", new[] { info.SiteContactName, info.SiteContactPhone }.Where(v => !string.IsNullOrWhiteSpace(v)))),
                 ("Angelegt", $"{PdfReport.DateTime(info.CreatedAt)} von {info.CreatedByName}"));
             if (info.Customer is { } c)
             {
@@ -188,13 +188,13 @@ internal sealed class BauakteReportBuilder(
                 head.AddFormattedText(entry.Day.ToString("dddd, dd.MM.yyyy", German), TextFormat.Bold);
                 var meta = new[]
                 {
-                    entry.StartTime is { } s ? $"{s:HH\\:mm}{(entry.EndTime is { } e ? $"–{e:HH\\:mm}" : string.Empty)} Uhr" : null,
+                    entry.StartTime is { } s ? $"{s:HH\\:mm}{(entry.EndTime is { } e ? $" bis {e:HH\\:mm}" : string.Empty)} Uhr" : null,
                     entry.Weather is { } w ? Weather.GetValueOrDefault(w) : null,
                     entry.TemperatureCelsius is { } temp ? $"{temp} °C" : null,
                     entry.WorkersPresent is { } n ? $"{n} anwesend" : null,
                     entry.Crew, names.GetValueOrDefault(entry.AuthorUserId),
                 }.Where(v => !string.IsNullOrWhiteSpace(v));
-                section.AddParagraph(string.Join(" · ", meta)).Style = "Muted";
+                section.AddParagraph(string.Join(", ", meta)).Style = "Muted";
                 section.AddParagraph(entry.Text);
             }
         }
@@ -209,7 +209,7 @@ internal sealed class BauakteReportBuilder(
                 var by = string.Join(", ", new[] { waiver.ByName, waiver.At is { } at ? PdfReport.DateTime(at) : null }.Where(v => !string.IsNullOrWhiteSpace(v)));
                 var line = section.AddParagraph();
                 line.AddFormattedText("Keine Erstbegehung erforderlich", TextFormat.Bold);
-                line.AddText((by.Length > 0 ? $" · {by}" : string.Empty) + (string.IsNullOrWhiteSpace(waiver.Reason) ? string.Empty : $" · Begründung: {waiver.Reason}"));
+                line.AddText((by.Length > 0 ? $", {by}" : string.Empty) + (string.IsNullOrWhiteSpace(waiver.Reason) ? string.Empty : $", Begründung: {waiver.Reason}"));
             }
             else if (inspections.Count == 0)
             {
@@ -221,7 +221,7 @@ internal sealed class BauakteReportBuilder(
                 var title = section.AddParagraph();
                 title.Format.KeepWithNext = true;
                 title.AddFormattedText($"Erstbegehung am {PdfReport.DateTime(i.PerformedAt)}", TextFormat.Bold);
-                title.AddText($" · {names.GetValueOrDefault(i.PerformedByUserId) ?? "?"}{(i.CorrectsInspectionId is null ? string.Empty : " · Korrektur")}");
+                title.AddText($", {names.GetValueOrDefault(i.PerformedByUserId) ?? "?"}{(i.CorrectsInspectionId is null ? string.Empty : ", Korrektur")}");
                 if (i.NotRequired)
                 {
                     section.AddParagraph($"Nicht notwendig: {i.Remarks}");
@@ -238,7 +238,7 @@ internal sealed class BauakteReportBuilder(
                 {
                     if (i.Checks.TryGetValue(key, out var result))
                     {
-                        var checkLabel = i.CheckRemarks.TryGetValue(key, out var remark) ? $"{text} – {remark}" : text;
+                        var checkLabel = i.CheckRemarks.TryGetValue(key, out var remark) ? $"{text}: {remark}" : text;
                         var row = AddRow(table, checkLabel, result switch { CheckResult.Ok => "in Ordnung", CheckResult.NotOk => "Mangel", _ => "entfällt" });
                         if (result == CheckResult.NotOk)
                         {
@@ -349,7 +349,7 @@ internal sealed class BauakteReportBuilder(
                 var caption = cell.AddParagraph();
                 caption.Format.SpaceBefore = Unit.FromPoint(2);
                 caption.AddFormattedText($"Foto {index + 1}", TextFormat.Bold);
-                caption.AddText($" · {PdfReport.DateTime(photo.CapturedAt ?? photo.CreatedAt)}");
+                caption.AddText($", {PdfReport.DateTime(photo.CapturedAt ?? photo.CreatedAt)}");
                 if (!string.IsNullOrWhiteSpace(photo.Caption))
                 {
                     caption.AddLineBreak();
@@ -406,7 +406,7 @@ internal sealed class BauakteReportBuilder(
         title.Format.Font.Bold = true;
         title.Format.Font.Color = Brand;
         title.Format.SpaceAfter = Unit.FromPoint(4);
-        var number = section.AddParagraph(string.Join(" · ", new[] { info.Number, StatusText.GetValueOrDefault(info.Status) }.Where(v => v is not null)));
+        var number = section.AddParagraph(string.Join(", ", new[] { info.Number, StatusText.GetValueOrDefault(info.Status) }.Where(v => v is not null)));
         number.Format.Font.Size = 12;
         number.Format.SpaceAfter = Unit.FromCentimeter(1.2);
         AddFacts(section, width,
@@ -414,7 +414,7 @@ internal sealed class BauakteReportBuilder(
             ("Kunde", info.Customer is { } c ? string.Join(", ", new[] { c.Name, Address(c.Street, c.PostalCode, c.City) }.Where(v => !string.IsNullOrWhiteSpace(v))) : null),
             ("Ausführung", Period(info.PlannedStart, info.PlannedEnd)),
             ("Fläche", info.Rooms.Count > 0 ? $"{Number(info.Rooms.Sum(r => r.AreaSquareMeters ?? 0))} m² in {info.Rooms.Count} Räumen" : null),
-            ("Inhalt", $"{diary} Tagesberichte · {inspections} Prüfungen · {work} Aufgaben/Mängel · {photos} Fotos"),
+            ("Inhalt", $"{diary} Tagesberichte, {inspections} Prüfungen, {work} Aufgaben/Mängel, {photos} Fotos"),
             ("Angelegt von", $"{info.CreatedByName} am {PdfReport.DateTime(info.CreatedAt)}"),
             ("Erstellt", PdfReport.DateTime(clock.GetUtcNow())));
         var from = section.AddParagraph();
@@ -459,7 +459,7 @@ internal sealed class BauakteReportBuilder(
     }
 
     private static string? Period(DateOnly? from, DateOnly? to) =>
-        from is null && to is null ? null : $"{Date(from)} – {Date(to)}";
+        from is null && to is null ? null : $"{Date(from)} bis {Date(to)}";
 
     private static string SafeName(string value)
     {

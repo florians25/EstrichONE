@@ -174,7 +174,7 @@ internal sealed class TeamsRolloutJobs(IServiceScopeFactory scopes, TimeProvider
             Update(job, j =>
             {
                 j.State = "failed";
-                j.Error = "Unerwarteter Fehler – Einzelheiten stehen im Server-Log (docker compose logs api).";
+                j.Error = "Unerwarteter Fehler. Einzelheiten stehen im Server-Log (docker compose logs api).";
             });
         }
         finally

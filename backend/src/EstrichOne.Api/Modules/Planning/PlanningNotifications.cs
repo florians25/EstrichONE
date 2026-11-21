@@ -41,7 +41,7 @@ internal static class PlanningNotifications
             foreach (var bauakte in range.Assignments.Where(a => previous is null || !previous.TryGetValue(a.Id, out var v) || v != a.Version)
                 .GroupBy(a => a.BauakteId))
             {
-                var days = bauakte.OrderBy(a => a.Day).ThenBy(a => a.Sequence).Take(5).Select(a => string.Join(" · ",
+                var days = bauakte.OrderBy(a => a.Day).ThenBy(a => a.Sequence).Take(5).Select(a => string.Join(", ",
                     new[] { a.Day.ToString("ddd dd.MM.", German), a.StartTime is { } s ? s.ToString("H:mm", German) + " Uhr" : null, a.Activity }
                         .Where(p => !string.IsNullOrEmpty(p))));
                 teams.Publish(new Teams.Exports.TeamsEvent(bauakte.Key, Teams.Exports.TeamsEventKind.ScheduleChanged,
@@ -61,7 +61,7 @@ internal static class PlanningNotifications
                 continue; // Für diese Person hat sich nichts geändert.
             }
 
-            var lines = items.Take(3).Select(a => string.Join(" · ",
+            var lines = items.Take(3).Select(a => string.Join(", ",
                 new[] { a.Day.ToString("ddd dd.MM.", German), a.StartTime is { } s ? s.ToString("H:mm", German) + " Uhr" : null, a.BauakteTitle }
                     .Where(p => !string.IsNullOrEmpty(p)))).ToList();
             if (items.Count > 3)

@@ -23,14 +23,14 @@ public sealed class AccessLetterService(IPdfBranding branding, IMailService mail
         var company = await branding.GetAsync(cancellationToken);
         var subject = onboarding is not null ? $"Willkommen bei {company.Name}" : reset ? "Neues Einmalpasswort für EstrichONE" : "Ihr Zugang zu EstrichONE";
         var (document, section) = PdfLetter.Create(onboarding is not null ? "Onboarding" : reset ? "Neues Einmalpasswort" : "Ihr Zugang zu EstrichONE", company,
-            ["Persönlich – vertraulich", user.DisplayName, $"z. Hd. {user.DisplayName}, im Hause", company.Street ?? "", $"{company.PostalCode} {company.City}".Trim()],
+            ["Persönlich und vertraulich", user.DisplayName, $"z. Hd. {user.DisplayName}, im Hause", company.Street ?? "", $"{company.PostalCode} {company.City}".Trim()],
             [("Datum", PdfLetter.Today(clock)), ("Ansprechpartner", company.Name), ("Telefon", company.Phone), ("E-Mail", company.Email)],
             subject);
         section.AddParagraph($"Guten Tag {user.DisplayName},").Format.SpaceAfter = Unit.FromMillimeter(4);
         if (onboarding is not null)
         {
-            var welcome = section.AddParagraph($"herzlich willkommen im Team von {company.Name}! Damit Sie vom ersten Tag an loslegen können, finden Sie hier alles Wichtige: "
-                + "Ihre Zugangsdaten für EstrichONE – unsere Software für Bauakten, Planung und Baustellendokumentation –, die Einrichtung der App und die ersten Schritte.");
+            var welcome = section.AddParagraph($"herzlich willkommen im Team von {company.Name}. In diesem Schreiben finden Sie alles, was Sie für den Start benötigen: "
+                + "Ihre Zugangsdaten für EstrichONE (unsere Software für Bauakten, Planung und Baustellendokumentation), die Einrichtung der App und die ersten Schritte.");
             welcome.Format.SpaceAfter = Unit.FromMillimeter(3);
             var facts = new List<(string, string)>();
             if (!string.IsNullOrWhiteSpace(onboarding.JobTitle)) facts.Add(("Tätigkeit", onboarding.JobTitle));
@@ -46,12 +46,12 @@ public sealed class AccessLetterService(IPdfBranding branding, IMailService mail
 
         section.AddParagraph(onboarding is not null ? "Mit diesen Daten melden Sie sich im Browser und in der App an:" : reset
             ? "Ihr Passwort für EstrichONE wurde zurückgesetzt. Mit den folgenden Daten melden Sie sich wieder an:"
-            : "für Sie wurde ein Zugang zu EstrichONE eingerichtet – unserer Software für Bauakten, Planung und Baustellendokumentation. Mit diesen Daten melden Sie sich an:");
+            : "für Sie wurde ein Zugang zu EstrichONE eingerichtet, unserer Software für Bauakten, Planung und Baustellendokumentation. Mit diesen Daten melden Sie sich an:");
 
         Table(section, [("Adresse", serverUrl, false), ("Benutzername", user.UserName, true), ("Einmalpasswort", password, true)]);
         if (onboarding is not null)
         {
-            var must = section.AddParagraph("Das Einmalpasswort gilt nur für die erste Anmeldung – danach legen Sie ein eigenes Passwort fest.");
+            var must = section.AddParagraph("Das Einmalpasswort gilt nur für die erste Anmeldung. Danach legen Sie ein eigenes Passwort fest.");
             must.Style = "Muted";
             must.Format.SpaceBefore = Unit.FromMillimeter(1);
         }
@@ -61,7 +61,7 @@ public sealed class AccessLetterService(IPdfBranding branding, IMailService mail
         {
             (1, $"Im Browser (PC, Tablet oder Handy) die Adresse {serverUrl} öffnen."),
             (2, "Mit Benutzername und Einmalpasswort anmelden."),
-            (3, "Ein eigenes, sicheres Passwort festlegen – das wird bei der ersten Anmeldung verlangt. Das Einmalpasswort gilt danach nicht mehr."),
+            (3, "Ein eigenes, sicheres Passwort festlegen. Das wird bei der ersten Anmeldung verlangt. Das Einmalpasswort gilt danach nicht mehr."),
             (4, "App einrichten: die App „EstrichONE“ auf dem iPhone oder iPad installieren, die Adresse oben eintragen und mit Ihren Zugangsdaten anmelden. Firmengeräte richtet die IT über einen QR-Code ein."),
         })
         {
@@ -86,13 +86,13 @@ public sealed class AccessLetterService(IPdfBranding branding, IMailService mail
                 image.LockAspectRatio = true;
             }
 
-            var text = row.Cells[1].AddParagraph("App „EstrichONE“ öffnen, „Gerät einrichten“ wählen und den QR-Code scannen – oder den Code eingeben:");
+            var text = row.Cells[1].AddParagraph("App „EstrichONE“ öffnen, „Gerät einrichten“ wählen und den QR-Code scannen oder den Code eingeben:");
             text.Format.SpaceAfter = Unit.FromMillimeter(2);
             var codeText = row.Cells[1].AddParagraph().AddFormattedText(code, TextFormat.Bold);
             codeText.Font.Size = 14;
             if (onboarding.DeviceCodeExpiresAt is { } expires)
             {
-                var valid = row.Cells[1].AddParagraph($"Gültig bis {PdfReport.DateTime(expires)} – danach erzeugt die IT einen neuen Code.");
+                var valid = row.Cells[1].AddParagraph($"Gültig bis {PdfReport.DateTime(expires)}. Danach erzeugt die IT einen neuen Code.");
                 valid.Style = "Muted";
                 valid.Format.SpaceBefore = Unit.FromMillimeter(2);
             }
@@ -101,7 +101,7 @@ public sealed class AccessLetterService(IPdfBranding branding, IMailService mail
         if (onboarding is not null && (onboarding.ContactName ?? onboarding.ContactPhone ?? onboarding.ContactEmail) is not null)
         {
             Heading(section, "Ihr Ansprechpartner");
-            section.AddParagraph(string.Join(" · ", new[] { onboarding.ContactName, onboarding.ContactPhone, onboarding.ContactEmail }.Where(v => !string.IsNullOrWhiteSpace(v))));
+            section.AddParagraph(string.Join(", ", new[] { onboarding.ContactName, onboarding.ContactPhone, onboarding.ContactEmail }.Where(v => !string.IsNullOrWhiteSpace(v))));
         }
 
         if (onboarding is not null)

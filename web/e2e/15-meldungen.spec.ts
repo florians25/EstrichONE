@@ -167,7 +167,7 @@ test('Einreicher sieht Status und Antwort (ohne interne Notiz) und wird benachri
   await signIn(page, user.login, user.password);
   const inbox = await apiCall<{ items: { title: string; body: string | null; link: string }[] }>(page, 'GET', '/api/v1/notifications');
   expect(inbox.json.items.some((n) => n.title === `Antwort zu Meldung ${number}`)).toBe(true);
-  expect(inbox.json.items.some((n) => n.title === `Status geändert: Meldung ${number}` && (n.body ?? '').endsWith('· Geplant'))).toBe(true);
+  expect(inbox.json.items.some((n) => n.title === `Status geändert: Meldung ${number}` && (n.body ?? '').endsWith(', Geplant'))).toBe(true);
   const link = inbox.json.items.find((n) => n.title.includes(number))!.link;
   expect(link).toMatch(/^\/meine-meldungen\//);
 

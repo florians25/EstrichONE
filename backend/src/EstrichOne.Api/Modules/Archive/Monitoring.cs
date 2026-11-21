@@ -69,7 +69,7 @@ internal sealed class MonitoringService(
         try
         {
             dbBytes = await db.Database.SqlQueryRaw<long>("SELECT pg_database_size(current_database()) AS \"Value\"").SingleAsync(cancellationToken);
-            items.Add(new("Datenbank", $"in Betrieb · {Size(dbBytes.Value)}", MonitorLevel.Ok));
+            items.Add(new("Datenbank", $"in Betrieb, {Size(dbBytes.Value)}", MonitorLevel.Ok));
         }
         catch (Exception exception) when (exception is InvalidOperationException or Npgsql.NpgsqlException)
         {
@@ -92,20 +92,20 @@ internal sealed class MonitoringService(
             var downSince = outages.Observe(OutageTracker.ArchiveKey, status is not null);
             var archiveItems = new List<MonitorItem>
             {
-                status is not null ? new("Erreichbar", $"ja · Version {status.Version}", MonitorLevel.Ok)
+                status is not null ? new("Erreichbar", $"ja, Version {status.Version}", MonitorLevel.Ok)
                     : !outages.Exceeded(downSince, grace) ? Briefly(downSince, grace, connection.LastError)
-                    : new("Erreichbar", $"nein – {connection.LastError}",
+                    : new("Erreichbar", $"nein: {connection.LastError}",
                         now - (connection.LastContactAt ?? now) > TimeSpan.FromHours(24) ? MonitorLevel.Critical : MonitorLevel.Warning),
             };
             if (status?.Archive is { } stats)
             {
-                archiveItems.Add(new("Bestand", $"{stats.Objects} Dokumente · {Size(stats.Bytes)} · Journal {stats.LedgerEntries}", MonitorLevel.Ok));
+                archiveItems.Add(new("Bestand", $"{stats.Objects} Dokumente, {Size(stats.Bytes)}, Journal {stats.LedgerEntries}", MonitorLevel.Ok));
             }
 
             if (status is not null)
             {
                 var v = status.LastVerification;
-                archiveItems.Add(new("Letzte Prüfung", v is null ? "noch keine" : $"{(v.Ok ? "in Ordnung" : $"{v.Errors.Count} Abweichung(en)")} · {Local(v.At)}",
+                archiveItems.Add(new("Letzte Prüfung", v is null ? "noch keine" : $"{(v.Ok ? "in Ordnung" : $"{v.Errors.Count} Abweichung(en)")}, {Local(v.At)}",
                     v is null ? MonitorLevel.Warning : !v.Ok ? MonitorLevel.Critical : now - v.At > TimeSpan.FromDays(2) ? MonitorLevel.Warning : MonitorLevel.Ok));
             }
 
@@ -127,8 +127,8 @@ internal sealed class MonitoringService(
             {
                 target.Reachable ? new("Erreichbar", "ja", MonitorLevel.Ok)
                     : !outages.Exceeded(targetDownSince, grace) ? Briefly(targetDownSince, grace, target.Error)
-                    : new("Erreichbar", $"nein{(target.Error is null ? string.Empty : $" – {target.Error}")}", MonitorLevel.Warning),
-                new("Letzte Sicherung dorthin", target.LastRunAt is null ? "noch keine" : $"{(target.LastRunStatus == "succeeded" ? "erfolgreich" : "fehlgeschlagen")} · {Local(target.LastRunAt.Value)}",
+                    : new("Erreichbar", $"nein{(target.Error is null ? string.Empty : $": {target.Error}")}", MonitorLevel.Warning),
+                new("Letzte Sicherung dorthin", target.LastRunAt is null ? "noch keine" : $"{(target.LastRunStatus == "succeeded" ? "erfolgreich" : "fehlgeschlagen")}, {Local(target.LastRunAt.Value)}",
                     target.LastRunAt is null ? MonitorLevel.Warning : target.LastRunStatus != "succeeded" || now - target.LastRunAt > TimeSpan.FromHours(36)
                         ? MonitorLevel.Critical : MonitorLevel.Ok),
             };
@@ -148,7 +148,7 @@ internal sealed class MonitoringService(
         }
 
         await db.SaveChangesAsync(cancellationToken);
-        var warnings = systems.SelectMany(s => s.Items.Where(i => i.Level != MonitorLevel.Ok).Select(i => i.Label == "Status" ? $"{s.Name}: {i.Value}" : $"{s.Name}: {i.Label} – {i.Value}"))
+        var warnings = systems.SelectMany(s => s.Items.Where(i => i.Level != MonitorLevel.Ok).Select(i => i.Label == "Status" ? $"{s.Name}: {i.Value}" : $"{s.Name}: {i.Label}: {i.Value}"))
             .Concat(systems.Where(s => s.Disk is { UsedPercent: >= WarnPercent }).Select(s => $"{s.Name}: Platte zu {s.Disk!.UsedPercent:0} % belegt"))
             .ToList();
         return new MonitoringOverview(systems.Count == 0 ? MonitorLevel.Ok : systems.Max(s => s.Level), now, systems, warnings);
@@ -182,8 +182,8 @@ internal sealed class MonitoringService(
             var level = percent >= CriticalPercent || daysUntilFull < 14 ? MonitorLevel.Critical
                 : percent >= WarnPercent || daysUntilFull < 60 ? MonitorLevel.Warning : MonitorLevel.Ok;
             items.Insert(0, new("Platte", $"{Size(d.Used)} von {Size(d.Total)} belegt ({percent.ToString("0.#", System.Globalization.CultureInfo.GetCultureInfo("de-DE"))} %), {Size(d.Total - d.Used)} frei"
-                + (perDay is { } g ? $" · Trend {(g >= 0 ? "+" : "")}{Size(g)}/Tag" : string.Empty)
-                + (daysUntilFull is { } days ? $" · voll in ca. {days} Tagen" : string.Empty), level));
+                + (perDay is { } g ? $", Trend {(g >= 0 ? "+" : "")}{Size(g)}/Tag" : string.Empty)
+                + (daysUntilFull is { } days ? $", voll in ca. {days} Tagen" : string.Empty), level));
         }
 
         return new MonitoredSystem(key, name, items.Count == 0 ? MonitorLevel.Ok : items.Max(i => i.Level), info, items);
@@ -191,8 +191,8 @@ internal sealed class MonitoringService(
 
     /// <summary>Aussetzer innerhalb der Meldefrist: sichtbar, aber ohne Warnstatus (keine Flatter-Meldungen).</summary>
     private static MonitorItem Briefly(DateTimeOffset? since, TimeSpan grace, string? error) =>
-        new("Erreichbar", $"kurzzeitig nicht erreichbar{(since is { } at ? $" seit {Local(at)}" : string.Empty)} – wird weiter geprüft, "
-            + $"gemeldet erst nach {grace.TotalMinutes:0} Minute{(grace.TotalMinutes == 1 ? string.Empty : "n")} ohne Verbindung"
+        new("Erreichbar", $"kurzzeitig nicht erreichbar{(since is { } at ? $" seit {Local(at)}" : string.Empty)}. Wird weiter geprüft und erst nach "
+            + $"{grace.TotalMinutes:0} Minute{(grace.TotalMinutes == 1 ? string.Empty : "n")} ohne Verbindung gemeldet"
             + (error is null ? string.Empty : $" ({error})"), MonitorLevel.Ok);
 
     private static (long Used, long Total)? Drive(string path)

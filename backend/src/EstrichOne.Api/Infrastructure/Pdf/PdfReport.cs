@@ -21,10 +21,10 @@ public sealed record PdfCompany(string Name, string? Street, string? PostalCode,
     /// <summary>Zusätzliche Zeile in der Fußzeile (z. B. Bankverbindung, Registergericht).</summary>
     public string? FooterText { get; init; }
 
-    public string AddressLine => string.Join(" · ", new[] { Street, string.Join(' ', new[] { PostalCode, City }.Where(v => !string.IsNullOrWhiteSpace(v))) }
+    public string AddressLine => string.Join(", ", new[] { Street, string.Join(' ', new[] { PostalCode, City }.Where(v => !string.IsNullOrWhiteSpace(v))) }
         .Where(v => !string.IsNullOrWhiteSpace(v)));
 
-    public string ContactLine => string.Join(" · ", new[] { Phone is null ? null : $"Tel. {Phone}", Email, Website }.Where(v => !string.IsNullOrWhiteSpace(v)));
+    public string ContactLine => string.Join(", ", new[] { Phone is null ? null : $"Tel. {Phone}", Email, Website }.Where(v => !string.IsNullOrWhiteSpace(v)));
 }
 
 /// <summary>
@@ -138,7 +138,7 @@ public static class PdfReport
         frow.Borders.Top.Width = 0.5;
         frow.Borders.Top.Color = Line;
         frow.TopPadding = Unit.FromPoint(3);
-        var info = frow.Cells[0].AddParagraph(string.Join(" · ", new[] { company.Name, company.AddressLine, company.ContactLine }.Where(v => !string.IsNullOrWhiteSpace(v))));
+        var info = frow.Cells[0].AddParagraph(string.Join(", ", new[] { company.Name, company.AddressLine, company.ContactLine }.Where(v => !string.IsNullOrWhiteSpace(v))));
         info.Style = "Muted";
         if (!string.IsNullOrWhiteSpace(company.FooterText))
         {

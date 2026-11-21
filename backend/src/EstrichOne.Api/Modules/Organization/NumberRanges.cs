@@ -306,14 +306,14 @@ internal static class NumberRangeEndpoints
             db.Add(row);
         }
 
-        var before = $"{row.Pattern} {row.RangeStart}–{row.RangeEnd?.ToString(CultureInfo.InvariantCulture) ?? "∞"}";
+        var before = $"{row.Pattern} {row.RangeStart} bis {row.RangeEnd?.ToString(CultureInfo.InvariantCulture) ?? "∞"}";
         // Ohne Jahr ohne Ende: bis zur letzten Nummer, die in die Stellen passt (kein Überlauf in andere Nummernkreise).
         var end = request.RangeEnd ?? (NumberPattern.IsYearly(pattern) ? null : NumberPattern.Capacity(pattern));
         row.Update(pattern, request.RangeStart, end);
         audit.Record("settings.number_range.saved", currentUser.UserId, "number_range", key, new Dictionary<string, string?>
         {
             ["before"] = before,
-            ["after"] = $"{pattern} {request.RangeStart}–{end?.ToString(CultureInfo.InvariantCulture) ?? "∞"}",
+            ["after"] = $"{pattern} {request.RangeStart} bis {end?.ToString(CultureInfo.InvariantCulture) ?? "∞"}",
             ["nextNumber"] = request.NextNumber?.ToString(CultureInfo.InvariantCulture),
         });
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);

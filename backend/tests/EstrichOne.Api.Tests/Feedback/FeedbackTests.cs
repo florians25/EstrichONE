@@ -163,7 +163,7 @@ public sealed class FeedbackTests(PostgresFixture postgres) : IAsyncLifetime
         mine.Count.ShouldBe(3);
         mine.ShouldAllBe(n => n.Link == $"/meine-meldungen/{id}");
         mine.ShouldContain(n => n.Title.StartsWith("Antwort zu Meldung", StringComparison.Ordinal));
-        mine.ShouldContain(n => n.Title.StartsWith("Status geändert", StringComparison.Ordinal) && n.Body!.EndsWith("· Geplant", StringComparison.Ordinal));
+        mine.ShouldContain(n => n.Title.StartsWith("Status geändert", StringComparison.Ordinal) && n.Body!.EndsWith(", Geplant", StringComparison.Ordinal));
 
         // Rückmeldung des Einreichers geht an die zuständige Person.
         (await reporter.PostAsJsonAsync($"/api/v1/feedback/{id}/comments", new { text = "Danke!", isInternal = false }, Ct)).EnsureSuccessStatusCode();

@@ -546,11 +546,11 @@ public sealed class GraphClient(IHttpClientFactory http, IOptions<TeamsOptions> 
 
     public static GraphException Offline(string host) => new("OFFLINE",
         $"Microsoft 365 ist vom Server aus nicht erreichbar ({host}). Für Teams braucht der EstrichONE-Server eine Internetverbindung (HTTPS, Port 443 zu "
-        + "login.microsoftonline.com und graph.microsoft.com) – bitte Firewall oder Proxy prüfen. Ohne Internet bleibt der eingebaute Chat nutzbar.");
+        + "login.microsoftonline.com und graph.microsoft.com). Bitte Firewall oder Proxy prüfen. Ohne Internet bleibt der eingebaute Chat nutzbar.");
 
     /// <summary>Anlegen ohne eindeutige Antwort: nicht wiederholen, sondern in Teams nachsehen lassen.</summary>
     public static GraphException MaybeCreated(string what) => new("TIMEOUT",
-        $"Microsoft 365 hat beim Anlegen ({what}) nicht rechtzeitig geantwortet. Möglicherweise wurde er trotzdem angelegt – bitte in Teams nachsehen "
+        $"Microsoft 365 hat beim Anlegen ({what}) nicht rechtzeitig geantwortet. Möglicherweise wurde er trotzdem angelegt. Bitte in Teams nachsehen "
         + "und ihn dann über „Per Link verknüpfen …“ verknüpfen, statt ihn erneut anzulegen (sonst entsteht er doppelt).");
 
     public static GraphException TimedOut(string host) => new("TIMEOUT",
@@ -642,7 +642,7 @@ public sealed class GraphClient(IHttpClientFactory http, IOptions<TeamsOptions> 
             "AADSTS700027" or "AADSTS700023" => "Das Zertifikat ist in der App-Registrierung nicht hinterlegt oder passt nicht. Bitte den öffentlichen Teil hochladen.",
             "AADSTS7000218" => "Für das Dienstkonto muss in der App-Registrierung unter „Authentifizierung“ die Option „Öffentliche Clientflows zulassen“ auf „Ja“ stehen.",
             "AADSTS65001" => "Die Administratorzustimmung fehlt. Bitte in Entra ID unter „API-Berechtigungen“ „Administratorzustimmung erteilen“ wählen.",
-            "AADSTS50076" or "AADSTS50079" => "Für das Dienstkonto ist eine zusätzliche Bestätigung (MFA) nötig – bitte die Anmeldung im Browser abschließen.",
+            "AADSTS50076" or "AADSTS50079" => "Für das Dienstkonto ist eine zusätzliche Bestätigung (MFA) nötig. Bitte die Anmeldung im Browser abschließen.",
             _ => $"Anmeldung bei Microsoft fehlgeschlagen: {Clip(description.Split('\n')[0], 300)}",
         };
     }
@@ -669,7 +669,7 @@ public sealed class GraphClient(IHttpClientFactory http, IOptions<TeamsOptions> 
         {
             401 => new GraphException("AUTH_FAILED", "Microsoft hat die Anmeldung der App abgelehnt. Bitte Tenant-ID, Client-ID und Schlüssel prüfen.", 401),
             403 => new GraphException("FORBIDDEN",
-                $"Microsoft verweigert den Zugriff – es fehlt die Berechtigung „{permission}“. Bitte in Entra ID unter „API-Berechtigungen“ hinzufügen "
+                $"Microsoft verweigert den Zugriff. Es fehlt die Berechtigung „{permission}“. Bitte in Entra ID unter „API-Berechtigungen“ hinzufügen "
                 + "und „Administratorzustimmung erteilen“ wählen (siehe Handbuch).", 403),
             404 => new GraphException("NOT_FOUND", $"Bei Microsoft nicht gefunden ({message ?? code ?? "404"}).", 404),
             409 => new GraphException("CONFLICT", $"Bei Microsoft bereits vorhanden ({message ?? code ?? "409"}).", 409),

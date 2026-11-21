@@ -187,7 +187,7 @@ internal sealed class ApprovalService(EstrichOneDbContext db, ICurrentUser curre
         var recipients = approval.AssigneeUserId is { } user ? [user] : approval.AssigneeRoleId is { } role ? await roles.GetUserIdsInRoleAsync(role, cancellationToken) : [];
         var info = await bauakten.GetAsync(approval.BauakteId, cancellationToken);
         await notifier.NotifyAsync(recipients, new Notifications.Exports.NotificationRequest(Notifications.Exports.NotificationCategory.Approval,
-            "Freigabe angefordert", info is null ? fileName : $"{fileName} · {info.Number} {info.Title}".Trim(),
+            "Freigabe angefordert", info is null ? fileName : $"{fileName}, {info.Number} {info.Title}".Trim(),
             $"/bauakten/{approval.BauakteId}", "approval", approval.Id, Notifications.Exports.NotificationUrgency.High,
             Event: Notifications.Exports.NotificationEvents.ApprovalRequested), cancellationToken);
         await SendAsync(MailTemplateKeys.ApprovalRequested, recipients.Where(r => r != currentUser.UserId), approval, new Dictionary<string, string?>
@@ -202,7 +202,7 @@ internal sealed class ApprovalService(EstrichOneDbContext db, ICurrentUser curre
         var info = await bauakten.GetAsync(approval.BauakteId, cancellationToken);
         await notifier.NotifyAsync([approval.RequestedByUserId], new Notifications.Exports.NotificationRequest(Notifications.Exports.NotificationCategory.Approval,
             approval.Status == ApprovalStatus.Approved ? "Dokument freigegeben" : "Freigabe abgelehnt",
-            info is null ? file : $"{file} · {info.Number} {info.Title}".Trim(), $"/bauakten/{approval.BauakteId}", "approval", approval.Id,
+            info is null ? file : $"{file}, {info.Number} {info.Title}".Trim(), $"/bauakten/{approval.BauakteId}", "approval", approval.Id,
             Event: Notifications.Exports.NotificationEvents.ApprovalDecided), cancellationToken);
         await SendAsync(MailTemplateKeys.ApprovalDecided, [approval.RequestedByUserId], approval, new Dictionary<string, string?>
         {

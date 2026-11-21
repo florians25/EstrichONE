@@ -172,7 +172,7 @@ public sealed class AcceptanceService(
         var (document, section) = PdfReport.Create("Abnahmeprotokoll", $"Abnahme {info.Number} {info.Title}", company);
         var width = 21.0 - 2.0 - 1.8;
         section.AddParagraph("Abnahmeprotokoll", StyleNames.Heading1);
-        var lead = section.AddParagraph($"nach § 12 VOB/B bzw. § 640 BGB · {info.Number ?? "ohne Nummer"} · {info.Title}");
+        var lead = section.AddParagraph($"nach § 12 VOB/B bzw. § 640 BGB, {info.Number ?? "ohne Nummer"}, {info.Title}");
         lead.Style = "Muted";
 
         var address = string.Join(", ", new[] { info.Street, string.Join(' ', new[] { info.PostalCode, info.City }.Where(v => !string.IsNullOrWhiteSpace(v))) }

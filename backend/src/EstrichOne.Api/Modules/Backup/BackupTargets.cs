@@ -224,8 +224,8 @@ internal sealed class BackupTargetService(
         var address = new Uri(target.Address);
         var repository = $"rest:https://{target.RestUsername}:{password}@{address.Authority}{target.RestPath}";
         return $"""
-            EstrichONE – Notfallzugang zum Backup-Ziel „{target.Name}“ ({target.Address})
-            Erstellt: {clock.GetUtcNow():dd.MM.yyyy HH:mm} UTC – VERTRAULICH, getrennt vom Server aufbewahren (z. B. Passwortmanager).
+            EstrichONE: Notfallzugang zum Backup-Ziel „{target.Name}“ ({target.Address})
+            Erstellt: {clock.GetUtcNow():dd.MM.yyyy HH:mm} UTC. VERTRAULICH, getrennt vom Server aufbewahren (z. B. Passwortmanager).
 
             Repository:     {repository}
             Fingerabdruck:  {PeerClient.FormatFingerprint(target.CaFingerprint)}

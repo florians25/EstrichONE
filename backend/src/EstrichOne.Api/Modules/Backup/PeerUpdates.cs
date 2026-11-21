@@ -361,7 +361,7 @@ internal sealed partial class PeerUpdateService(
             var names = string.Join(", ", offer.Select(o => o.Name).Take(5));
             await notifier.NotifyAsync(admins, new NotificationRequest(NotificationCategory.System,
                 "Aktualisierung für Zusatzserver verfügbar",
-                $"{names} · Version {list.CurrentVersion} verfügbar. Aktualisierung im Backup Center unter Backup-Ziele bzw. Archiv.",
+                $"{names}, Version {list.CurrentVersion} verfügbar. Aktualisierung im Backup Center unter Backup-Ziele bzw. Archiv.",
                 offer[0].Kind switch { "archive" => "/system/archiv", "offload" => "/system/auslagerung", _ => "/system/backup-ziele" }, "peerUpdate", null, NotificationUrgency.Normal,
                 $"peer-update-available:{list.CurrentVersion}", NotificationEvents.PeerUpdateAvailable), cancellationToken);
         }
@@ -457,7 +457,7 @@ internal sealed partial class PeerUpdateService(
         var admins = await roles.GetUserIdsWithPermissionAsync(Permissions.BackupManage, cancellationToken);
         var (title, body, urgency, code) = status switch
         {
-            PeerUpdate.Succeeded => ("Zusatzserver aktualisiert", $"{row.Name} · Version {row.TargetVersion} installiert", NotificationUrgency.Low,
+            PeerUpdate.Succeeded => ("Zusatzserver aktualisiert", $"{row.Name}, Version {row.TargetVersion} installiert", NotificationUrgency.Low,
                 NotificationEvents.PeerUpdateSucceeded),
             PeerUpdate.RolledBack => ("Aktualisierung zurückgerollt", $"{row.Name}: Version {row.TargetVersion} ist nicht fehlerfrei gestartet. "
                 + $"Die vorherige Version {row.PreviousVersion ?? ""} ist wieder aktiv. {row.Message}".TrimEnd(), NotificationUrgency.High,

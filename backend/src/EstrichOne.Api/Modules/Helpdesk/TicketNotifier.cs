@@ -39,7 +39,7 @@ public sealed class TicketNotifier(EstrichOneDbContext db, IMailService mail, IO
             await notifier.NotifyAsync([userId], new NotificationRequest(
                 NotificationCategory.Ticket,
                 reporterSide ? $"Antwort zu Ticket {ticket.Number}" : $"Rückmeldung zu Ticket {ticket.Number}",
-                $"{ticket.Title} · {TicketService.StatusName(ticket.Status)}",
+                $"{ticket.Title}, {TicketService.StatusName(ticket.Status)}",
                 Link(ticket), "ticket", ticket.Id, Event: NotificationEvents.TicketUpdated), cancellationToken);
             await MailAsync(ticket, userId, comment, cancellationToken);
         }
@@ -75,7 +75,7 @@ public sealed class TicketNotifier(EstrichOneDbContext db, IMailService mail, IO
 
             await notifier.NotifyAsync(recipients.Where(id => id != ticket.ReporterUserId && id != ticket.CreatedByUserId).ToList(), new NotificationRequest(
                 NotificationCategory.Ticket, $"Neues Ticket {ticket.Number}",
-                $"{ticket.Title} · {TicketService.PriorityName(ticket.Priority)}{(ticket.ReporterBlocked ? " · kann nicht arbeiten" : string.Empty)}",
+                $"{ticket.Title}, {TicketService.PriorityName(ticket.Priority)}{(ticket.ReporterBlocked ? ", kann nicht arbeiten" : string.Empty)}",
                 Link(ticket), "ticket", ticket.Id,
                 ticket.ReporterBlocked || ticket.Priority == TicketPriority.Urgent ? NotificationUrgency.High : NotificationUrgency.Normal,
                 DedupKey: $"ticket.created:{ticket.Id}", Event: NotificationEvents.TicketCreated), cancellationToken);
@@ -101,7 +101,7 @@ public sealed class TicketNotifier(EstrichOneDbContext db, IMailService mail, IO
         {
             var recipients = await AgentsForAsync(ticket, cancellationToken);
             await notifier.NotifyAsync(recipients.Where(id => id != currentUser.UserId).ToList(), new NotificationRequest(
-                NotificationCategory.Ticket, $"Ticket {ticket.Number}: Melder hat geantwortet", $"{ticket.Title} · Warten auf Support",
+                NotificationCategory.Ticket, $"Ticket {ticket.Number}: Melder hat geantwortet", $"{ticket.Title}, Warten auf Support",
                 Link(ticket), "ticket", ticket.Id, Event: NotificationEvents.TicketUpdated), cancellationToken);
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
@@ -139,7 +139,7 @@ public sealed class TicketNotifier(EstrichOneDbContext db, IMailService mail, IO
         {
             await notifier.NotifyAsync([reporter], new NotificationRequest(
                 NotificationCategory.Ticket, $"Ticket {ticket.Number} für Sie angelegt",
-                $"{ticket.Title} · aufgenommen per {TicketService.ChannelName(ticket.Channel)}", Link(ticket), "ticket", ticket.Id,
+                $"{ticket.Title}, aufgenommen per {TicketService.ChannelName(ticket.Channel)}", Link(ticket), "ticket", ticket.Id,
                 DedupKey: $"ticket.recorded:{ticket.Id}", Event: NotificationEvents.TicketUpdated), cancellationToken);
             await MailAsync(ticket, reporter, $"Die IT hat Ihre Meldung ({TicketService.ChannelName(ticket.Channel)}) als Ticket aufgenommen.", cancellationToken);
         }
@@ -153,7 +153,7 @@ public sealed class TicketNotifier(EstrichOneDbContext db, IMailService mail, IO
         assignee == currentUser.UserId
             ? Task.CompletedTask
             : notifier.NotifyAsync([assignee], new NotificationRequest(
-                NotificationCategory.Ticket, $"Ticket {ticket.Number} Ihnen zugewiesen", $"{ticket.Title} · {TicketService.PriorityName(ticket.Priority)}",
+                NotificationCategory.Ticket, $"Ticket {ticket.Number} Ihnen zugewiesen", $"{ticket.Title}, {TicketService.PriorityName(ticket.Priority)}",
                 Link(ticket), "ticket", ticket.Id, Event: NotificationEvents.TicketAssigned), cancellationToken);
 
     public Task NotifyMentionedAsync(Ticket ticket, IReadOnlyCollection<Guid> userIds, CancellationToken cancellationToken) =>
@@ -166,7 +166,7 @@ public sealed class TicketNotifier(EstrichOneDbContext db, IMailService mail, IO
     public Task NotifyOverdueAsync(Ticket ticket, IReadOnlyCollection<Guid> userIds, string kind, CancellationToken cancellationToken) =>
         notifier.NotifyAsync(userIds, new NotificationRequest(
             NotificationCategory.Ticket, $"Ticket {ticket.Number}: {(kind == "response" ? "Reaktionsziel" : "Lösungsziel")} überschritten",
-            $"{ticket.Title} · {TicketService.PriorityName(ticket.Priority)}", Link(ticket), "ticket", ticket.Id, NotificationUrgency.High,
+            $"{ticket.Title}, {TicketService.PriorityName(ticket.Priority)}", Link(ticket), "ticket", ticket.Id, NotificationUrgency.High,
             DedupKey: $"ticket.overdue:{ticket.Id}:{kind}:{ticket.ResolutionDueAt:O}", Event: NotificationEvents.TicketOverdue), cancellationToken);
 
     private async Task MailAsync(Ticket ticket, Guid userId, string? comment, CancellationToken cancellationToken)

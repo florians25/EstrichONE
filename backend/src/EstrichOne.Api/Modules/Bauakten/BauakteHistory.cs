@@ -82,7 +82,7 @@ internal static class BauakteHistoryEndpoints
         {
             "customerId" => Id(raw) is { } c ? customers.GetValueOrDefault(c, "?") : null,
             "responsibleUserId" => Id(raw) is { } u ? names.GetValueOrDefault(u, "?") : null,
-            "period" => raw is null ? null : string.Join(" – ", raw.Split(" · ").Select(Day)),
+            "period" => raw is null ? null : string.Join(" bis ", raw.Split(" · ").Select(Day)),
             _ => raw,
         };
 
@@ -153,7 +153,7 @@ internal static class BauakteHistoryEndpoints
                 ? $"{actor} hat vermerkt, dass keine Erstbegehung erforderlich ist" + (Detail("reason") is { Length: > 0 } r ? $" (Begründung: {r})." : ".")
                 : $"{actor} hat den Vermerk „Keine Erstbegehung erforderlich“ aufgehoben.",
             "bauakte.inspection_added" when Detail("kind") == "CmMeasurement" =>
-                $"{actor} hat eine CM-Messung erfasst: {Percent(Detail("measured"))} CM-% bei Grenzwert {Percent(Detail("limit"))} CM-% – "
+                $"{actor} hat eine CM-Messung erfasst: {Percent(Detail("measured"))} CM-% bei Grenzwert {Percent(Detail("limit"))} CM-%, "
                 + (Detail("ready") == "true" ? "belegreif." : "noch nicht belegreif."),
             "bauakte.inspection_added" => Detail("notRequired") == "true"
                 ? $"{actor} hat vermerkt, dass keine Erstbegehung notwendig ist."

@@ -104,14 +104,14 @@ internal static class HrPrint
             }
 
             var monthHolidays = plan.Holidays.Where(h => h.Date.Month == months[index]).ToList();
-            var legend = section.AddParagraph(string.Join(" · ", types.Values.Where(t => t.IsActive && (!t.IsSickness || plan.Rows.Any(r => r.Entries.Any(e => e.TypeId == t.Id))))
-                    .Select(t => $"{t.Code} {t.Name}")) + " · ½ halber Tag · ? beantragt · grau: Wochenende/Feiertag"
-                + (monthHolidays.Count > 0 ? $" · Feiertage: {string.Join(", ", monthHolidays.Select(h => $"{h.Date:dd.MM.} {h.Name}"))}" : string.Empty));
+            var legend = section.AddParagraph(string.Join(", ", types.Values.Where(t => t.IsActive && (!t.IsSickness || plan.Rows.Any(r => r.Entries.Any(e => e.TypeId == t.Id))))
+                    .Select(t => $"{t.Code} {t.Name}")) + ", ½ halber Tag, ? beantragt, grau: Wochenende/Feiertag"
+                + (monthHolidays.Count > 0 ? $", Feiertage: {string.Join(", ", monthHolidays.Select(h => $"{h.Date:dd.MM.} {h.Name}"))}" : string.Empty));
             legend.Style = "Muted";
             legend.Format.SpaceBefore = Unit.FromPoint(6);
         }
 
-        var printed = section.AddParagraph($"Bundesland: {GermanHolidays.States[plan.State]} · Stand: {PdfReport.DateTime(clock.GetUtcNow())}");
+        var printed = section.AddParagraph($"Bundesland: {GermanHolidays.States[plan.State]}, Stand: {PdfReport.DateTime(clock.GetUtcNow())}");
         printed.Style = "Muted";
         return TypedResults.File(Render(document), "application/pdf", month is null ? $"Teamkalender {y}.pdf" : $"Teamkalender {y}-{month:00}.pdf");
     }

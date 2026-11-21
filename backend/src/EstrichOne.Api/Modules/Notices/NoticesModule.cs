@@ -131,7 +131,7 @@ public sealed partial class NoticesModule : IModule
                 var users = await db.Set<User>().AsNoTracking().Where(u => u.IsActive).Select(u => u.Id).ToListAsync(ct);
                 await notifier.NotifyAsync(users, new Notifications.Exports.NotificationRequest(Notifications.Exports.NotificationCategory.System,
                     "Wartung angekündigt",
-                    start.ToString("ddd dd.MM., HH:mm", german) + (end is { } x ? "–" + x.ToString("HH:mm", german) : string.Empty) + " Uhr · "
+                    start.ToString("ddd dd.MM., HH:mm", german) + (end is { } x ? " bis " + x.ToString("HH:mm", german) : string.Empty) + " Uhr: "
                         + (doc.Maintenance!.Message ?? "EstrichONE ist in dieser Zeit nicht verfügbar."), null, "maintenance", null, Notifications.Exports.NotificationUrgency.High,
                     DedupKey: "maintenance:" + window.StartsAt.ToUnixTimeSeconds().ToString(System.Globalization.CultureInfo.InvariantCulture),
                     Event: Notifications.Exports.NotificationEvents.MaintenanceAnnounced), ct);

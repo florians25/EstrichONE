@@ -115,7 +115,7 @@ public sealed class SiteRecordTests(PostgresFixture postgres) : IAsyncLifetime
         var history = await site.GetFromJsonAsync<List<BauakteHistoryEntry>>($"/api/v1/bauakten/{bauakte}/history", TestJson.Options, TestContext.Current.CancellationToken);
         var text = history!.Single(h => h.Action == "bauakte.inspection_added").Text;
         text.ShouldContain("CM-% bei Grenzwert");
-        text.ShouldEndWith(ready ? "– belegreif." : "– noch nicht belegreif.");
+        text.ShouldEndWith(ready ? ", belegreif." : ", noch nicht belegreif.");
     }
 
     [Fact]

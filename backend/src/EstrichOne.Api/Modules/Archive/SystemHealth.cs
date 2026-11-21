@@ -229,19 +229,19 @@ public sealed class SystemHealthMonitor(IServiceScopeFactory scopes, TimeProvide
             if (run.Status == "failed")
             {
                 await notifier.NotifyAsync(admins, new NotificationRequest(NotificationCategory.System, "Sicherung fehlgeschlagen",
-                    $"{run.Message} · {Local(run.At)}", link, "backup", null, NotificationUrgency.High,
+                    $"{run.Message}, {Local(run.At)}", link, "backup", null, NotificationUrgency.High,
                     $"backup:run:{run.At:O}", NotificationEvents.BackupFailed), cancellationToken);
             }
             else if (backup.NotifyOnSuccess)
             {
-                var details = string.Join(" · ", new[]
+                var details = string.Join(", ", new[]
                 {
                     run.Kind == "incremental" ? "inkrementell" : "Vollsicherung",
                     run.DurationSeconds is { } d ? $"{Math.Max(1, (d + 59) / 60)} min" : null,
                     run.Targets is { } t ? $"{t} Ziel{(t == 1 ? "" : "e")}" : null,
                 }.Where(v => v is not null));
                 await notifier.NotifyAsync(admins, new NotificationRequest(NotificationCategory.System, "Sicherung erfolgreich",
-                    $"{Local(run.At)} · {details}", link, "backup", null, NotificationUrgency.Low, $"backup:run:{run.At:O}", NotificationEvents.BackupSucceeded), cancellationToken);
+                    $"{Local(run.At)}, {details}", link, "backup", null, NotificationUrgency.Low, $"backup:run:{run.At:O}", NotificationEvents.BackupSucceeded), cancellationToken);
             }
         }
         else if (backup.LastRun is { } seen && _lastRunNotified is null)

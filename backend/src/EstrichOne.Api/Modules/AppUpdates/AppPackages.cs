@@ -94,6 +94,6 @@ public sealed class AppPackageCatalog(IOptions<AppUpdateOptions> options, ILogge
         }
 
         var hash = Convert.ToHexStringLower(SHA256.HashData(stream));
-        return hash == manifest.Sha256 ? null : "Die Prüfsumme (SHA-256) stimmt nicht – die Datei ist beschädigt oder ausgetauscht.";
+        return hash == manifest.Sha256 ? null : "Die Prüfsumme (SHA-256) stimmt nicht. Die Datei ist beschädigt oder wurde ausgetauscht.";
     }
 }

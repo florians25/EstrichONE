@@ -222,7 +222,7 @@ internal static class WorkEndpoints
         var defect = item.Kind == WorkItemKind.Defect;
         await notifier.NotifyAsync([assignee], new NotificationRequest(NotificationCategory.Work,
             defect ? "Mangel zugewiesen" : "Aufgabe zugewiesen",
-            info is null ? item.Title : $"{item.Title} · {info.Number} {info.Title}".Trim(),
+            info is null ? item.Title : $"{item.Title}, {info.Number} {info.Title}".Trim(),
             item.BauakteId is { } b ? $"/bauakten/{b}" : "/start", "workItem", item.Id, defect ? NotificationUrgency.High : NotificationUrgency.Normal,
             Event: NotificationEvents.WorkAssigned), cancellationToken);
     }

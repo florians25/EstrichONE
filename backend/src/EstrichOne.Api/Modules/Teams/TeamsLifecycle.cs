@@ -62,7 +62,7 @@ internal sealed partial class TeamsService
         var optional = missing.Except(required).ToList();
         if (missing.Count == 0)
         {
-            steps.Add(new("Berechtigungen (Anwendung)", true, "Alle Anwendungsberechtigungen sind gewährt – auch Archivieren und Löschen."));
+            steps.Add(new("Berechtigungen (Anwendung)", true, "Alle Anwendungsberechtigungen sind gewährt, auch Archivieren und Löschen."));
             return;
         }
 
@@ -74,7 +74,7 @@ internal sealed partial class TeamsService
 
         if (optional.Count > 0)
         {
-            parts.Add("Nicht gewährt (optional): " + string.Join("; ", optional.Select(name => $"{name} – {Consequence(name)}")) + ".");
+            parts.Add("Nicht gewährt (optional): " + string.Join("; ", optional.Select(name => $"{name}: {Consequence(name)}")) + ".");
         }
 
         parts.Add("Ergänzen in Entra ID › App-Registrierung › API-Berechtigungen, danach „Administratorzustimmung erteilen“.");

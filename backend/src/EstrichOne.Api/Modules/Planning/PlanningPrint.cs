@@ -54,7 +54,7 @@ internal static class PlanningPrint
         var end = start.AddDays(count - 1);
         var range = await service.RangeAsync(start, end, mine ? currentUser.UserId : null, cancellationToken);
         var company = await branding.GetAsync(cancellationToken);
-        var title = $"Arbeitsplan {start:dd.MM.} – {end:dd.MM.yyyy}";
+        var title = $"Arbeitsplan {start:dd.MM.} bis {end:dd.MM.yyyy}";
         var (document, section) = Create(title, "Planung", company, landscape: true);
         section.AddParagraph(title, StyleNames.Heading1);
         var assignments = range.Assignments.Where(a => crewId is null || a.CrewId == crewId).ToList();
@@ -81,7 +81,7 @@ internal static class PlanningPrint
                 foreach (var a in jobs)
                 {
                     AddRow(table,
-                        a.StartTime is { } s ? $"{s:HH\\:mm}{(a.EndTime is { } e ? $"–{e:HH\\:mm}" : string.Empty)}" : "ganztags",
+                        a.StartTime is { } s ? $"{s:HH\\:mm}{(a.EndTime is { } e ? $" bis {e:HH\\:mm}" : string.Empty)}" : "ganztags",
                         string.Join("\n", new[] { $"{a.BauakteNumber} {a.BauakteTitle}".Trim(), a.BauakteAddress }.Where(v => !string.IsNullOrWhiteSpace(v))),
                         a.Activity,
                         string.Join("\n", new[] { a.CrewName, string.Join(", ", a.People.Select(p => p.Name)) }.Where(v => !string.IsNullOrWhiteSpace(v))),
@@ -120,7 +120,7 @@ internal static class PlanningPrint
 
         var title = day
             ? $"Tageseinteilung {days[0].ToString("dddd, dd.MM.yyyy", German)}"
-            : $"Kolonnenplan KW {System.Globalization.ISOWeek.GetWeekOfYear(days[0].ToDateTime(TimeOnly.MinValue))} ({days[0]:dd.MM.} – {days[^1]:dd.MM.yyyy})";
+            : $"Kolonnenplan KW {System.Globalization.ISOWeek.GetWeekOfYear(days[0].ToDateTime(TimeOnly.MinValue))} ({days[0]:dd.MM.} bis {days[^1]:dd.MM.yyyy})";
         var (document, section) = Create(title, "Planung", company, landscape: !day);
         section.AddParagraph(title, StyleNames.Heading1);
         var usable = day ? 17.2 : 26.7;
@@ -267,7 +267,7 @@ internal static class PlanningPrint
     }
 
     private static string Time(AssignmentView a) =>
-        a.StartTime is { } s ? $"{s:HH\\:mm}{(a.EndTime is { } e ? $"–{e:HH\\:mm}" : string.Empty)}" : "ganztags";
+        a.StartTime is { } s ? $"{s:HH\\:mm}{(a.EndTime is { } e ? $" bis {e:HH\\:mm}" : string.Empty)}" : "ganztags";
 
     private static void Warn(MigraDoc.DocumentObjectModel.Tables.Cell cell, AssignmentView a)
     {

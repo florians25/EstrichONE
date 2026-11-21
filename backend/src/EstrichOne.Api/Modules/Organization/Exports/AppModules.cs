@@ -47,7 +47,7 @@ public static class AppModules
     /// <summary>Reihenfolge: Voraussetzungen vor den abhängigen Modulen.</summary>
     public static IReadOnlyList<AppModuleInfo> All { get; } =
     [
-        new("bauakten", "core", "Bauakten", "Bauakten mit Fotos, Dokumenten, Notizen und Team – das Herz von EstrichONE.", [], Core: true),
+        new("bauakten", "core", "Bauakten", "Bauakten mit Fotos, Dokumenten, Notizen und Team. Kernmodul von EstrichONE.", [], Core: true),
         new("contacts", "core", "Kunden und Kontakte", "Kundenkartei, Ansprechpartner und Beteiligte der Bauakten.", [], Core: true),
         new("access", "core", "Benutzer und Rechte", "Konten, Rollen, Geräte und Protokoll.", [], Core: true),
         new("settings", "core", "Einstellungen", "Firmendaten, Stammdaten, Systemeinstellungen und Hinweise.", [], Core: true),

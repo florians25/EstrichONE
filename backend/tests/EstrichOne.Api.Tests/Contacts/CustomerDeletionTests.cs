@@ -265,7 +265,7 @@ public sealed class CustomerDeletionTests(PostgresFixture postgres) : IAsyncLife
             problem.Code.ShouldBe(code);
             if (code == "CUSTOMER_ARCHIVED")
             {
-                problem.Detail.ShouldBe("Kunde ist archiviert – zuerst reaktivieren.");
+                problem.Detail.ShouldBe("Der Kunde ist archiviert. Bitte zuerst reaktivieren.");
             }
         }
 
@@ -282,7 +282,7 @@ public sealed class CustomerDeletionTests(PostgresFixture postgres) : IAsyncLife
         using (var party = await _office.PutAsJsonAsync($"/api/v1/bauakten/{akte}/parties/{Guid.CreateVersion7()}", new { role = "architect", contactId = archived.Id }, TestJson.Options, Ct))
         {
             party.StatusCode.ShouldBe(HttpStatusCode.UnprocessableEntity);
-            (await party.ReadProblemAsync()).Detail.ShouldBe("Kunde ist archiviert – zuerst reaktivieren.");
+            (await party.ReadProblemAsync()).Detail.ShouldBe("Der Kunde ist archiviert. Bitte zuerst reaktivieren.");
         }
 
         var push = await _office.PushAsync(SyncClient.Op("bauakte.create", Guid.CreateVersion7(), new { title = "App", customerId = archived.Id }));

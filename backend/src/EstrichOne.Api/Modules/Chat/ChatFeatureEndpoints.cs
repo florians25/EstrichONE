@@ -847,7 +847,7 @@ internal static partial class ChatEndpoints
         var title = ChatConversation.Clip($"{info.Number} {info.Title}".Trim(), ChatConversation.MaxTitle) ?? "Baustelle";
         var address = string.Join(", ", new[] { info.Street, $"{info.PostalCode} {info.City}".Trim() }.Where(p => !string.IsNullOrWhiteSpace(p)));
         var conversation = ChatConversation.Group(title, null, user.UserId, now, bauakteId,
-            address.Length > 0 ? $"Baustellen-Gruppe · {address}" : "Baustellen-Gruppe");
+            address.Length > 0 ? $"Baustellen-Gruppe, {address}" : "Baustellen-Gruppe");
         db.Add(conversation);
         db.Add(ChatMember.Create(conversation.Id, user.UserId, now, fromCrew: team.Contains(user.UserId), isAdmin: true));
         audit.Record("chat.conversation_created", user.UserId, "chat_conversation", conversation.Id.ToString(),

@@ -267,7 +267,7 @@ internal static class OfficeEndpoints
         var author = await db.Set<User>().AsNoTracking().Where(u => u.Id == currentUser.UserId).Select(u => u.DisplayName).SingleOrDefaultAsync(cancellationToken);
         await notifier.NotifyAsync(await bauakten.TeamUserIdsAsync(id, cancellationToken), new Notifications.Exports.NotificationRequest(
             Notifications.Exports.NotificationCategory.Bauakte, "Neue Notiz",
-            string.Join(" · ", new[] { info is null ? null : $"{info.Number} {info.Title}".Trim(), author }.Where(s => !string.IsNullOrEmpty(s))) is { Length: > 0 } noteBody
+            string.Join(", ", new[] { info is null ? null : $"{info.Number} {info.Title}".Trim(), author }.Where(s => !string.IsNullOrEmpty(s))) is { Length: > 0 } noteBody
                 ? noteBody : null, $"/bauakten/{id}", "bauakte", id,
             DedupKey: $"note:{id}:{DateOnly.FromDateTime(DateTime.UtcNow):yyyyMMdd}:{currentUser.UserId:N}",
             Event: Notifications.Exports.NotificationEvents.BauakteComment), cancellationToken);

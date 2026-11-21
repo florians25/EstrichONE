@@ -22,7 +22,7 @@ internal static class DispatchPrint
         var board = await service.BoardAsync(date, cancellationToken);
         var profile = await companies.GetProfileAsync(cancellationToken);
         var company = new PdfCompany(profile?.Name ?? "EstrichONE", profile?.Street, profile?.PostalCode, profile?.City, profile?.Phone, profile?.Email, profile?.Website);
-        var title = $"Wer fährt wohin – {date.ToString("dddd, dd.MM.yyyy", German)}";
+        var title = $"Wer fährt wohin: {date.ToString("dddd, dd.MM.yyyy", German)}";
         var (document, section) = Create(title, "Planung", company, landscape: true);
         section.AddParagraph(title, StyleNames.Heading1);
 
@@ -100,7 +100,7 @@ internal static class DispatchPrint
     }
 
     private static string Time(DispatchJob job) =>
-        job.StartTime is { } s ? $"{s:HH\\:mm}{(job.EndTime is { } e ? $"–{e:HH\\:mm}" : string.Empty)}" : string.Empty;
+        job.StartTime is { } s ? $"{s:HH\\:mm}{(job.EndTime is { } e ? $" bis {e:HH\\:mm}" : string.Empty)}" : string.Empty;
 
     private static void AddList(Section section, string heading, List<string> names)
     {

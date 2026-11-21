@@ -242,7 +242,7 @@ public sealed class TeamsLifecycleTests(PostgresFixture postgres) : IAsyncLifeti
         result.Ok.ShouldBeTrue(); // optionale Berechtigungen fehlen: Hinweis, kein Fehler
         var step = result.Steps.Single(s => s.Name.StartsWith("Berechtigungen", StringComparison.Ordinal));
         step.Warning.ShouldBeTrue();
-        step.Detail.ShouldContain("Channel.Delete.All – Kanäle lassen sich nicht löschen");
+        step.Detail.ShouldContain("Channel.Delete.All: Kanäle lassen sich nicht löschen");
         step.Detail.ShouldContain("ChannelSettings.ReadWrite.All");
         step.Detail.ShouldNotContain("Chat.ManageDeletion.All");
     }

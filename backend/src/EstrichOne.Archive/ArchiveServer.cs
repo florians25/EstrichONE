@@ -265,7 +265,7 @@ public static class ArchiveServer
                 StoreOutcome.ChecksumMismatch => Problem(422, "ARCHIVE_CHECKSUM_MISMATCH", "Die Prüfsumme des empfangenen Inhalts stimmt nicht."),
                 StoreOutcome.TooLarge => Problem(413, "ARCHIVE_TOO_LARGE", "Das Dokument ist zu groß."),
                 StoreOutcome.RetentionTooShort => Problem(422, "ARCHIVE_RETENTION_TOO_SHORT", "Die Aufbewahrungsfrist ist kürzer als die Mindestfrist des Archivs."),
-                _ => Problem(400, "ARCHIVE_INVALID", "Angaben unvollständig (SHA-256, Name, Frist 1–30 Jahre)."),
+                _ => Problem(400, "ARCHIVE_INVALID", "Angaben unvollständig (SHA-256, Name, Frist 1 bis 30 Jahre)."),
             };
         });
 
@@ -413,7 +413,7 @@ public static class ArchiveServer
         var text = new StringBuilder();
         text.AppendLine();
         text.AppendLine("======================================================================");
-        text.AppendLine($" EstrichONE {options.RoleTitle} {Version} – „{options.Name}“ läuft auf Port {options.Port} (HTTPS)");
+        text.AppendLine($" EstrichONE {options.RoleTitle} {Version} „{options.Name}“ läuft auf Port {options.Port} (HTTPS)");
         text.AppendLine($" Fingerabdruck: {TlsCertificates.FormatFingerprint(tls.CaFingerprint)}");
         if (open is { } pairing)
         {

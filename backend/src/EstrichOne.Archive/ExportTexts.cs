@@ -8,13 +8,13 @@ internal static class ExportTexts
     {
         var range = from is null && to is null ? "alle Dokumente" : $"archiviert {from?.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture) ?? "…"} bis {to?.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture) ?? "…"}";
         return $"""
-            EstrichONE – Archivexport für die Betriebsprüfung
+            EstrichONE: Archivexport für die Betriebsprüfung
             =================================================
 
             Archivserver:     {serverName}
             Erstellt am:      {report.At:dd.MM.yyyy HH:mm:ss} UTC
             Umfang:           {count} Dokument(e), {range}
-            Prüfergebnis:     {(report.Ok ? "in Ordnung – Journal-Kette und alle Prüfsummen bestätigt" : $"{report.Errors.Count} Abweichung(en), siehe pruefprotokoll.json")}
+            Prüfergebnis:     {(report.Ok ? "in Ordnung, Journal-Kette und alle Prüfsummen bestätigt" : $"{report.Errors.Count} Abweichung(en), siehe pruefprotokoll.json")}
             Journal-Stand:    Nr. {report.LedgerEntries}, Hash {report.LedgerHead}
 
             Inhalt

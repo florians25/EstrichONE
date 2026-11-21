@@ -397,7 +397,7 @@ internal static class BauakteEndpoints
         if ((bauakte.PlannedStart, bauakte.PlannedEnd) != previousSchedule && (bauakte.PlannedStart is not null || bauakte.PlannedEnd is not null))
         {
             teams.Publish(new Teams.Exports.TeamsEvent(bauakte.Id, Teams.Exports.TeamsEventKind.ScheduleChanged, "Ausführungszeitraum geändert",
-                $"{bauakte.PlannedStart?.ToString("dd.MM.yyyy", System.Globalization.CultureInfo.InvariantCulture) ?? "offen"} – "
+                $"{bauakte.PlannedStart?.ToString("dd.MM.yyyy", System.Globalization.CultureInfo.InvariantCulture) ?? "offen"} bis "
                 + $"{bauakte.PlannedEnd?.ToString("dd.MM.yyyy", System.Globalization.CultureInfo.InvariantCulture) ?? "offen"}", $"/bauakten/{bauakte.Id}"));
         }
 
@@ -491,7 +491,7 @@ internal static class BauakteEndpoints
         static string? Clip(string? value) => value is { Length: > 300 } ? value[..297] + "…" : value;
         static string? Day(DateOnly? day) => day?.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
         static string? Join(params string?[] parts) =>
-            parts.Any(p => !string.IsNullOrWhiteSpace(p)) ? string.Join(" · ", parts.Where(p => !string.IsNullOrWhiteSpace(p))) : null;
+            parts.Any(p => !string.IsNullOrWhiteSpace(p)) ? string.Join(", ", parts.Where(p => !string.IsNullOrWhiteSpace(p))) : null;
 
         Change("title", before.Title, after.Title);
         Change("street", before.Street, after.Street);
@@ -515,7 +515,7 @@ internal static class BauakteEndpoints
         }
     }
 
-    private static string? ProjectText(BauakteProject? p) => p is null || p == BauakteProject.Empty ? null : string.Join(" · ", new[]
+    private static string? ProjectText(BauakteProject? p) => p is null || p == BauakteProject.Empty ? null : string.Join(", ", new[]
     {
         p.ObjectType, p.TotalArea is { } a ? $"{a:0.##} m²" : null, p.ScreedType, p.Construction,
         p.NominalThicknessMm is { } t ? $"{t} mm" : null, p.StrengthClass, p.UnderfloorHeating == true ? "Fußbodenheizung" : null,

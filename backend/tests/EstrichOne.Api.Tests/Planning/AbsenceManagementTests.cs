@@ -210,7 +210,7 @@ public sealed class AbsenceManagementTests(PostgresFixture postgres) : IAsyncLif
         var inbox = await SendAsync<NotificationInbox>(office, HttpMethod.Get, "/api/v1/notifications/");
         var notice = inbox.Items.ShouldHaveSingleItem();
         notice.Title.ShouldBe("Abwesenheitsantrag eingegangen");
-        notice.Body.ShouldNotBeNull().ShouldContain("Urlaub · ");
+        notice.Body.ShouldNotBeNull().ShouldContain("Urlaub, ");
         notice.Body.ShouldEndWith("2,5 Tage");
 
         // Offenen Antrag ändern (gleiche ID): jetzt ganze Tage.

@@ -44,7 +44,7 @@ internal sealed partial class TeamsService(
         new("TeamMember.ReadWrite.All", "Anwendung", false,
             "Bauakten-Team ins Team „Baustellen“ aufnehmen, damit es den Kanal sieht (nur bei Art „Kanal“ mit Mitgliederabgleich; entfernt niemanden)."),
         new("Chat.Create", "Anwendung", false,
-            "„Teams-Chat anlegen“ an Bauakte und Kolonne (Gruppenchat mit den gewählten Personen) und – falls eingeschaltet – Einzelchats mit stabilem Link."),
+            "„Teams-Chat anlegen“ an Bauakte und Kolonne (Gruppenchat mit den gewählten Personen) und (falls eingeschaltet) Einzelchats mit stabilem Link."),
         new("ChatMember.ReadWrite.All", "Anwendung", false,
             "Mitglieder der Gruppenchats bei Änderungen an Bauakten-Team bzw. Kolonne abgleichen (fügt hinzu, entfernt nur von EstrichONE Hinzugefügte)."),
         new("ChannelSettings.ReadWrite.All", "Anwendung", false,
@@ -467,7 +467,7 @@ internal sealed partial class TeamsService(
         if (desired.Ids.Count < MinGroupChatMembers)
         {
             throw new GraphException("TOO_FEW_MEMBERS",
-                $"Ein Gruppenchat in Teams braucht mindestens {MinGroupChatMembers} Personen mit Microsoft-Konto – gefunden: {desired.Ids.Count}"
+                $"Ein Gruppenchat in Teams braucht mindestens {MinGroupChatMembers} Personen mit Microsoft-Konto. Gefunden: {desired.Ids.Count}"
                 + (desired.Unmapped > 0 ? $" ({desired.Unmapped} weitere ohne Microsoft-Konto)" : string.Empty)
                 + ". Bitte weitere Personen auswählen bzw. Konten zuordnen (Einstellungen › Integrationen › Microsoft Teams › Benutzer); "
                 + "für zwei Personen genügt ein Einzelchat.");
@@ -588,7 +588,7 @@ internal sealed partial class TeamsService(
         link.SyncPending = false;
         if (!row.GraphConfigured)
         {
-            link.LastSyncError = "Microsoft Graph ist nicht eingerichtet – Mitglieder werden nicht abgeglichen.";
+            link.LastSyncError = "Microsoft Graph ist nicht eingerichtet. Mitglieder werden nicht abgeglichen.";
             return;
         }
 
@@ -616,7 +616,7 @@ internal sealed partial class TeamsService(
             }
             else
             {
-                problems.Add("Die Verknüpfung enthält keine Kanal- bzw. Chat-ID – Mitglieder lassen sich nicht abgleichen.");
+                problems.Add("Die Verknüpfung enthält keine Kanal- bzw. Chat-ID. Mitglieder lassen sich nicht abgleichen.");
             }
 
             AddUnmapped(problems, desired.Unmapped);

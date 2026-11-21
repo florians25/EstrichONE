@@ -413,7 +413,7 @@ test('Prüfungen und Bautagebuch aus der App erscheinen in der Bauakte', async (
   await page.getByRole('tab', { name: /CM-Messungen/ }).click();
   await expect(page.getByRole('row', { name: /Bad OG/ })).toContainText('1,6 CM-% (Grenzwert 1,8)');
   await openSection(page, 'Notizen & Verlauf');
-  await expect(page.getByText('Anna Admin hat eine CM-Messung erfasst: 1,6 CM-% bei Grenzwert 1,8 CM-% – belegreif.')).toBeVisible();
+  await expect(page.getByText('Anna Admin hat eine CM-Messung erfasst: 1,6 CM-% bei Grenzwert 1,8 CM-%, belegreif.')).toBeVisible();
 });
 
 test('Standort per Karte festlegen und in der Kopfzeile anzeigen', async ({ page }) => {

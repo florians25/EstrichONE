@@ -834,7 +834,7 @@ internal static partial class TeamsEndpoints
         options.AddRange(people.OrderBy(p => p.Name, StringComparer.CurrentCultureIgnoreCase)
             .Select(p => new TeamsParticipantOption(TeamsMemberSources.User(p.UserId), "user", p.Name, [p.UserId])));
         var bauakte = await teams.Db.Set<Bauakte>().AsNoTracking().Where(b => b.Id == id).Select(b => new { b.Number, b.Title }).SingleAsync(cancellationToken);
-        var topic = string.IsNullOrWhiteSpace(bauakte.Number) ? bauakte.Title.Trim() : $"{bauakte.Number.Trim()} · {bauakte.Title.Trim()}";
+        var topic = string.IsNullOrWhiteSpace(bauakte.Number) ? bauakte.Title.Trim() : $"{bauakte.Number.Trim()} {bauakte.Title.Trim()}";
         return TypedResults.Ok(new TeamsParticipantsResponse(options, people, user.UserId, row.GraphConfigured, TeamsService.MinGroupChatMembers,
             TeamsService.Clip(topic, 250)));
     }

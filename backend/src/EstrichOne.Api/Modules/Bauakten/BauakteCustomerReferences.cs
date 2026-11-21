@@ -44,5 +44,5 @@ internal sealed class BauakteCustomerReferences(EstrichOneDbContext db) : ICusto
         }
     }
 
-    private static string Text(string? number, string title) => number is null ? title : $"{number} · {title}";
+    private static string Text(string? number, string title) => number is null ? title : $"{number}, {title}";
 }

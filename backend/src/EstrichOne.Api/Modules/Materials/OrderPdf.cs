@@ -31,7 +31,7 @@ internal sealed class OrderPdf(EstrichOneDbContext db, IPdfBranding branding, IB
                 ("Bestellnummer", order.Number), ("Datum", PdfLetter.Today(clock)), ("Unsere Kundennummer", supplier.CustomerNumber),
                 ("Ansprechpartner", creator?.DisplayName), ("Telefon", creator?.Phone ?? company.Phone), ("E-Mail", creator?.Email ?? company.Email),
             ],
-            $"Bestellung {order.Number}{(akte is null ? "" : $" – Bauvorhaben {akte.Number} {akte.Title}")}");
+            $"Bestellung {order.Number}{(akte is null ? "" : $", Bauvorhaben {akte.Number} {akte.Title}")}");
         section.AddParagraph(supplier.ContactName is null ? "Sehr geehrte Damen und Herren," : $"Guten Tag {supplier.ContactName},").Format.SpaceAfter = Unit.FromMillimeter(3);
         section.AddParagraph("hiermit bestellen wir verbindlich:");
 

@@ -20,7 +20,7 @@ internal sealed class EmergencySheetService(
         var s = settings.Value;
         var (document, section) = PdfReport.Create("Notfallblatt Datensicherung", "Wiederherstellung von EstrichONE nach Totalverlust", company);
         section.AddParagraph("Notfallblatt Datensicherung").Style = StyleNames.Heading1;
-        var intro = section.AddParagraph("VERTRAULICH – ausgedruckt getrennt vom Server aufbewahren (Tresor, Bankschließfach, beim Geschäftsführer). "
+        var intro = section.AddParagraph("VERTRAULICH: ausgedruckt getrennt vom Server aufbewahren (Tresor, Bankschließfach, beim Geschäftsführer). "
             + "Wer dieses Blatt hat, kann die Sicherungen entschlüsseln. Ohne den Wiederherstellungsschlüssel ist keine Wiederherstellung möglich.");
         intro.Format.Font.Bold = true;
         intro.Format.SpaceAfter = Unit.FromMillimeter(3);
@@ -31,7 +31,7 @@ internal sealed class EmergencySheetService(
 
         section.AddParagraph("Wiederherstellungsschlüssel (Repository-Passwort)").Style = StyleNames.Heading2;
         var key = section.AddParagraph(string.IsNullOrWhiteSpace(s.RepositoryPassword)
-            ? "Nicht hinterlegt – steht als RESTIC_PASSWORD in der Datei .env des Servers (Installationsverzeichnis)."
+            ? "Nicht hinterlegt. Steht als RESTIC_PASSWORD in der Datei .env des Servers (Installationsverzeichnis)."
             : Group(s.RepositoryPassword));
         key.Format.Font.Size = string.IsNullOrWhiteSpace(s.RepositoryPassword) ? 9.5 : 14;
         key.Format.Font.Bold = !string.IsNullOrWhiteSpace(s.RepositoryPassword);
@@ -49,7 +49,7 @@ internal sealed class EmergencySheetService(
         {
             PdfReport.AddRow(table, "Hauptziel", primary == "/repository"
                 ? $"Ordner auf dem Server bzw. der eingebundenen Platte: {s.HostBackupDir ?? "./backup-repository"} (im Installationsverzeichnis). "
-                  + "Nach Totalverlust nur nutzbar, wenn diese Platte erhalten ist – dann den Ordner auf den neuen Server kopieren."
+                  + "Nach Totalverlust nur nutzbar, wenn diese Platte erhalten ist. Dann den Ordner auf den neuen Server kopieren."
                 : primary);
         }
 

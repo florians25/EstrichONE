@@ -158,7 +158,7 @@ public sealed class FeedbackService(EstrichOneDbContext db, IStoredFiles files)
         {
             var author = Name(c.AuthorUserId);
             items.Add(new FeedbackTimelineItem(c.Id, c.CreatedAt, c.IsInternal ? "note" : "comment", c.AuthorUserId, author,
-                c.IsInternal ? $"{author} · interne Notiz" : $"{author} hat geantwortet", c.Text, c.IsInternal, c.AuthorUserId == item.ReporterUserId,
+                c.IsInternal ? $"{author}, interne Notiz" : $"{author} hat geantwortet", c.Text, c.IsInternal, c.AuthorUserId == item.ReporterUserId,
                 attachments(c.AttachmentFileIds)));
         }
 

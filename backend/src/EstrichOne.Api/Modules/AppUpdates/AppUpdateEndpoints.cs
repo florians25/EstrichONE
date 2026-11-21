@@ -178,7 +178,7 @@ internal static class AppUpdateEndpoints
             : "Bitte in EstrichONE unter Mehr › Info „Aktualisieren“ wählen";
         await notifier.NotifyAsync([userId], new NotificationRequest(NotificationCategory.System,
             $"Bitte EstrichONE auf Version {info.LatestVersion} aktualisieren",
-            $"{how} – vorher werden alle Änderungen übertragen. Gerät: {device.Name}.",
+            $"{how}. Vorher werden alle Änderungen übertragen. Gerät: {device.Name}.",
             Urgency: NotificationUrgency.High, Event: NotificationEvents.AppUpdateRequested,
             DedupKey: $"app-update:{device.Id}:{info.LatestVersion}"), cancellationToken);
         audit.Record("devices.app_update_requested", currentUser.UserId, "device", device.Id.ToString(),
