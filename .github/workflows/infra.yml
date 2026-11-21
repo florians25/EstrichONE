@@ -71,10 +71,10 @@ jobs:
           # Hinter NAT zeigt der Eintrag auf die öffentliche Adresse – kein Fehlalarm.
           check -e ESTRICHONE_PUBLIC_IP=198.51.100.7 | tee nat.log
           grep -q "öffentliche Adresse dieses Servers" nat.log
-          ! grep -q "keine dieser Adressen" nat.log
+          ! grep -q "Keine dieser Adressen" nat.log
           # Eintrag zeigt woandershin: Hinweis mit der richtigen Adresse.
           check -e ESTRICHONE_PUBLIC_IP=203.0.113.20 | tee falsch.log
-          grep -q "dieser Server ist aber unter 203.0.113.20 erreichbar" falsch.log
+          grep -q "Dieser Server ist aber unter 203.0.113.20 erreichbar" falsch.log
           # Ohne Netz (Container ohne Netzwerk) bzw. Dienste nicht erreichbar: kurzer Hinweis, kein Abbruch, keine lange Wartezeit.
           check --network none | tee offline.log
           grep -q "öffentliche Adresse ist nicht ermittelbar" offline.log
