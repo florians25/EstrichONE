@@ -18351,7 +18351,7 @@
         "tags": [
           "Tankbelege"
         ],
-        "summary": "Prüfen/Freigeben, Ablehnen (mit Grund), als erstattet bzw. gebucht markieren oder zurücknehmen – auch für mehrere",
+        "summary": "Prüfen/Freigeben, Ablehnen (mit Grund), als erstattet bzw. gebucht markieren oder zurücknehmen, auch für mehrere Belege",
         "operationId": "DecideFuelReceipts",
         "requestBody": {
           "content": {
