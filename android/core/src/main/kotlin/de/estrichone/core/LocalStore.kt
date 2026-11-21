@@ -507,10 +507,10 @@ class LocalStore(val backend: StorageBackend) {
 }
 
 /** Änderung an einer Bauakte, der man nicht zugeteilt ist (Server: abgelehnt mit BAUAKTE_NOT_ASSIGNED). */
-class BauakteNotAssignedException : IllegalStateException("Nur ansehen – trag dich als Beteiligter ein, um zu bearbeiten.") {
+class BauakteNotAssignedException : IllegalStateException("Nur ansehen: Trag dich als Beteiligter ein, um zu bearbeiten.") {
     companion object {
         const val CODE = "BAUAKTE_NOT_ASSIGNED"
-        const val MESSAGE = "Nur ansehen – trag dich als Beteiligter ein, um zu bearbeiten."
+        const val MESSAGE = "Nur ansehen: Trag dich als Beteiligter ein, um zu bearbeiten."
         const val JOIN = "Mich als Beteiligten eintragen"
         const val LEAVE = "Als Beteiligter austragen"
 

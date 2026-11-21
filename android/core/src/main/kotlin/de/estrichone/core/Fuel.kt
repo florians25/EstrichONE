@@ -125,7 +125,7 @@ data class FuelReceiptDraft(
         if (fuelType != FuelType.AdBlue && l != null && tank != null && l > tank) add("Mehr Liter, als in den Tank passen (${decimal(tank)} l).")
         val price = pricePerLiter
         if (fuelType != FuelType.AdBlue && price != null && (price < 0.8 || price > 3.5)) {
-            add("Der Preis je Liter (${decimal(price)} €) wirkt ungewöhnlich – bitte Menge und Betrag prüfen.")
+            add("Der Preis je Liter (${decimal(price)} €) wirkt ungewöhnlich. Bitte Menge und Betrag prüfen.")
         }
     }
 

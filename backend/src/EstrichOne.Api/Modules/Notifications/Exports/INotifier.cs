@@ -136,7 +136,7 @@ public static class NotificationEvents
     public static IReadOnlyList<NotificationEventInfo> All { get; } =
     [
         new(BauakteAssigned, "Bauakten", "Bauakte mir zugewiesen", "Sie wurden Mitglied oder zuständig für eine Bauakte."),
-        new(BauakteMemberJoined, "Bauakten", "Kollege trägt sich ein", "Jemand hat sich selbst als Beteiligter in eine Bauakte eingetragen oder ausgetragen, die Sie leiten – oder (Disposition) in irgendeine Bauakte."),
+        new(BauakteMemberJoined, "Bauakten", "Kollege trägt sich ein", "Jemand hat sich selbst als Beteiligter in eine Bauakte eingetragen oder ausgetragen, die Sie leiten (Disposition: in jede Bauakte)."),
         new(BauakteComment, "Bauakten", "Notiz in meiner Bauakte", "Neue Notiz in einer Bauakte, in der Sie Mitglied oder zuständig sind."),
         new(AcceptanceSigned, "Bauakten", "Abnahme unterschrieben", "Ein Abnahmeprotokoll Ihrer Bauakte wurde unterschrieben."),
         new(WorkAssigned, "Aufgaben", "Aufgabe oder Mangel mir zugewiesen", "Ihnen wurde eine Aufgabe oder ein Mangel zugewiesen."),

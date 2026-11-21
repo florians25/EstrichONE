@@ -155,14 +155,14 @@ fun BauaktenScreen(selected: String?) {
                 group(status.name, "${if (status == BauakteStatus.Drying) "Trocknung" else status.label} (${rows.size})", rows)
             }
             if (others.isNotEmpty()) {
-                item(key = "label-online", contentType = "label") { GroupLabel("Weitere Bauakten (online) – nur ansehen") }
+                item(key = "label-online", contentType = "label") { GroupLabel("Weitere Bauakten (online, nur ansehen)") }
                 itemsIndexed(others, key = { _, b -> "online-${b.id}" }, contentType = { _, _ -> "online" }) { index, b ->
                     CardSlot(index, others.size) {
                         Row(Modifier.fillMaxWidth().clickable { nav.set(nav.tab, listOf(Route.Bauakte(b.id.lowercase()))) }
                             .padding(horizontal = 16.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                                 Text(b.title, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                Secondary(listOfNotNull(b.number, listOfNotNull(b.street, b.city).joinToString(", ").ifBlank { null }).joinToString(" · "), maxLines = 1)
+                                Secondary(listOfNotNull(b.number, listOfNotNull(b.street, b.city).joinToString(", ").ifBlank { null }).joinToString(", "), maxLines = 1)
                                 StatusLabel(b.status)
                             }
                             Icon(Icons.Outlined.Visibility, "Nur ansehen", tint = tones.textSecondary)

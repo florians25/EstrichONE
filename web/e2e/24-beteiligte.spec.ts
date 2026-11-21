@@ -36,7 +36,7 @@ test('Nicht zugeteilte Bauakte: alle sehen sie, nur ansehen; eintragen schaltet 
 
   // Nur ansehen: Hinweis-Streifen, keine Bearbeiten-Knöpfe; der Server lehnt Änderungen ab.
   const strip = page.locator('[id$="readOnlyStrip"]');
-  await expect(strip).toContainText('Nur ansehen – trag dich als Beteiligter ein, um zu bearbeiten.');
+  await expect(strip).toContainText('Nur ansehen: Trag dich als Beteiligter ein, um zu bearbeiten.');
   await expect(page.getByRole('button', { name: 'Bearbeiten', exact: true })).toHaveCount(0);
   const denied = await apiCall<{ code: string }>(page, 'POST', `/api/v1/bauakten/${bauakteId}/notes`, { id: crypto.randomUUID(), text: 'Darf ich?' });
   expect(denied.status).toBe(403);

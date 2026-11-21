@@ -57,7 +57,7 @@ describe('Tankbelege', () => {
     expect(liters(61.37)).toBe('61,37 l');
     expect(km(48210)).toBe('48.210 km');
     expect(consumption(11)).toBe('11,0 l/100 km');
-    expect(consumption(null)).toBe('–');
+    expect(consumption(null)).toBe('keine Angabe');
     expect(monthText('2026-03')).toBe('März 2026');
     expect(warningSummary([{ code: 'missing_image', text: '' }])).toEqual({ text: 'Ohne Foto', tone: 'Warning' });
     expect(warningSummary([{ code: 'consumption_unusual', text: '' }, { code: 'duplicate', text: '' }])).toEqual({ text: '2 Hinweise', tone: 'Error' });

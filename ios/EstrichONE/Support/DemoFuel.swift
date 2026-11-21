@@ -22,7 +22,7 @@ final class DemoFuel {
                          consumption: 10.3),
             Self.receipt(9103, "TB-2026-0011", Self.id(5002), "Sprinter", "LA-EO 12", day(15), 61_420, 12.0, 11.88, "adBlue", "fuelCard", "settled", "Gebucht"),
             Self.receipt(9104, "TB-2026-0008", Self.id(5003), "Pritsche", "LA-EO 7", day(21), 46_200, 64.5, 107.07, "diesel", "private", "rejected",
-                         "Abgelehnt", reason: "Betrag auf dem Foto nicht lesbar – bitte neu fotografieren."),
+                         "Abgelehnt", reason: "Der Betrag auf dem Foto ist nicht lesbar. Bitte neu fotografieren."),
             Self.receipt(9105, "TB-2026-0005", Self.id(5003), "Pritsche", "LA-EO 7", day(28), 45_600, 59.1, 99.29, "diesel", "private", "settled", "Erstattet"),
         ]
     }

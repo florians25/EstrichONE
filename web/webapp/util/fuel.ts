@@ -153,10 +153,10 @@ export function settleText(items: Pick<FuelReceiptResponse, "paymentMethod">[]):
 
 const number = (value: number, digits = 2) => value.toLocaleString("de-DE", { maximumFractionDigits: digits });
 
-export const liters = (value: number | null | undefined): string => value === null || value === undefined ? "–" : `${number(value)} l`;
-export const km = (value: number | null | undefined): string => value === null || value === undefined ? "–" : `${value.toLocaleString("de-DE")} km`;
+export const liters = (value: number | null | undefined): string => value === null || value === undefined ? "keine Angabe" : `${number(value)} l`;
+export const km = (value: number | null | undefined): string => value === null || value === undefined ? "keine Angabe" : `${value.toLocaleString("de-DE")} km`;
 export const consumption = (value: number | null | undefined): string =>
-	value === null || value === undefined ? "–" : `${value.toLocaleString("de-DE", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} l/100 km`;
+	value === null || value === undefined ? "keine Angabe" : `${value.toLocaleString("de-DE", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} l/100 km`;
 export const pricePerLiter = (value: number): string => `${value.toLocaleString("de-DE", { minimumFractionDigits: 3, maximumFractionDigits: 3 })} €/l`;
 
 const monthNames = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];

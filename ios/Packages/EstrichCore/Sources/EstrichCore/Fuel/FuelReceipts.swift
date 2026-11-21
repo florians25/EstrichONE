@@ -221,7 +221,7 @@ public struct FuelReceiptDraft: Equatable, Sendable {
             result.append("Mehr Liter, als in den Tank passen (\(Self.text(tank)) l).")
         }
         if fuelType != .adBlue, let price = pricePerLiter, price < 0.8 || price > 3.5 {
-            result.append("Der Preis je Liter (\(Self.text(price)) €) wirkt ungewöhnlich – bitte Menge und Betrag prüfen.")
+            result.append("Der Preis je Liter (\(Self.text(price)) €) wirkt ungewöhnlich. Bitte Menge und Betrag prüfen.")
         }
         return result
     }

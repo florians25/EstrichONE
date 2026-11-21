@@ -698,7 +698,7 @@ struct BauakteDetailView: View {
             try? await sync.store.setViewOnly(bauakte: bauakteId, false)
             _ = await sync.load(bauakte: bauakteId)
             isMember = true
-            toast = "Als Beteiligter eingetragen – Bearbeiten ist freigeschaltet."
+            toast = "Als Beteiligter eingetragen. Bearbeiten ist freigeschaltet."
             await reload()
         } catch {
             toast = error == .offline ? "Ohne Verbindung nicht möglich. Bitte später erneut versuchen." : error.message
@@ -832,7 +832,7 @@ struct MissingBauakteView: View {
                     .accessibilityIdentifier("assignToMeButton")
                 }
             } footer: {
-                Text("Auf dem Gerät liegen nur Bauakten, denen Sie zugeteilt sind. Nach dem Eintragen wird die Bauakte vollständig geladen – auch für unterwegs ohne Verbindung.")
+                Text("Auf dem Gerät liegen nur Bauakten, denen Sie zugeteilt sind. Nach dem Eintragen wird die Bauakte vollständig geladen, auch für unterwegs ohne Verbindung.")
             }
         }
         .listStyle(.insetGrouped)

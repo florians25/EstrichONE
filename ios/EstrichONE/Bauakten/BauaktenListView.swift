@@ -148,7 +148,7 @@ struct BauaktenListView: View {
             } header: {
                 Text("Weitere Bauakten (online)")
             } footer: {
-                Text("Nicht zugeteilt – nur ansehen. Zum Bearbeiten in der Bauakte „\(BauakteViewOnly.join)“ wählen.")
+                Text("Nicht zugeteilt, nur ansehen. Zum Bearbeiten in der Bauakte „\(BauakteViewOnly.join)“ wählen.")
             }
         }
     }

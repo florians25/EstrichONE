@@ -111,19 +111,19 @@ export function openFuelReceipt(receipt: FuelReceiptResponse, manage: boolean, c
 			...pair("Fahrzeug", vehicleText({ name: receipt.vehicleName, identifier: receipt.vehicleIdentifier })),
 			...pair("Getankt von", receipt.userName),
 			...pair("Kraftstoff", fuelTypes[receipt.fuelType]),
-			...pair("Menge", `${liters(receipt.liters)} · ${pricePerLiter(receipt.pricePerLiter)}`),
+			...pair("Menge", `${liters(receipt.liters)} (${pricePerLiter(receipt.pricePerLiter)})`),
 			...pair("Betrag brutto", money(receipt.amountGross)),
 			...pair("Zahlart", paymentMethods[receipt.paymentMethod]),
 			...pair("Kilometerstand", km(receipt.odometerKm)),
-			...(receipt.distanceKm ? pair("Seit letztem Tanken", `${km(receipt.distanceKm)} · ${consumption(receipt.consumptionPer100Km)}`) : []),
+			...(receipt.distanceKm ? pair("Seit letztem Tanken", `${km(receipt.distanceKm)}, ${consumption(receipt.consumptionPer100Km)}`) : []),
 			...(receipt.station ? pair("Tankstelle", receipt.station) : []),
 			...(receipt.notes ? pair("Notiz", receipt.notes) : []),
 			new CoreTitle({ text: "Bearbeitung" }),
 			new Label({ text: "Status" }), new ObjectStatus({ text: status.text, state: status.tone }),
 			...(receipt.rejectionReason ? pair("Grund", receipt.rejectionReason) : []),
-			...(receipt.checkedByName ? pair(receipt.status === "rejected" ? "Abgelehnt von" : "Geprüft von", `${receipt.checkedByName} · ${dateTime(receipt.checkedAt)}`) : []),
-			...(receipt.settledByName ? pair(receipt.paymentMethod === "private" ? "Erstattet von" : "Gebucht von", `${receipt.settledByName} · ${dateTime(receipt.settledAt)}`) : []),
-			...pair("Erfasst", `${dateTime(receipt.createdAt)} · ${receipt.source === "ios" ? "iPhone/iPad" : receipt.source === "android" ? "Android" : "Web"}`),
+			...(receipt.checkedByName ? pair(receipt.status === "rejected" ? "Abgelehnt von" : "Geprüft von", `${receipt.checkedByName}, ${dateTime(receipt.checkedAt)}`) : []),
+			...(receipt.settledByName ? pair(receipt.paymentMethod === "private" ? "Erstattet von" : "Gebucht von", `${receipt.settledByName}, ${dateTime(receipt.settledAt)}`) : []),
+			...pair("Erfasst", `${dateTime(receipt.createdAt)}, ${receipt.source === "ios" ? "iPhone/iPad" : receipt.source === "android" ? "Android" : "Web"}`),
 		],
 	});
 	const warnings = receipt.warnings.filter((w) => w.code !== "missing_image")
@@ -243,13 +243,13 @@ export async function openVehicleFuel(vehicle: { id: string; name: string; ident
 		figure("Kosten brutto", money(s?.cost ?? 0)), figure("Letzter Kilometerstand", km(s?.lastOdometerKm)),
 	] }).addStyleClass("eoKpiBar");
 	const months = new List({ headerText: "Je Monat", noDataText: "Noch keine Tankbelege.", items: [...(s?.months ?? [])].reverse().slice(0, 6).map((m) => new StandardListItem({
-		title: monthText(m.month), description: `${liters(m.liters)} · ${money(m.cost)}`, info: consumption(m.averageConsumption),
+		title: monthText(m.month), description: `${liters(m.liters)}, ${money(m.cost)}`, info: consumption(m.averageConsumption),
 	})) });
 	const list = new List({ headerText: "Letzte Belege", noDataText: "Noch keine Tankbelege.", items: receipts.map((r) => {
 		const status = fuelStatus(r.status, r.paymentMethod);
 		return new StandardListItem({
-			title: `${date(r.date)} · ${liters(r.liters)} ${fuelTypes[r.fuelType]} · ${money(r.amountGross)}`,
-			description: [r.number, r.userName, r.odometerKm ? km(r.odometerKm) : null, r.consumptionPer100Km ? consumption(r.consumptionPer100Km) : null].filter(Boolean).join(" · "),
+			title: `${date(r.date)}: ${liters(r.liters)} ${fuelTypes[r.fuelType]}, ${money(r.amountGross)}`,
+			description: [r.number, r.userName, r.odometerKm ? km(r.odometerKm) : null, r.consumptionPer100Km ? consumption(r.consumptionPer100Km) : null].filter(Boolean).join(", "),
 			info: status.text, infoState: status.tone, icon: r.imageFileId ? fileUrl(r.imageFileId, "thumb") : "sap-icon://receipt",
 			highlight: r.warnings.some((w) => w.code !== "missing_image") ? "Warning" : "None",
 		});
