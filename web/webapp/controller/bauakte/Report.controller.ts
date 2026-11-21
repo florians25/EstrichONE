@@ -66,7 +66,7 @@ export default class Report extends BaseController {
 <div class="muted">Stand ${e(dateTime(new Date().toISOString()))}</div></div></div>`;
 		const facts = `<h2>Stammdaten</h2><div class="grid">
 <div>Kunde: <strong>${e(customer?.name ?? "–")}</strong></div><div>Status: ${e(bauakteStatus[b.status]?.text)}</div>
-<div>Zuständig: ${e(session.name(b.responsibleUserId))}</div><div>Ausführung: ${e(b.plannedStart || b.plannedEnd ? `${date(b.plannedStart)} – ${date(b.plannedEnd)}` : "–")}</div>
+<div>Zuständig: ${e(session.name(b.responsibleUserId))}</div><div>Ausführung: ${e(b.plannedStart || b.plannedEnd ? `${date(b.plannedStart)} bis ${date(b.plannedEnd)}` : "–")}</div>
 <div>Ansprechpartner vor Ort: ${e(b.siteContactName ?? "–")} ${e(b.siteContactPhone ?? "")}</div><div>Mitarbeiter: ${e(members.map((m) => m.displayName).join(", ") || "–")}</div>
 </div>${b.siteNotes ? `<p class="pre"><strong>Hinweise:</strong> ${e(b.siteNotes)}</p>` : ""}`;
 		const roomTable = `<h2>Räume und Flächen</h2><table><thead><tr><th>Raum</th><th>Geschoss</th><th class="num">Fläche</th><th>Estrich</th><th class="num">Dicke</th><th>Heizung</th><th>Status</th>${kind === "abnahme" ? "<th>Abgenommen</th>" : ""}</tr></thead><tbody>

@@ -274,7 +274,7 @@ final class DemoHelpdesk {
     func article(_ id: String) -> [String: Any]? {
         guard id == Self.articleId else { return nil }
         return ["id": id, "title": "Fotos werden nicht übertragen", "category": "sync", "isPublished": true,
-                "body": "So bringen Sie wartende Fotos auf den Server:\n\n1. WLAN oder mobile Daten einschalten.\n\n2. In der App Mehr › Synchronisation öffnen und „Jetzt abgleichen“ tippen.\n\n3. Warten, bis „Alles übertragen“ erscheint.\n\nHilft das nicht, bitte die Meldung beantworten – die IT sieht dann die technischen Angaben."]
+                "body": "So bringen Sie wartende Fotos auf den Server:\n\n1. WLAN oder mobile Daten einschalten.\n\n2. In der App Mehr › Synchronisation öffnen und „Jetzt abgleichen“ tippen.\n\n3. Warten, bis „Alles übertragen“ erscheint.\n\nHilft das nicht, bitte die Meldung beantworten. Die IT sieht dann die technischen Angaben."]
     }
 
     /// „Meldung aufnehmen“: Ticket im Namen eines Melders (Telefon, E-Mail, vor Ort).

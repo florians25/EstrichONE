@@ -193,7 +193,7 @@ export default class ObjectController extends BaseController {
 				if (t && this.cur()?.id === b.id) m.setProperty("/subtitle", `Vorlage: ${t.name}`);
 			}).catch(() => undefined);
 		}
-		m.setProperty("/periodText", b.plannedStart || b.plannedEnd ? `${date(b.plannedStart)} – ${date(b.plannedEnd)}` : "–");
+		m.setProperty("/periodText", b.plannedStart || b.plannedEnd ? `${date(b.plannedStart)} bis ${date(b.plannedEnd)}` : "–");
 		m.setProperty("/markers", b.latitude !== null && b.longitude !== null
 			? [{ id: b.id, latitude: b.latitude, longitude: b.longitude, color: statusMarkerColors[b.status], label: b.title }] : []);
 		this.updateContactFacts();

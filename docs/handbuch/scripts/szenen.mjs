@@ -136,7 +136,7 @@ export default {
     await h.wait(600);
     await button(p, "Weiter").click();
     await h.wait(1000);
-    await p.locator('input[id$="newTitle-inner"]').fill("Einfamilienhaus Oberländer – Anbau Wintergarten");
+    await p.locator('input[id$="newTitle-inner"]').fill("Einfamilienhaus Oberländer, Anbau Wintergarten");
     await h.wait(500);
     await h.shot("bauakte-neu-bauvorhaben");
     await h.closeDialogs();

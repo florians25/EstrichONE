@@ -195,7 +195,7 @@ export function openInitialInspectionWizard(options: InspectionWizardOptions): P
 		}
 		for (const [key, c] of Object.entries(checks)) {
 			const r = results.find((x) => x.key === c.result.getSelectedKey());
-			summary.addItem(new Text({ text: `${titles[key]}: ${r?.text ?? "–"}${c.note.getValue().trim() ? ` – ${c.note.getValue().trim()}` : ""}` }));
+			summary.addItem(new Text({ text: `${titles[key]}: ${r?.text ?? "–"}${c.note.getValue().trim() ? `, ${c.note.getValue().trim()}` : ""}` }));
 		}
 		const photoCount = selectedPhotos().length;
 		const defectCount = defectChecks.filter((d) => d.box.getSelected()).length;
