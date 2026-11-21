@@ -367,7 +367,7 @@ private fun ContactCard(b: Bauakte, session: Session) {
     }
     customer?.let { c ->
         rows += {
-            RowItem(c.name, icon = Icons.Outlined.AccountCircle, subtitle = listOfNotNull("Kunde", c.customerNumber).joinToString(" · "),
+            RowItem(c.name, icon = Icons.Outlined.AccountCircle, subtitle = listOfNotNull("Kunde", c.customerNumber).joinToString(", "),
                 onClick = { nav.push(Route.Customer(c.id)) }, trailing = { c.phone?.let { p -> CircleAction(Icons.Filled.Phone, "Kunden anrufen", { Links.call(context, p) }) } })
         }
     }
@@ -379,7 +379,7 @@ private fun ContactCard(b: Bauakte, session: Session) {
     }
     primary?.let { p ->
         rows += {
-            RowItem(p.name, icon = Icons.Outlined.Engineering, subtitle = listOfNotNull(p.role.label, p.company).joinToString(" · "),
+            RowItem(p.name, icon = Icons.Outlined.Engineering, subtitle = listOfNotNull(p.role.label, p.company).joinToString(", "),
                 onClick = { nav.push(Route.Area(b.id, AreaKind.Contacts)) },
                 trailing = { p.bestPhone?.let { phone -> CircleAction(Icons.Filled.Phone, "${p.role.label} anrufen", { Links.call(context, phone) }) } })
         }
@@ -387,9 +387,9 @@ private fun ContactCard(b: Bauakte, session: Session) {
     next?.let { job ->
         val day = de.estrichone.core.ApiDate.day(job.day)
         rows += {
-            RowItem("${day?.let { Dates.relativeDay(it) } ?: job.day}${Dates.clock(job.startTime)?.let { " ab $it" } ?: ""} · ${job.activity}",
+            RowItem("${day?.let { Dates.relativeDay(it) } ?: job.day}${Dates.clock(job.startTime)?.let { " ab $it" } ?: ""}, ${job.activity}",
                 icon = Icons.Filled.CalendarMonth, subtitle = listOfNotNull(job.crewName, job.people.joinToString(", ") { it.name }.ifEmpty { null },
-                    job.resources.joinToString(", ") { it.name }.ifEmpty { null }).joinToString(" · "))
+                    job.resources.joinToString(", ") { it.name }.ifEmpty { null }).joinToString(", "))
         }
     }
     SectionCard(Modifier.padding(top = 16.dp)) {

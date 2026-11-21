@@ -37,7 +37,7 @@ class InitialInspectionOverviewTests {
         assertEquals(InitialInspectionStatus.Planned, overview.status)
         assertEquals("Geplant", overview.status.title)
         assertEquals(planned, overview.appointment)
-        assertEquals("Do., 19.11.2026, 08:00 · Kolonne Nord, Max Huber", InitialInspectionOverview.appointmentText(planned))
+        assertEquals("Do., 19.11.2026, 08:00, Kolonne Nord, Max Huber", InitialInspectionOverview.appointmentText(planned))
         assertTrue(InitialInspectionOverview.isInitialInspection(job(null, "2026-11-19")))
         assertFalse(InitialInspectionOverview.isInitialInspection(job(null, "2026-11-19", "Estrich")))
 

@@ -104,7 +104,7 @@ fun UpdateMaintenanceOverlay(session: Session) {
                     color = if (screen.failed) tones.danger else MaterialTheme.colorScheme.primary, trackColor = tones.fill)
                 Text(screen.text, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 4.dp))
                 Text(
-                    if (offline) "Server wird gerade getauscht – die App wartet automatisch." else "Die App prüft alle 5 Sekunden und geht nach der Freigabe zur Anmeldung.",
+                    if (offline) "Der Server wird gerade getauscht. Die App wartet automatisch." else "Die App prüft alle 5 Sekunden und geht nach der Freigabe zur Anmeldung.",
                     style = MaterialTheme.typography.bodySmall, color = tones.textSecondary,
                 )
             }

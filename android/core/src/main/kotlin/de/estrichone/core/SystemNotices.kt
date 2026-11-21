@@ -94,9 +94,9 @@ object NoticePresentation {
     fun period(start: Instant?, end: Instant?, now: Instant, zone: ZoneId = Dates.zone): String = when {
         start != null && end != null ->
             if (start.atZone(zone).toLocalDate() == end.atZone(zone).toLocalDate()) {
-                "${shortDate(start, now, zone)}, ${clock(start, zone)}–${clock(end, zone)} Uhr"
+                "${shortDate(start, now, zone)}, ${clock(start, zone)} bis ${clock(end, zone)} Uhr"
             } else {
-                "${shortDate(start, now, zone)}, ${clock(start, zone)} Uhr – ${shortDate(end, now, zone)}, ${clock(end, zone)} Uhr"
+                "${shortDate(start, now, zone)}, ${clock(start, zone)} Uhr bis ${shortDate(end, now, zone)}, ${clock(end, zone)} Uhr"
             }
         start != null -> "ab ${shortDate(start, now, zone)}, ${clock(start, zone)} Uhr"
         end != null -> "bis ${shortDate(end, now, zone)}, ${clock(end, zone)} Uhr"

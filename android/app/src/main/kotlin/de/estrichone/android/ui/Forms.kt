@@ -69,7 +69,7 @@ fun FormSheet(
 ) {
     val session = LocalSession.current
     var error by remember { mutableStateOf<String?>(null) }
-    val subtitle = remember(bauakteId) { bauakteId?.let { session.service.bauakte(it)?.let { b -> "${b.numberText} · ${b.title}" } } }
+    val subtitle = remember(bauakteId) { bauakteId?.let { session.service.bauakte(it)?.let { b -> "${b.numberText}, ${b.title}" } } }
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true), containerColor = tones.canvas) {
         Column(Modifier.verticalScroll(rememberScrollState()).imePadding().padding(horizontal = 20.dp).padding(bottom = 32.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -133,7 +133,7 @@ fun DiarySheet(bauakteId: String, onDismiss: () -> Unit) {
     // Fotos von heute zu dieser Baustelle (wie auf iOS am Tagebucheintrag).
     val todaysPhotos = remember { session.service.photos(bauakteId).filter { it.time?.atZone(Dates.zone)?.toLocalDate() == day && it.isPhoto } }
     var attachPhotos by remember { mutableStateOf(true) }
-    FormSheet("Bautagebuch – ${Dates.relativeDay(day)}", bauakteId, onDismiss, canSave = text.isNotBlank(), onSave = {
+    FormSheet("Bautagebuch: ${Dates.relativeDay(day)}", bauakteId, onDismiss, canSave = text.isNotBlank(), onSave = {
         session.service.addDiary(bauakteId, day, text, weather, temperature.toIntOrNull(), workers.toIntOrNull(),
             start.takeIf { it.length == 5 }?.let { "$it:00" }, end.takeIf { it.length == 5 }?.let { "$it:00" },
             photoFileIds = if (attachPhotos) todaysPhotos.map { it.id } else emptyList())

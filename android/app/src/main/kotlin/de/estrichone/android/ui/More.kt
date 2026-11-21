@@ -135,7 +135,7 @@ fun MoreScreen() {
                         Spacer(Modifier.width(14.dp))
                         Column {
                             Text(session.user.displayName, style = MaterialTheme.typography.titleLarge)
-                            Secondary("${session.user.userName} · ${if (session.isDemo) "Telefon von Max" else session.deviceName}${if (session.isPool) " · Poolgerät" else ""}")
+                            Secondary("${session.user.userName}, ${if (session.isDemo) "Telefon von Max" else session.deviceName}${if (session.isPool) ", Poolgerät" else ""}")
                         }
                     }
                     RowDivider(16.dp)
@@ -378,7 +378,7 @@ fun SecurityScreen() {
                             if (index > 0) RowDivider()
                             RowItem(s.clientName ?: s.client, icon = Icons.Outlined.Devices,
                                 subtitle = listOfNotNull(if (s.current) "Dieses Gerät" else null, if (s.deviceBound) "an Gerät gebunden" else null,
-                                    ApiDate.parse(s.lastSeenAt)?.let { "zuletzt ${Dates.ago(it)}" }).joinToString(" · "))
+                                    ApiDate.parse(s.lastSeenAt)?.let { "zuletzt ${Dates.ago(it)}" }).joinToString(", "))
                         }
                     }
                 }
@@ -497,7 +497,7 @@ fun AboutScreen() {
                 SectionCard {
                     RowItem("App-Version", value = "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})")
                     RowDivider(16.dp)
-                    RowItem("Android", value = "${Build.VERSION.RELEASE} · ${Build.MODEL}")
+                    RowItem("Android", value = "${Build.VERSION.RELEASE}, ${Build.MODEL}")
                     RowDivider(16.dp)
                     RowItem("Server", value = if (session.isDemo) "Demo" else session.api.baseUrl.host)
                     RowDivider(16.dp)
@@ -548,7 +548,7 @@ fun MyTasksScreen() {
             }
             visible.groupBy { it.bauakteId }.forEach { (bauakteId, list) ->
                 val b = bauakteId?.let { bauakten[it] }
-                item(key = "label-$bauakteId") { GroupLabel(b?.let { "${it.numberText} · ${it.title}" } ?: "Ohne Bauakte") }
+                item(key = "label-$bauakteId") { GroupLabel(b?.let { "${it.numberText}, ${it.title}" } ?: "Ohne Bauakte") }
                 itemsIndexed(list, key = { _, t -> t.id }, contentType = { _, _ -> "task" }) { i, t -> CardSlot(i, list.size, 56.dp) { TaskRow(t, session) } }
             }
         }
@@ -568,7 +568,7 @@ fun WeekScreen() {
             (0L..6L).map { today.plusDays(it) }.forEach { day ->
                 val jobs = plan?.assignments?.filter { it.day == day.toString() }.orEmpty()
                 val absent = plan?.absences?.filter { it.userId == session.user.id && it.from <= day.toString() && it.to >= day.toString() }.orEmpty()
-                item { GroupLabel("${Dates.weekdayName(day)}, ${Dates.dayMonth(day)}${if (day == today) " · Heute" else ""}") }
+                item { GroupLabel("${Dates.weekdayName(day)}, ${Dates.dayMonth(day)}${if (day == today) ", Heute" else ""}") }
                 item {
                     SectionCard {
                         when {
@@ -576,7 +576,7 @@ fun WeekScreen() {
                             jobs.isEmpty() -> RowItem("Nichts eingeplant", icon = Icons.Outlined.CalendarMonth, iconTint = tones.textTertiary, iconBackground = tones.fill)
                             else -> jobs.forEachIndexed { i, job ->
                                 if (i > 0) RowDivider()
-                                RowItem(job.bauakteTitle, icon = Icons.Filled.Apartment, subtitle = "${job.time} · ${job.activity}${job.crewName?.let { " · $it" } ?: ""}",
+                                RowItem(job.bauakteTitle, icon = Icons.Filled.Apartment, subtitle = "${job.time}, ${job.activity}${job.crewName?.let { ", $it" } ?: ""}",
                                     showChevron = true, onClick = { nav.push(Route.Bauakte(job.bauakteId)) })
                             }
                         }
@@ -618,7 +618,7 @@ fun DispatchScreen() {
                                     Spacer(Modifier.width(10.dp))
                                     Column(Modifier.weight(1f)) {
                                         Text(site.title, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                        Secondary(listOfNotNull(site.number, site.address).joinToString(" · "), maxLines = 1)
+                                        Secondary(listOfNotNull(site.number, site.address).joinToString(", "), maxLines = 1)
                                     }
                                     if (mine) Pill("Ich", MaterialTheme.colorScheme.primary, tones.infoSoft)
                                 }
@@ -626,11 +626,11 @@ fun DispatchScreen() {
                                     Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                                         Box(Modifier.size(10.dp).clip(CircleShape).background(parseColor(job.crewColor) ?: tones.textTertiary))
                                         Spacer(Modifier.width(8.dp))
-                                        Text("${job.crewName ?: ""} · ${job.activity}", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                                        Text("${job.crewName ?: ""}, ${job.activity}", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
                                     }
                                 }
                                 if (site.people.isNotEmpty()) Secondary(site.people.joinToString(", ") { it.name }, Modifier.padding(top = 4.dp))
-                                if (site.vehicles.isNotEmpty()) Secondary("🚚 " + site.vehicles.joinToString(", ") { it.name })
+                                if (site.vehicles.isNotEmpty()) Secondary("Fahrzeuge: " + site.vehicles.joinToString(", ") { it.name })
                                 site.warnings.forEach { Text("⚠ $it", color = tones.warning, style = MaterialTheme.typography.bodyMedium) }
                                 Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                     site.address?.let { a -> OutlinedButton(onClick = { Links.route(context, a, site.latitude, site.longitude) }) { Text("Route") } }

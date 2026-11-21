@@ -71,8 +71,8 @@ object UpdatePresentation {
         val version = state.targetVersion ?: ""
         val failed = state.phase == "failed"
         if (announcing) {
-            val text = if (running) "Update auf $target beginnt in ${clock(left!!)} – bitte Arbeit speichern. Offene Änderungen werden jetzt übertragen."
-            else "Update auf $target beginnt gleich – bitte Arbeit speichern."
+            val text = if (running) "Update auf $target beginnt in ${clock(left!!)}. Bitte speichern Sie Ihre Arbeit. Offene Änderungen werden jetzt übertragen."
+            else "Update auf $target beginnt gleich. Bitte speichern Sie Ihre Arbeit."
             return UpdateScreen(true, text, false, "Update angekündigt", text, if (running) clock(left!!) else "", "Beginnt in",
                 progress, steps(0), false, version)
         }
@@ -81,8 +81,8 @@ object UpdatePresentation {
                 "EstrichONE wird auf $target aktualisiert. Erfasste Daten bleiben auf dem Gerät und werden danach übertragen.",
                 if (running) clock(left!!) else "", if (running) "Mindestens noch" else "Läuft …", progress, steps(1), false, version)
             "finish" -> UpdateScreen(false, "", true, "Update wird abgeschlossen",
-                "$target läuft. Letzte Prüfungen – danach geht es mit einer neuen Anmeldung weiter.",
-                if (running) clock(left!!) else "", if (running) "Freigabe in" else "Gleich geschafft …", progress, steps(index), false, version)
+                "$target läuft. Letzte Prüfungen laufen. Danach geht es mit einer neuen Anmeldung weiter.",
+                if (running) clock(left!!) else "", if (running) "Freigabe in" else "Wird abgeschlossen …", progress, steps(index), false, version)
             "rollback" -> UpdateScreen(false, "", true, "Update wird zurückgenommen",
                 "Das Update auf $target hat nicht geklappt. Der bisherige Stand wird wiederhergestellt.", "", "Läuft …", progress, steps(2), false, version)
             else -> UpdateScreen(false, "", true, "Update fehlgeschlagen",
@@ -93,7 +93,7 @@ object UpdatePresentation {
 
     /** Hinweis nach der Freigabe (Anmeldeseite). */
     fun doneText(version: String?, failed: Boolean): String = when {
-        failed -> "Das Update konnte nicht eingespielt werden – EstrichONE läuft mit dem bisherigen Stand weiter. Bitte erneut anmelden."
+        failed -> "Das Update konnte nicht eingespielt werden. EstrichONE läuft mit dem bisherigen Stand weiter. Bitte erneut anmelden."
         !version.isNullOrBlank() -> "EstrichONE wurde auf Version $version aktualisiert. Bitte erneut anmelden."
         else -> "EstrichONE wurde aktualisiert. Bitte erneut anmelden."
     }

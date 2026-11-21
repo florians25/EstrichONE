@@ -63,7 +63,7 @@ data class SyncStatus(
         get() = when {
             running -> "wird abgeglichen"
             summary.hasProblems -> "Problem"
-            outcome == SyncOutcome.Offline -> if (summary.isSettled) "offline" else "offline · ${summary.pendingOperations + summary.pendingUploads} ausstehend"
+            outcome == SyncOutcome.Offline -> if (summary.isSettled) "offline" else "offline, ${summary.pendingOperations + summary.pendingUploads} ausstehend"
             !summary.isSettled -> "${summary.pendingOperations + summary.pendingUploads} ausstehend"
             else -> "aktuell"
         }

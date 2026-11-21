@@ -188,7 +188,7 @@ fun HelpdeskScreen() {
                                     subtitle = listOfNotNull(t.number, if (view == "mine") ticketStatusLabel(t.status) else de.estrichone.core.ticketStatusAgentLabel(t.status),
                                         sla, if (view != "mine") t.reporterDisplayName else null, if (view != "mine") t.assigneeName ?: "nicht zugewiesen" else null,
                                         de.estrichone.core.ticketChannelLabel(t.channel)?.takeIf { view != "mine" })
-                                        .joinToString(" · "),
+                                        .joinToString(", "),
                                     showChevron = true, onClick = { nav.push(Route.Ticket(t.id)) }, trailing = { if (t.hasUnread) CountBadge(1) })
                             }
                         }
@@ -257,7 +257,7 @@ fun TicketScreen(id: String) {
                         if (agent) slaText(full.summary)?.let { Pill(it, tones.danger, tones.dangerSoft) }
                     }
                     full.summary.assigneeName?.let { Secondary("Bearbeitet von $it", Modifier.padding(top = 6.dp)) }
-                    if (agent) full.summary.intakeText?.let { Secondary("Eingang: $it · Melder: ${full.summary.reporterDisplayName ?: "–"}") }
+                    if (agent) full.summary.intakeText?.let { Secondary("Eingang: $it, Melder: ${full.summary.reporterDisplayName ?: "–"}") }
                 }
                 if (agent) item {
                     AgentPanel(full, agents, groups, options, session.user.id, onResolve = { resolveAs = it; resolving = true }) { change, message -> update({ session.api.updateTicket(id, change) }, message) }
@@ -286,7 +286,7 @@ fun TicketScreen(id: String) {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = if (mine) Arrangement.End else Arrangement.Start) {
                             Column(Modifier.fillMaxWidth(0.86f).clip(RoundedCornerShape(16.dp))
                                 .background(if (e.isInternal) tones.warningSoft else if (mine) tones.infoSoft else tones.card).padding(12.dp)) {
-                                Text((e.actorName ?: "") + if (e.isInternal) " · interne Notiz" else "", style = MaterialTheme.typography.labelLarge,
+                                Text((e.actorName ?: "") + if (e.isInternal) ", interne Notiz" else "", style = MaterialTheme.typography.labelLarge,
                                     color = MaterialTheme.colorScheme.primary)
                                 e.text?.let { Text(it) }
                                 if (e.attachmentFileIds.isNotEmpty()) TicketAttachments(e.attachmentFileIds)
@@ -295,7 +295,7 @@ fun TicketScreen(id: String) {
                         }
                     } else {
                         Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
-                            Secondary("${e.summary} · ${ApiDate.parse(e.at)?.let { Dates.ago(it) } ?: ""}")
+                            Secondary("${e.summary}, ${ApiDate.parse(e.at)?.let { Dates.ago(it) } ?: ""}")
                             e.text?.takeIf { e.kind == "rating" }?.let { Secondary("„$it“") }
                         }
                     }
@@ -320,7 +320,7 @@ fun TicketScreen(id: String) {
                     if (full.summary.status == "closed") {
                         Secondary("Diese Meldung ist abgeschlossen. Bei einem neuen Problem bitte neu melden.")
                     } else if (full.summary.status == "resolved" && !agent) {
-                        OutlinedButton(onClick = { update({ session.api.reopenTicket(id) }) }, modifier = Modifier.fillMaxWidth()) { Text("Problem besteht weiter – wieder öffnen") }
+                        OutlinedButton(onClick = { update({ session.api.reopenTicket(id) }) }, modifier = Modifier.fillMaxWidth()) { Text("Problem besteht weiter, wieder öffnen") }
                     } else {
                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             DictationField(reply, { reply = it }, if (internal) "Interne Notiz" else if (agent) "Öffentliche Antwort an den Melder" else "Antwort an die IT", minLines = 2)
@@ -675,7 +675,7 @@ fun RecordTicketScreen() {
             val chosen = reporter
             if (chosen != null) {
                 SectionCard {
-                    RowItem(chosen.displayName, icon = Icons.Outlined.Person, subtitle = listOfNotNull(chosen.userName.ifBlank { null }, chosen.email).joinToString(" · "),
+                    RowItem(chosen.displayName, icon = Icons.Outlined.Person, subtitle = listOfNotNull(chosen.userName.ifBlank { null }, chosen.email).joinToString(", "),
                         trailing = { TextButton(onClick = { reporter = null }) { Text("Ändern") } })
                 }
             } else {
@@ -683,7 +683,7 @@ fun RecordTicketScreen() {
                 if (results.isNotEmpty()) SectionCard {
                     results.forEachIndexed { i, r ->
                         if (i > 0) RowDivider()
-                        RowItem(r.displayName, icon = Icons.Outlined.Person, subtitle = listOfNotNull(r.userName.ifBlank { null }, r.email ?: r.phone).joinToString(" · "),
+                        RowItem(r.displayName, icon = Icons.Outlined.Person, subtitle = listOfNotNull(r.userName.ifBlank { null }, r.email ?: r.phone).joinToString(", "),
                             onClick = { reporter = r })
                     }
                 }

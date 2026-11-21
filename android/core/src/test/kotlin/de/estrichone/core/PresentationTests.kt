@@ -28,12 +28,12 @@ class PresentationTests {
     @Test
     @DisplayName("Systemhinweise: Zeitraum, gleicher Tag, über Mitternacht, nur Beginn bzw. Ende, anderes Jahr")
     fun period() {
-        assertEquals("So., 08.11., 22:00–23:30 Uhr", NoticePresentation.period(at(8, 22), at(8, 23, 30), now, zone))
-        assertEquals("Sa., 07.11., 22:00 Uhr – So., 08.11., 02:00 Uhr", NoticePresentation.period(at(7, 22), at(8, 2), now, zone))
+        assertEquals("So., 08.11., 22:00 bis 23:30 Uhr", NoticePresentation.period(at(8, 22), at(8, 23, 30), now, zone))
+        assertEquals("Sa., 07.11., 22:00 Uhr bis So., 08.11., 02:00 Uhr", NoticePresentation.period(at(7, 22), at(8, 2), now, zone))
         assertEquals("ab Sa., 07.11., 06:05 Uhr", NoticePresentation.period(at(7, 6, 5), null, now, zone))
         assertEquals("bis Fr., 13.11., 18:00 Uhr", NoticePresentation.period(null, at(13, 18), now, zone))
         assertEquals("", NoticePresentation.period(null, null, now, zone))
-        assertEquals("Sa., 02.01.2027, 08:00–09:00 Uhr", NoticePresentation.period(at(2, 8, month = 1, year = 2027), at(2, 9, month = 1, year = 2027), now, zone))
+        assertEquals("Sa., 02.01.2027, 08:00 bis 09:00 Uhr", NoticePresentation.period(at(2, 8, month = 1, year = 2027), at(2, 9, month = 1, year = 2027), now, zone))
     }
 
     @Test
@@ -72,7 +72,7 @@ class PresentationTests {
         val maintenance = items[2]
         assertEquals("Geplante Wartung", maintenance.title)
         assertEquals("in 2 Tagen", maintenance.relative)
-        assertEquals("So., 08.11., 22:00–23:30 Uhr", maintenance.period)
+        assertEquals("So., 08.11., 22:00 bis 23:30 Uhr", maintenance.period)
 
         val (shown, hidden) = NoticePresentation.selection(items, emptySet(), expanded = false)
         assertEquals(listOf(NoticeItem.Kind.Critical), shown.map { it.kind })
@@ -196,7 +196,7 @@ class PresentationTests {
         assertEquals("new", ticket.summary.status)
         val plan = api.myPlan(LocalDate.now().toString(), LocalDate.now().plusDays(6).toString())
         assertEquals("Estrich einbringen OG", plan.assignments.first().activity)
-        assertEquals("07:00 – 13:00", plan.assignments.first().time)
+        assertEquals("07:00 bis 13:00", plan.assignments.first().time)
         assertEquals(3, NoticePresentation.items(api.systemNotices(), Instant.now()).size)
         assertTrue(api.healthBanners().isEmpty())
     }

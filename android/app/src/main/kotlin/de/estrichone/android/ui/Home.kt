@@ -229,7 +229,7 @@ fun HomeScreen() {
                     SectionCard {
                         recent.forEachIndexed { index, b ->
                             if (index > 0) RowDivider(16.dp)
-                            RowItem(b.title, subtitle = listOfNotNull(b.numberText, b.addressLine).joinToString(" · "), showChevron = true,
+                            RowItem(b.title, subtitle = listOfNotNull(b.numberText, b.addressLine).joinToString(", "), showChevron = true,
                                 onClick = { nav.push(Route.Bauakte(b.id)) })
                         }
                     }
@@ -286,7 +286,7 @@ fun WeekRow(job: PlannedJob, today: LocalDate, onClick: () -> Unit) {
         }
         Column(Modifier.weight(1f)) {
             Text(job.bauakteTitle, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Secondary("${Dates.clock(job.startTime) ?: "ganztags"} · ${job.activity}", maxLines = 1)
+            Secondary("${Dates.clock(job.startTime) ?: "ganztags"}, ${job.activity}", maxLines = 1)
         }
         Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = tones.textTertiary)
     }
@@ -324,7 +324,7 @@ fun TodayJobCard(job: PlannedJob, session: Session, phase: TodayGlance.Phase = T
                         PhasePill(phase, Modifier.padding(start = 8.dp))
                     }
                     Text(job.bauakteTitle, style = MaterialTheme.typography.titleMedium)
-                    Secondary(listOfNotNull(job.activity, job.crewName).joinToString(" · "))
+                    Secondary(listOfNotNull(job.activity, job.crewName).joinToString(", "))
                     job.bauakteAddress?.let { Secondary(it) }
                     if (!glance.isEmpty) GlanceChips(glance, Modifier.padding(top = 4.dp))
                 }
@@ -369,7 +369,7 @@ fun TodayJobCard(job: PlannedJob, session: Session, phase: TodayGlance.Phase = T
         job.bauakteAddress?.let { JobLine(Icons.Outlined.Place, it) }
         val contact = bauakte?.siteContactName
         if (contact != null || phone != null) {
-            JobLine(Icons.Outlined.AccountCircle, listOfNotNull(contact?.let { "Vor Ort: $it" } ?: "Ansprechpartner vor Ort", phone).joinToString(" · "))
+            JobLine(Icons.Outlined.AccountCircle, listOfNotNull(contact?.let { "Vor Ort: $it" } ?: "Ansprechpartner vor Ort", phone).joinToString(", "))
         }
         JobLine(Icons.Filled.Handyman, job.activity, bold = true)
         job.crewName?.let { crew ->
@@ -564,7 +564,7 @@ private fun NoticeDetails(item: NoticeItem, onDismiss: () -> Unit) {
             }
             SectionCard {
                 if (item.period.isNotEmpty()) RowItem("Zeitraum", icon = Icons.Filled.CalendarMonth, subtitle = item.period)
-                val countdown = listOf(item.relative, item.remaining).filter { it.isNotEmpty() }.joinToString(" · ")
+                val countdown = listOf(item.relative, item.remaining).filter { it.isNotEmpty() }.joinToString(", ")
                 if (countdown.isNotEmpty()) { RowDivider(); RowItem("Stand", icon = Icons.Filled.Info, subtitle = countdown) }
                 if (item.source.isNotEmpty()) { RowDivider(); RowItem("Absender", icon = Icons.Outlined.AccountCircle, subtitle = item.source) }
             }

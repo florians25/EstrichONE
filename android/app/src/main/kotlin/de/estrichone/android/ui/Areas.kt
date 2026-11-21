@@ -310,7 +310,7 @@ fun PhotoScreen(fileId: String) {
                 }
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Secondary(listOfNotNull(f.time?.let { Dates.dateTime(it) }, if (f.isStoredOnServer) "übertragen" else "wird übertragen").joinToString(" · "),
+                Secondary(listOfNotNull(f.time?.let { Dates.dateTime(it) }, if (f.isStoredOnServer) "übertragen" else "wird übertragen").joinToString(", "),
                     Modifier.weight(1f))
                 SyncMark(f.syncState)
             }
@@ -346,7 +346,7 @@ private fun DocumentsArea(id: String) {
                         list.forEachIndexed { index, file ->
                             if (index > 0) RowDivider()
                             RowItem(file.displayName, icon = Icons.Filled.PictureAsPdf, iconTint = tones.danger, iconBackground = tones.dangerSoft,
-                                subtitle = listOfNotNull(file.time?.let { Dates.ago(it) }, "${(file.sizeBytes / 1024).coerceAtLeast(1)} KB").joinToString(" · "),
+                                subtitle = listOfNotNull(file.time?.let { Dates.ago(it) }, "${(file.sizeBytes / 1024).coerceAtLeast(1)} KB").joinToString(", "),
                                 onClick = {
                                     scope.launch {
                                         val bytes = session.content(file)
@@ -406,7 +406,7 @@ private fun DiaryArea(id: String) {
                     }
                     val facts = listOfNotNull(entry.weather?.label, entry.temperature?.let { "$it °C" }, entry.workers?.let { "$it Personen" },
                         listOfNotNull(Dates.clock(entry.startTime), Dates.clock(entry.endTime)).joinToString("–").ifEmpty { null }, entry.crew)
-                    if (facts.isNotEmpty()) Secondary(facts.joinToString(" · "), Modifier.padding(top = 2.dp, bottom = 6.dp))
+                    if (facts.isNotEmpty()) Secondary(facts.joinToString(", "), Modifier.padding(top = 2.dp, bottom = 6.dp))
                     Text(entry.text, style = MaterialTheme.typography.bodyLarge)
                 }
             }
@@ -456,7 +456,7 @@ private fun InitialInspectionArea(id: String) {
                         subtitle = overview.protocols.firstOrNull()?.performedAt?.let { "Durchgeführt am ${Dates.dateTime(it)}" })
                     RowDivider()
                     RowItem("Termin", modifier = Modifier.testTag("initialInspectionAppointment"), icon = Icons.Filled.CalendarMonth,
-                        subtitle = overview.appointment?.let { InitialInspectionOverview.appointmentText(it) } ?: "nicht geplant – Termine plant das Büro")
+                        subtitle = overview.appointment?.let { InitialInspectionOverview.appointmentText(it) } ?: "nicht geplant (Termine plant das Büro)")
                 }
             }
             when (overview.status) {
@@ -482,7 +482,7 @@ private fun InitialInspectionArea(id: String) {
                                 iconTint = if (i.defects > 0) tones.warning else tones.success,
                                 iconBackground = if (i.defects > 0) tones.warningSoft else tones.successSoft,
                                 subtitle = (listOfNotNull(i.performedAt?.let { Dates.dateTime(it) }) +
-                                    listOfNotNull(if (i.notRequired) "nicht erforderlich" else null, if (i.defects > 0) "${i.defects} Mangel" else "ohne Mängel")).joinToString(" · "),
+                                    listOfNotNull(if (i.notRequired) "nicht erforderlich" else null, if (i.defects > 0) "${i.defects} Mangel" else "ohne Mängel")).joinToString(", "),
                                 showChevron = true, onClick = { nav.push(Route.Inspection(id, i.id)) }, trailing = { SyncMark(i.syncState) })
                         }
                     }
@@ -547,8 +547,8 @@ private fun ProtocolsArea(id: String) {
                     SectionCard {
                         acceptances.forEachIndexed { index, a ->
                             if (index > 0) RowDivider()
-                            RowItem("Abnahme · ${a.result?.label ?: "offen"}", icon = Icons.Filled.VerifiedUser,
-                                subtitle = listOfNotNull(a.performedAt?.let { Dates.dateTime(it) }, a.stateLabel).joinToString(" · "), showChevron = true,
+                            RowItem("Abnahme, ${a.result?.label ?: "offen"}", icon = Icons.Filled.VerifiedUser,
+                                subtitle = listOfNotNull(a.performedAt?.let { Dates.dateTime(it) }, a.stateLabel).joinToString(", "), showChevron = true,
                                 onClick = { nav.push(Route.Acceptance(id, a.id)) }, trailing = { SyncMark(a.syncState) })
                         }
                     }
@@ -565,7 +565,7 @@ private fun ProtocolsArea(id: String) {
                             RowItem(i.title, icon = Icons.Filled.Thermostat,
                                 iconTint = if (i.isReady == false) tones.warning else tones.success,
                                 iconBackground = if (i.isReady == false) tones.warningSoft else tones.successSoft,
-                                subtitle = (listOfNotNull(i.performedAt?.let { Dates.dateTime(it) }) + subtitle).joinToString(" · "),
+                                subtitle = (listOfNotNull(i.performedAt?.let { Dates.dateTime(it) }) + subtitle).joinToString(", "),
                                 trailing = { SyncMark(i.syncState) })
                         }
                     }
@@ -598,12 +598,12 @@ private fun RoomsArea(id: String) {
                 }
             }
             rooms.groupBy { it.floor ?: "Ohne Geschoss" }.forEach { (floor, list) ->
-                item { GroupLabel("$floor · ${formatNumber(list.sumOf { it.area ?: 0.0 })} m²") }
+                item { GroupLabel("$floor, ${formatNumber(list.sumOf { it.area ?: 0.0 })} m²") }
                 item {
                     SectionCard {
                         list.forEachIndexed { index, room ->
                             if (index > 0) RowDivider(16.dp)
-                            RowItem(room.name, subtitle = listOfNotNull(room.thickness?.let { "$it mm" }, if (room.underfloorHeating) "FBH" else null, room.notes).joinToString(" · "),
+                            RowItem(room.name, subtitle = listOfNotNull(room.thickness?.let { "$it mm" }, if (room.underfloorHeating) "FBH" else null, room.notes).joinToString(", "),
                                 value = room.area?.let { "${formatNumber(it)} m²" }, onClick = { editing = room }, trailing = {
                                     Spacer(Modifier.width(8.dp))
                                     Pill(room.status.label, if (room.status == de.estrichone.core.RoomStatus.Planned) tones.textSecondary else tones.success,
@@ -631,13 +631,13 @@ private fun ContactsArea(id: String) {
         LazyColumn(contentPadding = padding.content(), verticalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.readable()) {
             customer?.let { c ->
                 item {
-                    PersonCard("Bauherr/Kunde", c.name, listOfNotNull(c.customerNumber, c.addressLine).joinToString(" · "), c.phone, c.email,
+                    PersonCard("Bauherr/Kunde", c.name, listOfNotNull(c.customerNumber, c.addressLine).joinToString(", "), c.phone, c.email,
                         onOpen = { nav.push(Route.Customer(c.id)) }, context = context)
                 }
             }
             bauakte?.siteContactName?.let { name -> item { PersonCard("Ansprechpartner vor Ort", name, null, bauakte.siteContactPhone, null, null, context) } }
             items(parties, key = { it.id }) { p ->
-                PersonCard(p.role.label + if (p.isPrimary) " · Hauptansprechpartner" else "", p.name,
+                PersonCard(p.role.label + if (p.isPrimary) ", Hauptansprechpartner" else "", p.name,
                     listOfNotNull(p.company, p.addressLine, p.note).joinToString("\n").ifEmpty { null }, p.bestPhone, p.email, null, context)
             }
             if (customer == null && parties.isEmpty()) item { EmptyState(Icons.Outlined.Contacts, "Keine Kontakte", "Beteiligte pflegt das Büro.") }

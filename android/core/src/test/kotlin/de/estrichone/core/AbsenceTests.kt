@@ -38,7 +38,7 @@ class AbsenceTests {
         assertEquals("2 Tage Resturlaub verfallen nach dem 31.03.2027, wenn sie bis dahin nicht genommen oder geplant sind.", account.expiryHint)
         assertEquals(listOf("vacation"), mine.requestableTypes.map { it.key })
         val request = mine.requests.single()
-        assertEquals("07.06. – 09.06.2027 (erster Tag halb)", request.rangeText)
+        assertEquals("07.06. bis 09.06.2027 (erster Tag halb)", request.rangeText)
         assertEquals("Genehmigt", request.statusText)
         assertEquals("2,5", AbsenceText.days(request.workingDays))
         assertTrue(mine.canApprove)
@@ -70,7 +70,7 @@ class AbsenceTests {
         val body = EstrichOneApi.json.encodeToString(AbsenceDraft.serializer(), normalized)
         assertFalse(body.contains("note"))
         assertTrue(body.contains("\"halfDayStart\":true"))
-        assertEquals("28.12.2027 – 02.01.2028 (letzter Tag halb)", AbsenceText.range("2027-12-28", "2028-01-02", halfDayEnd = true))
+        assertEquals("28.12.2027 bis 02.01.2028 (letzter Tag halb)", AbsenceText.range("2027-12-28", "2028-01-02", halfDayEnd = true))
         assertEquals("07.06.2027 (halber Tag)", AbsenceText.range("2027-06-07", "2027-06-07", halfDayStart = true))
         assertEquals("2,5 Arbeitstage, danach 17 Tage Resturlaub. Der Antrag geht zur Genehmigung.",
             AbsencePreview(2.5, emptyList(), 17.0, true).summary)

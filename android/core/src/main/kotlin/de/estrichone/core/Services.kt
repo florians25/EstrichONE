@@ -205,7 +205,7 @@ data class PlannedJob(
     val kind: String? = null,
 ) {
     val time: String
-        get() = listOfNotNull(Dates.clock(startTime), Dates.clock(endTime)).joinToString(" – ").ifEmpty { "ganztags" }
+        get() = listOfNotNull(Dates.clock(startTime), Dates.clock(endTime)).joinToString(" bis ").ifEmpty { "ganztags" }
 }
 
 @Serializable

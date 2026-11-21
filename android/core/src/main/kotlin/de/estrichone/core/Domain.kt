@@ -143,7 +143,7 @@ data class Contact(val entity: LocalEntity) {
     val isArchived: Boolean get() = archivedAt != null
     val syncState: SyncState get() = entity.syncState
     val addressLine: String? get() = addressLine(street, postalCode, city)
-    val subtitle: String get() = listOfNotNull(customerNumber?.takeIf { it.isNotBlank() }, city?.takeIf { it.isNotBlank() }).joinToString(" · ")
+    val subtitle: String get() = listOfNotNull(customerNumber?.takeIf { it.isNotBlank() }, city?.takeIf { it.isNotBlank() }).joinToString(", ")
     val initials: String get() = initials(name)
 
     fun matches(search: String): Boolean {
@@ -534,7 +534,7 @@ class InitialInspectionOverview(bauakte: Bauakte, inspections: List<Inspection>,
             val date = day?.let { "${Dates.weekdayShort(it)}, ${Dates.date(it)}" } ?: job.day
             val who = (listOfNotNull(job.crewName) + job.people.map { it.name }).distinct()
             val text = date + (Dates.clock(job.startTime)?.let { ", $it" } ?: "")
-            return if (who.isEmpty()) text else "$text · ${who.joinToString(", ")}"
+            return if (who.isEmpty()) text else "$text, ${who.joinToString(", ")}"
         }
 
         /** Vom Server abgelegte Erstbegehungsprotokolle (PDF im Ordner „Erstbegehung“, Titel „Erstbegehung“). */

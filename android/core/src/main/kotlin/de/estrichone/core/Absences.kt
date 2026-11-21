@@ -187,7 +187,7 @@ object AbsenceText {
         if (from == to) return date(from) + if (halfDayStart || halfDayEnd) " (halber Tag)" else ""
         val start = if (from.take(4) == to.take(4)) date(from).take(6) else date(from)
         val half = listOfNotNull(if (halfDayStart) "erster Tag halb" else null, if (halfDayEnd) "letzter Tag halb" else null).joinToString(", ")
-        return "$start – ${date(to)}" + if (half.isEmpty()) "" else " ($half)"
+        return "$start bis ${date(to)}" + if (half.isEmpty()) "" else " ($half)"
     }
 
     /** Hinweis oben im Änderungsantrag. */

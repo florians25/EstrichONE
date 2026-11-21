@@ -151,7 +151,7 @@ fun UpdateFlowContent(updater: AppUpdater, state: UpdateState) {
                 LinearProgressIndicator(Modifier.fillMaxWidth())
             }
             is UpdateState.NeedsInstallPermission -> Text("Android fragt einmalig, ob EstrichONE Updates installieren darf. Bitte unter „Einstellungen“ " +
-                "„Aus dieser Quelle zulassen“ einschalten und zurückkehren – die Installation startet dann von selbst.")
+                "„Aus dieser Quelle zulassen“ einschalten und zurückkehren. Die Installation startet dann von selbst.")
             is UpdateState.ReadyToInstall -> Text("Version $version ist geladen und geprüft. Ihre Daten und Anmeldung bleiben erhalten.")
             is UpdateState.Installing -> {
                 Text("Android installiert Version $version. Die App startet danach neu.")

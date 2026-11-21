@@ -279,10 +279,10 @@ private fun RequestRow(r: AbsenceRequestItem, showsName: Boolean, onCancel: (() 
                 }
                 Pill(r.statusText, color, background)
             }
-            Secondary(listOfNotNull(if (showsName) r.typeName else null, r.rangeText, AbsenceText.workingDays(r.workingDays)).joinToString(" · "))
+            Secondary(listOfNotNull(if (showsName) r.typeName else null, r.rangeText, AbsenceText.workingDays(r.workingDays)).joinToString(", "))
             if (r.replacesRequestId != null) Text("Änderungsantrag", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
             listOfNotNull(r.substituteName?.let { "Vertretung: $it" }, r.decisionComment, r.note).takeIf { it.isNotEmpty() }?.let {
-                Text(it.joinToString(" · "), style = MaterialTheme.typography.bodySmall, color = tones.textSecondary)
+                Text(it.joinToString(", "), style = MaterialTheme.typography.bodySmall, color = tones.textSecondary)
             }
             if (showsName) r.remainingAfter?.let {
                 Text("Rest danach ${AbsenceText.days(it)} Tage", style = MaterialTheme.typography.bodySmall, color = if (it < 0) tones.danger else tones.textSecondary)

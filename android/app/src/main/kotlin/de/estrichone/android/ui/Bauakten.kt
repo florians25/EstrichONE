@@ -189,19 +189,19 @@ fun BauakteRow(b: Bauakte, customer: de.estrichone.core.Contact?, job: PlannedJo
                 Spacer(Modifier.width(6.dp))
                 SyncMark(b.syncState)
             }
-            Secondary(listOfNotNull(b.numberText, b.addressLine).joinToString(" · "), maxLines = 1)
+            Secondary(listOfNotNull(b.numberText, b.addressLine).joinToString(", "), maxLines = 1)
             Row(verticalAlignment = Alignment.CenterVertically) {
                 StatusLabel(b.status)
                 if (customer != null) {
                     Spacer(Modifier.width(8.dp))
-                    Text(listOfNotNull(customer.name, customer.customerNumber).joinToString(" · "), style = MaterialTheme.typography.bodyMedium, color = tones.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(listOfNotNull(customer.name, customer.customerNumber).joinToString(", "), style = MaterialTheme.typography.bodyMedium, color = tones.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
             if (job != null) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Filled.CalendarMonth, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(4.dp))
-                    Text(listOfNotNull("Heute", Dates.clock(job.startTime), job.crewName).joinToString(" · "), color = MaterialTheme.colorScheme.primary,
+                    Text(listOfNotNull("Heute", Dates.clock(job.startTime), job.crewName).joinToString(", "), color = MaterialTheme.colorScheme.primary,
                         style = MaterialTheme.typography.labelLarge)
                 }
             }

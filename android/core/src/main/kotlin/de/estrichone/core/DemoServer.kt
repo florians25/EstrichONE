@@ -240,31 +240,31 @@ private class DemoInbox {
     private val items = mutableListOf(
         Item("0193a1b2-de00-7000-8000-00000000a001", "planning", "high", "Plan für morgen freigegeben",
             "Kolonne Huber: 07:30 Praxis Dr. Maier, 10:30 EFH Schneider.", "/planung/wer-faehrt-wohin", 12, false),
-        Item("0193a1b2-de00-7000-8000-00000000a010", "chat", "normal", "Neue Nachricht von Sabine Wagner", "Büro · 2 neue Nachrichten",
+        Item("0193a1b2-de00-7000-8000-00000000a010", "chat", "normal", "Neue Nachricht von Sabine Wagner", "Büro, 2 neue Nachrichten",
             "/chat/${DemoChat.OFFICE}", 14, false),
-        Item("0193a1b2-de00-7000-8000-00000000a011", "work", "high", "Mangel zugewiesen", "Riss im Flur prüfen · 2026-038 EFH Schneider",
+        Item("0193a1b2-de00-7000-8000-00000000a011", "work", "high", "Mangel zugewiesen", "Riss im Flur prüfen, 2026-038 EFH Schneider",
             "/bauakten/${DemoData.EFH}", 25, false, objectType = "workItem"),
-        Item("0193a1b2-de00-7000-8000-00000000a002", "ticket", "normal", "Antwort zum Ticket", "T-2026-0007 · Bitte die App im WLAN öffnen und den Abgleich abwarten.",
+        Item("0193a1b2-de00-7000-8000-00000000a002", "ticket", "normal", "Antwort zum Ticket", "T-2026-0007, Bitte die App im WLAN öffnen und den Abgleich abwarten.",
             "/it-center/helpdesk/${DemoData.TICKET}", 47, false),
-        Item("0193a1b2-de00-7000-8000-00000000a012", "bauakte", "normal", "Neue Notiz von Sabine Wagner", "2026-038 EFH Schneider · Fotos der Dämmung vor dem Einbau",
+        Item("0193a1b2-de00-7000-8000-00000000a012", "bauakte", "normal", "Neue Notiz von Sabine Wagner", "2026-038 EFH Schneider, Fotos der Dämmung vor dem Einbau",
             "/bauakten/${DemoData.EFH}", 70, false),
-        Item("0193a1b2-de00-7000-8000-00000000a013", "approval", "normal", "Dokument zur Genehmigung", "Aufmaß Haus B · 2026-044 MFH Isarpark",
+        Item("0193a1b2-de00-7000-8000-00000000a013", "approval", "normal", "Dokument zur Genehmigung", "Aufmaß Haus B, 2026-044 MFH Isarpark",
             "/bauakten/${DemoData.ISARPARK}", 110, true),
         Item("0193a1b2-de00-7000-8000-00000000a003", "message", "normal", "Pumpe 2 ab Montag später",
             "Ab Montag Abholung der Pumpe 2 erst ab 6:45 Uhr am Lager. Bitte die Touren entsprechend planen und Material am Vortag laden.",
             null, 180, false, sender = "Sabine Wagner"),
-        Item("0193a1b2-de00-7000-8000-00000000a014", "bauakte", "normal", "Abnahme unterschrieben", "Kindergarten Sonnenschein · ohne Mängel",
+        Item("0193a1b2-de00-7000-8000-00000000a014", "bauakte", "normal", "Abnahme unterschrieben", "Kindergarten Sonnenschein, ohne Mängel",
             "/bauakten/${DemoData.KITA}", 300, true),
-        Item("0193a1b2-de00-7000-8000-00000000a015", "absence", "low", "Urlaubsantrag genehmigt", "Mo 16.11. bis Fr 20.11. · 5 Tage", "/personal/urlaub", 60 * 26, true),
-        Item("0193a1b2-de00-7000-8000-00000000a004", "bauakte", "normal", "Bauakte zugewiesen", "2026-044 · MFH Isarpark, Haus B",
+        Item("0193a1b2-de00-7000-8000-00000000a015", "absence", "low", "Urlaubsantrag genehmigt", "Mo 16.11. bis Fr 20.11., 5 Tage", "/personal/urlaub", 60 * 26, true),
+        Item("0193a1b2-de00-7000-8000-00000000a004", "bauakte", "normal", "Bauakte zugewiesen", "2026-044, MFH Isarpark, Haus B",
             "/bauakten/${DemoData.ISARPARK}", 60 * 28, true),
-        Item("0193a1b2-de00-7000-8000-00000000a016", "system", "normal", "Wartung angekündigt", "Samstag 6:00 bis 7:30 Uhr · EstrichONE nicht erreichbar",
+        Item("0193a1b2-de00-7000-8000-00000000a016", "system", "normal", "Wartung angekündigt", "Samstag 6:00 bis 7:30 Uhr, EstrichONE nicht erreichbar",
             null, 60 * 50, true),
-        Item("0193a1b2-de00-7000-8000-00000000a005", "deadline", "low", "Frist endet morgen", "CM-Messung Behandlungsraum 2 · Praxis Dr. Maier",
+        Item("0193a1b2-de00-7000-8000-00000000a005", "deadline", "low", "Frist endet morgen", "CM-Messung Behandlungsraum 2, Praxis Dr. Maier",
             "/bauakten/${DemoData.PRAXIS}", 60 * 75, true),
         Item("0193a1b2-de00-7000-8000-00000000a017", "planning", "normal", "Planänderung für Donnerstag", "Halle Weber: Beginn 8:00 statt 7:00 Uhr.",
             "/planung/wer-faehrt-wohin", 60 * 24 * 8, true),
-        Item("0193a1b2-de00-7000-8000-00000000a018", "ticket", "low", "Ticket erledigt", "T-2026-0004 · Tablet-Halterung in Fahrzeug 3 getauscht",
+        Item("0193a1b2-de00-7000-8000-00000000a018", "ticket", "low", "Ticket erledigt", "T-2026-0004, Tablet-Halterung in Fahrzeug 3 getauscht",
             "/it-center/helpdesk/${DemoData.TICKET}", 60 * 24 * 12, true),
     )
 
@@ -332,7 +332,7 @@ private class DemoTickets {
         Ticket("0193a1b2-de00-7000-8000-00000000c005", "T-2026-0011", "Drucker im Büro druckt nur leere Seiten", "Etagendrucker 1. OG zieht Papier ein, druckt aber nichts.",
             "officeIt", "waitingForSupport", 60 * 5, mutableListOf(
                 Triple("IT-Support", "Welche Meldung zeigt das Display des Druckers?", 60L * 3),
-                Triple("Sabine Wagner", "„Toner fast leer“ – neuer Toner ist aber drin.", 25L),
+                Triple("Sabine Wagner", "„Toner fast leer“, neuer Toner ist aber drin.", 25L),
             ), priority = "high", subcategory = "0193a1b2-de00-7000-8000-00000000e102", assignee = DemoData.USER_ID, reporter = "Sabine Wagner"),
         Ticket("0193a1b2-de00-7000-8000-00000000c006", "T-2026-0012", "Tablet Kolonne Kaya: Display gesprungen", "Beim Abladen heruntergefallen.",
             "deviceDefect", "new", 18, mutableListOf(), priority = "urgent", assignee = null, group = null, reporter = "Emre Kaya"),
@@ -424,7 +424,7 @@ private class DemoTickets {
 
     fun article(id: String) = if (id == "0193a1b2-de00-7000-8000-00000000e001") json("id" to id, "title" to "Fotos werden nicht übertragen", "category" to "sync",
         "body" to "So bringen Sie wartende Fotos auf den Server:\n\n1. WLAN oder mobile Daten einschalten.\n2. In der App Mehr › Synchronisation öffnen.\n" +
-            "3. „Jetzt abgleichen“ tippen und warten, bis „Alles übertragen“ erscheint.\n\nHilft das nicht, bitte die Meldung beantworten – die IT sieht dann die " +
+            "3. „Jetzt abgleichen“ tippen und warten, bis „Alles übertragen“ erscheint.\n\nHilft das nicht, bitte die Meldung beantworten. Die IT sieht dann die " +
             "technischen Angaben.", "isPublished" to true) else null
 
     fun createOnBehalf(body: JsonObject): JsonObject {

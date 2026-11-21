@@ -176,7 +176,7 @@ fun AcceptanceScreen(bauakteId: String, id: String?) {
     ScreenScaffold(if (readOnly) "Abnahme" else "Neue Abnahme") { padding ->
         Column(Modifier.padding(padding).verticalScroll(rememberScrollState()).padding(16.dp).readable(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             existing?.let { a ->
-                Banner("${a.stateLabel}${a.performedAt?.let { " · ${Dates.dateTime(it)}" } ?: ""}", Icons.Filled.CheckCircle, tones.success, tones.successSoft)
+                Banner("${a.stateLabel}${a.performedAt?.let { ", ${Dates.dateTime(it)}" } ?: ""}", Icons.Filled.CheckCircle, tones.success, tones.successSoft)
             }
             Text("Ergebnis", style = MaterialTheme.typography.titleSmall)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

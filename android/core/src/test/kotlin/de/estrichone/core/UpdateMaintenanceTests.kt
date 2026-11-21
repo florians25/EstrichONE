@@ -37,7 +37,7 @@ class UpdateMaintenanceTests {
         val view = UpdatePresentation.screen(state("announce", -1, 59), now)
         assertTrue(view.banner)
         assertFalse(view.page)
-        assertEquals("Update auf Version 1.0.16 beginnt in 0:59 – bitte Arbeit speichern. Offene Änderungen werden jetzt übertragen.", view.bannerText)
+        assertEquals("Update auf Version 1.0.16 beginnt in 0:59. Bitte speichern Sie Ihre Arbeit. Offene Änderungen werden jetzt übertragen.", view.bannerText)
         assertEquals(listOf("now", "todo", "todo"), view.steps.map { it.second })
         val late = UpdatePresentation.screen(state("announce", -61, -1), now)
         assertTrue(late.page)

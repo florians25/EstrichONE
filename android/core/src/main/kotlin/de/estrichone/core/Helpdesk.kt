@@ -42,7 +42,7 @@ data class TicketDiagnosticsReport(
     fun lines(): List<Pair<String, String>> = buildList {
         add("App" to listOfNotNull(appVersion, build?.let { "($it)" }).joinToString(" "))
         add("System" to "Android $osVersion")
-        deviceModel?.let { add("Gerät" to it + (deviceKind?.let { k -> if (k == "pool") " · Poolgerät" else " · persönlich" } ?: "")) }
+        deviceModel?.let { add("Gerät" to it + (deviceKind?.let { k -> if (k == "pool") ", Poolgerät" else ", persönlich" } ?: "")) }
         network?.let { add("Netz" to it) }
         add("Abgleich" to "${sync.pendingOperations} Vorgänge, ${sync.pendingUploads} Dateien ausstehend" +
             (if (sync.failedUploads > 0) ", ${sync.failedUploads} fehlgeschlagen" else ""))

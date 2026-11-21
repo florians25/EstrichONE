@@ -309,7 +309,7 @@ abstract class ScreenshotBase(private val device: String, private val appearance
 
     private val notes = listOf(
         AppReleaseNote("1.0.13", "EstrichONE 1.0.13", listOf(
-            AppReleaseSection("Apps", listOf("Updates direkt in der App: laden, prüfen, installieren – Daten bleiben erhalten", "**Was gibt’s Neues:** nach jedem Update einmal die Neuerungen")),
+            AppReleaseSection("Apps", listOf("Updates direkt in der App: laden, prüfen, installieren. Daten bleiben erhalten", "**Was gibt’s Neues:** nach jedem Update einmal die Neuerungen")),
             AppReleaseSection("Bauakten", listOf("Abnahme mit Unterschrift auch ohne Netz", "Fotos schneller hochladen")))),
         AppReleaseNote("1.0.12", "EstrichONE 1.0.12", listOf(AppReleaseSection("Module", listOf("Module lassen sich in der Verwaltung ein- und ausschalten")))),
     )
@@ -329,7 +329,7 @@ abstract class ScreenshotBase(private val device: String, private val appearance
     @Test
     fun updateErforderlich() {
         val model = demo()
-        model.updater.show(UpdateState.Available(update(UpdateStatus.Required, "Neue Abnahme-Funktion – bitte heute noch aktualisieren.")))
+        model.updater.show(UpdateState.Available(update(UpdateStatus.Required, "Neue Abnahme-Funktion. Bitte heute noch aktualisieren.")))
         shot("update-erforderlich") { Root(model) }
     }
 

@@ -107,7 +107,7 @@ fun CustomersScreen(selected: String?) {
                                         Spacer(Modifier.width(6.dp))
                                         SyncMark(c.syncState)
                                     }
-                                    Secondary(listOf(if (c.isArchived) "Archiviert" else "", c.subtitle.ifEmpty { "Neu" }, if (count > 0) "$count Bauakte${if (count > 1) "n" else ""}" else "").filter { it.isNotEmpty() }.joinToString(" · "))
+                                    Secondary(listOf(if (c.isArchived) "Archiviert" else "", c.subtitle.ifEmpty { "Neu" }, if (count > 0) "$count Bauakte${if (count > 1) "n" else ""}" else "").filter { it.isNotEmpty() }.joinToString(", "))
                                 }
                                 Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = tones.textTertiary)
                             }
@@ -162,7 +162,7 @@ fun CustomerScreen(id: String, showBack: Boolean = true) {
                     Avatar(c.initials, size = 76.dp)
                     Text(c.name, style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(top = 10.dp))
                     Secondary(listOfNotNull(c.customerNumber?.let { "Kd.-Nr. $it" } ?: "Kd.-Nr. wird automatisch vergeben", if (c.isCompany) "Firma" else "Privat",
-                        if (c.anonymizedAt != null) "Anonymisiert" else if (c.isArchived) "Archiviert" else null).joinToString(" · "))
+                        if (c.anonymizedAt != null) "Anonymisiert" else if (c.isArchived) "Archiviert" else null).joinToString(", "))
                     Row(Modifier.padding(top = 14.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                         c.phone?.let { CircleAction(Icons.Filled.Phone, "Anrufen", { Links.call(context, it) }) }
                         c.email?.let { CircleAction(Icons.Filled.Email, "E-Mail", { Links.mail(context, it) }) }
@@ -177,7 +177,7 @@ fun CustomerScreen(id: String, showBack: Boolean = true) {
                         c.phones.forEachIndexed { index, p ->
                             if (index > 0) RowDivider()
                             RowItem(p.number, icon = if (p.kind == ContactPhoneKind.Mobile) Icons.Filled.Smartphone else Icons.Filled.Phone,
-                                subtitle = listOfNotNull(p.kind.label, p.label).joinToString(" · "), onClick = { Links.call(context, p.number) })
+                                subtitle = listOfNotNull(p.kind.label, p.label).joinToString(", "), onClick = { Links.call(context, p.number) })
                         }
                         c.emails.forEach { e ->
                             RowDivider()

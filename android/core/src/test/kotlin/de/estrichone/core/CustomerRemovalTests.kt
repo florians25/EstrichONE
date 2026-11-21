@@ -60,8 +60,8 @@ class CustomerRemovalTests {
         assertFalse(CustomerRemoval.confirms("60012", "600123"))
         val refs = EstrichOneApi.json.decodeFromString(CustomerReferences.serializer(),
             """{"id":"k1","name":"Huber","customerNumber":"600001","deletable":false,"confirmText":"600001","archived":false,"anonymized":false,
-               "references":[{"kind":"bauakten","label":"Bauakte","count":1,"link":"/bauakten?kunde=k1","items":[{"id":"b1","text":"B-1 · Halle","link":null}]}]}""")
+               "references":[{"kind":"bauakten","label":"Bauakte","count":1,"link":"/bauakten?kunde=k1","items":[{"id":"b1","text":"B-1, Halle","link":null}]}]}""")
         assertEquals("1 Bauakte", refs.summary)
-        assertEquals("B-1 · Halle", refs.references.single().items.single().text)
+        assertEquals("B-1, Halle", refs.references.single().items.single().text)
     }
 }

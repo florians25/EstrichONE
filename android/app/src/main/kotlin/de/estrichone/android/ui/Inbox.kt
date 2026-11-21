@@ -417,7 +417,7 @@ private fun NotificationRow(
                 }
                 item.body?.takeIf { it.isNotBlank() }?.let { Secondary(it, maxLines = 2) }
                 Row(Modifier.padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text(item.senderName?.let { "${item.kind.title} · $it" } ?: item.kind.title, style = MaterialTheme.typography.labelMedium,
+                    Text(item.senderName?.let { "${item.kind.title}, $it" } ?: item.kind.title, style = MaterialTheme.typography.labelMedium,
                         color = kindTint, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
                     if (item.isUrgent) {
                         Spacer(Modifier.width(8.dp))

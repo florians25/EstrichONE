@@ -359,7 +359,7 @@ private fun ConversationInfo(id: String, onDismiss: () -> Unit) {
             LoadView(detail) {
                 val d = (detail as Load.Done).value
                 Text(d.conversation.title, style = MaterialTheme.typography.headlineSmall)
-                Secondary(listOfNotNull(d.conversation.type.title, d.bauakteTitle?.let { "Bauakte $it" }).joinToString(" · "))
+                Secondary(listOfNotNull(d.conversation.type.title, d.bauakteTitle?.let { "Bauakte $it" }).joinToString(", "))
                 d.conversation.description?.let { Text(it, modifier = Modifier.padding(top = 8.dp)) }
                 Spacer(Modifier.height(12.dp))
                 SectionCard {
@@ -430,7 +430,7 @@ private fun Bubble(
                     if (m.deleted) Text("Nachricht gelöscht", color = textColor.copy(alpha = 0.7f), fontStyle = FontStyle.Italic)
                     else m.text?.takeIf { it.isNotBlank() }?.let { Text(it, color = textColor, style = MaterialTheme.typography.bodyLarge) }
                     Row(Modifier.align(Alignment.End), verticalAlignment = Alignment.CenterVertically) {
-                        if (m.editedAt != null) Text("bearbeitet · ", style = MaterialTheme.typography.labelSmall, color = textColor.copy(alpha = 0.7f))
+                        if (m.editedAt != null) Text("bearbeitet, ", style = MaterialTheme.typography.labelSmall, color = textColor.copy(alpha = 0.7f))
                         Text(Dates.time(m.created), style = MaterialTheme.typography.labelSmall, color = textColor.copy(alpha = 0.7f))
                         if (mine) {
                             Spacer(Modifier.width(3.dp))

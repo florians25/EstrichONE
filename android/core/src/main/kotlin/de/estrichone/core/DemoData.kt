@@ -105,7 +105,7 @@ object DemoData {
                 "initialInspectionWaived" to true, "initialInspectionWaivedReason" to "Untergrund aus dem Vorauftrag bekannt",
                 "initialInspectionWaivedByName" to "Max Huber", "initialInspectionWaivedAt" to time(-14L * 86400)))
         bauakte(ISARPARK, "2026-044", "MFH Isarpark, Haus B", "planned", "Am Isarpark 7", "84034", "Landshut", WOHNBAU,
-            mapOf("objectType" to "mfh", "floors" to "EG–3. OG", "totalArea" to 920, "screedType" to "ct", "construction" to "floating",
+            mapOf("objectType" to "mfh", "floors" to "EG bis 3. OG", "totalArea" to 920, "screedType" to "ct", "construction" to "floating",
                 "nominalThicknessMm" to 55, "strengthClass" to "C25-F4", "underfloorHeating" to true, "heatingType" to "water"), 2, 9)
         bauakte(WEBER, "2026-047", "Anbau Weber", "inquiry", "Lindenstr. 8", "84137", "Vilsbiburg", T_WEBER, mapOf("objectType" to "efh", "totalArea" to 38), null, null)
         bauakte(KITA, "2026-021", "Kindergarten Sonnenschein", "completed", "Schulweg 4", "84030", "Ergolding", GEMEINDE,

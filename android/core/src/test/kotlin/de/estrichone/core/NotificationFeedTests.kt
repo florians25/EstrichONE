@@ -27,7 +27,7 @@ class NotificationFeedTests {
     private val sample = listOf(
         item(1, "planning", "Plan für morgen freigegeben", hoursAgo = 0.2),
         item(2, "chat", "Neue Nachricht von Sabine Wagner", hoursAgo = 1.0),
-        item(3, "work", "Mangel zugewiesen", body = "Randfuge Flur · Praxis Dr. Maier", hoursAgo = 9.0, read = true),
+        item(3, "work", "Mangel zugewiesen", body = "Randfuge Flur, Praxis Dr. Maier", hoursAgo = 9.0, read = true),
         item(4, "ticket", "Antwort zu T-2026-0007", hoursAgo = 14.0),
         item(5, "bauakte", "Abnahme unterschrieben", hoursAgo = 40.0, read = true),
         item(6, "message", "Nachricht aus dem Büro", body = "Pumpe 2 erst ab 6:45 Uhr", sender = "Sabine Wagner", hoursAgo = 60.0),
