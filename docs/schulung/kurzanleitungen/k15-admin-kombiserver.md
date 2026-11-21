@@ -1,10 +1,10 @@
 % datei: Kurzanleitung-15-Admin-Kombiserver-Backup-Ziel-und-Archiv-koppeln
-% art: Kurzanleitung · Administration
+% art: Kurzanleitung, Administration
 % fuer: Administration und IT
 
 # Admin: Kombiserver koppeln (Backup-Ziel und Archiv)
 
-Ein zweiter Rechner (NAS, alter PC, Raspberry Pi mit Linux und Docker) – **räumlich getrennt** vom EstrichONE-Server –
+Ein zweiter Rechner (NAS, alter PC, Raspberry Pi mit Linux und Docker), **räumlich getrennt** vom EstrichONE-Server,
 nimmt die Sicherungen „nur anhängen“ auf und archiviert Dokumente revisionssicher.
 
 ## Kombiserver einrichten
@@ -23,7 +23,7 @@ nimmt die Sicherungen „nur anhängen“ auf und archiviert Dokumente revisions
 
 ## Sonderfälle
 
-- **Kombiserver zuhause, EstrichONE im Rechenzentrum:** **Kombiserver, der zieht** – das Backup-Ziel holt die
+- **Kombiserver zuhause, EstrichONE im Rechenzentrum:** **Kombiserver, der zieht**, das Backup-Ziel holt die
   Sicherungen selbst (keine Portfreigabe); das Archiv koppeln Sie danach über eine weitergeleitete Adresse (Port 8443)
   oder eine Tunnel-Adresse mit demselben Code.
 - **Nur Backup-Ziel:** Installer-Modus `backup-ziel`, dann **Backup-Ziel koppeln**.

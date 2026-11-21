@@ -1,6 +1,6 @@
 % datei: Wissenstests-Loesungsblatt
-% art: Lösungsblatt · nur für Trainer
-% fuer: Trainerinnen und Trainer – Auflösung aller vier Wissenstests
+% art: Lösungsblatt, nur für Trainer
+% fuer: Trainerinnen und Trainer, Auflösung aller vier Wissenstests
 
 # Lösungsblatt zu den Wissenstests
 
@@ -20,13 +20,13 @@ gilt der Test als bestanden; einzelne falsche Antworten in der Runde besprechen.
 | 7 | Umgehend die Administration informieren (Arbeit in der App geht weiter) | K07 |
 | 8 | Als „vorläufig“ gekennzeichnet | K05 |
 | 9 | Zwei von: Heute, Morgen, In 3 Tagen, In 1 Woche (oder Datum) | K03 |
-| 10 | Abmelden löscht die Daten auf dem Gerät – nicht übertragene Änderungen gingen verloren | BH App 9.2 |
+| 10 | Abmelden löscht die Daten auf dem Gerät, nicht übertragene Änderungen gingen verloren | BH App 9.2 |
 
 ## Bauleitung
 
 | Nr. | Lösung | Nachlesen |
 |---|---|---|
-| 1 | Anfrage 1 · Geplant 2 · In Ausführung 3 · Belegreif / Trocknung 4 · Abgeschlossen 5 | BH Web 3.1 |
+| 1 | Anfrage 1, Geplant 2, In Ausführung 3, Belegreif / Trocknung 4, Abgeschlossen 5 | BH Web 3.1 |
 | 2 | „Erstbegehung nicht notwendig“ einschalten und Begründung angeben | K17 |
 | 3 | Sie wird korrigiert; die Bauakte zeigt die korrigierte Fassung | K17 |
 | 4 | Noch nicht belegreif (Grenzwert CT beheizt 1,8 CM-%) | K17 |
@@ -46,7 +46,7 @@ gilt der Test als bestanden; einzelne falsche Antworten in der Runde besprechen.
 | 3 | Telefon-Symbol → Notiz → „Als Anfrage speichern“ | K10 |
 | 4 | Menü der Zeile → **Neue Fassung hochladen …** (v1, v2 …) | BH Web 3.6 |
 | 5 | <kbd>Strg</kbd> + <kbd>Z</kbd> (oder Pfeilsymbol oben) | K09 |
-| 6 | Ein Konflikt – EstrichONE verhindert die Planung nicht | K09 |
+| 6 | Ein Konflikt, EstrichONE verhindert die Planung nicht | K09 |
 | 7 | Den Plan als vorläufig; im Cockpit steht „Entwurf“ | K09 |
 | 8 | <kbd>T</kbd> | K09, Spickzettel |
 | 9 | Ihn zurückziehen | K11 |
@@ -56,13 +56,13 @@ gilt der Test als bestanden; einzelne falsche Antworten in der Runde besprechen.
 
 | Nr. | Lösung | Nachlesen |
 |---|---|---|
-| 1 | Sperren – Benutzer werden nicht gelöscht | K13 |
+| 1 | Sperren, Benutzer werden nicht gelöscht | K13 |
 | 2 | **Zwei-Faktor-Anmeldung zurücksetzen (Handy verloren)** (oder Anmeldung mit Wiederherstellungscode) | K13 |
 | 3 | Nur kurz und nur einmal | K13 |
 | 4 | **Geräte** → **Sperren**; Passwörter der Personen ändern, die das Gerät genutzt haben | K13 |
-| 5 | Es enthält den Wiederherstellungsschlüssel – fällt der Server aus, wird es für die Neuinstallation gebraucht | K14 |
+| 5 | Es enthält den Wiederherstellungsschlüssel, fällt der Server aus, wird es für die Neuinstallation gebraucht | K14 |
 | 6 | Das ganze System wird zurückgesetzt; spätere Änderungen gehen verloren | K14 |
 | 7 | `backup-archiv` | K15 |
-| 8 | Nein – räumlich getrennt aufstellen; er ist kein zweiter Standort für das Archiv | K15 |
+| 8 | Nein, räumlich getrennt aufstellen; er ist kein zweiter Standort für das Archiv | K15 |
 | 9 | `sudo /opt/estrichone/update.sh --automatik sicherheit` | K16 |
 | 10 | … sie für sich selbst (und alle Administratoren) eingerichtet haben | BH Web 9 |

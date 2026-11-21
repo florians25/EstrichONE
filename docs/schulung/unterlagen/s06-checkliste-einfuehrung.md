@@ -1,5 +1,5 @@
 % datei: Checkliste-Einfuehrung-im-Betrieb
-% art: Checkliste · Einführung
+% art: Checkliste, Einführung
 % fuer: Inhaber, Projektleitung und Administration
 % felder: Betrieb, Projektleitung, Go-live am
 
@@ -11,7 +11,7 @@ App (BH App), Kurzanleitungen (K).
 ## Vor dem Go-live: Technik
 
 - [ ] Server installiert, erreichbar über **HTTPS** mit gültigem Zertifikat (die App lässt sich ohne nicht einrichten)
-- [ ] Öffentliche Serveradresse (`ESTRICHONE_DOMAIN`) gesetzt – nötig für QR-Codes, Links in E-Mails und Pushnachrichten
+- [ ] Öffentliche Serveradresse (`ESTRICHONE_DOMAIN`) gesetzt, nötig für QR-Codes, Links in E-Mails und Pushnachrichten
 - [ ] Ersteinrichtung mit Einrichtungscode (`docker compose logs api`), erster Administrator angelegt
 - [ ] Zwei-Faktor-Anmeldung für alle Administratoren eingerichtet, danach **Pflicht für Administratoren** (BH Web 9.6)
 - [ ] **Firma**: Firmendaten und Logo; **PDF-Layout** geprüft (Probeausdruck „Bauaktenblatt“)
@@ -50,7 +50,7 @@ App (BH App), Kurzanleitungen (K).
 
 - [ ] Morgens: alle Geräte per QR-Code eingerichtet bzw. freigegeben (**Geräte**: keine Geräte „wartet auf Freigabe“)
 - [ ] Plan für die ersten Tage im Cockpit erstellt und **freigegeben**; Kolonnen sehen ihn unter **Wer fährt wohin**
-- [ ] Jede Kolonne: ein Testfoto und ein Bautagebuch-Eintrag – im Büro in der Bauakte sichtbar
+- [ ] Jede Kolonne: ein Testfoto und ein Bautagebuch-Eintrag, im Büro in der Bauakte sichtbar
 - [ ] Chat-Gruppen der Kolonnen/Baustellen geprüft (falls Chat aktiv)
 - [ ] Ansprechpartner erreichbar; Helpdesk-Tickets werden am selben Tag beantwortet
 - [ ] Abends: Sicherung des Tages erfolgreich (**Sicherung** bzw. Card **Sicherung** auf der Startseite)

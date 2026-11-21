@@ -32,17 +32,17 @@ Ansprechpartner, Telefon, E-Mail, Anschrift und **Bestellhinweisen** wie Bestell
 ### Material bestellen
 
 1. Klicken Sie auf **Material bestellen** (oder in der Bauakte unter **Material** auf **Auswahl bestellen** bzw.
-   **Material bestellen** – dann sind Bauakte und Positionen schon vorbelegt).
+   **Material bestellen**. Dann sind Bauakte und Positionen schon vorbelegt).
 2. Wählen Sie den **Lieferanten** und optional die **Bauakte**. Ohne Bauakte gilt die Bestellung für das Lager.
 3. **Liefertermin** und **Zeitfenster** (oder „nach Absprache“).
-4. **Lieferadresse** und **Ansprechpartner vor Ort** – leer bedeutet: Baustelle bzw. Ansprechpartner der Bauakte.
+4. **Lieferadresse** und **Ansprechpartner vor Ort**, leer bedeutet: Baustelle bzw. Ansprechpartner der Bauakte.
 5. **Positionen**: Artikel aus dem Materialstamm oder ein freier Artikel, Menge, Einheit, Einzelpreis. **Position
    hinzufügen** für weitere Zeilen; die Summe wird mitgerechnet.
 6. **Hinweise an den Lieferanten**, z. B. „Anfahrt nur über Hofeinfahrt, Kran nötig“.
 7. **Speichern**. Die Bestellung ist zunächst ein **Entwurf**.
 
 Den Bestellschein schicken Sie per E-Mail an den Lieferanten oder drucken ihn (**Drucken / PDF**). Danach fragt
-EstrichONE „E-Mail gesendet?“ – mit **Nur als bestellt markieren** setzen Sie den Status ohne erneuten Versand. Der
+EstrichONE: „E-Mail gesendet?“ Mit **Nur als bestellt markieren** setzen Sie den Status ohne erneuten Versand. Der
 Bestellschein wird zusätzlich in der Bauakte abgelegt.
 
 ### Status einer Bestellung

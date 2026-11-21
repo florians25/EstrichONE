@@ -9,7 +9,7 @@ Geräte und vertrauliche Personaldokumente.
 
 - **Mitarbeiter anlegen** erfasst einen neuen Mitarbeiter. Auf Wunsch legt EstrichONE gleich das **Benutzerkonto** mit
   an und erstellt ein **Onboarding-PDF** mit Zugangsdaten, App-Einrichtung (QR-Code, 15 Minuten gültig) und ersten
-  Schritten – abgelegt in der Mitarbeiterakte und optional per E-Mail verschickt.
+  Schritten, abgelegt in der Mitarbeiterakte und optional per E-Mail verschickt.
 - **Aus Benutzerkonten übernehmen** legt für alle aktiven Benutzer ohne Personalstamm einen Mitarbeiter an.
 - Die Reiter **Aktiv**, **Ausgetreten** und **Alle** sowie die Suche (Name, Personalnummer, Ort, Tätigkeit) grenzen die
   Liste ein. Der **Status** zeigt, ob jemand verfügbar, im Urlaub oder krank ist.
@@ -46,8 +46,8 @@ Ein Klick öffnet die Mitarbeiterakte mit den Abschnitten:
 3. Senden Sie den Antrag. Er erscheint unter **Meine Anträge** mit Status; solange er offen ist, können Sie ihn
    **zurückziehen**.
 
-Die Genehmigenden werden benachrichtigt. Sie sehen den Antrag im Reiter **Urlaubsanträge** unter **Warten auf Genehmigung** –
-mit den Tagen, dem Resturlaub danach und Hinweisen (z. B. wenn schon viele aus derselben Kolonne fehlen) – und
+Die Genehmigenden werden benachrichtigt. Sie sehen den Antrag im Reiter **Urlaubsanträge** unter **Warten auf Genehmigung**,
+mit den Tagen, dem Resturlaub danach und Hinweisen (z. B. wenn schon viele aus derselben Kolonne fehlen), und
 entscheiden mit **Genehmigen** oder **Ablehnen**. **Für Mitarbeiter beantragen** erfasst einen Antrag stellvertretend.
 
 ![Urlaubsanträge](bilder/urlaubsantraege.png "Offener Urlaubsantrag mit Tagen und Resturlaub danach")
@@ -63,7 +63,7 @@ dem eingestellten Bundesland. **PDF Monat** und **PDF Jahr** drucken den Plan.
 
 ### Krankmeldungen und Fristen
 
-**Krankmeldungen** erfasst die Personalverwaltung mit **Krankmeldung erfassen** – auf Wunsch mit AU-Bescheinigung.
+**Krankmeldungen** erfasst die Personalverwaltung mit **Krankmeldung erfassen**, auf Wunsch mit AU-Bescheinigung.
 Krankmeldungen sind vertraulich: Sie sieht nur die Personalverwaltung; in der Planung erscheint lediglich „abwesend“.
 Wurde die elektronische AU (eAU) bei der Krankenkasse abgerufen, tragen Sie **eAU abgerufen am** ein. Die Spalte
 **AU-Bescheinigung** zeigt dann „eAU abgerufen“. Andernfalls zeigt sie „vorhanden“, „fehlt“, „ab …“ (noch nicht fällig)

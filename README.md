@@ -3,9 +3,9 @@
 Kostenlose, selbst hostbare Branchensoftware für Estrichbetriebe. Nachfolger von **Estrich Web**.
 
 > **Status: Implementierung läuft** (Roadmap: `docs/reengineering/20-entwicklungsroadmap.md`).
-> Fertig: AP-01 bis AP-09 – Server-Fundament inkl. Dateiservice, Sync-Protokoll ([Spezifikation](docs/sync-protokoll.md)) sowie Backup und Wiederherstellung ([Betrieb](deploy/README.md)).
-> AP-10 – [iOS-App](ios/README.md): Grundgerüst und Server-Einrichtung (QR-Code oder Adresse, Verbindungsprüfung).
-> Als Nächstes: AP-11 – Geräteregistrierung, Anmeldung und Poolgeräte in der iOS-App.
+> Fertig: AP-01 bis AP-09, Server-Fundament inkl. Dateiservice, Sync-Protokoll ([Spezifikation](docs/sync-protokoll.md)) sowie Backup und Wiederherstellung ([Betrieb](deploy/README.md)).
+> AP-10, [iOS-App](ios/README.md): Grundgerüst und Server-Einrichtung (QR-Code oder Adresse, Verbindungsprüfung).
+> Als Nächstes: AP-11, Geräteregistrierung, Anmeldung und Poolgeräte in der iOS-App.
 
 ## Inhalt
 
@@ -24,11 +24,11 @@ Kostenlose, selbst hostbare Branchensoftware für Estrichbetriebe. Nachfolger vo
 ## Zielstruktur
 
 ```
-backend/        ASP.NET Core – modularer Monolith (API, Hintergrunddienste)
-web/            React + Ant Design – Büro, Planung, Verwaltung, IT Center
-desktop/        WinUI 3 – EstrichONE Desktop für Windows
-ios/            SwiftUI – EstrichONE für iPhone/iPad
-android/        Kotlin + Jetpack Compose – EstrichONE für Android
+backend/        ASP.NET Core: modularer Monolith (API, Hintergrunddienste)
+web/            React + Ant Design: Büro, Planung, Verwaltung, IT Center
+desktop/        WinUI 3: EstrichONE Desktop für Windows
+ios/            SwiftUI: EstrichONE für iPhone/iPad
+android/        Kotlin + Jetpack Compose: EstrichONE für Android
 contracts/      OpenAPI-Spezifikation (Quelle für alle generierten Clients)
 deploy/         Docker Compose, Caddy, Backup-Worker, Restore-Werkzeug
 docs/           Architektur, Betrieb, Entscheidungen (ADR)

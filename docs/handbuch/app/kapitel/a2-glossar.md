@@ -3,7 +3,7 @@
 <dl class="glossar">
 <dt>Abnahme</dt><dd>Protokoll über die Übergabe der Leistung an den Auftraggeber: Ergebnis (abgenommen, mit Vorbehalt, verweigert), Mängel, Fotos und Unterschriften. Kann auch nachträglich über einen Freigabelink bestätigt werden.</dd>
 <dt>Bauakte</dt><dd>Alles zu einer Baustelle: Kunde, Adresse, Kenndaten, Fotos, Dokumente, Bautagebuch, Mängel, Aufgaben, Protokolle, Räume und Kontakte.</dd>
-<dt>Bautagebuch</dt><dd>Tägliche Einträge, was auf der Baustelle passiert ist – mit Textbausteinen, Wetter und Anwesenden.</dd>
+<dt>Bautagebuch</dt><dd>Tägliche Einträge, was auf der Baustelle passiert ist, mit Textbausteinen, Wetter und Anwesenden.</dd>
 <dt>Belegreife</dt><dd>Zustand, in dem der Estrich trocken genug für den Bodenbelag ist. Geprüft mit der CM-Messung.</dd>
 <dt>CM-Messung</dt><dd>Messung der Restfeuchte des Estrichs nach der Calciumcarbid-Methode, Ergebnis in CM-%.</dd>
 <dt>Demomodus</dt><dd>Betrieb der App mit Beispieldaten ohne Server; es wird nichts gesendet.</dd>

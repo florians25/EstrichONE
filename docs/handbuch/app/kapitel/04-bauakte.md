@@ -1,7 +1,7 @@
 # Baustellen und Bauakte
 
 Jede Baustelle hat in EstrichONE eine **Bauakte**: Kunde, Adresse, Estrich-Kenndaten, Fotos, Dokumente, Bautagebuch,
-Mängel und Aufgaben, Protokolle, Räume und Kontakte. Die App hält die Bauakten, die Sie brauchen, **auf dem Gerät** –
+Mängel und Aufgaben, Protokolle, Räume und Kontakte. Die App hält die Bauakten, die Sie brauchen, **auf dem Gerät**,
 Sie können sie ohne Netz öffnen und ergänzen. Was Sie erfassen, wird übertragen, sobald wieder Verbindung besteht.
 
 ## Die Baustellenliste
@@ -22,29 +22,29 @@ den nächsten Einsatz.
 
 ## Neue Bauakte anlegen
 
-Eine neue Baustelle legen Sie in wenigen Schritten an – auch ohne Verbindung. Tippen Sie in **Baustellen** auf **„+“**
+Eine neue Baustelle legen Sie in wenigen Schritten an, auch ohne Verbindung. Tippen Sie in **Baustellen** auf **„+“**
 oder in **Erfassen** auf **Neue Bauakte anlegen**. Der Assistent führt in vier Schritten:
 
 ![Schritt 1](bilder/iphone-neu-1.jpg "Schritt 1: Für wen bauen wir?")
 ![Schritt 2](bilder/iphone-neu-2.jpg "Schritt 2: Wo ist die Baustelle?")
 ![Schritt 3](bilder/iphone-neu-3.jpg "Schritt 3: Was wird gebaut?")
-![Schritt 4](bilder/iphone-neu-4.jpg "Schritt 4: Alles richtig? – Anlegen")
+![Schritt 4](bilder/iphone-neu-4.jpg "Schritt 4: Alles richtig? Anlegen")
 
-1. **Für wen bauen wir?** – vorhandenen Kunden suchen (Name, Nummer, Ort) oder **Neuen Kunden anlegen** (Firma oder
-   Privatperson). Gesucht wird auf dem Gerät und – mit Verbindung – auf dem Server. Die Kundennummer vergibt später das
+1. **Für wen bauen wir?**: vorhandenen Kunden suchen (Name, Nummer, Ort) oder **Neuen Kunden anlegen** (Firma oder
+   Privatperson). Gesucht wird auf dem Gerät und (mit Verbindung) auf dem Server. Die Kundennummer vergibt später das
    Büro.
-2. **Wo ist die Baustelle?** – **Bauvorhaben** (Pflicht, z. B. „EFH Brunner, Neubau“) und Adresse. Mit **Aktuellen
+2. **Wo ist die Baustelle?**: **Bauvorhaben** (Pflicht, z. B. „EFH Brunner, Neubau“) und Adresse. Mit **Aktuellen
    Standort übernehmen** trägt die App die Adresse vom Standort ein (bitte kurz prüfen); **Adresse des Kunden
    übernehmen** übernimmt die Kundenanschrift. Die Adresse ist empfohlen, aber keine Pflicht.
-3. **Was wird gebaut?** – Objektart, Geschosse, Gesamtfläche, Priorität, Estrichart, Konstruktion, Nenndicke – alles
+3. **Was wird gebaut?**: Objektart, Geschosse, Gesamtfläche, Priorität, Estrichart, Konstruktion, Nenndicke, alles
    optional und später ergänzbar.
-4. **Alles richtig?** – Übersicht. Unter **Gleich danach** wählen Sie, was als Nächstes kommt: **Akte öffnen**,
+4. **Alles richtig?**: Übersicht. Unter **Gleich danach** wählen Sie, was als Nächstes kommt: **Akte öffnen**,
    **Fotografieren** oder **Erstbegehung**. Tippen Sie auf **Anlegen**.
 
 Oben rechts schalten Sie unter **Darstellung** zwischen **Schritt für Schritt** und **Alles auf einer Seite** um. Gibt
 es an derselben Adresse schon eine Bauakte, weist die App darauf hin und bietet **Öffnen statt neu anlegen** an.
 
-> **Hinweis:** Eine neue Bauakte heißt bis zur Übertragung „Neu · noch ohne Nummer“. Die Nummer vergibt der Server
+> **Hinweis:** Eine neue Bauakte heißt bis zur Übertragung „Neu, noch ohne Nummer“. Die Nummer vergibt der Server
 > beim nächsten Abgleich.
 
 ## Die Bauakte im Überblick
@@ -58,21 +58,21 @@ Die Bauakte zeigt von oben nach unten:
 - **Basisdaten auf einen Blick**: Nummer, **Stand** (antippen zum Ändern, Abschnitt 4.16), Bauvorhaben, **Adresse** mit
   **Route starten**, **Kunde** und **Ansprechpartner vor Ort** mit **Anrufen**, Bauleiter, nächster Einsatz mit Kolonne.
 - Hinweise nur bei Bedarf: angeheftete Notizen, Erstbegehung fehlt, Warnungen aus der Planung, storniert.
-- **Basisdaten** – die vier wichtigsten Kennwerte, zuerst **Estrichart**, **Dicke**, **Fläche** und **Termin** (soweit
+- **Basisdaten**: die vier wichtigsten Kennwerte, zuerst **Estrichart**, **Dicke**, **Fläche** und **Termin** (soweit
   erfasst), danach in der Reihenfolge des Formulars; **Alle Basisdaten**
   klappt alle weiteren auf, **Bearbeiten** ändert sie.
-- **Offene Punkte** (Mängel und Aufgaben) und die **neuesten Fotos** – nur, wenn es welche gibt.
+- **Offene Punkte** (Mängel und Aufgaben) und die **neuesten Fotos**, nur, wenn es welche gibt.
 - **Bereiche**: **Fotos & Dokumente**, **Aufgaben & Mängel**, **Bautagebuch**, **Räume & Flächen**, **Erstbegehung**,
   **Abnahme & Messungen**, **Basisdaten**, **Kontakte** und **Notizen & Verlauf**, jeweils mit Kurzinfo. Die letzte
   Aktivität steht unter **Notizen & Verlauf**.
 
-Unten stehen immer die zwei großen Schaltflächen **Foto** und **Video** – die Kamera öffnet sofort, die Aufnahme landet
+Unten stehen immer die zwei großen Schaltflächen **Foto** und **Video**, die Kamera öffnet sofort, die Aufnahme landet
 in dieser Bauakte. Alles Weitere steht oben rechts unter **Weitere Aktionen** (**…** bzw. **⋮**): **Dokument scannen**,
 **Bautagebuch-Eintrag**, **Mangel melden**, **Aufgabe**, **Notiz**, **Erstbegehung**, **Abnahme**, **CM-Messung**
 (Android: unter **Weitere erfassen …**), **Bauakte als PDF**, **Route starten**, **Basisdaten bearbeiten**, **Verlauf**
 und **In Teams öffnen**. **Stornieren …** steht im Menü des Stands.
 
-Jeder Eintrag zeigt seinen Übertragungsstand: „Auf dem Gerät gespeichert – wird übertragen“ oder „Auf dem Gerät
+Jeder Eintrag zeigt seinen Übertragungsstand: „Auf dem Gerät gespeichert, wird übertragen“ oder „Auf dem Gerät
 gespeichert und übertragen“.
 
 ## Fotos aufnehmen
@@ -82,21 +82,21 @@ gespeichert und übertragen“.
 1. Tippen Sie in der Bauakte (oder auf der Heute-Seite, oder in **Erfassen**) auf **Foto**.
 2. Geben Sie optional eine **Beschriftung** ein, z. B. „Randdämmung Bad OG“. Sie gilt für alle folgenden Fotos dieser
    Serie.
-3. Fotografieren Sie beliebig viele Bilder hintereinander – die Kamera bleibt offen, der Zähler unten rechts zählt mit.
-   Ab iOS 18 lösen auch die **Lautstärketasten** (bzw. die Kamerasteuerung) aus – mit Handschuhen sicherer als der
+3. Fotografieren Sie beliebig viele Bilder hintereinander, die Kamera bleibt offen, der Zähler unten rechts zählt mit.
+   Ab iOS 18 lösen auch die **Lautstärketasten** (bzw. die Kamerasteuerung) aus, mit Handschuhen sicherer als der
    Bildschirm. Mit **Aus Fotos auswählen** übernehmen Sie Bilder aus der Fotomediathek.
 4. Tippen Sie auf **Fertig**.
 
-Ohne Netz zeigt die Kamera „Offline – Fotos bleiben auf dem Gerät“. Die Fotos werden verkleinert (längste Kante
+Ohne Netz zeigt die Kamera „Offline. Fotos bleiben auf dem Gerät.“. Die Fotos werden verkleinert (längste Kante
 3000 Pixel, JPEG; Aufnahmezeit und Ort bleiben erhalten) und verschlüsselt auf dem Gerät abgelegt, bis sie übertragen
 sind. In der Fotomediathek landet nichts.
 
 **Schneller zur Kamera:** App-Symbol lange drücken → **Foto zur Baustelle** (bzw. **Bautagebuch**, **Baustelle
-suchen**). Dasselbe gibt es als Kurzbefehl, per Siri („Foto mit EstrichONE“) und – auf iPhones mit Aktionstaste – über
+suchen**). Dasselbe gibt es als Kurzbefehl, per Siri („Foto mit EstrichONE“) und (auf iPhones mit Aktionstaste) über
 **Einstellungen** → **Aktionstaste** → **Kurzbefehl**. Gemeint ist immer der heutige Einsatz, sonst die zuletzt geöffnete
 Bauakte; oben in der Kamera lässt sie sich wechseln.
 In **Fotos & Dokumente** tippen Sie ein Foto an, um es groß zu sehen (Doppeltippen vergrößert). Dort können Sie es
-**beschriften** oder **löschen** – ein bereits übertragenes Foto wird dann auch im Büro gelöscht, ein noch nicht
+**beschriften** oder **löschen**, ein bereits übertragenes Foto wird dann auch im Büro gelöscht, ein noch nicht
 übertragenes nur auf diesem Gerät.
 
 ## Videos aufnehmen
@@ -104,7 +104,7 @@ In **Fotos & Dokumente** tippen Sie ein Foto an, um es groß zu sehen (Doppeltip
 Über **Video** unten in der Bauakte (oder **Erfassen** → **Video**) nehmen Sie ein kurzes Video auf,
 **bis 2 Minuten** lang, z. B. „Estrich wird eingebracht“. Alternativ wählen Sie ein Video aus der Mediathek; längere
 Videos werden auf die ersten 2 Minuten gekürzt. Die App verkleinert das Video vor der Übertragung (720p, H.264, rund
-15 MB je Minute – im Browser überall abspielbar) und zeigt die Größe an.
+15 MB je Minute, im Browser überall abspielbar) und zeigt die Größe an.
 Mit **Video speichern** landet es in **Fotos & Dokumente**.
 
 ## Dokumente scannen
@@ -128,7 +128,7 @@ Dokumente öffnen Sie in **Fotos & Dokumente** mit einem Tipp in der Vorschau; v
 
 Das Bautagebuch hält fest, was auf der Baustelle passiert ist. Tippen Sie auf **Weitere Aktionen** → **Bautagebuch-Eintrag** bzw. im Bereich auf **Neuer Eintrag**:
 
-- **Tag** (vorbelegt mit heute) und **Was ist passiert?** – ein Text, den Sie tippen oder diktieren.
+- **Tag** (vorbelegt mit heute) und **Was ist passiert?** ein Text, den Sie tippen oder diktieren.
 - **Textbausteine** für häufige Einträge mit einem Tipp: „Estrich eingebracht“, „Randdämmstreifen gesetzt“, „Folie
   verlegt“, „Material angeliefert“, „CM-Messung durchgeführt“, „Aufheizen begonnen“, „Baustelle nicht frei“, „Wartezeit
   wegen Vorgewerk“.
@@ -153,7 +153,7 @@ zusätzlich unter **Meine Aufgaben** (Kapitel 3).
 
 ## Notizen und Verlauf
 
-**Notiz schreiben** legt eine kurze Notiz an, die alle in der Bauakte sehen – z. B. „Schlüssel beim Nachbarn
+**Notiz schreiben** legt eine kurze Notiz an, die alle in der Bauakte sehen, z. B. „Schlüssel beim Nachbarn
 (Nr. 5)“. Notizen, die im Büro **angeheftet** wurden, stehen oben im Kopf der Bauakte. Der **Änderungsverlauf**
 in **Notizen & Verlauf** zeigt, wer was wann geändert hat; er ist nur mit Verbindung zum Server verfügbar.
 
@@ -180,14 +180,14 @@ Modul „Erstbegehung und Protokolle“ ausgeschaltet, entfällt der Bereich.
 
 Ist keine Erstbegehung nötig, schalten Sie **Erstbegehung nicht notwendig** ein und geben eine **Begründung** an
 (Pflicht). Eine erfasste Erstbegehung lässt sich **korrigieren**; die Bauakte zeigt dann die korrigierte Fassung. Das
-Protokoll öffnen Sie mit **Als PDF ansehen** – das PDF erstellt der Server, dafür ist eine Verbindung nötig.
+Protokoll öffnen Sie mit **Als PDF ansehen**, das PDF erstellt der Server, dafür ist eine Verbindung nötig.
 
 ## CM-Messung
 
 Mit der **CM-Messung** halten Sie die Restfeuchte des Estrichs fest und sehen sofort, ob er **belegreif** ist:
 
 1. Öffnen Sie **CM-Messung** (Bauakte → **Mehr**, **Abnahme & Messungen** oder **Erfassen**).
-2. Wählen Sie die **Estrichart** – **Zementestrich (CT)** oder **Calciumsulfatestrich (CA)** – und ob er **beheizt**
+2. Wählen Sie die **Estrichart** (**Zementestrich (CT)** oder **Calciumsulfatestrich (CA)**) und ob er **beheizt**
    ist (Fußbodenheizung).
 3. Tragen Sie den **Messort** (z. B. „Bad OG“) und den **Messwert** in CM-% ein, optional eine Bemerkung und Fotos
    (z. B. vom Messgerät).
@@ -207,7 +207,7 @@ Die App vergleicht den Wert mit dem Grenzwert und zeigt **Belegreif** oder **Noc
 ![Abnahme und Messungen](bilder/iphone-bereich-protokolle.jpg "Abnahme & Messungen: Abnahme und CM-Messungen")
 ![Abnahme](bilder/iphone-abnahme.jpg "Abnahme: Ergebnis, Teilnehmer und Ort, abgenommene Leistung")
 
-Das **Abnahmeprotokoll** erfassen Sie vollständig in der App – mit Mängeln, Fotos und Unterschriften, auch ohne
+Das **Abnahmeprotokoll** erfassen Sie vollständig in der App, mit Mängeln, Fotos und Unterschriften, auch ohne
 Verbindung:
 
 1. Öffnen Sie **Abnahme** (Bauakte → **Mehr**, **Abnahme & Messungen** → **Abnahme erfassen** oder **Erfassen**).
@@ -221,7 +221,7 @@ Verbindung:
 7. Tippen Sie auf **Abnahme sichern**.
 
 **Freigabe durch den Kunden:** Unterschreibt der Auftraggeber nicht vor Ort, erstellen Sie nach der Übertragung einen
-**Freigabelink** – optional mit **Freigabelink per E-Mail senden** an die E-Mail des Kunden. Der Kunde sieht das
+**Freigabelink**, optional mit **Freigabelink per E-Mail senden** an die E-Mail des Kunden. Der Kunde sieht das
 Protokoll ohne Anmeldung und kann es freigeben oder mit Begründung ablehnen; der Link ist befristet. Die Bauakte zeigt
 danach „Online freigegeben von …“. Mit **Protokoll (PDF) ansehen** öffnen Sie das fertige Protokoll.
 
@@ -232,18 +232,18 @@ danach „Online freigegeben von …“. Mit **Protokoll (PDF) ansehen** öffnen
 
 Unter **Räume & Flächen** erfassen Sie die Räume mit **Geschoss**, **Fläche**, **Estrichdicke**, **Dämmung** und
 **Fußbodenheizung** sowie dem **Stand**: **Geplant**, **Eingebracht** oder **Belegreif**. Oben rechnet die App die
-Summen: Fläche gesamt, davon mit Heizung, und wie viele Räume bereits eingebracht sind – abgeglichen mit der Fläche aus
+Summen: Fläche gesamt, davon mit Heizung, und wie viele Räume bereits eingebracht sind, abgeglichen mit der Fläche aus
 den Basisdaten.
 
 **Raum hinzufügen** legt einen Raum an; ein Tipp auf einen Raum öffnet ihn zum Bearbeiten, **Raum löschen** entfernt
-ihn aus der Bauakte – auch im Büro.
+ihn aus der Bauakte, auch im Büro.
 
 ## Basisdaten
 
 ![Basisdaten](bilder/iphone-bereich-basisdaten.jpg "Basisdaten der Bauakte")
 ![Basisdaten bearbeiten](bilder/iphone-basisdaten-neu.jpg "Basisdaten bearbeiten")
 
-Die **Basisdaten** fassen die Kenndaten des Bauvorhabens zusammen – für Kolonne und Büro auf einen Blick:
+Die **Basisdaten** fassen die Kenndaten des Bauvorhabens zusammen, für Kolonne und Büro auf einen Blick:
 Beschreibung, **geplanter Zeitraum**, **Objektart**, **Geschosse**, **Gesamtfläche**, **Priorität**, **Estrichart**,
 **Konstruktion**, **Nenndicke**, **Festigkeitsklasse**, **Fußbodenheizung** und **Art der Heizung**, **Dämmung** und
 **Dämmdicke** sowie **Vor Ort**: **Zufahrt** (z. B. „nur bis 7,5 t“), **Strom vorhanden** und **Wasser vorhanden**.
@@ -280,7 +280,7 @@ zuständige Person, als eingetragener Beteiligter oder über einen Einsatz bzw. 
 dem iPhone klein und die Daten für unterwegs vollständig.
 
 - Öffnen Sie eine andere Bauakte (Suche, **Alle im Betrieb**, Link oder Benachrichtigung), zeigt die App ihren Kopf
-  online mit dem Hinweis **„Nur ansehen: Trag dich als Beteiligter ein, um zu bearbeiten.“**
+  online mit dem Hinweis **„Nur ansehen: Tragen Sie sich als Beteiligter ein, um zu bearbeiten.“**
 - **Mich als Beteiligten eintragen** trägt Sie ein. Die App lädt die Bauakte danach vollständig aufs Gerät; Sie können
   sofort fotografieren, das Bautagebuch führen usw. Das Eintragen steht im Verlauf, die zuständige Person und die
   Disposition werden benachrichtigt.
@@ -288,7 +288,7 @@ dem iPhone klein und die Daten für unterwegs vollständig.
   Bauakte danach vom Gerät (im Büro und online bleibt sie natürlich erhalten).
 - Ohne Zuteilung lassen sich keine Änderungen erfassen, auch nicht offline. Kommt doch einmal eine Ablehnung vom Server
   (z. B. weil Sie inzwischen ausgetragen wurden), steht sie unter **Mehr** → **Synchronisation** mit der Meldung
-  „Nicht übertragen: Du bist dieser Bauakte nicht (mehr) zugeteilt …“. Nach dem Eintragen **Erneut senden**.
+  „Nicht übertragen: Sie sind dieser Bauakte nicht (mehr) zugeteilt …“. Nach dem Eintragen **Erneut senden**.
 - Haben Sie das Recht, alle Bauakten offline zu speichern (Büro), liegen auch nicht zugeteilte Bauakten auf dem Gerät;
   dann zeigt die Bauakte oben den Hinweis „Nur ansehen“, sofern Sie nicht alle Bauakten bearbeiten dürfen.
 
@@ -298,7 +298,7 @@ dem iPhone klein und die Daten für unterwegs vollständig.
 
 Der Tab **Erfassen** ist der schnellste Weg, etwas zu einer Baustelle festzuhalten, ohne die Bauakte zu suchen:
 
-1. Oben steht die **Baustelle** – vorausgewählt ist die Bauakte Ihres heutigen Einsatzes („Heutiger Einsatz“), sonst
+1. Oben steht die **Baustelle**, vorausgewählt ist die Bauakte Ihres heutigen Einsatzes („Heutiger Einsatz“), sonst
    die zuletzt geöffnete. Mit **Ändern** wählen Sie eine andere.
 2. Tippen Sie auf einen Eintrag der Liste: unter **Fotos und Dokumente** **Foto** (Serie mit Beschriftung), **Video**
    (kurze Aufnahme) und **Dokument scannen** (Lieferschein, Plan); unter **Festhalten** **Bautagebuch** (Eintrag für

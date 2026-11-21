@@ -1,6 +1,6 @@
 # Besonderheiten auf dem iPad
 
-Auf dem iPad funktioniert EstrichONE genauso wie auf dem iPhone – alle Funktionen dieses Handbuchs stehen zur Verfügung.
+Auf dem iPad funktioniert EstrichONE genauso wie auf dem iPhone, alle Funktionen dieses Handbuchs stehen zur Verfügung.
 Die App nutzt den größeren Bildschirm aber für mehr Überblick: Listen und Einzelheiten stehen nebeneinander, die
 Planung zeigt alle Kolonnen auf einmal. Das iPad eignet sich besonders als **Poolgerät** im Fahrzeug der Kolonne
 (Kapitel 2) und für die Bauleitung bei Erstbegehung und Abnahme mit Unterschrift.
@@ -22,19 +22,19 @@ rechts **Offene Aufgaben** und **Morgen**. Die Kennzahlen stehen darüber in ein
 ## Baustellen und Bauakte
 
 Im Tab **Baustellen** steht links die Liste, rechts die gewählte Bauakte. Im Querformat teilt sich die Bauakte noch
-einmal: links die Übersicht, rechts der gewählte Bereich – z. B. **Fotos & Dokumente** oder **Kontakte** –, ohne die
+einmal: links die Übersicht, rechts der gewählte Bereich, z. B. **Fotos & Dokumente** oder **Kontakte**, ohne die
 Übersicht zu verlassen.
 
 ![Bauakte auf dem iPad](bilder/ipad-bauakte.jpg "Baustellenliste links, Bauakte rechts"){ipadhoch}
 
 ![Bauakte quer](bilder/ipad-bauakte-quer.jpg "Querformat: Liste, Übersicht der Bauakte und Bereich nebeneinander"){ipad}
 
-> **Tipp:** Mit angeschlossener Tastatur legt **⌘ N** in der Baustellenliste eine neue Bauakte an.
+> **Hinweis:** Mit angeschlossener Tastatur legt **⌘ N** in der Baustellenliste eine neue Bauakte an.
 
 ## Wer fährt wohin
 
-Auf dem iPad zeigt **Wer fährt wohin** die Kolonnen als **Tafel** nebeneinander – mit Besetzung, Fahrzeugen und
-Einsätzen –, darunter die freien und abwesenden Mitarbeiter. Alle Aktionen aus Kapitel 6 (zuweisen, verschieben,
+Auf dem iPad zeigt **Wer fährt wohin** die Kolonnen als **Tafel** nebeneinander, mit Besetzung, Fahrzeugen und
+Einsätzen, darunter die freien und abwesenden Mitarbeiter. Alle Aktionen aus Kapitel 6 (zuweisen, verschieben,
 tauschen, freigeben) sind wie auf dem iPhone verfügbar. Zum Ändern der **Reihenfolge** wechselt die Ansicht in die Liste.
 
 ![Disposition auf dem iPad](bilder/ipad-disposition.jpg "Wer fährt wohin als Tafel mit allen Kolonnen"){ipadhoch}

@@ -1,5 +1,5 @@
 % datei: Wissenstest-Administration
-% art: Wissenstest · Schulung
+% art: Wissenstest, Schulung
 % fuer: Administration und IT
 % felder: Name, Datum, Punkte (von 10)
 
@@ -10,7 +10,7 @@ Kreuzen Sie die **richtige** Antwort an (je eine) bzw. schreiben Sie die Antwort
 **1. Ein Mitarbeiter scheidet aus. Was tun Sie mit seinem Benutzerkonto?**
 
 - [ ] Löschen
-- [ ] Sperren – Verlauf und Protokoll bleiben nachvollziehbar
+- [ ] Sperren, Verlauf und Protokoll bleiben nachvollziehbar
 - [ ] Nichts
 
 **2. Ein Monteur hat sein Handy mit der Authenticator-App verloren. Welche Aktion hilft?**
@@ -44,7 +44,7 @@ Kreuzen Sie die **richtige** Antwort an (je eine) bzw. schreiben Sie die Antwort
 **8. Der Kombiserver steht im selben Raum wie der EstrichONE-Server. Ist das in Ordnung?**
 
 - [ ] Ja
-- [ ] Nein – er sollte räumlich getrennt stehen (anderes Gebäude, zuhause, Rechenzentrum)
+- [ ] Nein. Er sollte räumlich getrennt stehen (anderes Gebäude, zuhause, Rechenzentrum)
 
 **9. Welcher Befehl spielt nur Sicherheitsupdates automatisch nachts ein?**
 

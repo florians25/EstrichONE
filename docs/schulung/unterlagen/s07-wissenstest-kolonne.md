@@ -1,5 +1,5 @@
 % datei: Wissenstest-Kolonne
-% art: Wissenstest · Schulung
+% art: Wissenstest, Schulung
 % fuer: Kolonne / Monteure
 % felder: Name, Datum, Punkte (von 10)
 

@@ -27,12 +27,12 @@ const serverLine = version.replace(/\.\d+$/, ".x");
 const variants = {
   web: {
     dir: base, file: "EstrichONE-Handbuch-Web.pdf", name: "Benutzerhandbuch Web", heading: "Die Weboberfläche von EstrichONE",
-    sub: "für Büro, Bauleitung und Administration im Estrichbetrieb", scope: `Weboberfläche (Browser) – Server ${serverLine}`,
+    sub: "für Büro, Bauleitung und Administration im Estrichbetrieb", scope: `Weboberfläche (Browser), Server ${serverLine}`,
   },
   app: {
     dir: join(base, "app"), file: "EstrichONE-Handbuch-App.pdf", name: "Benutzerhandbuch App", heading: "Die App EstrichONE für iPhone und iPad",
-    sub: "für Bauleitung, Kolonnen und Büro – auf der Baustelle und unterwegs",
-    scope: `iPhone und iPad ab iOS 17 – Server ${serverLine}`, css: "vorlage/app.css", cover: "bilder/titel.jpg",
+    sub: "für Bauleitung, Kolonnen und Büro, auf der Baustelle und unterwegs",
+    scope: `iPhone und iPad ab iOS 17, Server ${serverLine}`, css: "vorlage/app.css", cover: "bilder/titel.jpg",
   },
 };
 const target = process.argv[2] ?? process.env.HB_HANDBUCH ?? "web";
@@ -53,7 +53,7 @@ function inline(text) {
     .replace(/(^|[\s(„])_([^_]+)_(?=[\s.,;:!?)“]|$)/g, "$1<em>$2</em>")
     .replace(/\[([^\]]+)\]\((#[^)]+)\)/g, '<a href="$2">$1</a>')
     .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
-    .replace(/ -- /g, " – ")
+    .replace(/ -- /g, ", ")
     .replace(/→/g, '<span class="arrow">→</span>'))).join("");
 }
 const slug = (s) => s.toLowerCase().replace(/<[^>]+>/g, "").replace(/[äöüß]/g, (c) => ({ ä: "ae", ö: "oe", ü: "ue", ß: "ss" })[c])
@@ -180,15 +180,15 @@ function render(pages) {
   const toc = headings.map((h) => `<li class="l${h.level}"><a href="#${h.id}"><span class="tn">${h.number}</span><span class="tt">${inline(h.text)}</span>` +
     `<span class="tp">${pages ? pages[h.id] ?? "" : "000"}</span></a></li>`).join("\n");
   const css = readFileSync(join(base, "vorlage/handbuch.css"), "utf8") + (variant.css ? "\n" + readFileSync(join(dir, variant.css), "utf8") : "");
-  const pageRules = chapters.map((c, i) => `@page kap${i} { @top-right { content: "${c.appendix ? c.label : c.number} · ${c.title.replace(/"/g, "")}"; } }`).join("\n");
+  const pageRules = chapters.map((c, i) => `@page kap${i} { @top-right { content: "${c.appendix ? c.label : c.number} ${c.title.replace(/"/g, "")}"; } }`).join("\n");
   const logo = readFileSync(join(root, "branding/logo-horizontal-white.svg"), "utf8");
-  return `<!doctype html><html lang="de"><head><meta charset="utf-8"><title>EstrichONE – ${variant.name} ${version}</title>
+  return `<!doctype html><html lang="de"><head><meta charset="utf-8"><title>EstrichONE: ${variant.name} ${version}</title>
 <style>
 @font-face { font-family: "Inter Tight"; font-weight: 600; src: url("${pathToFileURL(join(root, "branding/fonts/inter-tight-latin-600-normal.woff"))}"); }
 @font-face { font-family: "Inter Tight"; font-weight: 700; src: url("${pathToFileURL(join(root, "branding/fonts/inter-tight-latin-700-normal.woff"))}"); }
 @font-face { font-family: "Inter Tight"; font-weight: 800; src: url("${pathToFileURL(join(root, "branding/fonts/inter-tight-latin-800-normal.woff"))}"); }
 ${css}
-@page { @bottom-left { content: "EstrichONE ${version} · ${variant.name}"; } }
+@page { @bottom-left { content: "EstrichONE ${version}, ${variant.name}"; } }
 ${pageRules}
 </style></head><body>
 <section class="cover">
@@ -291,7 +291,7 @@ async function schulung(filter) {
     }
   }
 
-  const fuss = (d) => (d.sub === "kurzanleitungen" ? "Kurzanleitung" : d.meta.art?.split("·")[0].trim() ?? "Schulung");
+  const fuss = (d) => (d.sub === "kurzanleitungen" ? "Kurzanleitung" : d.meta.art?.split(",")[0].trim() ?? "Schulung");
   function section(d, idx, sammel) {
     headings.length = 0;
     figure = 0;
@@ -305,10 +305,10 @@ async function schulung(filter) {
 <h1>${inline(d.title)}<span class="hbAnchor" data-id="d${idx}"></span></h1>${d.meta.fuer ? `<p class="band-sub">Für: ${inline(d.meta.fuer)}</p>` : ""}</div></header>
 ${felder}${toc}<div class="sbody">${html}</div>${kontakt}</section>`;
   }
-  const page = (titel, inner, links) => `<!doctype html><html lang="de"><head><meta charset="utf-8"><title>EstrichONE – ${esc(titel)} ${version}</title>
+  const page = (titel, inner, links) => `<!doctype html><html lang="de"><head><meta charset="utf-8"><title>EstrichONE: ${esc(titel)} ${version}</title>
 <style>${fonts}
 ${css}
-@page { @bottom-left { content: "EstrichONE ${version} · ${links} · Stand ${stand}"; } }
+@page { @bottom-left { content: "EstrichONE ${version}, ${links}, Stand ${stand}"; } }
 @page sdoc { @top-right { content: "${titel.replace(/"/g, "")}"; } }
 @page sdoc:first { @top-right { content: none; } }
 </style></head><body class="schulung">${inner}</body></html>`;
@@ -357,14 +357,14 @@ ${css}
     const kurz = docs.map((d, i) => [d, i]).filter(([d]) => d.sub === "kurzanleitungen");
     const titel = "Kurzanleitungen";
     const render = (pages) => {
-      const toc = kurz.map(([d, i]) => `<li class="l1"><a href="#d${i}"><span class="tn">${esc(d.meta.art?.split("·")[1]?.trim() ?? "")}</span>` +
+      const toc = kurz.map(([d, i]) => `<li class="l1"><a href="#d${i}"><span class="tn">${esc(d.meta.art?.split(",")[1]?.trim() ?? "")}</span>` +
         `<span class="tt">${inline(d.title)}</span><span class="tp">${pages ? pages[`d${i}`] ?? "" : "000"}</span></a></li>`).join("");
       return page(titel, `<section class="cover">
   <div class="cover-logo">${logo}</div>
   <div class="cover-title"><p class="kicker">Schulung</p><h1 class="cover-h">Alle Kurzanleitungen</h1>
-  <p class="cover-sub">zum Ausdrucken und Aushängen – App für die Baustelle, Web für Büro, Bauleitung und Administration</p></div>
+  <p class="cover-sub">zum Ausdrucken und Aushängen: App für die Baustelle, Web für Büro, Bauleitung und Administration</p></div>
   <div class="cover-meta"><table><tr><th>Version</th><td>${version}</td></tr><tr><th>Stand</th><td>${stand}</td></tr>
-  <tr><th>Gilt für</th><td>App für iPhone und iPad, Weboberfläche – Server ${serverLine}</td></tr></table></div>
+  <tr><th>Gilt für</th><td>App für iPhone und iPad und Weboberfläche, Server ${serverLine}</td></tr></table></div>
 </section>
 <section class="toc"><h1 class="toc-h">Inhalt</h1><ol class="toc-list sammel-toc">${toc}</ol></section>
 ${kurz.map(([d, i]) => section(d, i, true)).join("\n")}`, "Kurzanleitungen");

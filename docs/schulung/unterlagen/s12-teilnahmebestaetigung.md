@@ -1,5 +1,5 @@
 % datei: Teilnahmebestaetigung-Vorlage
-% art: Vorlage · Teilnahmebestätigung
+% art: Vorlage, Teilnahmebestätigung
 % stil: blatt
 
 # Teilnahmebestätigung

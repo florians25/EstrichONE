@@ -1,5 +1,5 @@
 % datei: Kurzanleitung-09-Web-Cockpit-Disposition-und-Freigabe
-% art: Kurzanleitung · Web
+% art: Kurzanleitung, Web
 % fuer: Disposition und Bauleitung
 
 # Web: Cockpit, Disposition und Freigabe
@@ -9,17 +9,17 @@
 ## Einplanen
 
 1. **Planung** → **Planungs-Cockpit** öffnen. Ansicht wählen: **Tag**, **Woche**, **2 Wochen** oder **Monat**.
-2. Links im **Vorrat** stehen ungeplante Bauvorhaben. Karte auf **Kolonne und Tag ziehen** – oder **Einplanen** klicken.
+2. Links im **Vorrat** stehen ungeplante Bauvorhaben. Karte auf **Kolonne und Tag ziehen**, oder **Einplanen** klicken.
 3. Einsatz ändern: **Doppelklick** (bearbeiten), **ziehen** (verschieben), <kbd>Strg</kbd> + ziehen (kopieren),
    **Rechtsklick** (Tagesbesetzung, Kolonne tauschen, Reihenfolge …).
 4. Versehen? <kbd>Strg</kbd> + <kbd>Z</kbd> nimmt zurück, <kbd>Strg</kbd> + <kbd>Y</kbd> stellt wieder her.
 
 ## Konflikte lösen
 
-1. Schaltfläche **Konflikte** (mit Anzahl) öffnen – z. B. Person abwesend, Gerät doppelt, Kolonne überlastet.
+1. Schaltfläche **Konflikte** (mit Anzahl) öffnen, z. B. Person abwesend, Gerät doppelt, Kolonne überlastet.
 2. Einsatz verschieben, Tagesbesetzung ändern oder Kolonnen tauschen.
 
-Konflikte sind **Hinweise** – EstrichONE verhindert die Planung nicht.
+Konflikte sind **Hinweise**, EstrichONE verhindert die Planung nicht.
 
 ## Plan freigeben
 
@@ -33,7 +33,7 @@ Konflikte sind **Hinweise** – EstrichONE verhindert die Planung nicht.
 
 ## Tastatur
 
-<kbd>?</kbd> Hilfe · <kbd>T</kbd> heute · <kbd>W</kbd> Wochenende · <kbd>Bild ↑</kbd>/<kbd>Bild ↓</kbd> Zeitraum ·
-<kbd>Alt</kbd> + <kbd>←</kbd>/<kbd>→</kbd> Auswahl ±1 Tag · <kbd>N</kbd> nächster freier Tag · <kbd>Entf</kbd> entfernen
+<kbd>?</kbd> Hilfe, <kbd>T</kbd> heute, <kbd>W</kbd> Wochenende, <kbd>Bild ↑</kbd>/<kbd>Bild ↓</kbd> Zeitraum,
+<kbd>Alt</kbd> + <kbd>←</kbd>/<kbd>→</kbd> Auswahl ±1 Tag, <kbd>N</kbd> nächster freier Tag, <kbd>Entf</kbd> entfernen
 
 **Drucken** gibt den Plan als PDF aus (Aushang im Lager); **Karte** zeigt die Baustellen des Zeitraums.

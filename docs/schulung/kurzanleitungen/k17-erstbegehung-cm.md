@@ -1,5 +1,5 @@
 % datei: Kurzanleitung-17-Erstbegehung-und-CM-Messung
-% art: Kurzanleitung · App
+% art: Kurzanleitung, App
 % fuer: Bauleitung
 
 # Erstbegehung und CM-Messung
@@ -10,7 +10,7 @@
 ## Erstbegehung
 
 1. Bauakte → **Mehr** → **Erstbegehung** (oder **Protokolle** bzw. **Erfassen** → **Erstbegehung**).
-2. Je Prüfpunkt **In Ordnung**, **Mangel** oder **Entfällt** – mit **Foto zu diesem Punkt**, bei Mangel kurz beschreiben.
+2. Je Prüfpunkt **In Ordnung**, **Mangel** oder **Entfällt**, mit **Foto zu diesem Punkt**, bei Mangel kurz beschreiben.
 3. **Messwerte und Angaben** (z. B. Fläche, Estrichdicke) und **Notizen** eintragen.
 4. Unter **Fotos und Unterschrift** weitere Fotos aufnehmen, Kunde **unterschreiben** lassen.
 5. **Erstbegehung sichern** tippen.
@@ -21,7 +21,7 @@ nicht überschrieben, sondern **korrigiert**. PDF: **Als PDF ansehen** (Verbindu
 ## CM-Messung (Belegreife)
 
 1. Bauakte → **Mehr** → **CM-Messung** (oder **Protokolle** bzw. **Erfassen**).
-2. **Estrichart** wählen – **Zementestrich (CT)** oder **Calciumsulfatestrich (CA)** – und ob **beheizt**.
+2. **Estrichart** wählen (**Zementestrich (CT)** oder **Calciumsulfatestrich (CA)**) und ob **beheizt**.
 3. **Messort** (z. B. „Bad OG“) und **Messwert** in CM-% eintragen, optional Foto vom Messgerät.
 4. Die App zeigt sofort **Belegreif** oder **Noch nicht belegreif**.
 

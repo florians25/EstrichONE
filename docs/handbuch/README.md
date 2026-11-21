@@ -1,7 +1,7 @@
 # Benutzerhandbücher
 
-- `EstrichONE-Handbuch-Web.pdf` – Benutzerhandbuch der Weboberfläche für Büro, Bauleitung und Administration.
-- `EstrichONE-Handbuch-App.pdf` – Benutzerhandbuch der App für iPhone und iPad (mit Anhang zur Android-App) für
+- `EstrichONE-Handbuch-Web.pdf`: Benutzerhandbuch der Weboberfläche für Büro, Bauleitung und Administration.
+- `EstrichONE-Handbuch-App.pdf`: Benutzerhandbuch der App für iPhone und iPad (mit Anhang zur Android-App) für
   Bauleitung, Kolonnen und Büro. Quellen unter `app/` (siehe unten).
 
 Bei jedem Release hängt `.github/workflows/release.yml` beide PDFs als Assets an.

@@ -1,4 +1,4 @@
-# EstrichONE – Installation und Betrieb
+# EstrichONE: Installation und Betrieb
 
 ## Voraussetzungen
 
@@ -17,7 +17,7 @@ curl -fsSL https://raw.githubusercontent.com/florians25/EstrichONE/main/install.
 
 Das Skript
 
-1. **prüft den Server** – Betriebssystem, Prozessor, Arbeitsspeicher (mind. 2 GB, empfohlen 4 GB), freien Speicher
+1. **prüft den Server**: Betriebssystem, Prozessor, Arbeitsspeicher (mind. 2 GB, empfohlen 4 GB), freien Speicher
    (mind. 8 GB, empfohlen 30 GB), Docker mit Compose-Plugin, belegte Ports, DNS-Eintrag der Domain und die Firewall
    (ufw). Jede Meldung nennt die Abhilfe. Zeigt die Domain nicht auf eine Adresse des Servers, fragt das Skript kurz
    (je höchstens 5 Sekunden) die **öffentliche Adresse** ab (ipify, ifconfig.me, icanhazip; IPv4 und IPv6): Hinter einem
@@ -30,7 +30,7 @@ Das Skript
 4. wählt die **Betriebsart** selbst: Sind 80 und 443 frei, holt EstrichONE das Zertifikat selbst bei Let's Encrypt
    (`direkt` auf 80/443). Sind sie belegt, läuft EstrichONE hinter dem vorhandenen Proxy (`proxy`, HTTP auf 8181). Ist
    der vorhandene Proxy ein **Caddy auf dem Server** (Paket, systemd), trägt das Skript EstrichONE auf Wunsch dort als
-   Site ein – das Zertifikat holt dann dieser Caddy. Beim Nginx Proxy Manager zeigt es die nötigen Einstellungen;
+   Site ein, das Zertifikat holt dann dieser Caddy. Beim Nginx Proxy Manager zeigt es die nötigen Einstellungen;
 5. startet den Installer der neuesten Version, legt `/opt/estrichone/update.sh` an und zeigt am Ende **Adresse,
    Backup-Passwort und Einrichtungscode**.
 
@@ -65,7 +65,7 @@ Typische Meldungen und Abhilfe:
 | `Port 80 ist bereits belegt (nginx)` | Dienst beenden oder `--modus proxy` (EstrichONE dann hinter diesem Proxy) |
 | `DNS: … ist (noch) nicht auflösbar` | A-/AAAA-Eintrag beim DNS-Anbieter anlegen; das Zertifikat folgt automatisch |
 | `DNS: … (öffentliche Adresse dieses Servers, Netz mit NAT bzw. Router)` | kein Fehler: Server hinter Router/Cloud-NAT; dort 80 und 443 auf den Server weiterleiten bzw. freigeben |
-| `DNS: … – dieser Server ist aber unter … erreichbar` | DNS-Eintrag auf die genannte öffentliche Adresse ändern (oder bewusst anderer Proxy/Load-Balancer davor) |
+| `DNS: … → …. Dieser Server ist aber unter … erreichbar.` | DNS-Eintrag auf die genannte öffentliche Adresse ändern (oder bewusst anderer Proxy/Load-Balancer davor) |
 | `… die öffentliche Adresse ist nicht ermittelbar (offline?)` | nur ein Hinweis; bei Servern ohne Internet `ESTRICHONE_PUBLIC_IP=<adresse>` setzen |
 | `Firewall (ufw) … lässt Port(s) 80 443 nicht zu` | `sudo ufw allow 80/tcp` und `sudo ufw allow 443/tcp` |
 | `Installer-Image … nicht ladbar` | Internetverbindung, Version bzw. Docker-Proxy im Firmennetz prüfen |
@@ -85,9 +85,9 @@ Der Installer fragt **Betriebsart**, Domain und Firmennamen ab, legt `/opt/estri
 Passwörter) an, lädt die fertigen Images und startet die Suite. Er zeigt am Ende das **Backup-Passwort** und den
 **Einrichtungscode** für den ersten Administrator.
 
-### Betriebsart `proxy` (Standard) – hinter Nginx Proxy Manager o. Ä.
+### Betriebsart `proxy` (Standard): hinter Nginx Proxy Manager o. Ä.
 
-EstrichONE stellt nur **HTTP auf Port 8181** bereit – ohne Weiterleitung und ohne eigenes Zertifikat. HTTPS, Domain
+EstrichONE stellt nur **HTTP auf Port 8181** bereit, ohne Weiterleitung und ohne eigenes Zertifikat. HTTPS, Domain
 und Zertifikat übernimmt der vorhandene Reverse Proxy. Im Nginx Proxy Manager:
 
 | Einstellung | Wert |
@@ -100,18 +100,18 @@ und Zertifikat übernimmt der vorhandene Reverse Proxy. Im Nginx Proxy Manager:
 `X-Forwarded-For`/`-Proto` werden nur von privaten Adressen (LAN, Docker-Netze) übernommen; die Protokolle zeigen
 dadurch die echte Client-Adresse.
 
-Läuft der Proxy auf einem anderen Rechner mit **öffentlicher** Adresse, diese in der `.env` eintragen –
+Läuft der Proxy auf einem anderen Rechner mit **öffentlicher** Adresse, diese in der `.env` eintragen,
 `ESTRICHONE_TRUSTED_PROXIES="private_ranges 203.0.113.5"` (mehrere Adressen/Netze mit Leerzeichen) bzw. beim Installer
 `-e ESTRICHONE_TRUSTED_PROXIES=203.0.113.5` (ergänzt `private_ranges` selbst). Die Liste gilt für Caddy **und** die API
 (`EstrichOne__TrustedProxies`): Ohne Eintrag sähen Anmeldesperre und Rate-Limits nur die Adresse des Proxys, mit einer
 zu großzügigen Liste (`0.0.0.0/0`) könnten Angreifer fremde Adressen vortäuschen. Danach `docker compose up -d`.
 
-### Betriebsart `direkt` – ohne vorgeschalteten Proxy
+### Betriebsart `direkt`: ohne vorgeschalteten Proxy
 
 | Port | Zweck |
 |---|---|
-| **8143** | HTTPS – Weboberfläche und API (`https://<adresse>:8143`) |
-| **8181** | HTTP – leitet auf 8143 weiter |
+| **8143** | HTTPS, Weboberfläche und API (`https://<adresse>:8143`) |
+| **8181** | HTTP, leitet auf 8143 weiter |
 
 Bei IP-Adresse oder `localhost` stellt Caddy ein eigenes Zertifikat aus (der Browser warnt einmal; die Android-App
 akzeptiert es nicht). Für ein gültiges Let's-Encrypt-Zertifikat eine Domain verwenden und am Router
@@ -121,7 +121,7 @@ akzeptiert es nicht). Für ein gültiges Let's-Encrypt-Zertifikat eine Domain ve
 
 - Ohne Rückfragen: `-e ESTRICHONE_MODE=proxy -e ESTRICHONE_DOMAIN=estrichone.firma.de -e ESTRICHONE_NAME="Estrichbau Muster GmbH"`
 - Andere Ports: `-e ESTRICHONE_HTTP_PORT=8181 -e ESTRICHONE_HTTPS_PORT=8143`
-- **Aktualisieren:** `sudo /opt/estrichone/update.sh` (siehe „Aktualisieren“ unten) – oder denselben Befehl mit
+- **Aktualisieren:** `sudo /opt/estrichone/update.sh` (siehe „Aktualisieren“ unten), oder denselben Befehl mit
   neuer Version erneut ausführen (Daten und Konfiguration bleiben). Betriebsart wechseln: zusätzlich
   `-e ESTRICHONE_MODE=proxy` bzw. `direkt`.
 - Archivserver im selben Stack (nur ohne zweiten Rechner): `-e ESTRICHONE_ARCHIVE=lokal`
@@ -204,7 +204,7 @@ curl https://<adresse>/health/ready   # 200 = API und Datenbank bereit
 
 ## Sicherung (Backup)
 
-Ausführlich – Topologien (RZ ↔ zuhause), Backup Center, Wiederherstellen, Worst Case, Notfallblatt: **[docs/backup.md](../docs/backup.md)**.
+Ausführlich, Topologien (RZ ↔ zuhause), Backup Center, Wiederherstellen, Worst Case, Notfallblatt: **[docs/backup.md](../docs/backup.md)**.
 
 Der Dienst `backup` sichert **täglich um 22:30** (`BACKUP_TIME`, im Backup Center änderbar) voll: Datenbank, Dateien,
 Schlüsselbund und Konfiguration, verschlüsselt mit restic; optional zusätzlich inkrementell.
@@ -214,11 +214,11 @@ Testdatenbank**. Den Zustand zeigt `GET /api/v1/backup/status` (später das Back
 
 | Einstellung (.env) | Bedeutung |
 |---|---|
-| `RESTIC_PASSWORD` | Schlüssel der Sicherungen – **von setup.sh angezeigt, außerhalb des Servers aufbewahren** |
+| `RESTIC_PASSWORD` | Schlüssel der Sicherungen, **von setup.sh angezeigt, außerhalb des Servers aufbewahren** |
 | `ESTRICHONE_BACKUP_DIR` | Hauptziel auf dem Host, idealerweise zweite Festplatte oder eingebundenes NAS |
 | `BACKUP_REPOSITORY_2` | **dringend empfohlen:** zweites Ziel an anderem Ort, z. B. `sftp:backup@nas2.firma.de:/estrichone` (Schlüssel in `ESTRICHONE_SSH_DIR`) |
 
-Eine Kopie der `.env` (`data/config/estrichone.env`, von setup.sh bzw. dem Installer angelegt) ist Teil jeder Sicherung –
+Eine Kopie der `.env` (`data/config/estrichone.env`, von setup.sh bzw. dem Installer angelegt) ist Teil jeder Sicherung,
 damit kann der Installer-Modus `restore` einen neuen Server vollständig einrichten. Das Backup-Passwort selbst gehört
 zusätzlich auf das Notfallblatt (Backup Center → Notfall) bzw. in einen Passwortmanager.
 
@@ -264,28 +264,28 @@ das Skript noch nicht: einmal den Installer-Befehl von oben mit der neuen Versio
 
 ### Update-Ablauf (mindestens 2,5 Minuten)
 
-Jedes Update läuft in drei Phasen – mit `update.sh`, `install.sh aktualisieren`, dem Installer auf einer laufenden
+Jedes Update läuft in drei Phasen, mit `update.sh`, `install.sh aktualisieren`, dem Installer auf einer laufenden
 Installation (andere Version) und der Hosting-Konsole (Einzel- und Massen-Update) gleich:
 
 | Phase | Dauer | Was passiert |
 |---|---|---|
-| 1. Ankündigung | 60 s | Alle angemeldeten Benutzer sehen oben „Update auf Version X beginnt in 0:59 – bitte Arbeit speichern“ (Web und Apps). Die Apps übertragen offene Änderungen sofort. Neue Anmeldungen sind gesperrt. |
+| 1. Ankündigung | 60 s | Alle angemeldeten Benutzer sehen oben „Update auf Version X beginnt in 0:59. Bitte speichern Sie Ihre Arbeit.“ (Web und Apps). Die Apps übertragen offene Änderungen sofort. Neue Anmeldungen sind gesperrt. |
 | 2. Update | mindestens 60 s | Die API beendet alle Sitzungen (auch Administratoren) und sperrt alles außer Hinweisen und Serverinfo. Web und Apps zeigen den Wartungsbildschirm mit Phase, Zielversion und Fortschritt. Sicherung, Austausch der Container, Warten auf `/health/ready`. |
 | 3. Abschluss | 30 s | Die neue Version läuft; der Wartungsbildschirm zeigt „Freigabe in 0:29“. Danach Freigabe: das Web lädt neu und zeigt die Anmeldung mit „EstrichONE wurde auf Version X aktualisiert“, die Apps führen zur Anmeldung (Daten bleiben auf dem Gerät). |
 
 Der Stand liegt in `data/backup-status/update-maintenance.json`. Die API liest ihn bei jeder Anfrage (Kopfzeile
 `X-EstrichONE-Update` auf jeder Antwort, Feld `update` in `/api/v1/system/notices`); Caddy liefert ihn zusätzlich als
-`/update-status.json` aus dem nur lesend eingebundenen Verzeichnis – so bleibt der Wartungsbildschirm im Web auch dann
+`/update-status.json` aus dem nur lesend eingebundenen Verzeichnis. So bleibt der Wartungsbildschirm im Web auch dann
 stehen, wenn die API gerade getauscht wird (statt „nicht erreichbar“). Die Störungsseite (`/stoerung.html`, OpenUI5 wie die App) zeigt
 Phase und Countdown ebenso.
 
 - **Dauer anpassen** (Sekunden, Umgebung oder `.env`): `ESTRICHONE_UPDATE_ANNOUNCE_SECONDS`, `ESTRICHONE_UPDATE_MIN_SECONDS`,
-  `ESTRICHONE_UPDATE_FINISH_SECONDS` – Standard 60 / 60 / 30. Kürzer nur für Tests (CI: `deploy/test-update-ablauf.sh`).
-- **Fehlschlag:** Läuft EstrichONE weiter (z. B. Sicherung fehlgeschlagen), sehen die Benutzer „Update fehlgeschlagen –
+  `ESTRICHONE_UPDATE_FINISH_SECONDS`: Standard 60 / 60 / 30. Kürzer nur für Tests (CI: `deploy/test-update-ablauf.sh`).
+- **Fehlschlag:** Läuft EstrichONE weiter (z. B. Sicherung fehlgeschlagen), sehen die Benutzer „Update fehlgeschlagen,
   Version X läuft weiter“ und nach der Abschlussdauer die Freigabe. Startet nichts mehr, bleibt der Wartungsbildschirm
   mit Meldung stehen. Nach der Reparatur freigeben: `sudo /opt/estrichone/update.sh --wartung-beenden`. Ein verwaister
   Stand (abgebrochenes Skript) gilt nach 6 Stunden automatisch nicht mehr.
-- **Erstes Update nach Einführung:** Der Ablauf gilt ab der Version, die ihn mitbringt – das `update.sh` einer älteren
+- **Erstes Update nach Einführung:** Der Ablauf gilt ab der Version, die ihn mitbringt, das `update.sh` einer älteren
   Installation spielt das erste Update noch ohne Phasen ein.
 - Läuft EstrichONE beim Update nicht (angehalten), entfällt die Ankündigung. Eine Reparatur mit derselben Version
   (Installer erneut) tauscht keine Container und kündigt nichts an.
@@ -323,7 +323,7 @@ Archivserver und Backup-Ziele auf anderen Rechnern: dort den jeweiligen Installa
 ## Archivserver (10 Jahre, revisionssicher)
 
 Unveränderbare Ablage mit Prüfsummen, Hash-Kette, Löschsperre bis Fristende, Prüfprotokoll und Export für den
-Betriebsprüfer – auf einem zweiten Rechner mit **einem** Befehl:
+Betriebsprüfer, auf einem zweiten Rechner mit **einem** Befehl:
 
 ```bash
 sudo docker run --rm -v /var/run/docker.sock:/var/run/docker.sock ghcr.io/florians25/estrichone-installer:latest archiv
@@ -351,7 +351,7 @@ sudo docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v /opt/estric
 ```
 
 Ein Lauf, getrennte Container und Daten, eine `.env` (600) unter `/opt/estrichone-kombi`, **ein** Kopplungscode für beide:
-**System → Backup-Ziele → „Kombiserver koppeln“**. Kein zweiter Standort für das Archiv – räumlich getrennt aufstellen.
+**System → Backup-Ziele → „Kombiserver koppeln“**. Kein zweiter Standort für das Archiv, räumlich getrennt aufstellen.
 Ausführlich: [../docs/backup.md](../docs/backup.md) („Kombiserver“).
 
 ## Überwachung

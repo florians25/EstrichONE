@@ -1,5 +1,5 @@
 % datei: Kurzanleitung-05-Wer-faehrt-wohin-und-Meine-Woche
-% art: Kurzanleitung · App
+% art: Kurzanleitung, App
 % fuer: Kolonne, Bauleitung und Disposition
 
 # Wer fährt wohin und Meine Woche
@@ -10,11 +10,11 @@
 
 ## Morgens: Mein Einsatz
 
-1. App öffnen – die **Heute**-Seite zeigt **Mein Einsatz**: Uhrzeit, Bauvorhaben, Adresse, Ansprechpartner, Tätigkeit,
+1. App öffnen, die **Heute**-Seite zeigt **Mein Einsatz**: Uhrzeit, Bauvorhaben, Adresse, Ansprechpartner, Tätigkeit,
    Kolonne, Fahrzeuge und Geräte.
 2. **Route starten** öffnet Apple Karten mit der Baustelle als Ziel.
 3. **Anrufen** wählt den Ansprechpartner vor Ort.
-4. Darunter: **Foto**, **Tagebuch**, **Mangel**, **Akte** – immer für diese Baustelle.
+4. Darunter: **Foto**, **Tagebuch**, **Mangel**, **Akte**, immer für diese Baustelle.
 
 ## Wer fährt wohin
 

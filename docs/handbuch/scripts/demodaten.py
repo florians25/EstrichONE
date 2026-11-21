@@ -238,7 +238,7 @@ def main():
             ("person", "Dr. Katharina Wimmer", "K-10024", "Am Mühlbach 17a", "84036", "Kumhausen", "0171 555 12 34", "k.wimmer@mail.example"),
             ("company", "Architekturbüro Brandl & Partner", "K-10025", "Altstadt 88", "84028", "Landshut", "0871 223 34", "office@brandl-architekten.example"),
             ("person", "Josef Gruber", "K-10026", "Hauptstraße 3", "84155", "Bodenkirchen", "08741 98 76", None),
-            ("company", "Gemeinde Altdorf – Bauamt", "K-10027", "Dekan-Wagner-Straße 13", "84032", "Altdorf", "0871 303 30", "bauamt@altdorf.example")]:
+            ("company", "Gemeinde Altdorf, Bauamt", "K-10027", "Dekan-Wagner-Straße 13", "84032", "Altdorf", "0871 303 30", "bauamt@altdorf.example")]:
         cid = new_id()
         call("POST", "contacts", {"id": cid, "kind": kind, "name": name, "customerNumber": number, "street": street, "postalCode": plz, "city": city,
                                   "phone": phone, "email": mail,
@@ -250,21 +250,21 @@ def main():
     files_specs = [
         ("Neubau Mehrfamilienhaus Sonnenhof, Haus B", "Sonnenhofstraße 5", "84030", "Ergolding", "inProgress", 48.552, 12.207, "Bauträger Sonnenhof GmbH",
          {"objectType": "mfh", "totalArea": 812.5, "screedType": "ct", "construction": "heated", "nominalThicknessMm": 65, "strengthClass": "C25-F4",
-          "underfloorHeating": True, "heatingType": "water", "insulation": "eps", "insulationThicknessMm": 40, "floors": "EG–3. OG", "priority": "high"}),
+          "underfloorHeating": True, "heatingType": "water", "insulation": "eps", "insulationThicknessMm": 40, "floors": "EG bis 3. OG", "priority": "high"}),
         ("Einfamilienhaus Oberländer", "Lindenweg 4", "84144", "Geisenhausen", "planned", 48.475, 12.258, "Familie Oberländer",
          {"objectType": "efh", "totalArea": 164, "screedType": "ct", "construction": "heated", "nominalThicknessMm": 65, "underfloorHeating": True,
           "heatingType": "water", "insulation": "eps", "floors": "EG, OG"}),
         ("Wohnanlage Isarpark, 3. Bauabschnitt", "Isarpark 10", "84028", "Landshut", "planned", 48.537, 12.152, "Wohnbau Isar AG",
          {"objectType": "mfh", "totalArea": 1430, "screedType": "caf", "construction": "floating", "nominalThicknessMm": 50, "strengthClass": "CA-C25-F4"}),
-        ("Praxis Dr. Wimmer – Sanierung", "Am Mühlbach 17a", "84036", "Kumhausen", "inquiry", 48.511, 12.180, "Dr. Katharina Wimmer",
+        ("Praxis Dr. Wimmer, Sanierung", "Am Mühlbach 17a", "84036", "Kumhausen", "inquiry", 48.511, 12.180, "Dr. Katharina Wimmer",
          {"objectType": "renovation", "totalArea": 96, "screedType": "ct", "construction": "separatingLayer"}),
         ("Bürogebäude Altstadt 88", "Altstadt 88", "84028", "Landshut", "drying", 48.536, 12.151, "Architekturbüro Brandl & Partner",
          {"objectType": "commercial", "totalArea": 540, "screedType": "caf", "construction": "floating", "nominalThicknessMm": 45}),
-        ("Garage Gruber – Verbundestrich", "Hauptstraße 3", "84155", "Bodenkirchen", "inquiry", 48.390, 12.380, "Josef Gruber",
+        ("Garage Gruber, Verbundestrich", "Hauptstraße 3", "84155", "Bodenkirchen", "inquiry", 48.390, 12.380, "Josef Gruber",
          {"objectType": "other", "totalArea": 42, "screedType": "ct", "construction": "bonded"}),
         ("Reihenhaus Kastanienweg 7", "Kastanienweg 7", "84034", "Landshut", "planned", 48.548, 12.170, "Familie Oberländer",
          {"objectType": "efh", "totalArea": 118, "screedType": "ct", "construction": "heated", "underfloorHeating": True}),
-        ("Kinderhaus Altdorf, Erweiterung", "Dekan-Wagner-Straße 20", "84032", "Altdorf", "completed", 48.561, 12.111, "Gemeinde Altdorf – Bauamt",
+        ("Kinderhaus Altdorf, Erweiterung", "Dekan-Wagner-Straße 20", "84032", "Altdorf", "completed", 48.561, 12.111, "Gemeinde Altdorf, Bauamt",
          {"objectType": "public", "totalArea": 380, "screedType": "ct", "construction": "heated", "underfloorHeating": True}),
     ]
     for i, (title, street, plz, city, status, lat, lon, customer, project) in enumerate(files_specs):
@@ -334,10 +334,10 @@ def main():
     docs = {}
     for name, title, lines, category, folder in [
             ("Angebot A-2026-118.pdf", "Angebot A-2026-118", ["Zementestrich CT-C25-F4, 65 mm, auf Fußbodenheizung", "Randdämmstreifen, PE-Folie", "Fläche ca. 812 m²"], "offer", None),
-            ("Auftragsbestätigung.pdf", "Auftragsbestätigung", ["Bezug: Angebot A-2026-118", "Ausführung KW 45–47"], "order", None),
+            ("Auftragsbestätigung.pdf", "Auftragsbestätigung", ["Bezug: Angebot A-2026-118", "Ausführung KW 45 bis 47"], "order", None),
             ("Grundriss EG Haus B.pdf", "Grundriss Erdgeschoss Haus B", ["Maßstab 1:100", "Estrichflächen und Fugenplan"], "plan", None),
             ("Fugenplan Haus B.pdf", "Fugenplan", ["Bewegungsfugen an Türen und Feldgrenzen > 40 m²"], "plan", None),
-            ("Lieferschein 778812.pdf", "Lieferschein 778812", ["CEM II 42,5 R – 12 t", "Estrichsand 0/8 – 38 t"], "delivery", None),
+            ("Lieferschein 778812.pdf", "Lieferschein 778812", ["CEM II 42,5 R: 12 t", "Estrichsand 0/8: 38 t"], "delivery", None),
             ("Aufheizprotokoll.pdf", "Aufheizprotokoll", ["Beginn Funktionsheizen nach 21 Tagen", "Vorlauftemperatur 25 °C"], "protocol", None)]:
         docs[name] = upload(make_pdf(name.replace(" ", "_"), title, lines), sonnenhof, "document", "application/pdf", name=name, category=category, folder=folder)
     # Neue Fassung des Angebots
@@ -363,7 +363,7 @@ def main():
                   "access": "ok", "utilities": "ok" if n else "notOk"}
         sync("inspection.create", new_id(), {"bauakteId": aid, "kind": "initialInspection", "notRequired": False, "checks": checks,
                                              "remarks": "Rohdecke besenrein, Fenster eingebaut, Putz abgeschlossen. Höhenbezug (Meterriss) vorhanden.",
-                                             "notes": None, "values": {}, "checkRemarks": {} if n else {"utilities": "Bauwasser erst ab KW 45 – Wassertank mitbringen"},
+                                             "notes": None, "values": {}, "checkRemarks": {} if n else {"utilities": "Bauwasser erst ab KW 45, Wassertank mitbringen"},
                                              "schemaVersion": None, "photoFileIds": [p for p in photo_ids[:2] if p] if aid == sonnenhof else [],
                                              "correctsInspectionId": None, "performedAt": (dt.datetime.now() - dt.timedelta(days=12)).isoformat() + "Z"})
     sync("acceptance.create", new_id(), {"bauakteId": kinderhaus, "performedAt": (dt.datetime.now() - dt.timedelta(days=3)).isoformat() + "Z",

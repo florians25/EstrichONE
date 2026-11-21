@@ -12,7 +12,7 @@ Eintrag **Chat**; die Zahl steht auch am Reiter **Mehr**.
 ![Chats](bilder/iphone-chat.jpg "Chatliste mit Einzel-, Kolonnen- und Baustellenchats")
 ![Unterhaltung](bilder/iphone-chat-verlauf.jpg "Unterhaltung mit Fotos, Standort, Reaktionen und Erwähnung")
 
-> **Hinweis:** Nachrichten, Fotos und Dokumente liegen verschlüsselt auf dem Server Ihres Betriebs – nicht bei einem
+> **Hinweis:** Nachrichten, Fotos und Dokumente liegen verschlüsselt auf dem Server Ihres Betriebs, nicht bei einem
 > Messenger-Anbieter. Telefonnummern sind nicht nötig: Sie wählen Personen aus Ihrem Betrieb aus einer Liste. Was im
 > Betrieb dazu gilt (Löschfrist, Ihre Rechte), steht in der Chatliste unter **Chat im Betrieb**.
 
@@ -26,7 +26,7 @@ an. **In allen Chats suchen** findet Nachrichten über alle Unterhaltungen.
 |---|---|
 | **Einzelchat** | Sie und eine Person |
 | **Gruppe** | frei ausgewählte Personen |
-| **Kolonnengruppe** | automatisch alle, die in der Planung zur Kolonne gehören – die Mitglieder folgen der Kolonne |
+| **Kolonnengruppe** | automatisch alle, die in der Planung zur Kolonne gehören, die Mitglieder folgen der Kolonne |
 | **Baustellengruppe** | automatisch Team und Bauleitung der Bauakte; in der Bauakte erscheint ein Link zum Chat |
 | **Ankündigung** | z. B. „Alle Mitarbeiter“: alle lesen, nur Admins der Gruppe schreiben |
 
@@ -52,14 +52,14 @@ Dokumente**, **In diesem Chat suchen**, **Stummschalten** und **Gruppe verlassen
 ![Eingabe](bilder/iphone-chat-anhang.jpg "Eingabe mit Standort und Hinweis auf Microsoft Teams")
 ![Diktat](bilder/iphone-chat-diktat.jpg "Diktat: gesprochener Text landet bearbeitbar im Eingabefeld")
 
-> **Tipp:** Fotos und Dokumente, die früher im Chat verschickt wurden, bleiben sichtbar und lassen sich öffnen. **In
-> Bauakte übernehmen** legt sie als eigenes Foto bzw. Dokument in der Bauakte ab – auch ohne Verbindung. Fotos für die
-> Baustelle gehören ohnehin in die Bauakte (Fotos, Mängel, Erstbegehung) – daran ändert sich nichts.
+> **Hinweis:** Fotos und Dokumente, die früher im Chat verschickt wurden, bleiben sichtbar und lassen sich öffnen. **In
+> Bauakte übernehmen** legt sie als eigenes Foto bzw. Dokument in der Bauakte ab, auch ohne Verbindung. Fotos für die
+> Baustelle gehören ohnehin in die Bauakte (Fotos, Mängel, Erstbegehung), daran ändert sich nichts.
 
 ### Diktieren statt tippen
 
 Tippen Sie auf das **Mikrofon** im Eingabefeld und sprechen Sie. Der erkannte Text erscheint im Feld, Sie können ihn
-korrigieren und dann senden. Die Erkennung läuft – wenn das Gerät es unterstützt – direkt auf dem iPhone; **der Ton wird
+korrigieren und dann senden. Die Erkennung läuft (wenn das Gerät es unterstützt) direkt auf dem iPhone; **der Ton wird
 nie gespeichert oder gesendet**. Sprachnachrichten gibt es bewusst nicht. Beim ersten Mal fragt iOS nach Mikrofon und
 Spracherkennung.
 
@@ -67,18 +67,18 @@ Spracherkennung.
 
 Kommt eine Chatnachricht als Mitteilung, halten Sie sie gedrückt (oder ziehen Sie sie nach unten):
 
-- **Antworten** – Text direkt in der Mitteilung eingeben und senden, ohne die App zu öffnen.
+- **Antworten**: Text direkt in der Mitteilung eingeben und senden, ohne die App zu öffnen.
 - **Als gelesen markieren**.
 
 Ein Tipp auf die Mitteilung öffnet die Unterhaltung. Mitteilungen derselben Unterhaltung werden gebündelt; ist die
-Unterhaltung gerade offen, kommt kein Banner. Ist die App gesperrt, wird eine Antwort aus der Mitteilung nicht gesendet –
+Unterhaltung gerade offen, kommt kein Banner. Ist die App gesperrt, wird eine Antwort aus der Mitteilung nicht gesendet,
 die App sagt das, und der Text steht beim nächsten Öffnen im Eingabefeld.
 
 Ob eine Mitteilung den Nachrichtentext zeigt oder nur Absender und Chat, legen Ihr Betrieb und Sie fest.
 
 ### Stummschalten
 
-In der Gruppeninfo schalten Sie eine Unterhaltung **stumm**: Sie bekommen dafür keine Mitteilungen mehr –
+In der Gruppeninfo schalten Sie eine Unterhaltung **stumm**: Sie bekommen dafür keine Mitteilungen mehr,
 **@Erwähnungen kommen trotzdem an**. **Stummschaltung aufheben** macht das rückgängig. Stummgeschaltete Unterhaltungen
 sind in der Liste gekennzeichnet.
 
@@ -86,7 +86,7 @@ sind in der Liste gekennzeichnet.
 
 Ohne Netz schreiben Sie wie gewohnt; Nachrichten warten verschlüsselt auf dem Gerät und werden automatisch gesendet,
 sobald der Server erreichbar ist. Hatten Sie vor dem Update ohne Verbindung noch eine Nachricht mit Foto oder Dokument
-geschrieben, wird sie unverändert mitgesendet („Ohne Verbindung – die Nachricht wartet und wird automatisch
+geschrieben, wird sie unverändert mitgesendet („Ohne Verbindung, die Nachricht wartet und wird automatisch
 gesendet“). Im Modus **Nur Ansicht** (Kapitel 8) ist das Schreiben gesperrt.
 
 ## Benachrichtigungen
@@ -97,8 +97,8 @@ EstrichONE benachrichtigt Sie, wenn der Plan freigegeben oder geändert wird, Si
 im Helpdesk antwortet oder das Büro Ihnen schreibt.
 
 - **Postfach**: Die **Glocke** auf der Heute-Seite (mit Zahl) bzw. **Mehr** → **Benachrichtigungen** öffnet das
-  Postfach mit allen Benachrichtigungen, ungelesene oben. Ein Tipp öffnet das Objekt – die Bauakte, die Meldung, den Plan
-  des Tages oder Ihre Aufgaben – und markiert die Benachrichtigung als gelesen. Das **Häkchen** oben rechts
+  Postfach mit allen Benachrichtigungen, ungelesene oben. Ein Tipp öffnet das Objekt, die Bauakte, die Meldung, den Plan
+  des Tages oder Ihre Aufgaben, und markiert die Benachrichtigung als gelesen. Das **Häkchen** oben rechts
   (**Alle als gelesen markieren**) markiert alles.
 - **Pushnachrichten**: Tippen Sie im Postfach auf **Aktivieren** (**Pushnachrichten aktivieren**) und erlauben Sie die
   Mitteilungen. Die App fragt nie ungefragt danach. Lehnen Sie ab, stehen alle Benachrichtigungen weiterhin im Postfach;
@@ -116,11 +116,11 @@ im Web eingerichtet hat (Apple Push, siehe Benutzerhandbuch Web).
 ![Meldung](bilder/iphone-meldung-detail.jpg "Meldung mit Verlauf und Antwort an die IT")
 ![Bearbeitung](bilder/iphone-meldung-bearbeitung.jpg "Für die IT: Reiter Bearbeitung mit allen Meldungen")
 
-Funktioniert etwas nicht – die App, das Gerät, der Zugang –, melden Sie es direkt aus der App:
+Funktioniert etwas nicht (die App, das Gerät, der Zugang), melden Sie es direkt aus der App:
 
 1. **Mehr** → **Problem melden** (oder auf der Anmeldeseite **Anmeldung klappt nicht? Problem melden**).
 2. Beschreiben Sie unter **Was ist passiert?** das Problem, optional mit **Details**, wählen Sie **Kategorie**, falls
-   angeboten eine genauere Angabe (z. B. **Drucker**), und **Priorität**. **Dringend – ich kann nicht arbeiten** hebt die
+   angeboten eine genauere Angabe (z. B. **Drucker**), und **Priorität**. **Dringend: Arbeiten nicht möglich** hebt die
    Meldung hervor. Passen Anleitungen aus der Wissensdatenbank, zeigt Android sie schon beim Schreiben an.
 3. Mit **Bildschirmfoto oder Foto anhängen** legen Sie ein Bild bei.
 4. **Technische Informationen mitsenden** (App, System, Gerät, Synchronisation, Netzwerk, freier Speicher, Fehlercodes, Protokoll) hilft der IT; mit
@@ -130,7 +130,7 @@ Funktioniert etwas nicht – die App, das Gerät, der Zugang –, melden Sie es 
 
 Unter **Mehr** → **Helpdesk** → **Meine Meldungen** sehen Sie den Stand Ihrer Meldungen (offen, Rückfrage an Sie,
 erledigt) mit dem ganzen Verlauf. Stellt die IT eine **Rückfrage**, antworten Sie unten im Feld **Antwort an die IT**.
-Ist das Problem gelöst, aber besteht weiter, öffnen Sie die Meldung mit **Problem besteht weiter – wieder öffnen** erneut.
+Ist das Problem gelöst, aber besteht weiter, öffnen Sie die Meldung mit **Problem besteht weiter, wieder öffnen** erneut.
 Nach der Lösung bewerten Sie mit **1 bis 5 Sternen** und einem freiwilligen Kommentar, wie zufrieden Sie waren. Ohne
 Verbindung wird die Meldung samt Fotos auf dem Gerät gespeichert und automatisch gesendet; bis dahin steht sie unter
 **Wird gesendet**. Eine Pushnachricht zur Antwort der IT öffnet direkt die Meldung.
@@ -141,19 +141,19 @@ sie.
 
 Unter **Mehr** steht alles in der Gruppe **IT-Service/Helpdesk**.
 
-**Für die IT:** Wer im Betrieb Meldungen bearbeitet, sieht im Helpdesk zusätzlich die **Ansichten** der Bearbeitung –
+**Für die IT:** Wer im Betrieb Meldungen bearbeitet, sieht im Helpdesk zusätzlich die **Ansichten** der Bearbeitung,
 **Meine**, **Nicht zugewiesen**, **Überfällig**, **Warten auf Support**, **Warten auf Anwenderinfo**, **Alle offenen**
 (iOS: Reiter **Bearbeitung**, darunter die Auswahl **Ansicht**; Android: Leiste über der Liste). In einer Meldung:
 
 - **Zuständig**: sich selbst (**Mir zuweisen**), eine Kollegin oder einen Kollegen oder niemand; dazu die **Gruppe**.
 - **Status**, **Priorität**, **Kategorie** und **Unterkategorie** ändern (iOS: Menü **Bearbeiten** oben rechts; Android:
   Bereich **Bearbeitung** im Ticket). **Gelöst** fragt die Lösung ab, die der Melder sieht.
-- **Warten auf Anwenderinfo** setzen, wenn Sie vom Melder etwas brauchen – am schnellsten mit **Mit Rückfrage senden**
+- **Warten auf Anwenderinfo** setzen, wenn Sie vom Melder etwas brauchen, am schnellsten mit **Mit Rückfrage senden**
   (Antwort und Status in einem Schritt). Antwortet der Melder, steht die Meldung auf **Warten auf Support**.
 - Unten **öffentlich antworten** oder eine **Interne Notiz** schreiben (für den Melder unsichtbar). **Textbaustein** fügt
   eine vorbereitete Antwort ein; {Vorname}, {Ticket} und Ähnliches füllt die App selbst aus.
 - **Meldung aufnehmen** (Hörer-Symbol): Ticket für jemanden anlegen, der angerufen, geschrieben hat oder vorbeigekommen ist
-  – **Eingang** (Telefon, E-Mail, Vor Ort), **Melder** suchen oder seinen Namen eintragen, Problem beschreiben, **Selbst
+  - **Eingang** (Telefon, E-Mail, Vor Ort), **Melder** suchen oder seinen Namen eintragen, Problem beschreiben, **Selbst
   übernehmen**. Das geht nur mit Verbindung.
 
 ![IT-Bearbeitung](bilder/iphone-meldung-it.jpg "Für die IT: Meldung bearbeiten, interne Notiz und Textbaustein")
@@ -163,7 +163,7 @@ Unter **Mehr** steht alles in der Gruppe **IT-Service/Helpdesk**.
 Nutzt Ihr Betrieb Microsoft Teams im Modus „Microsoft Teams“, ist der Chat in der App ein **Chat-Archiv** (nur lesen).
 Neue Unterhaltungen beginnen Sie direkt in der Teams-App:
 
-- **Neuer Chat in Teams** (im Chat-Archiv): Person antippen – der Einzelchat öffnet sich in der Teams-App. Es erscheinen
+- **Neuer Chat in Teams** (im Chat-Archiv): Person antippen, der Einzelchat öffnet sich in der Teams-App. Es erscheinen
   nur Kolleginnen und Kollegen mit Microsoft-Konto.
 - **Bauakte** › **…** › **Chat mit dem Team in Teams**: Gruppenchat mit dem ganzen Bauakten-Team; **In Teams öffnen**
   öffnet den Kanal bzw. Chat der Baustelle.

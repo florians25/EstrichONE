@@ -1,5 +1,5 @@
 % datei: Kurzanleitung-11-Urlaub-beantragen-und-genehmigen
-% art: Kurzanleitung · Web
+% art: Kurzanleitung, Web
 % fuer: alle Mitarbeiter (Antrag) und Genehmigende
 
 # Urlaub beantragen und genehmigen
@@ -11,7 +11,7 @@
 1. Im Browser **Personal** → **Mein Urlaub** öffnen. Oben: **Mein Resturlaub (Tage)**.
 2. **Urlaub beantragen** klicken.
 3. **Zeitraum** und **Art** wählen (Urlaub, Schulung, Berufsschule, Sonderurlaub, Sonstiges), bei Bedarf eine Notiz.
-4. Antrag senden. Er steht unter **Meine Anträge** – solange er offen ist, können Sie ihn **zurückziehen**.
+4. Antrag senden. Er steht unter **Meine Anträge**, solange er offen ist, können Sie ihn **zurückziehen**.
 
 ## Antrag genehmigen
 
@@ -19,7 +19,7 @@
 2. Tage, **Resturlaub danach** und Hinweise prüfen (z. B. wenn schon viele aus derselben Kolonne fehlen).
 3. **Genehmigen** oder **Ablehnen**.
 
-> **Tipp:** **Für Mitarbeiter beantragen** erfasst einen Antrag stellvertretend – z. B. für Kolonnen ohne Zugang zum Web.
+> **Hinweis:** **Für Mitarbeiter beantragen** erfasst einen Antrag stellvertretend, z. B. für Kolonnen ohne Zugang zum Web.
 
 ## Urlaubsplan
 

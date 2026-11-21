@@ -1,5 +1,5 @@
 % datei: Kurzanleitung-16-Admin-Updates-einspielen
-% art: Kurzanleitung · Administration
+% art: Kurzanleitung, Administration
 % fuer: Administration (Recht „Backups verwalten“)
 
 # Admin: Updates einspielen
@@ -10,7 +10,7 @@
 |---|---|
 | **Update verfügbar** (blau) | Neue Version derselben Versionslinie; je Version ausblendbar |
 | **Sicherheitsupdate verfügbar** (rot) | Bitte **zeitnah** einspielen |
-| **Automatisches Update fehlgeschlagen** (gelb) | Ergebnis der Automatik – Protokoll prüfen |
+| **Automatisches Update fehlgeschlagen** (gelb) | Ergebnis der Automatik, Protokoll prüfen |
 
 ## Update von Hand
 
@@ -26,7 +26,7 @@
 
 | Befehl | Wirkung |
 |---|---|
-| `sudo /opt/estrichone/update.sh --automatik sicherheit` | nur Sicherheitsupdates, nachts 02:00–05:00 Uhr |
+| `sudo /opt/estrichone/update.sh --automatik sicherheit` | nur Sicherheitsupdates, nachts 02:00 bis 05:00 Uhr |
 | `sudo /opt/estrichone/update.sh --automatik patch 01:00-04:00` | alle Fehlerbehebungen der Versionslinie im Zeitfenster |
 | `sudo /opt/estrichone/update.sh --automatik aus` | Automatik aus |
 | `sudo /opt/estrichone/update.sh --pruefen` | nur prüfen |

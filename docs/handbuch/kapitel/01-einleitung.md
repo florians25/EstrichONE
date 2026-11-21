@@ -1,7 +1,7 @@
 # Willkommen bei EstrichONE
 
 EstrichONE ist die Betriebssoftware für Estrichbetriebe: Bauakten mit Fotos, Dokumenten und Protokollen, die Planung der
-Kolonnen und Geräte, Kunden, Material, Personal und Urlaub – alles an einem Ort und auf dem eigenen Server. Die
+Kolonnen und Geräte, Kunden, Material, Personal und Urlaub, alles an einem Ort und auf dem eigenen Server. Die
 Weboberfläche ist der Arbeitsplatz für **Büro**, **Bauleitung** und **Administration**. Auf der Baustelle arbeiten die
 Kolonnen mit den Apps für iPhone, iPad, Android und Windows; alles, was dort erfasst wird, erscheint sofort im Web.
 
@@ -22,7 +22,7 @@ Das Handbuch richtet sich an alle, die im Browser mit EstrichONE arbeiten. Kennt
   Administration, zusammen mit Anmeldename und einem ersten Passwort (Zugangsbrief).
 - Für Administratoren: eine Authenticator-App auf dem Smartphone für die Zwei-Faktor-Anmeldung.
 
-> **Hinweis:** EstrichONE läuft auf Ihrem eigenen Server oder bei einem Hoster Ihrer Wahl. Ihre Daten bleiben dort –
+> **Hinweis:** EstrichONE läuft auf Ihrem eigenen Server oder bei einem Hoster Ihrer Wahl. Ihre Daten bleiben dort,
 > es gibt keine Cloud des Herstellers, an die Daten übertragen werden.
 
 ## Rollen und Rechte in Kürze

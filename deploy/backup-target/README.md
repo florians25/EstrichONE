@@ -1,4 +1,4 @@
-# EstrichONE-Backup-Ziel – Sicherung auf einem zweiten Rechner
+# EstrichONE-Backup-Ziel: Sicherung auf einem zweiten Rechner
 
 Ein Backup-Ziel ist ein zweiter Rechner (NAS mit Docker, alter PC, Raspberry Pi mit großer USB-Platte), auf den der
 EstrichONE-Server **zusätzlich** jede Nacht sichert. Das Ziel nimmt nur neue Sicherungen an und **lässt nichts
@@ -44,14 +44,14 @@ sudo docker compose -p estrichone up -d
   Fotos also nur einmal). Wird es voll: auf dem Zielrechner ein weiteres Backup-Ziel (neue Platte) einrichten und
   koppeln, das alte abkoppeln und aufbewahren.
 - **Aktualisieren:** im EstrichONE-Server unter *System → Backup-Ziele* mit **Aktualisieren** (Fernaktualisierung über
-  den Updater-Container `estrichone-backup-target-updater`, mit Rücksprung, wenn die neue Version nicht gesund wird –
+  den Updater-Container `estrichone-backup-target-updater`, mit Rücksprung, wenn die neue Version nicht gesund wird,
   docs/backup.md, „Zusatzserver aktualisieren“) oder am Rechner den Installationsbefehl erneut ausführen. Sicherungen und
   Kopplung bleiben. Ziele, die vor der Fernaktualisierung eingerichtet wurden: einmal lokal mit dem aktuellen Installer
   aktualisieren, danach per Knopfdruck.
 - **Protokoll:** `sudo docker logs estrichone-backup-target`
 - **Neuer Kopplungscode:** `sudo docker exec estrichone-backup-target estrichone-archive pair`
 - **Backup-Ziel und Archiv auf einem Rechner (Kombiserver):** Installer-Modus `backup-archiv` mit
-  `-v /opt/estrichone-kombi:/opt/estrichone-kombi` – ein vorhandenes Backup-Ziel wird übernommen und um den Archivserver
+  `-v /opt/estrichone-kombi:/opt/estrichone-kombi`: Ein vorhandenes Backup-Ziel wird übernommen und um den Archivserver
   ergänzt, ein Code koppelt beide (*Kombiserver koppeln*, docs/backup.md „Kombiserver“).
 - Port **8444** (Standard des Installers; der Archivserver nutzt 8443) muss vom EstrichONE-Server aus erreichbar sein. Kein Port-Forwarding ins Internet nötig.
 

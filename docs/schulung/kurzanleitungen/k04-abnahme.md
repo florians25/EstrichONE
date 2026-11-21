@@ -1,5 +1,5 @@
 % datei: Kurzanleitung-04-Abnahme-mit-Unterschrift
-% art: Kurzanleitung · App
+% art: Kurzanleitung, App
 % fuer: Bauleitung (und Kolonnenführer, wenn sie abnehmen)
 
 # Abnahme mit Unterschrift
@@ -7,13 +7,13 @@
 ![Abnahme](../../handbuch/app/bilder/iphone-abnahme.jpg "Abnahme: Ergebnis, Teilnehmer, Leistung")
 ![Protokolle](../../handbuch/app/bilder/iphone-bereich-protokolle.jpg "Protokolle der Bauakte")
 
-## In der App – auch ohne Netz
+## In der App: auch ohne Netz
 
 1. Bauakte öffnen → **Mehr** → **Abnahme** (oder **Erfassen** → **Abnahme**).
 2. **Ergebnis** wählen: **Abgenommen**, **Mit Vorbehalt** oder **Verweigert**.
 3. **Teilnehmer und Ort** prüfen (Auftraggeber, Auftragnehmer, Adresse) und die **abgenommene Leistung** eintragen,
    z. B. „Zementestrich CT-C25-F4, 65 mm, EG und OG“.
-4. Bei Vorbehalt: **Mangel hinzufügen** – jeder Mangel wird als **Aufgabe mit Frist** in der Bauakte angelegt.
+4. Bei Vorbehalt: **Mangel hinzufügen**, jeder Mangel wird als **Aufgabe mit Frist** in der Bauakte angelegt.
 5. Fotos aufnehmen, **Notizen** ergänzen (Absprachen, Restarbeiten).
 6. Unter **Unterschriften** unterschreiben **Auftraggeber** und **Auftragnehmer** mit dem Finger.
 7. **Abnahme sichern** tippen.

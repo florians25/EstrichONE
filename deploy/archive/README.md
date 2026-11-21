@@ -1,4 +1,4 @@
-# EstrichONE-Archivserver – 10 Jahre revisionssicher aufbewahren
+# EstrichONE-Archivserver: 10 Jahre revisionssicher aufbewahren
 
 Der Archivserver bewahrt Rechnungen, Aufträge, Abnahmen, Pläne und andere Dokumente aus EstrichONE **unveränderbar**
 auf, bis die Aufbewahrungsfrist abgelaufen ist (GoBD-orientiert). Er läuft am besten auf **einem zweiten Rechner**
@@ -46,7 +46,7 @@ sudo docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v /opt/estric
 
 Richtet Archivserver (Port 8443) und Backup-Ziel (Port 8444) in getrennten Containern mit getrennten Daten ein und gibt
 **einen** Kopplungscode für beide aus; in EstrichONE unter *System → Backup-Ziele* „Kombiserver koppeln“. Bequem, aber
-kein zweiter Standort für das Archiv – den Rechner räumlich getrennt vom EstrichONE-Server aufstellen. Details:
+kein zweiter Standort für das Archiv, den Rechner räumlich getrennt vom EstrichONE-Server aufstellen. Details:
 docs/backup.md, Abschnitt „Kombiserver“.
 
 ## Kein zweiter Rechner?
@@ -65,11 +65,11 @@ Unter System → Archiv steht je Dokumentart: archivieren ja/nein, Frist in Jahr
 | Aufträge | 6 Jahre | sofort nach dem Hochladen |
 | Angebote | 6 Jahre | nach der Freigabe |
 | Abnahmen | 10 Jahre | sofort nach dem Hochladen |
-| Lieferscheine, Protokolle, Pläne, Kundenschreiben | 6–10 Jahre | wenn die Bauakte abgeschlossen ist |
+| Lieferscheine, Protokolle, Pläne, Kundenschreiben | 6 bis 10 Jahre | wenn die Bauakte abgeschlossen ist |
 | Fotos, Videos, Sonstiges | aus | nur manuell |
 
 Die Frist läuft ab dem Ende des Kalenderjahres (wie § 147 AO), z. B. Rechnung vom März 2026 mit 10 Jahren →
-gesperrt bis 31.12.2036. **Die Vorschläge ersetzen keine steuerliche Beratung** – Fristen bitte mit der
+gesperrt bis 31.12.2036. **Die Vorschläge ersetzen keine steuerliche Beratung**, Fristen bitte mit der
 Steuerberatung abstimmen. Mit `-e ESTRICHONE_MIN_RETENTION_YEARS=10` erzwingt der Archivserver eine Mindestfrist.
 
 Manuell: im Dialog „Archivnachweis“ (Bauakte bzw. Dokument) → „Jetzt archivieren“ oder per API
@@ -80,7 +80,7 @@ Adresse aus „Bei Fehlern benachrichtigen“.
 ## Komplette Bauakten auslagern (Aktenarchiv)
 
 Abgeschlossene Bauakten können **komplett** auf den Archivserver wandern und werden danach aus dem Produktivsystem
-entfernt – das hält den Server klein. In Listen und Suche bleibt die Akte als Platzhalter („archiviert“) sichtbar.
+entfernt, das hält den Server klein. In Listen und Suche bleibt die Akte als Platzhalter („archiviert“) sichtbar.
 
 - **Automatisch:** System → Archiv → „Akten auslagern nach … Monaten“ (abgeschlossene Bauakten). **Manuell:**
   System → **Aktenarchiv** → „Bauakte archivieren …“.
@@ -90,7 +90,7 @@ entfernt – das hält den Server klein. In Listen und Suche bleibt die Akte als
   (nur Ansicht) und wird dann automatisch wieder entfernt. Auf dem Archivserver bleibt sie **immer**.
 - **Ändern:** nur nach „Entsperren“ mit dem eigenen Passwort (Recht „Archivierte Bauakten entsperren“, wird
   protokolliert). Nach 8 Stunden bzw. „Jetzt neu archivieren“ geht die Akte als **neue Fassung** wieder ins Archiv.
-- Hinweis: Die strukturierten Daten (Bauakte, Räume, Notizen …) bleiben schreibgeschützt in der Datenbank – sie sind
+- Hinweis: Die strukturierten Daten (Bauakte, Räume, Notizen …) bleiben schreibgeschützt in der Datenbank. Sie sind
   klein; ausgelagert werden die Dateiinhalte. Der vollständige Datenstand liegt zusätzlich je Fassung im Archiv.
 
 ## Wie die Unveränderbarkeit funktioniert
@@ -107,7 +107,7 @@ entfernt – das hält den Server klein. In Listen und Suche bleibt die Akte als
 - **Nachweis in EstrichONE:** je Dokument Zeitpunkt, Frist, Journal-Nummer und Journal-Hash (System → Archiv,
   Dialog „Archivnachweis“ für Bauakte/Dokument, API `GET /api/v1/archive/files/{id}` und `/archive/bauakten/{id}`).
 
-Ehrlicher Hinweis: Wer Root-Rechte auf dem Archivrechner hat, kann Dateien auf der Festplatte trotzdem verändern –
+Ehrlicher Hinweis: Wer Root-Rechte auf dem Archivrechner hat, kann Dateien auf der Festplatte trotzdem verändern,
 das fällt aber bei der nächsten Prüfung sofort auf (Kette/Prüfsumme). Gegen das physische Löschen hilft nur eine
 Sicherung des Archivs (z. B. Archiv-Volume zusätzlich auf USB-Platte oder in ein zweites Backup).
 
@@ -134,20 +134,20 @@ sudo docker exec estrichone-archive estrichone-archive status  # gekoppelte Serv
 sudo docker exec estrichone-archive estrichone-archive verify  # Prüfung jetzt
 ```
 
-**Aktualisieren:** im EstrichONE-Server unter *System → Archiv* mit **Aktualisieren** – der Updater-Container
+**Aktualisieren:** im EstrichONE-Server unter *System → Archiv* mit **Aktualisieren**, der Updater-Container
 `estrichone-archive-updater` holt die Version des Servers, tauscht den Container und springt zurück, wenn die neue
 Version nicht gesund wird (docs/backup.md, „Zusatzserver aktualisieren“). Oder am Rechner den Installationsbefehl von
 oben erneut ausführen. Daten, Zertifikat und Kopplungen bleiben. Archivserver, die vor der Fernaktualisierung eingerichtet
 wurden: einmal lokal mit dem aktuellen Installer aktualisieren, danach per Knopfdruck.
 
 **Sichern:** Alle Daten liegen im Docker-Volume `estrichone-archive` (bzw. mit `-e ESTRICHONE_DATA_DIR=/srv/archiv` in
-einem Ordner). Dieses Volume gehört zusätzlich auf eine zweite Platte – das Archiv ist sonst nur einmal vorhanden.
+einem Ordner). Dieses Volume gehört zusätzlich auf eine zweite Platte, das Archiv ist sonst nur einmal vorhanden.
 
 ## Technik (für Interessierte)
 
 Eigenes kleines Image auf Basis .NET 10 („chiseled“: ohne Shell und Paketmanager, Benutzer ohne Root-Rechte,
 schreibgeschütztes Dateisystem außer `/data`). Bewusst keine Objektspeicher-Software wie MinIO: deren WORM-Funktion
-(Object Lock) braucht S3-Zugangsschlüssel, Bucket-Richtlinien und eine eigene Zertifikatsverwaltung – genau die
+(Object Lock) braucht S3-Zugangsschlüssel, Bucket-Richtlinien und eine eigene Zertifikatsverwaltung, genau die
 „komplizierte Konfiguration“, die hier vermieden werden soll. Das Archiv kann außerdem Journal, Prüfprotokoll und
 Export für den Betriebsprüfer direkt liefern.
 

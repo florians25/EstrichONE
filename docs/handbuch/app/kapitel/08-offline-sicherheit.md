@@ -1,6 +1,6 @@
 # Offline arbeiten, Störungen und Sicherheit
 
-Auf Baustellen gibt es oft kein Netz – im Keller, im Rohbau, auf dem Land. EstrichONE ist dafür gebaut: Die App
+Auf Baustellen gibt es oft kein Netz, im Keller, im Rohbau, auf dem Land. EstrichONE ist dafür gebaut: Die App
 speichert alles zuerst verschlüsselt auf dem Gerät und überträgt es, sobald der Server wieder erreichbar ist. Dieses
 Kapitel erklärt, was dabei im Hintergrund passiert und welche Hinweise die App zeigt.
 
@@ -19,8 +19,8 @@ erfassen. Den Stand sehen Sie
 schlägt ein Upload fehl, versucht die App es später selbst noch einmal, oder Sie tippen auf **Fehlgeschlagene Uploads
 erneut versuchen**.
 
-**Bitte prüfen:** Lehnt der Server eine Änderung ab – etwa weil das Büro dieselbe Angabe gleichzeitig anders geändert
-hat oder ein Recht fehlt –, steht sie unter **Vom Server abgelehnt** mit dem Grund. Solche Vorgänge werden nicht erneut
+**Bitte prüfen:** Lehnt der Server eine Änderung ab, etwa weil das Büro dieselbe Angabe gleichzeitig anders geändert
+hat oder ein Recht fehlt, steht sie unter **Vom Server abgelehnt** mit dem Grund. Solche Vorgänge werden nicht erneut
 gesendet; prüfen Sie den Stand in der Bauakte und wischen Sie den Eintrag nach links, um ihn zu entfernen. Auf der
 Heute-Seite weist „Einige Änderungen wurden nicht übernommen“ darauf hin.
 
@@ -35,20 +35,20 @@ Nur mit Verbindung möglich sind Dinge, die der Server erzeugt oder prüft: **PD
 **Änderungsverlauf**, die **Konfliktprüfung** und **Freigabe** in der Disposition, Freigabelinks für die Abnahme und
 Tage der Planung, die noch nicht auf dem Gerät liegen.
 
-> **Wichtig:** Solange etwas nur auf dem Gerät liegt, sehen Kollegen und Büro es noch nicht – und es ist nur dort
+> **Wichtig:** Solange etwas nur auf dem Gerät liegt, sehen Kollegen und Büro es noch nicht, und es ist nur dort
 > gesichert. Öffnen Sie die App, sobald Sie wieder Netz haben, und löschen Sie sie nicht, solange **Ausstehend** nicht
 > leer ist.
 
-## „Nur Ansicht“ – Schutz vor Datenverlust
+## „Nur Ansicht“: Schutz vor Datenverlust
 
 ![Störungen](bilder/iphone-stoerung.jpg "Rote, gelbe und graue Leiste oben: Backup, Archiv, Nur Ansicht"){rechts}
 
 Ist der Server **seit über 5 Minuten nicht erreichbar**, schaltet die App vorsorglich auf **Nur Ansicht**. Eine graue
-Leiste oben sagt: „Nur Ansicht – seit … keine Verbindung zum Server. Erfassen und Ändern sind gesperrt.“ Sie können
+Leiste oben sagt: „Nur Ansicht: Der Server ist seit über 5 Minuten nicht erreichbar. Erfassen und Ändern sind gesperrt, bis die Verbindung wieder steht.“ Sie können
 weiterhin alles ansehen, aber nichts Neues erfassen. So verhindert die App, dass über längere Zeit wichtige Daten nur
 auf einem Gerät liegen, das verloren gehen kann.
 
-Müssen Sie trotzdem erfassen – etwa auf einer Baustelle ganz ohne Netz –, tippen Sie in der Leiste auf **Trotzdem
+Müssen Sie trotzdem erfassen (etwa auf einer Baustelle ganz ohne Netz), tippen Sie in der Leiste auf **Trotzdem
 arbeiten** und bestätigen **Auf eigene Gefahr offline arbeiten**. Die Leiste zeigt dann „Offline auf eigene Gefahr“; mit
 **Nur Ansicht** kehren Sie in den geschützten Modus zurück. Sobald der Server wieder erreichbar ist, endet der Modus von
 selbst und alles wird übertragen.
@@ -71,8 +71,8 @@ Oben auf allen Hauptseiten erscheint eine farbige Leiste, wenn die Datensicherun
 
 | Leiste | Bedeutung | Was Sie tun |
 |---|---|---|
-| **Rot** – „Backup-Ziel nicht erreichbar. Letzte erfolgreiche Sicherung: …“ | Die tägliche Datensicherung läuft nicht. | Geben Sie **umgehend** Ihrer Administration Bescheid. |
-| **Gelb** – „Archivserver nicht erreichbar. Letzte Archivierung: …“ | Der Archivserver (Langzeitablage) ist nicht erreichbar. Erscheint nur, wenn ein Archivserver eingerichtet ist. | Informieren Sie Ihre Administration. |
+| **Rot**: „Backup-Ziel nicht erreichbar. Letzte erfolgreiche Sicherung: …“ | Die tägliche Datensicherung läuft nicht. | Geben Sie **umgehend** Ihrer Administration Bescheid. |
+| **Gelb**: „Archivserver nicht erreichbar. Letzte Archivierung: …“ | Der Archivserver (Langzeitablage) ist nicht erreichbar. Erscheint nur, wenn ein Archivserver eingerichtet ist. | Informieren Sie Ihre Administration. |
 
 Den Text der Leisten liefert der Server; die App zeigt ihn unverändert. Ohne Störung ist keine Leiste zu sehen. Ihre
 Arbeit in der App ist davon nicht betroffen.
@@ -82,7 +82,7 @@ Arbeit in der App ist davon nicht betroffen.
 - **Ihre Daten bleiben im Betrieb.** Die App spricht ausschließlich mit dem Server Ihres Betriebs, immer verschlüsselt
   (HTTPS mit gültigem Zertifikat). Es gibt keine Cloud des Herstellers, kein Tracking und keine Werbung.
 - **Verschlüsselt auf dem Gerät.** Daten, Fotos und Dokumente liegen auf dem Gerät verschlüsselt, je Person getrennt.
-  Der Schlüssel ist im iOS-Schlüsselbund geschützt und wird mit Face ID, Gerätecode oder – auf Poolgeräten – mit der
+  Der Schlüssel ist im iOS-Schlüsselbund geschützt und wird mit Face ID, Gerätecode oder (auf Poolgeräten) mit der
   PIN freigegeben.
 - **An das Gerät gebunden.** Bei der Einrichtung erzeugt das Gerät einen eigenen Schlüssel, der es nicht verlassen kann.
   Die Anmeldung gilt nur zusammen mit diesem Gerät; im IT Center sieht die Administration jedes Gerät und kann es

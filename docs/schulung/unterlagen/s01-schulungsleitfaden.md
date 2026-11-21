@@ -1,5 +1,5 @@
 % datei: Schulungsleitfaden-Trainer
-% art: Schulungsleitfaden · für Trainer
+% art: Schulungsleitfaden, für Trainer
 % fuer: Trainerinnen und Trainer, Projektverantwortliche der Einführung
 % stil: dokument
 % inhalt: ja
@@ -31,9 +31,9 @@ Nachschlagewerke sind das **Benutzerhandbuch Web** und das **Benutzerhandbuch Ap
 
 - **Selbst tun statt zusehen:** Jede Teilnehmerin, jeder Teilnehmer arbeitet am eigenen Gerät. Der Trainer zeigt einen
   Schritt einmal am Beamer, dann machen alle mit.
-- **Echte Arbeitssituationen:** Die Übungen folgen einem Arbeitstag – Einsatz ansehen, Foto, Tagebuch, Mangel, Abnahme.
+- **Echte Arbeitssituationen:** Die Übungen folgen einem Arbeitstag, Einsatz ansehen, Foto, Tagebuch, Mangel, Abnahme.
 - **Kleine Gruppen:** Kolonnen höchstens 8 Personen, Büro und Administration höchstens 6.
-- **Kurzanleitung als roter Faden:** Die Teilnehmenden arbeiten mit der ausgedruckten Kurzanleitung – so finden sie
+- **Kurzanleitung als roter Faden:** Die Teilnehmenden arbeiten mit der ausgedruckten Kurzanleitung. So finden sie
   sich später allein zurecht.
 
 ## Vorbereitung
@@ -50,14 +50,14 @@ Nachschlagewerke sind das **Benutzerhandbuch Web** und das **Benutzerhandbuch Ap
 
 ### Übungsumgebung: Demomodus der App
 
-Für alle App-Übungen eignet sich der eingebaute **Demomodus** am besten – er braucht keinen Server und verändert keine
+Für alle App-Übungen eignet sich der eingebaute **Demomodus** am besten. Er braucht keinen Server und verändert keine
 echten Daten:
 
-1. App öffnen → **Demo ausprobieren – ohne Server**.
-2. Die App startet mit der fiktiven **Estrichbau Muster GmbH**: sechs Bauakten in allen Ständen – u. a.
+1. App öffnen → **Demo ohne Server starten**.
+2. Die App startet mit der fiktiven **Estrichbau Muster GmbH**: sechs Bauakten in allen Ständen, u. a.
    **2026-041 EFH Schneider, Neubau** (in Ausführung, heutiger Einsatz „Estrich einbringen OG“), **2026-042 Halle
    Gewerbering** (geplant), **2026-038 Praxis Dr. Maier, Sanierung** (Trocknung), **2026-047 Anbau Weber** (Anfrage)
-   und **2026-021 Kindergarten Sonnenschein** (abgeschlossen) – dazu Einsätze der Woche, „Wer fährt wohin“ mit drei
+   und **2026-021 Kindergarten Sonnenschein** (abgeschlossen), dazu Einsätze der Woche, „Wer fährt wohin“ mit drei
    Kolonnen, Chats und eine Meldung an die IT.
 3. Die Demo meldet automatisch **Max Huber** an. Zum Üben der Anmeldung unter **Mehr** abmelden; Demozugänge:
    `m.huber` (ohne) oder `s.berger` (mit Zwei-Faktor-Anmeldung), Passwort `demo`, Code `246810`.
@@ -88,14 +88,14 @@ fiktiven Daten der „Estrichbau Muster GmbH“ (Kunden, Bauakten, Kolonnen, Fah
 | Nach der Schulung beenden | `docs/handbuch/scripts/umgebung.sh stop` |
 
 Voraussetzungen wie im README unter `docs/handbuch` (u. a. `npm ci` in `web/`). Anmeldung als Administrator: `c.berger`, Passwort `Estrich-Muster-2026!`. Die Beispielbenutzer (z. B. `m.keller` und
-`t.hofmann` – Büro und Bauleitung, `m.huber` – Baustelle, `k.albrecht` – IT-Administration) haben kein bekanntes
+`t.hofmann` für Büro und Bauleitung, `m.huber` für die Baustelle, `k.albrecht` für die IT-Administration) haben kein bekanntes
 Passwort: Vergeben Sie es vor der Schulung mit **Benutzer** → **Passwort zurücksetzen** (Einmalpasswort). Die Instanz
 läuft nur auf diesem Rechner (`http://localhost`); Teilnehmende arbeiten dort per Bildschirmfreigabe oder am
-Trainer-Rechner. Für die App nutzen Sie den Demomodus – die App verbindet sich nur mit Servern mit gültigem Zertifikat.
+Trainer-Rechner. Für die App nutzen Sie den Demomodus, die App verbindet sich nur mit Servern mit gültigem Zertifikat.
 
-**B) Im Echtsystem mit Übungsakten.** Legen Sie je Teilnehmer eine Übungsbauakte an, z. B. „SCHULUNG Meier – bitte
+**B) Im Echtsystem mit Übungsakten.** Legen Sie je Teilnehmer eine Übungsbauakte an, z. B. „SCHULUNG Meier. Bitte
 nicht verplanen“, mit einem Übungskunden „Schulung Musterkunde“. Nach der Schulung werden die Akten **storniert**
-(Grund: „Schulung“) oder – mit dem Recht „Bauakten löschen“ – **In den Papierkorb** gelegt. Planen Sie Übungseinsätze
+(Grund: „Schulung“) oder (mit dem Recht „Bauakten löschen“) **In den Papierkorb** gelegt. Planen Sie Übungseinsätze
 nur auf eine Übungskolonne und geben Sie diese Tage **nicht** frei, damit keine echte Kolonne benachrichtigt wird.
 
 > **Achtung:** Im Echtsystem sind Benachrichtigungen, E-Mails (z. B. Freigabelink an den Kunden, Bestellschein an den
@@ -109,7 +109,7 @@ nur auf eine Übungskolonne und geben Sie diese Tage **nicht** frei, damit keine
 - [ ] Geräte geladen, App aus dem App Store installiert (iOS/iPadOS 17 oder neuer).
 - [ ] Ausgedruckt: Arbeitsblätter, passende Kurzanleitungen, Wissenstests, Teilnahmebestätigungen.
 - [ ] Für die Echtsystem-Einrichtung: QR-Codes (**Verwaltung** → **Geräte** → **Gerät einrichten**) erst in der
-  Schulung erzeugen – sie gelten nur kurz und nur einmal.
+  Schulung erzeugen. Sie gelten nur kurz und nur einmal.
 
 ## Schulung Kolonne / Monteure (60 min)
 
@@ -138,7 +138,7 @@ Nach der Schulung können die Teilnehmenden
 
 ### Übungen mit Lösung
 
-**Übung K1 – Fotoserie und Lieferschein (Bauakte EFH Schneider)**
+**Übung K1, Fotoserie und Lieferschein (Bauakte EFH Schneider)**
 
 1. Heute-Seite → unter **Mein Einsatz** auf **Foto** tippen.
 2. Beschriftung „Randdämmung OG“ eingeben, zwei Fotos aufnehmen, **Übernehmen**.
@@ -146,9 +146,9 @@ Nach der Schulung können die Teilnehmenden
    → **Als PDF ablegen**.
 
 > **Lösung:** Beide Fotos und das PDF stehen in der Bauakte unter **Fotos & Dokumente**. Die Fotos tragen
-> die Beschriftung „Randdämmung OG“. Ohne Netz zeigt die App „Foto gespeichert – wird übertragen, sobald Netz da ist.“
+> die Beschriftung „Randdämmung OG“. Ohne Netz zeigt die App „Foto gespeichert. Es wird übertragen, sobald eine Verbindung besteht.“
 
-**Übung K2 – Tagebuch, Mangel, Aufgabe erledigen**
+**Übung K2, Tagebuch, Mangel, Aufgabe erledigen**
 
 1. Heute-Seite → **Tagebuch** → Textbaustein „Estrich eingebracht“ → **Sichern**.
 2. **Mangel** → „Randdämmstreifen im Bad fehlt“ → Frist **Morgen** → Zuständig: sich selbst → **Sichern**.
@@ -158,14 +158,14 @@ Nach der Schulung können die Teilnehmenden
 > Bauakte unter **Aufgaben & Mängel** und unter **Meine Aufgaben** mit „morgen fällig“. Nach dem Tipp auf den Kreis
 > steht er unter **Erledigt**, **Wieder öffnen** macht das rückgängig.
 
-**Übung K3 – Ohne Netz**
+**Übung K3, Ohne Netz**
 
 1. Flugmodus einschalten. Ein Foto aufnehmen und einen Tagebuch-Eintrag sichern.
 2. **Mehr** → **Synchronisation** öffnen: Was steht unter **Ausstehend**?
 3. Flugmodus aus, App im Vordergrund lassen, erneut nachsehen.
 
 > **Lösung:** Offline stehen Foto und Eintrag unter **Ausstehend**. Mit Netz werden sie automatisch
-> übertragen; oben steht „Alles übertragen“. (Im Demomodus wird nichts gesendet – die Übung im Demomodus nur zeigen,
+> übertragen; oben steht „Alles übertragen“. (Im Demomodus wird nichts gesendet, die Übung im Demomodus nur zeigen,
 > „Nur Ansicht“ über **Demo** → **Störungen vorführen**.)
 
 ### Typische Fragen
@@ -176,7 +176,7 @@ Nach der Schulung können die Teilnehmenden
 | „Was ist, wenn ich im Keller kein Netz habe?“ | Weiterarbeiten. Alles liegt verschlüsselt auf dem Gerät und wird später übertragen. Nur PDFs und Verlauf brauchen Netz. |
 | „Die Leiste ist grau und ich kann nichts erfassen.“ | „Nur Ansicht“: Server seit über 5 Minuten nicht erreichbar. Netz prüfen; im Notfall **Trotzdem arbeiten**. |
 | „Darf ich die App löschen, wenn sie spinnt?“ | Nicht, solange unter **Synchronisation** etwas **Ausstehend** ist. Besser **Mehr** → **Problem melden**. |
-| „Sieht das Büro meine Fotos sofort?“ | Ja, sobald sie übertragen sind – in derselben Bauakte im Web. |
+| „Sieht das Büro meine Fotos sofort?“ | Ja, sobald sie übertragen sind, in derselben Bauakte im Web. |
 | „Wo ist der Chat?“ | Nur sichtbar, wenn der Betrieb das Modul eingeschaltet hat. |
 
 ## Schulung Bauleitung (90 min)
@@ -206,7 +206,7 @@ Zusätzlich zu den Zielen der Kolonne können die Teilnehmenden
 
 ### Übungen mit Lösung
 
-**Übung B1 – Neue Bauakte in der App**
+**Übung B1, Neue Bauakte in der App**
 
 1. Tab **Baustellen** → **„+“**.
 2. **Für wen bauen wir?** → **Neuen Kunden anlegen** (Privatperson „Familie Probst“).
@@ -214,10 +214,10 @@ Zusätzlich zu den Zielen der Kolonne können die Teilnehmenden
 4. **Was wird gebaut?** → Estrichart CT, Nenndicke 65 mm, Fußbodenheizung.
 5. **Alles richtig?** → **Gleich danach**: **Erstbegehung** → **Anlegen**.
 
-> **Lösung:** Die Bauakte heißt bis zur Übertragung „Neu · noch ohne Nummer“; die Nummer vergibt der Server.
+> **Lösung:** Die Bauakte heißt bis zur Übertragung „Neu, noch ohne Nummer“; die Nummer vergibt der Server.
 > Gibt es an der Adresse schon eine Bauakte, bietet die App **Öffnen statt neu anlegen** an.
 
-**Übung B2 – Erstbegehung und CM-Messung**
+**Übung B2, Erstbegehung und CM-Messung**
 
 1. In der neuen (oder in der Demo-Bauakte **EFH Schneider**) **Mehr** → **Erstbegehung**.
 2. Alle Prüfpunkte **In Ordnung**, einen Punkt **Mangel** mit **Foto zu diesem Punkt** und kurzer Beschreibung.
@@ -227,7 +227,7 @@ Zusätzlich zu den Zielen der Kolonne können die Teilnehmenden
 > **Lösung:** Die Erstbegehung steht unter **Protokolle**. Die CM-Messung zeigt **Noch nicht belegreif**:
 > Der Grenzwert für beheizten Zementestrich ist **1,8 CM-%** (unbeheizt 2,0; CA 0,5 bzw. 0,3).
 
-**Übung B3 – Abnahme mit Vorbehalt**
+**Übung B3, Abnahme mit Vorbehalt**
 
 1. Bauakte → **Mehr** → **Abnahme** → Ergebnis **Mit Vorbehalt**.
 2. Abgenommene Leistung „Zementestrich CT-C25-F4, 65 mm, EG“ eintragen.
@@ -239,7 +239,7 @@ Zusätzlich zu den Zielen der Kolonne können die Teilnehmenden
 > befristeten Link ohne Anmeldung freigeben oder mit Begründung ablehnen; danach zeigt die Bauakte „Online freigegeben
 > von …“.
 
-**Übung B4 – Dokument zur Freigabe (Web)**
+**Übung B4, Dokument zur Freigabe (Web)**
 
 1. Bauakte → **Dokumente** → eine PDF hochladen (Dokumentart **Pläne**).
 2. Menü der Zeile → **Freigabe anfordern** → Kollegin aus der Gruppe, Frist, Hinweis.
@@ -248,7 +248,7 @@ Zusätzlich zu den Zielen der Kolonne können die Teilnehmenden
 > **Lösung:** Bis zur Entscheidung trägt das Dokument die Marke **Wartet auf Freigabe**. Alle Freigaben
 > stehen unter **Auftragsbearbeitung** → **Dokumente**, Reiter **Freigaben**.
 
-**Übung B5 – Disposition unterwegs (App, Planungsrecht nötig)**
+**Übung B5, Disposition unterwegs (App, Planungsrecht nötig)**
 
 1. **Wer fährt wohin** → morgen wählen → bei einer Kolonne **Anpassen** → **Baustelle zuweisen**.
 2. Bauvorhaben suchen, Tätigkeit „Erstbegehung“, Uhrzeit 8:00 → Prüfung ansehen → **Einplanen**.
@@ -297,7 +297,7 @@ Die Teilnehmenden können
 
 ### Übungen mit Lösung
 
-**Übung U1 – Anruf wird zur Anfrage**
+**Übung U1, Anruf wird zur Anfrage**
 
 1. Kopfzeile → **Telefon**-Symbol. **Wer ruft an?** „Familie Probst“, Rückrufnummer, Richtung **Eingehend**.
 2. Notiz „EFH, ca. 140 m², Fußbodenheizung, Wunschtermin Mai“ → **Als Anfrage speichern**.
@@ -306,7 +306,7 @@ Die Teilnehmenden können
 > **Lösung:** Aus der Anfrage entsteht eine Bauakte (Status **Anfrage** oder direkt als Auftrag); die Anfrage
 > gilt damit als erledigt. Der Anruf steht unter **Büro** → **Anrufe**.
 
-**Übung U2 – Neue Bauakte mit Dublettenprüfung**
+**Übung U2, Neue Bauakte mit Dublettenprüfung**
 
 1. <kbd>Alt</kbd> + <kbd>N</kbd>. Kunde: einen Namen eines **vorhandenen** Kunden leicht anders schreiben, aber dieselbe
    Telefonnummer eingeben → **Weiter**.
@@ -318,7 +318,7 @@ Die Teilnehmenden können
 > **Lösung:** Es entsteht **kein** doppelter Kunde. Die Aktennummer wird automatisch vergeben (z. B.
 > 2026-001). Zugewiesene Mitarbeiter sehen die Akte auch mit dem Recht „Eigene Bauakten sehen“.
 
-**Übung U3 – Dokument mit Fassung und Freigabe**
+**Übung U3, Dokument mit Fassung und Freigabe**
 
 1. Bauakte → **Dokumente** → PDF per Ziehen hochladen, Dokumentart **Angebote**.
 2. Menü der Zeile → **Neue Fassung hochladen …** → geänderte Datei wählen.
@@ -328,7 +328,7 @@ Die Teilnehmenden können
 > **Lösung:** Die Liste zeigt v2 als aktuelle Fassung, **Alle Fassungen** blendet v1 ein. Der Ausdruck
 > entsteht als PDF mit Firmenlogo und wird zusätzlich in der Bauakte abgelegt.
 
-**Übung U4 – Cockpit**
+**Übung U4, Cockpit**
 
 1. **Planung** → **Planungs-Cockpit** → Ansicht **Woche**.
 2. Ein Bauvorhaben aus dem **Vorrat** auf eine Kolonne und Mittwoch ziehen.
@@ -340,7 +340,7 @@ Die Teilnehmenden können
 > freigegebene Tage tragen **Entwurf**; nach der Freigabe erhalten die Mitarbeiter eine Benachrichtigung und sehen den
 > Tag in der App unter **Wer fährt wohin**.
 
-**Übung U5 – Urlaub**
+**Übung U5, Urlaub**
 
 1. **Personal** → **Mein Urlaub** → **Urlaub beantragen** (zwei Tage nächsten Monat).
 2. Partnerin/Partner mit Genehmigungsrecht: Reiter **Urlaubsanträge** → **Genehmigen**.
@@ -349,7 +349,7 @@ Die Teilnehmenden können
 > **Lösung:** Beantragte Tage sind schraffiert, genehmigte als **U** eingetragen. Die Planung zeigt die
 > Person an diesen Tagen als abwesend.
 
-**Übung U6 – Material bestellen**
+**Übung U6, Material bestellen**
 
 1. Bauakte → **Material** → Reserve 5 % → Positionen markieren → **Auswahl bestellen**.
 2. Lieferant, Liefertermin, Zeitfenster → **Speichern** (Entwurf).
@@ -362,7 +362,7 @@ Die Teilnehmenden können
 
 | Frage | Antwort |
 |---|---|
-| „Kann ich eine Seite als Lesezeichen speichern?“ | Ja, jede Seite hat eine eigene Adresse – auch die Tagesübersicht mit Datum. |
+| „Kann ich eine Seite als Lesezeichen speichern?“ | Ja, jede Seite hat eine eigene Adresse, auch die Tagesübersicht mit Datum. |
 | „Der Plan zeigt ein rotes Dreieck.“ | Konflikt (z. B. Person abwesend). Konflikte sind Hinweise; Sie entscheiden bewusst. |
 | „Ich habe etwas falsch verschoben.“ | <kbd>Strg</kbd> + <kbd>Z</kbd> im Cockpit. |
 | „Wie bekomme ich den Plan an die Wand im Lager?“ | **Drucken** im Cockpit, **Wochen-PDF** in der Kolonnenplanung oder **Drucken** in der Tagesübersicht. |
@@ -389,7 +389,7 @@ Die Teilnehmenden können
 | 0:00 | Verwaltung im Überblick, Statuszeilen, Zwei-Faktor-Anmeldung für Admins | Vorführung, Übung A1 | Handbuch Web Kap. 9 |
 | 0:15 | Benutzer, Rollen und Rechte, Zugangsbrief | Übung A2 | Kurzanleitung 13 |
 | 0:30 | Geräte: QR-Code, Poolgerät, Sperren | Übung A3 | Kurzanleitung 13, 01 |
-| 0:45 | Systemeinstellungen, Stammdaten, E-Mail, Module | Übung A4 | Handbuch Web 9.3–9.7 |
+| 0:45 | Systemeinstellungen, Stammdaten, E-Mail, Module | Übung A4 | Handbuch Web 9.3 bis 9.7 |
 | 1:05 | Pause | – | – |
 | 1:15 | Backup Center, Notfallblatt, Wiederherstellen (einzelne Datei) | Übung A5 | Kurzanleitung 14 |
 | 1:30 | Backup-Ziele, Kombiserver, Archiv, Überwachung | Vorführung | Kurzanleitung 15 |
@@ -398,16 +398,16 @@ Die Teilnehmenden können
 
 ### Übungen mit Lösung
 
-**Übung A1 – Zwei-Faktor-Anmeldung einrichten**
+**Übung A1, Zwei-Faktor-Anmeldung einrichten**
 
 1. Benutzermenü → **Anmeldung und Sicherheit** → **Zwei-Faktor-Anmeldung** → **Einrichten**.
 2. QR-Code mit der Authenticator-App scannen, Code eingeben → **Einschalten**.
 3. **Wiederherstellungscodes** sichern.
 
 > **Lösung:** Das Schild **2FA** erscheint in der Benutzerliste. Unter **Systemeinstellungen** →
-> **Anmeldung** lässt sich die **Pflicht für Administratoren** einschalten – erst danach, wenn alle Admins eingerichtet sind.
+> **Anmeldung** lässt sich die **Pflicht für Administratoren** einschalten. Erst danach, wenn alle Admins eingerichtet sind.
 
-**Übung A2 – Benutzer und Rolle**
+**Übung A2, Benutzer und Rolle**
 
 1. **Verwaltung** → **Benutzer** → **Benutzer anlegen**: „Test Monteur“, Anmeldename „t.monteur“, Rolle **Baustelle**.
 2. **Zugangsbrief (PDF)** öffnen.
@@ -415,9 +415,9 @@ Die Teilnehmenden können
 4. Den Testbenutzer **sperren**.
 
 > **Lösung:** Der Zugangsbrief enthält Anmeldedaten und Anleitung (DIN 5008). Gesperrte Benutzer bleiben
-> mit Verlauf erhalten – gelöscht wird nicht. Die Rolle **Administrator** hat immer alle Rechte.
+> mit Verlauf erhalten, gelöscht wird nicht. Die Rolle **Administrator** hat immer alle Rechte.
 
-**Übung A3 – Gerät per QR-Code**
+**Übung A3, Gerät per QR-Code**
 
 1. **Geräte** → **Gerät einrichten** → **Poolgerät (mehrere Personen)** → Name „iPad Kolonne Test“ → **Code erzeugen**.
 2. In der App (im Echtsystem): **QR-Code scannen** → anmelden → PIN festlegen.
@@ -426,7 +426,7 @@ Die Teilnehmenden können
 > **Lösung:** Mit Code eingerichtet ist das Gerät sofort freigegeben. Der Code gilt nur kurz und einmal. Für
 > den QR-Code muss die öffentliche Serveradresse (`ESTRICHONE_DOMAIN`) konfiguriert sein.
 
-**Übung A4 – Systemeinstellungen**
+**Übung A4, Systemeinstellungen**
 
 1. **Verwaltung** → **Systemeinstellungen** → **Firma**: Firmendaten prüfen, **Logo hochladen …** → **Speichern**.
 2. **Verwaltung** → **E-Mail**: SMTP-Daten eintragen → **Testmail senden**.
@@ -436,16 +436,16 @@ Die Teilnehmenden können
 > **Lösung:** Das Logo erscheint in der Kopfzeile und auf allen PDFs. Die Testmail steht im
 > **Versandprotokoll**. Der neue Prüfpunkt erscheint bei der nächsten Erstbegehung in Web und App.
 
-**Übung A5 – Sicherung**
+**Übung A5, Sicherung**
 
 1. **Verwaltung** → **Sicherung** → **Jetzt sichern**.
 2. Reiter **Notfall** → **Notfallblatt (PDF)** öffnen (im Echtsystem ausdrucken und wegschließen).
 3. Reiter **Sicherungen** → Stand wählen → **Dokumentsymbol** → eine Datei zurückholen.
 
 > **Lösung:** Die einzelne Datei kommt zurück, ohne den Rest zu verändern. **Wiederherstellen** des ganzen
-> Systems (mit Eingabe `WIEDERHERSTELLEN`) nur in der Übungsinstanz vorführen – Änderungen nach dem Stand gehen verloren.
+> Systems (mit Eingabe `WIEDERHERSTELLEN`) nur in der Übungsinstanz vorführen, Änderungen nach dem Stand gehen verloren.
 
-**Übung A6 – Wartung und Update**
+**Übung A6, Wartung und Update**
 
 1. **Verwaltung** → **Hinweise & Wartung** → **Wartung planen …** (Nachricht, Beginn, Ende; Administratoren dürfen
    weiterarbeiten).
@@ -463,15 +463,15 @@ Die Teilnehmenden können
 | „Ein iPad wurde gestohlen.“ | **Geräte** → **Sperren**; Passwörter der Nutzer ändern. |
 | „Die Startseite meldet keine Sicherung.“ | **Sicherung** prüfen, **Jetzt sichern**; sonst `docker compose logs backup`. |
 | „Kommt 0.2 automatisch?“ | Nein. Neue Versionslinien werden nie automatisch eingespielt. |
-| „Reicht ein Kombiserver im selben Raum?“ | Nein – er muss räumlich getrennt stehen; er ist kein zweiter Standort für das Archiv. |
+| „Reicht ein Kombiserver im selben Raum?“ | Nein. Er muss räumlich getrennt stehen; er ist kein zweiter Standort für das Archiv. |
 | „Wie lange archivieren?“ | Vorschläge nach § 147 AO und § 257 HGB (6 bzw. 10 Jahre); maßgeblich ist die Steuerberatung. |
 
 ## Nach der Schulung
 
 - Wissenstest gemeinsam auflösen (Lösungsblatt), offene Punkte notieren.
 - **Teilnahmebestätigung** ausfüllen und unterschreiben.
-- Kurzanleitungen austeilen bzw. aushängen: Kolonnen im Fahrzeug oder Lager (01, 02, 03, 05, 07), Büro (08–12),
-  Administration (13–16).
+- Kurzanleitungen austeilen bzw. aushängen: Kolonnen im Fahrzeug oder Lager (01, 02, 03, 05, 07), Büro (08 bis 12),
+  Administration (13 bis 16).
 - Übungsdaten aufräumen: Demo beenden; im Echtsystem Übungsakten stornieren, Übungstage nicht freigeben, Testbenutzer
   sperren.
 - Nach zwei Wochen: kurze Nachschulung, Fragen aus dem Helpdesk (**IT-Service/Helpdesk** → **Helpdesk**) auswerten.

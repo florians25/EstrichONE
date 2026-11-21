@@ -2,7 +2,7 @@
 
 ## Anmelden
 
-1. Öffnen Sie im Browser die Adresse Ihres EstrichONE-Servers – immer mit `https://`.
+1. Öffnen Sie im Browser die Adresse Ihres EstrichONE-Servers, immer mit `https://`.
 2. Geben Sie Ihren **Anmeldenamen** (oder Ihre E-Mail-Adresse) und das **Passwort** ein.
 3. Auf dem eigenen Arbeitsplatzrechner können Sie **Angemeldet bleiben** einschalten. Auf fremden oder
    gemeinsam genutzten Rechnern lassen Sie das Häkchen weg.
@@ -14,12 +14,12 @@ Bei der ersten Anmeldung mit einem **Einmalpasswort** aus dem Zugangsbrief verla
 Passwort. Es muss mindestens 12 Zeichen lang sein; verbreitete Passwörter wie „Sommer2026!“ werden abgelehnt. Am
 sichersten sind mehrere zufällige Wörter, z. B. „Kelle Silo Wasserwaage Morgen“.
 
-> **Tipp:** Ist die Zwei-Faktor-Anmeldung eingeschaltet, fragt EstrichONE nach dem Passwort zusätzlich den
+> **Hinweis:** Ist die Zwei-Faktor-Anmeldung eingeschaltet, fragt EstrichONE nach dem Passwort zusätzlich den
 > **Bestätigungscode** ab: die sechs Ziffern aus Ihrer Authenticator-App. Haben Sie das Handy nicht zur Hand, geben Sie
 > stattdessen einen Ihrer Wiederherstellungscodes ein.
 
 Läuft eine Sitzung wegen längerer Pause ab, erscheint ein kleiner Anmeldedialog über der Seite. Ihre Eingaben bleiben
-dabei erhalten – nach der erneuten Anmeldung arbeiten Sie an derselben Stelle weiter.
+dabei erhalten, nach der erneuten Anmeldung arbeiten Sie an derselben Stelle weiter.
 
 ### Ersteinrichtung (nur einmal, durch die Administration)
 
@@ -49,7 +49,7 @@ und oben erscheint der Hinweis „Bitte richten Sie die Zwei-Faktor-Anmeldung ei
 
 Auf derselben Seite sehen Sie unter **Angemeldete Geräte und Browser** alle aktiven Anmeldungen mit Programm,
 Anmeldezeit und letzter Aktivität. Unbekannte Anmeldungen beenden Sie mit **Abmelden** oder auf einen Schlag mit
-**Überall sonst abmelden** – und ändern danach Ihr Passwort.
+**Überall sonst abmelden**, und ändern danach Ihr Passwort.
 
 > **Wichtig:** Handy verloren? Melden Sie sich mit einem Wiederherstellungscode an und richten Sie die App neu ein.
 > Haben Sie keinen Code mehr, setzt die Administration die Zwei-Faktor-Anmeldung in der Benutzerverwaltung zurück
@@ -67,7 +67,7 @@ Anmeldezeit und letzter Aktivität. Unbekannte Anmeldungen beenden Sie mit **Abm
 | 4 | **Chat** | Öffnet den Chat; eine Zahl zeigt ungelesene Nachrichten (Abschnitt 8.2). |
 | 5 | **Telefon** | Schnellerfassung eines Anrufs während des Gesprächs (Abschnitt 4.2). Die Zahl zeigt fällige Wiedervorlagen. |
 | 6 | **Benutzermenü** | Mein Konto (Einstellungen, Benachrichtigungen, Passwort, Anmeldung und Sicherheit), Hilfe (Was gibt’s Neues, Problem melden, Fehler melden / Funktion wünschen, Meine Fehler & Wünsche), Abmelden. |
-| 7 | **Seitennavigation** | Oben die Fachgruppen Auftragsbearbeitung, Planung, Material, Büro und Personal; unten fest **IT-Service/Helpdesk** und – für die Administration – **Verwaltung**. |
+| 7 | **Seitennavigation** | Oben die Fachgruppen Auftragsbearbeitung, Planung, Material, Büro und Personal; unten fest **IT-Service/Helpdesk** und (für die Administration) **Verwaltung**. |
 | 8 | **Cards** | Das Wichtigste für Sie auf einen Blick, jeweils mit Sprung in die passende Liste. |
 
 Unten zeigt die **Statuszeile**, mit welchem Server Sie verbunden sind, dessen Version sowie Ihren Namen und das Datum.
@@ -121,7 +121,7 @@ Browser. Solange Sie nichts wählen, gilt die Vorgabe der Administration (Abschn
 
 Nach einem Update des Servers zeigt EstrichONE bei der nächsten Anmeldung einmal das Fenster **Was gibt’s Neues in
 Version …** mit den wichtigsten Neuerungen. Haben Sie mehrere Versionen verpasst, stehen alle untereinander, die neueste
-oben; ältere sind eingeklappt. **Verstanden** schließt das Fenster – es erscheint dann auf keinem Gerät erneut, bis zur
+oben; ältere sind eingeklappt. **Verstanden** schließt das Fenster. Es erscheint dann auf keinem Gerät erneut, bis zur
 nächsten Version. Neue Benutzer sehen es beim ersten Anmelden nicht. Jederzeit wieder aufrufen: Benutzermenü →
 **Was gibt’s Neues**.
 

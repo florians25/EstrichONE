@@ -1,5 +1,5 @@
 % datei: Kurzanleitung-14-Admin-Backup-Center-und-Notfallblatt
-% art: Kurzanleitung · Administration
+% art: Kurzanleitung, Administration
 % fuer: Administration
 
 # Admin: Backup Center und Notfallblatt
@@ -14,10 +14,10 @@
 
 > **Achtung:** Eine **rote Leiste** „Backup-Server ausgefallen“ sehen alle Benutzer in Web und App. Sofort kümmern!
 
-## Notfallblatt – einmalig, jetzt
+## Notfallblatt: einmalig, jetzt
 
 1. Reiter **Notfall** → **Notfallblatt (PDF)** öffnen und **ausdrucken**.
-2. Getrennt vom Server aufbewahren (Tresor). Es enthält den **Wiederherstellungsschlüssel** – ohne ihn sind die
+2. Getrennt vom Server aufbewahren (Tresor). Es enthält den **Wiederherstellungsschlüssel**, ohne ihn sind die
    Sicherungen wertlos.
 
 ## Einzelne Datei zurückholen
@@ -38,5 +38,5 @@
 2. Befehl aus dem Reiter **Notfall** ausführen (**Befehl kopieren**).
 3. Quelle (Ordner oder Zugang vom Notfallblatt) und **Wiederherstellungsschlüssel** eingeben.
 
-**Zeitplan:** Reiter **Zeitplan und Meldungen** – tägliche Vollsicherung (Standard 22:30 Uhr), optional inkrementell,
+**Zeitplan:** Reiter **Zeitplan und Meldungen**, tägliche Vollsicherung (Standard 22:30 Uhr), optional inkrementell,
 wöchentliche Probe-Wiederherstellung, Aufbewahrung, Pushnachrichten an Administratoren.

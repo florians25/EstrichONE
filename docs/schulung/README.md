@@ -6,7 +6,7 @@ Apps; Bilder sind die Bildschirmfotos der Handbücher (`docs/handbuch/bilder`, `
 
 Bei jedem Release hängt `.github/workflows/release.yml` alle PDFs als ZIP `EstrichONE-Schulung-<tag>.zip` an.
 
-## Kurzanleitungen (je 1–2 Seiten A4, zum Ausdrucken und Aushängen)
+## Kurzanleitungen (je 1 bis 2 Seiten A4, zum Ausdrucken und Aushängen)
 
 | Nr. | PDF | Zielgruppe |
 |---|---|---|
@@ -53,7 +53,7 @@ Bei jedem Release hängt `.github/workflows/release.yml` alle PDFs als ZIP `Estr
 Die Markdown-Teilmenge ist die der Handbücher (`docs/handbuch/scripts/pdf.mjs`), ergänzt um Kopfzeilen am Dateianfang
 (`% datei:`, `% art:`, `% fuer:`, `% stil: kurz|blatt|dokument`, `% inhalt: ja`, `% felder: Name, Datum`,
 `% klasse:`), Ankreuzkästchen (`- [ ] …`), Lösungskästen (`> **Lösung:** …`) und Bildoptionen
-`{ausschnitt=x,y,b,h breite=px}` (ImageMagick schneidet aus, verkleinert und speichert JPEG – kleine PDFs).
+`{ausschnitt=x,y,b,h breite=px}` (ImageMagick schneidet aus, verkleinert und speichert JPEG, kleine PDFs).
 
 ```bash
 node docs/handbuch/scripts/pdf.mjs schulung              # alle PDFs und die Sammel-PDF

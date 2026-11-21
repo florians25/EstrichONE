@@ -2,7 +2,7 @@
 
 ## Helpdesk {#helpdesk}
 
-Klemmt etwas – am iPad der Kolonne, an der App oder im Büro –, melden Mitarbeiter es als **Ticket**. Die Apps senden auf
+Klemmt etwas (am iPad der Kolonne, an der App oder im Büro), melden Mitarbeiter es als **Ticket**. Die Apps senden auf
 Wunsch technische Angaben (Gerät, Version, Abgleich, Fehlercodes) mit; Fotos und Bildschirmfotos lassen sich anhängen.
 Alles rund um Hilfe und Rückmeldungen steht unten in der Seitennavigation unter **IT-Service/Helpdesk** (ein Klick klappt
 die Gruppe auf): **Helpdesk** (Tickets), **Problem melden**, **Wissensdatenbank**, **Meine Fehler & Wünsche** (eigene
@@ -42,7 +42,7 @@ Ruft jemand an, schreibt eine E-Mail oder kommt vorbei, legt die IT das Ticket i
 **Meldung aufnehmen** (Hörer-Symbol) → **Eingang** wählen (**Telefon**, **E-Mail**, **Vor Ort**) → **Melder** suchen
 (Name, Benutzername, E-Mail oder Telefon). Hat die Person keinen Zugang zu EstrichONE, tragen Sie ihren Namen unter
 **Oder Name** ein. Dazu Kurzbeschreibung, Kategorie, Priorität und Beschreibung, auf Wunsch einen Anhang (z. B. das
-Bildschirmfoto aus der E-Mail). **Zuweisen** steht auf **Mir** – dann ist das Ticket gleich **In Bearbeitung**;
+Bildschirmfoto aus der E-Mail). **Zuweisen** steht auf **Mir**. Dann ist das Ticket gleich **In Bearbeitung**;
 **Automatisch nach Regeln** überlässt die Zuordnung den Regeln.
 
 Das Ticket gehört dem Melder: Er sieht es unter seinen Tickets, erhält einen Hinweis „Ticket … für Sie angelegt“ und alle
@@ -83,7 +83,7 @@ Unter **Helpdesk-Einstellungen** legen Personen mit dem Recht „Helpdesk einric
 - **Feiertage**: Wählen Sie das **Bundesland**. EstrichONE berechnet die gesetzlichen Feiertage jedes Jahr selbst, auch
   die beweglichen um Ostern (Karfreitag, Ostermontag, Christi Himmelfahrt, Pfingstmontag, Fronleichnam); die Vorschau zeigt
   das laufende und das nächste Jahr. Unter **Zusätzliche Tage (Betriebsruhe)** tragen Sie eigene Tage ein, z. B. Heiligabend
-  oder Betriebsferien – ein Datum je Zeile. An all diesen Tagen steht die Uhr der Ziele. Feiertage, die nur in einzelnen
+  oder Betriebsferien, ein Datum je Zeile. An all diesen Tagen steht die Uhr der Ziele. Feiertage, die nur in einzelnen
   Gemeinden gelten (z. B. Mariä Himmelfahrt in Teilen Bayerns, Fronleichnam in Teilen Sachsens und Thüringens), prüfen Sie
   bitte selbst und ergänzen sie bei Bedarf als zusätzliche Tage.
 - **Gruppen** (z. B. IT, Büro-IT) mit Mitgliedern, **Unterkategorien** (z. B. Drucker, Telefon, E-Mail) und
@@ -112,7 +112,7 @@ Der **Chat** dient der schnellen Abstimmung zwischen Büro und Baustelle: Einzel
   **Baustellen-Chat anlegen** eine Gruppe mit allen Beteiligten an; **Bauakte öffnen** springt zurück.
 - Nachrichten können Fotos, Dokumente, Kamerabilder oder den Standort enthalten. Ein Foto aus dem Chat lässt sich direkt
   in die Bauakte übernehmen.
-- **Diktieren** nutzt die Spracherkennung des Browsers; es wird kein Audio gespeichert – prüfen Sie den Text vor dem
+- **Diktieren** nutzt die Spracherkennung des Browsers; es wird kein Audio gespeichert, prüfen Sie den Text vor dem
   Senden.
 - Nachrichten lassen sich beantworten, mit einer Reaktion versehen, anheften, weiterleiten und innerhalb einer Frist
   bearbeiten. **In dieser Unterhaltung suchen** und **Medien und Dokumente** helfen beim Wiederfinden.
@@ -129,7 +129,7 @@ Nachrichten und Anhänge werden verschlüsselt gespeichert und nach der eingeste
 ### Chat und Microsoft Teams
 
 Nutzt Ihr Betrieb Microsoft Teams (Abschnitt 9 „Microsoft Teams“), erscheinen **Microsoft Teams** in der Navigation und
-auf der Startseite sowie **In Teams öffnen** an der Bauakte – im Browser öffnet sich Teams (bzw. die Teams-App, wenn sie
+auf der Startseite sowie **In Teams öffnen** an der Bauakte, im Browser öffnet sich Teams (bzw. die Teams-App, wenn sie
 installiert ist). Im Modus „Microsoft Teams“ heißt der Chat **Chat-Archiv**: Bisherige Unterhaltungen bleiben lesbar und
 lassen sich exportieren, geschrieben wird nur noch in Teams. Neue Chats starten Sie dann über das Teams-Symbol in der Kopfzeile
 (**Chat in Teams starten …**), im Chat-Archiv über **Neuer Chat in Microsoft Teams** oder über das Teams-Symbol bei einer

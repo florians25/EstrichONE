@@ -41,10 +41,10 @@ Android fragt einmal, ob der Browser Apps installieren darf.
 
 Updates lädt die App selbst: Bei einer neuen Version erscheint oben **Version … verfügbar**. **Aktualisieren** überträgt
 zuerst alle offenen Änderungen, lädt das Update vom Server (ein abgebrochener Download wird fortgesetzt), prüft die
-Prüfsumme und installiert es. Beim ersten Update fragt Android, ob EstrichONE Apps installieren darf – unter
+Prüfsumme und installiert es. Beim ersten Update fragt Android, ob EstrichONE Apps installieren darf, unter
 **Einstellungen** „Aus dieser Quelle zulassen“ einschalten und zurückkehren. Daten und Anmeldung bleiben erhalten.
 **Mehr** → **Info** zeigt den Stand und **Nach Updates suchen**.
 
 Meldet die App **Update nicht möglich**, ist das Update mit einem anderen Schlüssel signiert als die installierte App
 (z. B. Testversion statt Release). Dann unter **Mehr** → **Synchronisation** prüfen, dass alles übertragen ist, die App
-deinstallieren, neu installieren und neu anmelden – und die IT informieren.
+deinstallieren, neu installieren und neu anmelden, und die IT informieren.

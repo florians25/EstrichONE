@@ -1,5 +1,5 @@
 % datei: Wissenstest-Buero-und-Disposition
-% art: Wissenstest · Schulung
+% art: Wissenstest, Schulung
 % fuer: Büro und Disposition
 % felder: Name, Datum, Punkte (von 10)
 
@@ -33,7 +33,7 @@ Kreuzen Sie die **richtige** Antwort an (je eine) bzw. schreiben Sie die Antwort
 
 **6. Was bedeutet ein rotes Dreieck in einer Tageszelle des Cockpits?**
 
-- [ ] Ein Konflikt, z. B. eine abwesende Person ist eingeplant – EstrichONE verhindert die Planung nicht
+- [ ] Ein Konflikt, z. B. eine abwesende Person ist eingeplant, EstrichONE verhindert die Planung nicht
 - [ ] Der Tag ist gesperrt
 - [ ] Der Einsatz wurde gelöscht
 

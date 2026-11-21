@@ -2,7 +2,7 @@
 
 Die **Bauakte** ist das Herzstück von EstrichONE. Sie bündelt alles zu einem Bauvorhaben: Kunde und Beteiligte,
 Dokumente, Fotos und Videos, Bautagebuch, Erstbegehung, Abnahme, Räume, Aufgaben, Material, Einsätze und den gesamten
-Verlauf. Büro, Bauleitung und Kolonnen arbeiten an derselben Akte – im Web wie in den Apps.
+Verlauf. Büro, Bauleitung und Kolonnen arbeiten an derselben Akte, im Web wie in den Apps.
 
 ## Der Lebenslauf einer Bauakte
 
@@ -23,21 +23,21 @@ unter **Verwaltung** → **Systemeinstellungen** → **Bauakten** fest.
 
 ## Neue Bauakte anlegen {#bauakte-anlegen}
 
-Eine Bauakte entsteht immer mit **Kunde** – ohne Kunde keine Bauakte. Der Assistent führt in fünf Schritten durch die
+Eine Bauakte entsteht immer mit **Kunde**, ohne Kunde keine Bauakte. Der Assistent führt in fünf Schritten durch die
 Anlage (Kunde, Bauvorhaben, Beteiligte, Weitere Angaben, Prüfen) und verhindert doppelte Kunden. Rechts zeigt eine
-**Zusammenfassung** laufend, was bisher erfasst ist. Ab dem Schritt Bauvorhaben können Sie jederzeit **Anlegen** – die
+**Zusammenfassung** laufend, was bisher erfasst ist. Ab dem Schritt Bauvorhaben können Sie jederzeit **Anlegen**, die
 Schritte Beteiligte und Weitere Angaben sind optional.
 
 1. Klicken Sie oben auf **Neue Bauakte** (oder in der Bauaktenliste auf **Neue Bauakte** bzw. **Neue Anfrage**).
 2. **Kunde:** Geben Sie den Namen ein. Schon beim Tippen schlägt EstrichONE vorhandene Kunden vor; ein Klick übernimmt
    den Kunden mit allen Angaben. Für einen neuen Kunden wählen Sie **Person** oder **Firma** und ergänzen Anschrift,
    Telefon und E-Mail.
-3. Klicken Sie auf **Weiter**. Der Server prüft jetzt auf **Dubletten** – nach Name, Telefon, E-Mail und Anschrift.
+3. Klicken Sie auf **Weiter**. Der Server prüft jetzt auf **Dubletten**, nach Name, Telefon, E-Mail und Anschrift.
 
 ![Assistent Schritt Kunde](bilder/bauakte-neu-kunde.png "Neue Bauakte, Schritt 1: Kunde mit Anschrift und Telefon")
 
 Findet EstrichONE ähnliche Kunden, erscheint der Hinweis „Es gibt bereits ähnliche Kunden“ mit der Liste
-**Mögliche Dubletten**. Wählen Sie den vorhandenen Kunden und **Diesen Kunden verwenden** – oder setzen Sie bewusst das
+**Mögliche Dubletten**. Wählen Sie den vorhandenen Kunden und **Diesen Kunden verwenden**, oder setzen Sie bewusst das
 Häkchen **Trotzdem als neuen Kunden anlegen**.
 
 ![Dublettenprüfung](bilder/bauakte-neu-dublette.png "Dublettenprüfung: Telefonnummer und Anschrift passen zu „Familie Oberländer“")
@@ -57,8 +57,8 @@ Häkchen **Trotzdem als neuen Kunden anlegen**.
 
 ![Assistent Schritt Bauvorhaben](bilder/bauakte-neu-bauvorhaben.png "Schritt 2: Bauvorhaben, Art der Anlage, Vorlage und Baustelle")
 
-> **Tipp:** Sind Sie gerade beim Kunden vor Ort? Wählen Sie unter **Weitere Angaben** → **Erstbegehung** die Option
-> **Direkt im Anschluss durchführen** – dann öffnet sich nach dem Anlegen sofort das Erstbegehungsprotokoll.
+> **Hinweis:** Sind Sie gerade beim Kunden vor Ort? Wählen Sie unter **Weitere Angaben** → **Erstbegehung** die Option
+> **Direkt im Anschluss durchführen**. Dann öffnet sich nach dem Anlegen sofort das Erstbegehungsprotokoll.
 
 Die **Aktennummer** (z. B. 2026-001) vergibt EstrichONE automatisch nach dem eingestellten Nummernkreis; von Hand
 lässt sie sich weder eingeben noch ändern.
@@ -79,9 +79,9 @@ Recht „Alle Bauakten bearbeiten“ hat (Standard: Administrator, Büro und Bau
 
 Weitere Möglichkeiten in der Kopfzeile der Liste:
 
-- **Karte** – zeigt die Bauakten mit bekanntem Standort auf der Baustellenkarte.
-- **Exportieren** – lädt die geladenen Bauakten als CSV-Datei für Excel herunter.
-- **Neue Anfrage** / **Neue Bauakte** – startet den Assistenten.
+- **Karte**: zeigt die Bauakten mit bekanntem Standort auf der Baustellenkarte.
+- **Exportieren**: lädt die geladenen Bauakten als CSV-Datei für Excel herunter.
+- **Neue Anfrage** / **Neue Bauakte**, startet den Assistenten.
 
 Ein Klick auf eine Zeile öffnet die Bauakte rechts daneben. Über die Symbole oben rechts in der Akte schalten Sie auf
 Vollbild oder schließen die Akte wieder.
@@ -98,30 +98,30 @@ Fläche und die Zahl der Fotos und Dokumente.
 
 Die Schaltflächen im Kopf:
 
-- **Status** – ändert den Status von Hand.
+- **Status**: ändert den Status von Hand.
 - **Als Auftrag übernehmen** (bei Anfragen) bzw. **Abschließen** (bei laufenden Bauakten). Ist ein Archivserver
   eingerichtet, bietet der Abschlussdialog zusätzlich **Abschließen & Archivieren** an: Die Bauakte wird abgeschlossen
   und alle ihre Dokumente werden sofort revisionssicher archiviert (Fortschritt im Dialog, Nachweis unter
-  **Aktionen** → **Archivnachweis**). Ist der Archivserver gerade nicht erreichbar, ist die Schaltfläche ausgegraut –
+  **Aktionen** → **Archivnachweis**). Ist der Archivserver gerade nicht erreichbar, ist die Schaltfläche ausgegraut,
   dann nur abschließen und später archivieren.
 - **Mich als Beteiligten eintragen**: trägt Sie als Beteiligten (Mitarbeiter) der Bauakte ein; danach dürfen Sie sie
   bearbeiten. Das Eintragen steht im Verlauf, die zuständige Person und die Disposition erhalten eine Benachrichtigung.
   Unter **Aktionen** → **Als Beteiligter austragen** tragen Sie sich wieder aus (die zuständige Person kann sich nicht
   austragen; sie übergibt zuerst die Zuständigkeit).
-- **Baustellen-Chat anlegen** – Gruppenchat mit allen Beteiligten der Baustelle (Abschnitt 8.2).
-- **In Teams öffnen** bzw. **Teams-Chat anlegen** – nur wenn Microsoft Teams eingerichtet ist (Abschnitt 9 „Microsoft
+- **Baustellen-Chat anlegen**: Gruppenchat mit allen Beteiligten der Baustelle (Abschnitt 8.2).
+- **In Teams öffnen** bzw. **Teams-Chat anlegen**, nur wenn Microsoft Teams eingerichtet ist (Abschnitt 9 „Microsoft
   Teams“). Im Menü des Knopfs:
-  - **Teams-Chat anlegen …** – Name (vorbelegt mit Bauaktennummer und Bauvorhaben) und **Teilnehmer**: Das
+  - **Teams-Chat anlegen …**: Name (vorbelegt mit Bauaktennummer und Bauvorhaben) und **Teilnehmer**: Das
     **Bauakten-Team** (Zuständige und Mitarbeiter) ist vorausgewählt, dazu lassen sich **Kolonnen**, **Gruppen** und
     einzelne **Personen** auswählen. Sie selbst sind immer dabei. Ein Hinweis erscheint nur, wenn ausgewählte Personen kein
     Microsoft-Konto haben. Ändern sich später Bauakten-Team oder Kolonne, passt EstrichONE die Mitglieder im Chat
     automatisch an. Ohne App-Registrierung öffnet sich der Chat direkt in Teams und wird nicht in der Bauakte gespeichert.
-  - **Per Link verknüpfen …** – einen vorhandenen Chat oder Kanal aus Teams verknüpfen (in Teams **…** → **Link
+  - **Per Link verknüpfen …**: einen vorhandenen Chat oder Kanal aus Teams verknüpfen (in Teams **…** → **Link
     kopieren** bzw. **Link zum Kanal abrufen**).
-  - **Teams-Chat löschen …** (Recht `teams.delete`) – löscht den Chat in Teams nach Eintippen der Bauaktennummer;
+  - **Teams-Chat löschen …** (Recht `teams.delete`), löscht den Chat in Teams nach Eintippen der Bauaktennummer;
     **Nur Verknüpfung lösen** lässt ihn in Teams bestehen. Ohne dieses Recht steht hier **Verknüpfung lösen**.
-- **Bearbeiten** – Bezeichnung, Baustelle, Termine, Beschreibung; im großen Fenster (Basisdaten links, Baustelle rechts).
-- **Aktionen** – alle Ausdrucke und weitere Funktionen:
+- **Bearbeiten**: Bezeichnung, Baustelle, Termine, Beschreibung; im großen Fenster (Basisdaten links, Baustelle rechts).
+- **Aktionen**: alle Ausdrucke und weitere Funktionen:
 
 ![Menü Aktionen](bilder/bauakte-aktionen.png "Das Menü Aktionen der Bauakte"){halb}
 
@@ -158,7 +158,7 @@ Standort, klicken Sie in die Karte und speichern ihn.
 ## Kontakte und Beteiligte
 
 Im Abschnitt **Kontakte** stehen der **Kunde (Auftraggeber)**, der **Ansprechpartner vor Ort**, die **Bauleitung** und
-weitere Beteiligte wie Architekt, Planer, Generalunternehmer, Lieferanten und Subunternehmer – mit Telefon und E-Mail
+weitere Beteiligte wie Architekt, Planer, Generalunternehmer, Lieferanten und Subunternehmer, mit Telefon und E-Mail
 griffbereit für Büro und Baustelle.
 
 ![Kontakte der Bauakte](bilder/bauakte-kontakte.png "Kunde, Baustelle und Bauleitung im Abschnitt Kontakte")
@@ -198,12 +198,12 @@ Frühere Fassungen bleiben unverändert erhalten.
 
 ### Weitere Aktionen
 
-- **Vorschau** – zeigt PDFs und Bilder direkt im Browser, mit den Pfeiltasten blättern Sie zur nächsten Datei.
-- **Auswahl herunterladen** – mehrere markierte Dateien als ZIP.
-- **Verschieben** – in einen anderen Ordner oder eine andere Dokumentart.
+- **Vorschau**: zeigt PDFs und Bilder direkt im Browser, mit den Pfeiltasten blättern Sie zur nächsten Datei.
+- **Auswahl herunterladen**: mehrere markierte Dateien als ZIP.
+- **Verschieben**: in einen anderen Ordner oder eine andere Dokumentart.
 - **Umbenennen …**, **Löschen** (nur mit Recht „Fotos, Videos und Dokumente löschen“).
-- **Archivnachweis …** – zeigt, ob und wann das Dokument revisionssicher archiviert wurde.
-- **Neuer Unterordner** – eigene Ordner innerhalb einer Dokumentart.
+- **Archivnachweis …**: zeigt, ob und wann das Dokument revisionssicher archiviert wurde.
+- **Neuer Unterordner**: eigene Ordner innerhalb einer Dokumentart.
 
 ### Freigaben (Genehmigungen) {#freigaben}
 
@@ -212,7 +212,7 @@ Pläne, Angebote oder Protokolle lassen sich von Kollegen **freigeben**, bevor s
 1. Menü der Zeile → **Freigabe anfordern**.
 2. Wählen Sie eine Person oder eine Rolle, eine Frist und schreiben Sie einen kurzen Hinweis.
 3. Die angefragte Person erhält eine Benachrichtigung und sieht das Dokument in der Card **Warten auf Genehmigung**.
-4. Sie öffnet das Dokument, prüft es und klickt auf **Freigeben** oder **Ablehnen** – auf Wunsch mit Kommentar.
+4. Sie öffnet das Dokument, prüft es und klickt auf **Freigeben** oder **Ablehnen**, auf Wunsch mit Kommentar.
 
 Bis zur Entscheidung zeigt das Dokument die Marke **Wartet auf Freigabe**. Eine Anfrage lässt sich mit **Zurückziehen**
 zurücknehmen. Alle Freigaben über alle Bauakten finden Sie unter **Auftragsbearbeitung** → **Dokumente** im Reiter
@@ -230,7 +230,7 @@ suchen Sie nach Dateiname, Beschreibung oder Bauakte und filtern nach Freigabest
 
 ## Fotos und Videos
 
-Fotos und Videos der Baustelle kommen meist aus der App – mit Aufnahmezeit und Standort. Im Web laden Sie sie mit
+Fotos und Videos der Baustelle kommen meist aus der App, mit Aufnahmezeit und Standort. Im Web laden Sie sie mit
 **Hochladen** oder per Ziehen hoch.
 
 ![Fotos und Videos](bilder/bauakte-fotos.png "Fotos der Bauakte im Zeitstrahl, nach Tagen gruppiert")
@@ -270,11 +270,11 @@ Es wird nicht überschrieben, sondern bei Bedarf **korrigiert** (eine neue Prüf
 
 Alles zur Erstbegehung steht im eigenen Reiter **Dokumentation** → **Erstbegehung**:
 
-- Oben der **Status** – **Offen**, **Geplant**, **Durchgeführt** oder **Nicht erforderlich** – und die Eckdaten
+- Oben der **Status** (**Offen**, **Geplant**, **Durchgeführt** oder **Nicht erforderlich**) und die Eckdaten
   **Termin**, **Durchgeführt** (wann, von wem), **Ergebnis** und Anzahl der **Protokolle**.
 - **Termin planen** legt einen Einsatz mit der Terminart **Erstbegehung** an (vorbelegt mit der zuständigen Person, die
-  Kolonne lässt sich ergänzen). Steht schon ein Termin – aus der Planung oder ein Kalendertermin „Erstbegehung: …“ aus
-  dem Anlage-Assistenten –, heißt die Schaltfläche **Termin ändern** und öffnet ihn.
+  Kolonne lässt sich ergänzen). Steht schon ein Termin, aus der Planung oder ein Kalendertermin „Erstbegehung: …“ aus
+  dem Anlage-Assistenten, heißt die Schaltfläche **Termin ändern** und öffnet ihn.
 - **Erstbegehung durchführen** öffnet den Assistenten (siehe unten). Danach zeigt der Reiter das
   **Erstbegehungsprotokoll** mit Prüfpunkten, Bemerkungen und Notizen, **Protokoll (PDF)** und **Korrigieren**.
 - **Fotos und Dokumente** zeigt die Fotos der Erstbegehung und die vom Server abgelegten Protokoll-PDFs (Ordner
@@ -290,7 +290,7 @@ So führen Sie die Erstbegehung durch:
 1. Klicken Sie im Reiter **Erstbegehung** auf **Erstbegehung durchführen**.
 2. **Begehung:** Zeitpunkt und freie Notizen (Gespräch mit dem Kunden, Zufahrt, Besonderheiten). Ist keine Begehung
    nötig, schalten Sie **Erstbegehung nicht notwendig** ein und nennen den Grund.
-3. **Prüfpunkte:** Je Punkt **In Ordnung**, **Mangel** oder **Entfällt**, auf Wunsch mit Bemerkung – z. B. „Untergrund
+3. **Prüfpunkte:** Je Punkt **In Ordnung**, **Mangel** oder **Entfällt**, auf Wunsch mit Bemerkung, z. B. „Untergrund
    tragfähig, eben und sauber“, „Randdämmstreifen vorhanden“, „Fußbodenheizung abgedrückt“, „Zufahrt und
    Pumpenstandort“, „Wasser und Strom vorhanden“. Dazu kommen die Messwerte und Felder aus Ihrem Formular.
 4. **Fotos:** Fotos der Bauakte auswählen.
@@ -325,7 +325,7 @@ unterschrieben.
 ![Unterschriften](bilder/abnahme-unterschrift.png "Schritt Unterschriften: Auftraggeber und Auftragnehmer unterschreiben")
 
 Ist der Auftraggeber nicht vor Ort, setzen Sie das Häkchen **Auftraggeber nicht vor Ort: Freigabe per Link an den
-Kunden**. Der Kunde erhält einen Link (auf Wunsch per E-Mail) und bestätigt die Abnahme auf einer eigenen Seite – ohne
+Kunden**. Der Kunde erhält einen Link (auf Wunsch per E-Mail) und bestätigt die Abnahme auf einer eigenen Seite, ohne
 Konto in EstrichONE. Wie lange der Link gilt, stellt die Administration ein.
 
 Das unterschriebene Protokoll legt EstrichONE als PDF unter der Dokumentart **Abnahmen** ab. Ist die Automatik
@@ -370,18 +370,18 @@ Unter **Einsätze** sehen Sie alle geplanten Einsätze der Baustelle mit Tag, Ze
 
 ## Notizen und Verlauf
 
-**Notizen & Verlauf** vereint freie Notizen und die lückenlose Historie der Akte: Wer hat wann was geändert – vom Anlegen
+**Notizen & Verlauf** vereint freie Notizen und die lückenlose Historie der Akte: Wer hat wann was geändert, vom Anlegen
 über Statuswechsel bis zu jedem hochgeladenen Dokument.
 
 ![Notizen und Verlauf](bilder/bauakte-verlauf.png "Notizen und Verlauf mit Systemänderungen")
 
 - **Neue Notiz**: Text schreiben, optional **Textbaustein einfügen**, einfärben (Gelb, Rot, Grün, Blau) und
-  **Anheften** – angeheftete Notizen erscheinen auch in der Übersicht. <kbd>Strg</kbd> + <kbd>Enter</kbd> speichert.
+  **Anheften**, angeheftete Notizen erscheinen auch in der Übersicht. <kbd>Strg</kbd> + <kbd>Enter</kbd> speichert.
 - **Mit Systemänderungen** zeigt den vollständigen Verlauf, **Nur Notizen** blendet die Systemeinträge aus.
 
 ## Tagesübersicht und Baustellenkarte
 
-**Auftragsbearbeitung** → **Tagesübersicht** zeigt, was an einem Tag ansteht – standardmäßig heute. Mit den Pfeilen
+**Auftragsbearbeitung** → **Tagesübersicht** zeigt, was an einem Tag ansteht, standardmäßig heute. Mit den Pfeilen
 neben dem Titel (oder <kbd>Alt</kbd> + <kbd>←</kbd> / <kbd>→</kbd>) blättern Sie tageweise, über das Datumsfeld springen
 Sie zu einem beliebigen Tag, **Heute** führt zurück. Die Adresse merkt sich den Tag, so lässt er sich als Link
 weitergeben.
@@ -395,7 +395,7 @@ weitergeben.
   planen** an. Darunter stehen die **Abwesenden** des Tages.
 - **Rechts** die offenen Punkte (Stand jetzt): Lieferungen des Tages, Wiedervorlagen (mit **Erledigt**), Freigaben,
   Aufgaben und Mängel, neue Tickets, offene Anfragen. Leere Bereiche fasst eine grüne Zeile „Nichts offen: …“
-  zusammen. Es folgen die zuletzt geänderten Bauakten und – für Administratoren – der **Systemstatus** (Sicherung,
+  zusammen. Es folgen die zuletzt geänderten Bauakten und (für Administratoren) der **Systemstatus** (Sicherung,
   Archiv, E-Mail).
 - **Drucken** gibt die Tagesübersicht ohne Navigation auf A4 aus, z. B. als Aushang für die Kolonnen.
 

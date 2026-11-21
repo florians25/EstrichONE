@@ -3,7 +3,7 @@
 <dl class="glossar">
 <dt>Altakte</dt><dd>Abgeschlossene oder stornierte Bauakte. Bleibt vollständig erhalten und durchsuchbar.</dd>
 <dt>Anfrage</dt><dd>Erster Kontakt eines Interessenten. Als Vorgang unter „Anfragen“ oder als Bauakte im Status Anfrage.</dd>
-<dt>APNs</dt><dd>Apple Push Notification Service – der Dienst von Apple, über den die iOS-App Pushnachrichten erhält.</dd>
+<dt>APNs</dt><dd>Apple Push Notification Service, der Dienst von Apple, über den die iOS-App Pushnachrichten erhält.</dd>
 <dt>Archivserver</dt><dd>Eigener Rechner für die revisionssichere Aufbewahrung von Dokumenten nach GoBD.</dd>
 <dt>Aktenarchiv</dt><dd>Komplett auf den Archivserver ausgelagerte Bauakten; bei Bedarf für 5 Tage abrufbar.</dd>
 <dt>Backup Center</dt><dd>Die Seite System → Sicherung: Status, Stände, Zeitplan, Wiederherstellung und Notfallblatt.</dd>

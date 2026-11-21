@@ -4,9 +4,9 @@
 
 | Frage oder Meldung | Lösung |
 |---|---|
-| Der QR-Code wird nicht erkannt. | Kamera ruhig halten, Abstand 20–40 cm, Bildschirm hell genug. Der Code gilt nur kurz – bei Ablauf im IT Center einen neuen erzeugen. Alternativ **Adresse eingeben**. |
+| Der QR-Code wird nicht erkannt. | Kamera ruhig halten, Abstand 20 bis 40 cm, Bildschirm hell genug. Der Code gilt nur kurz, bei Ablauf im IT Center einen neuen erzeugen. Alternativ **Adresse eingeben**. |
 | „Die App darf die Kamera nicht verwenden.“ | Einstellungen-App → **EstrichONE** → **Kamera** einschalten, oder die Adresse von Hand eingeben. |
-| Die Verbindungsprüfung schlägt fehl. | Adresse prüfen (ohne Tippfehler, ohne Leerzeichen), Netz prüfen (WLAN oder Mobilfunk). Bei einem Zertifikatsfehler die Administration informieren – ohne gültiges Zertifikat lässt sich die App nicht einrichten. |
+| Die Verbindungsprüfung schlägt fehl. | Adresse prüfen (ohne Tippfehler, ohne Leerzeichen), Netz prüfen (WLAN oder Mobilfunk). Bei einem Zertifikatsfehler die Administration informieren, ohne gültiges Zertifikat lässt sich die App nicht einrichten. |
 | „Wartet auf Freigabe“ geht nicht weg. | Die Administration muss das Gerät im Web unter **IT Center** → **Geräte** freigeben. Schneller geht die Einrichtung mit QR-Code. |
 | Passwort vergessen. | Die Administration setzt es zurück; Sie erhalten ein Einmalpasswort und legen danach ein eigenes fest (mindestens 12 Zeichen). |
 | Kein Zugriff auf die Authenticator-App. | **Wiederherstellungscode verwenden**. Ohne Codes setzt die Administration die Zwei-Faktor-Anmeldung zurück. |
@@ -19,13 +19,13 @@
 | Frage oder Meldung | Lösung |
 |---|---|
 | Eine Bauakte fehlt in der Liste. | Nach unten ziehen zum Aktualisieren. Abgeschlossene und stornierte Bauakten stehen unter **Abgeschlossen und storniert**. Auf dem Gerät liegen nur zugeteilte Bauakten: Suchen Sie mit Verbindung (Treffer unter **Weitere Bauakten (online)**) oder wählen Sie **Anzeigen** → **Alle im Betrieb (online)**. |
-| „Nur ansehen: Trag dich als Beteiligter ein, um zu bearbeiten.“ | Sie sind der Bauakte nicht zugeteilt. **Mich als Beteiligten eintragen** antippen (Abschnitt „Nur ansehen oder bearbeiten“). |
-| „Foto gespeichert – wird übertragen, sobald Netz da ist.“ | Alles in Ordnung: Das Foto ist sicher auf dem Gerät und wird automatisch übertragen. |
+| „Nur ansehen: Tragen Sie sich als Beteiligter ein, um zu bearbeiten.“ | Sie sind der Bauakte nicht zugeteilt. **Mich als Beteiligten eintragen** antippen (Abschnitt „Nur ansehen oder bearbeiten“). |
+| „Foto gespeichert. Es wird übertragen, sobald eine Verbindung besteht.“ | Alles in Ordnung: Das Foto ist sicher auf dem Gerät und wird automatisch übertragen. |
 | Ein Upload ist fehlgeschlagen. | **Mehr** → **Synchronisation** → **Fehlgeschlagene Uploads erneut versuchen**. Freien Speicher auf dem iPhone prüfen. |
 | „Einige Änderungen wurden nicht übernommen.“ | **Mehr** → **Synchronisation** → **Bitte prüfen**: Grund lesen, Stand in der Bauakte prüfen, Eintrag nach links wischen zum Entfernen. |
 | „PDF nicht verfügbar“ bzw. „Das PDF erstellt der Server …“ | PDFs entstehen auf dem Server. Mit Verbindung erneut versuchen; eine neue Bauakte muss vorher übertragen sein. |
 | Die graue Leiste **Nur Ansicht** erscheint. | Der Server ist seit über 5 Minuten nicht erreichbar. Netz prüfen; im Notfall **Trotzdem arbeiten** (auf eigene Gefahr). |
-| Der Bildschirm **Wartungsarbeiten** erscheint. | Der Server wird gewartet. Abwarten – die App gibt sich danach selbst frei. |
+| Der Bildschirm **Wartungsarbeiten** erscheint. | Der Server wird gewartet. Abwarten, die App gibt sich danach selbst frei. |
 | Rote oder gelbe Leiste oben. | Backup- bzw. Archivserver gestört: bitte die Administration informieren. Ihre Arbeit ist nicht betroffen. |
 | „Für die Planung fehlt Ihnen die Berechtigung.“ | Disponieren dürfen nur Personen mit dem Recht zur Planung; die Rollen vergibt die Administration. |
 | Der Chat fehlt. | Das Modul Chat ist in Ihrem Betrieb nicht eingeschaltet. |
@@ -35,6 +35,6 @@
 
 ## Wenn nichts hilft
 
-Melden Sie das Problem über **Mehr** → **Problem melden** mit eingeschalteten **technischen Informationen** – das geht
+Melden Sie das Problem über **Mehr** → **Problem melden** mit eingeschalteten **technischen Informationen**, das geht
 auch ohne Anmeldung von der Anmeldeseite aus und ohne Verbindung (die Meldung wird später gesendet). Die Antwort der IT
 erscheint unter **Mehr** → **Helpdesk** und als Benachrichtigung.

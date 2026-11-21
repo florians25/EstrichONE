@@ -33,7 +33,7 @@ Angaben, den Hinweisen und dem Verlauf der Prüfung. Je nach Stand gibt es:
 Mehrere Belege entscheiden Sie auf einmal: Häkchen setzen und oben **Freigeben**, **Ablehnen** oder **Erstattet/Gebucht**
 wählen. Jede Entscheidung steht im **Protokoll**.
 
-> **Tipp:** Für die monatliche Erstattung filtern Sie Zahlart **Privat ausgelegt** und Status **Geprüft**, markieren
+> **Hinweis:** Für die monatliche Erstattung filtern Sie Zahlart **Privat ausgelegt** und Status **Geprüft**, markieren
 > alle Belege und klicken **Erstattet/Gebucht**.
 
 ## Hinweise zur Plausibilität

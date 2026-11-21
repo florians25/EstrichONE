@@ -1,6 +1,6 @@
 # Kunden
 
-Der Tab **Kunden** enthält den Kundenstamm Ihres Betriebs, soweit er auf dem Gerät liegt – Firmen und
+Der Tab **Kunden** enthält den Kundenstamm Ihres Betriebs, soweit er auf dem Gerät liegt, Firmen und
 Privatpersonen mit Telefonnummern, E-Mail, Anschriften und ihren Bauakten. Er funktioniert auch ohne Verbindung.
 
 ![Kunden](bilder/iphone-kunden.jpg "Kundenliste mit Filter Alle, Firmen, Privat")
@@ -8,7 +8,7 @@ Privatpersonen mit Telefonnummern, E-Mail, Anschriften und ihren Bauakten. Er fu
 
 ## Kunden finden
 
-- **Suchen**: Feld **Name, Ort oder Telefon** – gesucht wird auch nach Kundennummer.
+- **Suchen**: Feld **Name, Ort oder Telefon**, gesucht wird auch nach Kundennummer.
 - **Filter**: **Alle**, **Firmen** oder **Privat**.
 - Die Liste ist alphabetisch gegliedert; jede Zeile nennt Ort, Kundennummer und die Zahl laufender Baustellen.
 - **Wischen** über eine Zeile bietet **Anrufen**, **Nachricht**, **E-Mail** und **Route**, ohne die Karte zu öffnen.
@@ -28,7 +28,7 @@ Ein Tipp auf einen Kunden öffnet die **Kundenkarte**. Oben stehen vier Schaltfl
 Darunter folgen **Telefon** (die bevorzugte Nummer ist mit einem Stern markiert), **E-Mail**, **Anschrift**,
 **Weitere Angaben** und die **Bauakten** des Kunden. Ein Tipp auf eine Bauakte öffnet sie.
 
-Mit **In Kontakte übernehmen** sichern Sie den Kunden in der Kontakte-App des iPhones – praktisch, damit der Name bei
+Mit **In Kontakte übernehmen** sichern Sie den Kunden in der Kontakte-App des iPhones, praktisch, damit der Name bei
 einem Anruf erscheint. Die App fragt dafür einmalig nach dem Zugriff auf Ihre Kontakte.
 
 ## Kunden anlegen und bearbeiten

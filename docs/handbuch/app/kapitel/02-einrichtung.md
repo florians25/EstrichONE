@@ -1,7 +1,7 @@
 # Installation und Einrichtung
 
 Die Einrichtung dauert etwa eine Minute: App laden, Server verbinden, festlegen, wer das Gerät nutzt, und anmelden.
-Ab dann bleiben Sie angemeldet und entsperren nur noch mit Face ID, Gerätecode oder – auf Poolgeräten – mit Ihrer PIN.
+Ab dann bleiben Sie angemeldet und entsperren nur noch mit Face ID, Gerätecode oder (auf Poolgeräten) mit Ihrer PIN.
 
 ## App installieren
 
@@ -10,7 +10,7 @@ Ab dann bleiben Sie angemeldet und entsperren nur noch mit Face ID, Gerätecode 
 3. Öffnen Sie die App. Es erscheint der Bildschirm **Willkommen bei EstrichONE**.
 
 Die App fragt Berechtigungen (Kamera, Mikrofon, Standort, Mitteilungen …) erst dann ab, wenn Sie die zugehörige
-Funktion zum ersten Mal benutzen – nie ungefragt beim Start. Eine Übersicht steht in Abschnitt 8.7.
+Funktion zum ersten Mal benutzen, nie ungefragt beim Start. Eine Übersicht steht in Abschnitt 8.7.
 
 ## Mit dem Server verbinden
 
@@ -19,20 +19,20 @@ Funktion zum ersten Mal benutzen – nie ungefragt beim Start. Eine Übersicht s
 
 Der Willkommensbildschirm bietet drei Wege:
 
-- **QR-Code scannen** – der schnellste Weg. Ihre Administration erzeugt im Web unter **IT Center** → **Geräte** →
+- **QR-Code scannen**: der schnellste Weg. Ihre Administration erzeugt im Web unter **IT Center** → **Geräte** →
   **Gerät einrichten** einen Einrichtungscode als QR-Code. Richten Sie die Kamera darauf; die App liest Serveradresse
   und Code in einem Schritt. Der Code gilt nur kurz und nur einmal.
-- **Adresse eingeben** – tippen Sie die Serveradresse ein, z. B. `estrichone.ihre-firma.de`. `https://` ergänzt die App
+- **Adresse eingeben**: tippen Sie die Serveradresse ein, z. B. `estrichone.ihre-firma.de`. `https://` ergänzt die App
   selbst; die Verbindung ist immer verschlüsselt. Tippen Sie auf **Verbindung prüfen**.
-- **Demo ausprobieren – ohne Server** – startet die App mit Beispieldaten (Abschnitt 2.8).
+- **Demo ohne Server starten**: startet die App mit Beispieldaten (Abschnitt 2.8).
 
-> **Tipp:** Eine Einrichtung per QR-Code ist nicht nur schneller: Das Gerät ist damit nach der Anmeldung **sofort
+> **Hinweis:** Eine Einrichtung per QR-Code ist nicht nur schneller: Das Gerät ist damit nach der Anmeldung **sofort
 > freigegeben**. Ohne Code muss die Administration das Gerät erst im IT Center freigeben (Abschnitt 2.5).
 
 Auf der Seite **Server bestätigen** zeigt die App, womit sie sich verbinden wird: **Adresse**, **Serverversion** und die
 Anmeldearten des Servers, bei einem gescannten Code zusätzlich **Einrichtungscode erkannt**. Die Meldung „Verbindung
 geprüft. Der Server ist erreichbar und verwendet ein gültiges Zertifikat.“ bestätigt die sichere Verbindung. Tippen Sie
-auf **Diesen Server verwenden** – oder auf **Andere Adresse eingeben**, wenn es nicht der richtige Server ist.
+auf **Diesen Server verwenden**, oder auf **Andere Adresse eingeben**, wenn es nicht der richtige Server ist.
 
 > **Wichtig:** Hat der Server kein gültiges Zertifikat, lässt sich die App nicht einrichten. Ein „Trotzdem fortfahren“
 > gibt es bewusst nicht. Wenden Sie sich in diesem Fall an Ihre Administration.
@@ -63,7 +63,7 @@ Bevor Sie sich anmelden, legen Sie fest, wer mit dem Gerät arbeitet:
 
 **Passwort vergessen?** Ihre Administration kann das Passwort in EstrichONE zurücksetzen; Sie erhalten dann ein
 Einmalpasswort. Klappt die Anmeldung gar nicht, schicken Sie mit **Anmeldung klappt nicht? Problem melden** eine
-Meldung an die IT – das geht auch ohne Anmeldung (Abschnitt 7.3).
+Meldung an die IT, das geht auch ohne Anmeldung (Abschnitt 7.3).
 
 > **Hinweis:** Nach mehreren falschen Passwörtern sperrt der Server die Anmeldung für kurze Zeit. Warten Sie einige
 > Minuten oder wenden Sie sich an die Administration.
@@ -74,7 +74,7 @@ Meldung an die IT – das geht auch ohne Anmeldung (Abschnitt 7.3).
 
 Haben Sie die App **ohne Einrichtungscode** eingerichtet, meldet sich das Gerät beim Server an und zeigt **Wartet auf
 Freigabe**. Ihre Administration wird benachrichtigt und gibt das Gerät im Web unter **IT Center** → **Geräte** frei. Die
-App prüft das selbst und öffnet dann die Heute-Seite – Sie müssen nichts tun.
+App prüft das selbst und öffnet dann die Heute-Seite. Sie müssen nichts tun.
 
 Mit **Abmelden** brechen Sie ab; **App zurücksetzen** löscht alle Angaben und beginnt von vorn.
 
@@ -85,24 +85,24 @@ werden nach der Anmeldung derselben Person gesendet.
 ## Persönliches Gerät: angemeldet bleiben mit Face ID
 
 Auf einem persönlichen Gerät melden Sie sich **einmal** mit dem Passwort an. Danach öffnen Sie die App mit **Face ID**
-(bzw. Touch ID) oder dem **Gerätecode** Ihres iPhones – auch nach einem Neustart.
+(bzw. Touch ID) oder dem **Gerätecode** Ihres iPhones, auch nach einem Neustart.
 
 ![Gesperrt](bilder/iphone-gesperrt.jpg "EstrichONE ist gesperrt: mit Face ID entsperren")
 ![Sperre und Face ID](bilder/iphone-sicherheit.jpg "Mehr → Sperre und Face ID")
 
 Unter **Mehr** → **Sperre und Face ID** stellen Sie ein:
 
-- **Mit Face ID entsperren** – an oder aus. Aus heißt: Entsperren nur mit dem Gerätecode. Ist auf dem Gerät weder Face ID
+- **Mit Face ID entsperren**: an oder aus. Aus heißt: Entsperren nur mit dem Gerätecode. Ist auf dem Gerät weder Face ID
   noch Touch ID eingerichtet, wird immer mit dem Gerätecode entsperrt.
-- **Sperren** – wann sich die App im Hintergrund sperrt: **Sofort**, **Nach 1 Minute**, **Nach 5 Minuten**,
+- **Sperren**: wann sich die App im Hintergrund sperrt: **Sofort**, **Nach 1 Minute**, **Nach 5 Minuten**,
   **Nach 15 Minuten** (Standard) oder **Nach 1 Stunde**.
-- **Sitzung** – bis wann die Anmeldung ohne Nutzung gültig bleibt.
+- **Sitzung**: bis wann die Anmeldung ohne Nutzung gültig bleibt.
 
 Jede Nutzung verlängert die Anmeldung. Die Frist legt Ihr Betrieb fest (Standard 90 Tage). Das Passwort brauchen Sie
 nur noch, wenn Sie sich abgemeldet haben, Ihr Passwort geändert wurde, das Gerät im IT Center gesperrt oder entfernt
 wurde oder die App so lange nicht genutzt wurde. Die App sagt Ihnen dann, warum.
 
-![Sitzung beendet](bilder/iphone-sitzung-beendet.jpg "Hinweis: Das Passwort wurde geändert – bitte neu anmelden"){rechts}
+![Sitzung beendet](bilder/iphone-sitzung-beendet.jpg "Hinweis: Das Passwort wurde geändert. Bitte neu anmelden"){rechts}
 
 > **Hinweis:** Ändern Sie in den iPhone-Einstellungen Ihre Face-ID-Gesichter oder Fingerabdrücke, nimmt iOS Face ID für
 > EstrichONE aus Sicherheitsgründen nicht mehr an. Geben Sie dann einmal den Gerätecode ein; die App richtet Face ID
@@ -112,7 +112,7 @@ Zum sofortigen Sperren tippen Sie auf **Mehr** → **Sperren**.
 
 ## Poolgerät: Benutzer wechseln mit PIN
 
-Auf einem **Poolgerät** – etwa dem iPad im Fahrzeug – arbeiten mehrere Personen nacheinander. Jede Person meldet sich
+Auf einem **Poolgerät** (etwa dem iPad im Fahrzeug) arbeiten mehrere Personen nacheinander. Jede Person meldet sich
 beim ersten Mal mit Anmeldename und Passwort an und legt dann eine **Geräte-PIN** mit **6 Ziffern** fest. Die PIN gilt
 nur auf diesem Gerät und wird nicht an den Server übertragen. Zu einfache PINs (z. B. `123456`) lehnt die App ab.
 
@@ -130,11 +130,11 @@ Person sieht nur ihre eigenen Daten; jede hat auf dem Gerät einen eigenen, vers
 > **Wichtig:** Nach **5 falschen PIN-Eingaben** ist für diese Person wieder die Anmeldung mit dem Passwort nötig
 > (**Mit Passwort**). Unter dem Namen steht dann „Anmeldung mit Passwort nötig“.
 
-## Demo ausprobieren – ohne Server
+## Demo ohne Server
 
 ![Demomodus](bilder/iphone-heute-chat.jpg "Demomodus: Kennzeichnung „Demo“ und Hinweis auf der Heute-Seite"){rechts}
 
-Mit **Demo ausprobieren – ohne Server** auf dem Willkommensbildschirm lernen Sie die App kennen, ohne einen Server zu
+Mit **Demo ohne Server starten** auf dem Willkommensbildschirm lernen Sie die App kennen, ohne einen Server zu
 brauchen. Die App läuft dann mit Beispieldaten der fiktiven „Estrichbau Muster GmbH“: sechs Bauakten in allen Ständen
 mit Kunden, Fotos, Lieferschein, Bautagebuch, Erstbegehung, CM-Messung, Räumen, Kontakten und Aufgaben, Einsätze der
 Woche, „Wer fährt wohin“ mit drei Kolonnen, Chats und Meldungen an die IT.

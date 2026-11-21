@@ -18,7 +18,7 @@ mit `-e ESTRICHONE_DOMAIN=<Ihre Domain>` aus bzw. passen Sie `ESTRICHONE_DOMAIN`
 `.env` an.
 
 **„Der Browser hat die Sitzung nicht gespeichert. Bitte Cookies für diese Seite erlauben“**
-EstrichONE braucht Cookies für die Anmeldung (keine Werbe-Cookies). Erlauben Sie Cookies für die Adresse von EstrichONE –
+EstrichONE braucht Cookies für die Anmeldung (keine Werbe-Cookies). Erlauben Sie Cookies für die Adresse von EstrichONE,
 typische Ursachen sind der private Modus, strenger Tracking-Schutz oder Browser-Erweiterungen. Prüfen Sie außerdem
 Datum und Uhrzeit des Geräts; eine falsch gehende Uhr lässt Sitzungen sofort ablaufen.
 

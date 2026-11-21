@@ -1,5 +1,5 @@
 % datei: Wissenstest-Bauleitung
-% art: Wissenstest · Schulung
+% art: Wissenstest, Schulung
 % fuer: Bauleitung
 % felder: Name, Datum, Punkte (von 10)
 
@@ -7,7 +7,7 @@
 
 Kreuzen Sie die **richtige** Antwort an (je eine) bzw. schreiben Sie die Antwort auf. Jede Frage zählt 1 Punkt.
 
-**1. Bringen Sie die Stände einer Bauakte in die richtige Reihenfolge (1–5):**
+**1. Bringen Sie die Stände einer Bauakte in die richtige Reihenfolge (1 bis 5):**
 
 | Stand | Nr. |
 |---|---|

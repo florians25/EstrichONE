@@ -1,5 +1,5 @@
 % datei: Kurzanleitung-02-Fotos-und-Dokumente-zur-Bauakte
-% art: Kurzanleitung · App
+% art: Kurzanleitung, App
 % fuer: Kolonne und Bauleitung
 
 # Fotos, Videos und Dokumente zur Bauakte
@@ -8,7 +8,7 @@
 
 ## Foto aufnehmen
 
-1. Auf der **Heute**-Seite unter **Mein Einsatz** auf **Foto** tippen – das Foto landet direkt in der richtigen Bauakte.
+1. Auf der **Heute**-Seite unter **Mein Einsatz** auf **Foto** tippen, das Foto landet direkt in der richtigen Bauakte.
    Andere Baustelle: Tab **Erfassen** → **Ändern** → Baustelle wählen → **Foto**.
 2. Optional eine **Beschriftung** eingeben, z. B. „Randdämmung Bad OG“. Sie gilt für die ganze Serie.
 3. Beliebig viele Fotos nacheinander aufnehmen (oder **Aus Fotos auswählen**).
@@ -17,7 +17,7 @@
 ## Dokument scannen (Lieferschein, Plan)
 
 1. In der Bauakte auf **Scanner** tippen (oder **Erfassen** → **Dokument scannen**).
-2. Seiten scannen – der Scanner erkennt die Ränder selbst. Weitere Seiten mit **Weitere Seiten scannen**.
+2. Seiten scannen, der Scanner erkennt die Ränder selbst. Weitere Seiten mit **Weitere Seiten scannen**.
 3. **Dokumentart** wählen (z. B. Lieferschein), **Text erkennen (durchsuchbares PDF)** anlassen.
 4. **Als PDF ablegen** tippen.
 
@@ -26,11 +26,11 @@
 1. Bauakte → **Mehr** → **Video aufnehmen** (oder **Erfassen** → **Video**).
 2. Aufnehmen (höchstens **2 Minuten**) → **Video speichern**.
 
-> **Tipp:** Kein Netz? Kein Problem: „Foto gespeichert – wird übertragen, sobald Netz da ist.“ Alles liegt
+> **Hinweis:** Kein Netz? Dann meldet die App: „Foto gespeichert. Es wird übertragen, sobald eine Verbindung besteht.“ Alles liegt
 > verschlüsselt auf dem Gerät, bis es übertragen ist.
 
 ## Gut zu wissen
 
-- Alles steht danach in der Bauakte unter **Fotos & Dokumente** – auch sofort im Büro.
+- Alles steht danach in der Bauakte unter **Fotos & Dokumente**, auch sofort im Büro.
 - Foto groß ansehen: antippen. Dort **beschriften** oder **löschen** (ein übertragenes Foto wird auch im Büro gelöscht).
 - Aus dem **Chat**: lange drücken → **In Bauakte übernehmen**. Im **Web**: **Hochladen** oder per Ziehen.

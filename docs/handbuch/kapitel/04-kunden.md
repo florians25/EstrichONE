@@ -2,7 +2,7 @@
 
 ## Kundenstamm
 
-**Büro** → **Kunden** ist der Kundenstamm für Bauakten und Anfragen – Privatkunden ebenso wie Firmen,
+**Büro** → **Kunden** ist der Kundenstamm für Bauakten und Anfragen, Privatkunden ebenso wie Firmen,
 Bauträger, Architekten und Gemeinden.
 
 ![Kundenliste](bilder/kunden.png "Der Kundenstamm mit Filter Firmen/Privat, Sortierung und Suche")
@@ -18,7 +18,7 @@ Bauträger, Architekten und Gemeinden.
 - Die Auswahl **Aktive / Archivierte / Alle (auch inaktive)** blendet archivierte Kunden ein. Standardmäßig sind nur
   aktive Kunden zu sehen.
 - Das Papierkorb-Symbol in einer Zeile bzw. **Löschen/Archivieren** in der Werkzeugleiste (für alle mit Häkchen
-  markierten Kunden) löscht oder archiviert Kunden – siehe unten.
+  markierten Kunden) löscht oder archiviert Kunden, siehe unten.
 
 ### Kundenakte
 
@@ -30,7 +30,7 @@ Schaltflächen für **Anrufen**, **E-Mail**, **Bearbeiten** und **Neue Bauakte**
 | Abschnitt | Inhalt |
 |---|---|
 | **Übersicht / Stammdaten** | Art, Anrede und Titel, Geburtstag, bevorzugter Kontaktweg, Website, Rechnungs- und Lieferanschrift, USt-IdNr., Steuernummer, Notiz |
-| **Bauakten** | Alle Bauakten des Kunden mit Status – auch Altakten |
+| **Bauakten** | Alle Bauakten des Kunden mit Status, auch Altakten |
 | **Dokumente** | Alle Dokumente aus allen Bauakten des Kunden, gegliedert nach Bauakte und Dokumentart; ein Klick öffnet die Vorschau |
 | **Kontakte** | Weitere Telefonnummern, E-Mail-Adressen und Ansprechpartner |
 | **Verlauf** | Änderungen am Kunden |
@@ -45,7 +45,7 @@ noch Daten hängen: Bauakten (auch im Papierkorb), Projektbeteiligungen in fremd
 | **Keine verknüpften Daten** (z. B. versehentlich oder doppelt angelegt) | **Endgültig löschen**: Zur Bestätigung tippen Sie die **Kundennummer** ein (ohne Nummer den Namen). Gelöscht werden Stammdaten, Telefonnummern, E-Mail-Adressen, Notiz und Ansprechpartner. Die Kundennummer wird **nie wieder vergeben**. Alternativ: **Stattdessen archivieren**. |
 | **Verknüpfte Daten vorhanden** | Löschen ist gesperrt. Der Dialog nennt die Verknüpfungen mit Anzahl je Art (z. B. „2 Bauakten und 1 Anruf oder Anfrage“) und verlinkt die Bauakten. Stattdessen **Archivieren**. |
 
-**Archivieren** setzt den Kunden inaktiv (neue Bauakten, Anfragen oder Projektbeteiligungen mit ihm lehnt EstrichONE ab: „Kunde ist archiviert – zuerst reaktivieren“; die Dublettenprüfung bietet dafür **Reaktivieren und verwenden**): Er bleibt mit allen Bauakten, Dokumenten und Anrufen erhalten, erscheint aber
+**Archivieren** setzt den Kunden inaktiv (neue Bauakten, Anfragen oder Projektbeteiligungen mit ihm lehnt EstrichONE ab: „Der Kunde ist archiviert. Bitte zuerst reaktivieren.“; die Dublettenprüfung bietet dafür **Reaktivieren und verwenden**): Er bleibt mit allen Bauakten, Dokumenten und Anrufen erhalten, erscheint aber
 nicht mehr in Auswahllisten (Bauaktenanlage, Anrufe, Kundensuche) und in der Kundenliste nur unter **Archivierte**. Die
 Kundenakte zeigt dann den Hinweis „Archiviert“; **Reaktivieren** macht den Kunden wieder aktiv. In den Apps verschwindet
 ein gelöschter Kunde beim nächsten Abgleich; archivierte Kunden zeigt die App nur mit **Archivierte anzeigen**.
@@ -55,7 +55,7 @@ verknüpfte Daten werden gelöscht, alle übrigen archiviert. Zur Bestätigung t
 
 **Anonymisieren (DSGVO):** Verlangt ein Kunde mit Altdaten die Löschung seiner personenbezogenen Daten, ersetzt
 **Anonymisieren …** Name, Anschriften, Telefon, E-Mail, Notiz und Ansprechpartner durch „Anonymisierter Kunde
-600123“ – auch in den Projektbeteiligten der Bauakten, in Anrufnotizen (Name, Telefon, E-Mail des Anrufers) und im
+600123“, auch in den Projektbeteiligten der Bauakten, in Anrufnotizen (Name, Telefon, E-Mail des Anrufers) und im
 E-Mail-Versandprotokoll. Bauakten, Dokumente und Kundennummer bleiben erhalten. Dafür tippen Sie die Kundennummer ein
 und bestätigen ausdrücklich, dass sich der Schritt nicht rückgängig machen lässt.
 
@@ -68,7 +68,7 @@ und bestätigen ausdrücklich, dass sich der Schritt nicht rückgängig machen l
 Jeder Schritt steht mit Kundennummer (ohne Namen) im **Protokoll** (`contact.deleted`, `contact.archived`,
 `contact.reactivated`, `contact.anonymized`).
 
-> **Tipp:** Pflegen Sie Telefonnummern im Kundenstamm vollständig. Dann erkennt die Dublettenprüfung bekannte Anrufer
+> **Hinweis:** Pflegen Sie Telefonnummern im Kundenstamm vollständig. Dann erkennt die Dublettenprüfung bekannte Anrufer
 > auch dann, wenn der Name anders geschrieben wird.
 
 ## Anrufe und Telefon-Schnellerfassung {#anrufe}
@@ -76,11 +76,11 @@ Jeder Schritt steht mit Kundennummer (ohne Namen) im **Protokoll** (`contact.del
 Während eines Gesprächs zählt jede Sekunde. Klicken Sie oben in der Kopfzeile auf das **Telefon**-Symbol: Die
 **Telefon-Schnellerfassung** öffnet sich mit laufender Gesprächsdauer.
 
-1. **Wer ruft an?** – Name, Firma oder Telefonnummer; bekannte Kunden werden vorgeschlagen.
+1. **Wer ruft an?**: Name, Firma oder Telefonnummer; bekannte Kunden werden vorgeschlagen.
 2. **Rückrufnummer**, **Richtung** (**Eingehend** oder **Ausgehend**) und eine **Notiz**: Worum geht es? Was wurde
    besprochen?
 3. Optional **Kunde zuordnen**, **Bauakte zuordnen** und eine **Wiedervorlage am** festlegen.
-4. **Speichern (Strg+Enter)** – oder **Als Anfrage speichern**, wenn ein Interessent ein neues Bauvorhaben anfragt.
+4. **Speichern (Strg+Enter)**: oder **Als Anfrage speichern**, wenn ein Interessent ein neues Bauvorhaben anfragt.
 
 Der Zeitpunkt des Gesprächsbeginns wird übernommen; Details ergänzen Sie später.
 

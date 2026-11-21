@@ -20,7 +20,7 @@ Auf jeder Verwaltungsseite steht über dem Titel der Pfad **Verwaltung / Seite**
 zurück zur Übersicht. In der Seitennavigation bleibt dabei **Verwaltung** markiert. Bookmarks und Links auf einzelne
 Verwaltungsseiten (z. B. `/system/sicherung`) funktionieren unverändert.
 
-**Verwaltung** zeigt alle Bereiche, die Sie sehen dürfen, als Karten – je Bereich mit kurzer
+**Verwaltung** zeigt alle Bereiche, die Sie sehen dürfen, als Karten, je Bereich mit kurzer
 Beschreibung und, wo sinnvoll, dem Zustand (z. B. Sicherung „aktuell“, Archiv „verbunden“, Helpdesk „2 neu“). Das
 Suchfeld findet Bereiche auch über Stichwörter: „Logo“ führt zu den Systemeinstellungen, „Push“ zu den
 Pushnachrichten, „Passwort“ zu den Benutzern. Mit <kbd>Enter</kbd> öffnet sich der Bereich, wenn genau einer passt.
@@ -29,12 +29,12 @@ Auch die Suche oben in der Kopfzeile schlägt passende Verwaltungsbereiche vor.
 ![Verwaltung](bilder/verwaltung.png "Verwaltungsübersicht mit Suche, Gruppen und Zustand je Bereich")
 
 Alle Verwaltungsseiten folgen demselben Aufbau: Titel mit Kurzbeschreibung, die Hauptaktion oben rechts, darunter die
-**Statuszeile** – grün „Alles in Ordnung“ mit einer kurzen Zusammenfassung, gelb oder rot „Handlungsbedarf“ mit den
+**Statuszeile**, grün „Alles in Ordnung“ mit einer kurzen Zusammenfassung, gelb oder rot „Handlungsbedarf“ mit den
 offenen Punkten (z. B. „Noch kein Backup-Ziel gekoppelt“, „Letzte Testmail fehlgeschlagen“). Aktionen mit großer
 Tragweite (Archivserver entkoppeln, Wartungsmodus starten) stehen getrennt am Seitenende unter **Gefährliche
 Aktionen** bzw. in einem rot umrandeten Abschnitt. Lange Seiten wie das Archiv bieten oben Sprungmarken.
 
-> **Wichtig:** Für Konten mit Verwaltungsrechten sollte die Zwei-Faktor-Anmeldung eingerichtet sein – erst recht, wenn
+> **Wichtig:** Für Konten mit Verwaltungsrechten sollte die Zwei-Faktor-Anmeldung eingerichtet sein. Erst recht, wenn
 > EstrichONE aus dem Internet erreichbar ist. Richten Sie sie für sich selbst ein (Abschnitt 2.2), bevor Sie sie unter
 > **Anmeldung** zur Pflicht machen.
 
@@ -68,7 +68,7 @@ Beim ersten Anmelden muss der Benutzer ein eigenes Passwort festlegen.
 | **Chatdaten (Auskunft, Löschung)** | Datenschutz-Auskunft und Löschung der Chatdaten einer Person |
 
 Das Schild **2FA** zeigt, wer die Zwei-Faktor-Anmeldung eingeschaltet hat. Benutzer werden nicht gelöscht, sondern
-gesperrt – so bleiben Verlauf und Protokoll nachvollziehbar.
+gesperrt. So bleiben Verlauf und Protokoll nachvollziehbar.
 
 ## Rollen und Rechte
 
@@ -77,7 +77,7 @@ Kontakte, Dokumentation, Planung, Personal, Material, Verwaltung …), Spalten d
 
 ![Rollen und Rechte](bilder/rollen.png "Die Rechtematrix mit den vier Standardrollen")
 
-- Setzen oder entfernen Sie Häkchen und übernehmen Sie die Änderungen mit **Änderungen speichern** – oder **Verwerfen**.
+- Setzen oder entfernen Sie Häkchen und übernehmen Sie die Änderungen mit **Änderungen speichern**, oder **Verwerfen**.
 - **Rolle anlegen** erstellt eine eigene Rolle, z. B. „Disposition“ oder „Buchhaltung“. Der Stift über einer Spalte
   ändert Name und Beschreibung.
 - **Recht suchen** findet ein Recht nach Name oder Kürzel (z. B. `documents.approve`).
@@ -105,13 +105,13 @@ Wichtige Rechte im Überblick:
 
 **Verwaltung** → **Stammdaten** pflegt die Grundlagen, auf denen Formulare und Listen aufbauen:
 
-- **Wertelisten** – Auswahllisten wie Objektart, Estrichart, Festigkeitsklasse, Aufbau, Dämmung, Heizungsart, Priorität
+- **Wertelisten**: Auswahllisten wie Objektart, Estrichart, Festigkeitsklasse, Aufbau, Dämmung, Heizungsart, Priorität
   und Dokumentart, jeweils mit Bezeichnung, Kurzform, Schlüssel, Reihenfolge und Aktiv-Schalter.
-- **Formulare** – die Felder der **Basisdaten** (Kennwerte der Bauakte) und der **Erstbegehung** (Prüfpunkte,
+- **Formulare**: die Felder der **Basisdaten** (Kennwerte der Bauakte) und der **Erstbegehung** (Prüfpunkte,
   Messwerte). Mit **Feld hinzufügen** und **Gruppe anlegen** passen Sie die Formulare an Ihren Betrieb an.
-- **Textbausteine** – wiederkehrende Texte für Notizen, Helpdesk-Antworten und Schreiben.
-- **Ordnervorlagen** – Unterordner, die in jeder neuen Bauakte angelegt werden.
-- **Bauakten-Vorlagen** – Vorlagen mit Ordnern, Räumen und Kennwerten für typische Objekte (z. B. „Einfamilienhaus mit
+- **Textbausteine**: wiederkehrende Texte für Notizen, Helpdesk-Antworten und Schreiben.
+- **Ordnervorlagen**: Unterordner, die in jeder neuen Bauakte angelegt werden.
+- **Bauakten-Vorlagen**: Vorlagen mit Ordnern, Räumen und Kennwerten für typische Objekte (z. B. „Einfamilienhaus mit
   Fußbodenheizung“), auswählbar im Assistenten Neue Bauakte.
 
 ![Stammdaten](bilder/stammdaten.png "Stammdaten: Auswahllisten, Formulare, Vorlagen und Texte")
@@ -119,17 +119,17 @@ Wichtige Rechte im Überblick:
 ## Geräte und App-Einrichtung (QR-Code) {#geraete}
 
 **Verwaltung** → **Geräte** listet alle iPhones, iPads, Android-Geräte und Windows-Arbeitsplätze, die mit EstrichONE
-verbunden sind – mit Nutzung, Status, App-Version und Betriebssystem sowie dem Zeitpunkt der letzten Verbindung.
+verbunden sind, mit Nutzung, Status, App-Version und Betriebssystem sowie dem Zeitpunkt der letzten Verbindung.
 
 So richten Sie ein neues Gerät ein:
 
 1. Klicken Sie auf **Gerät einrichten**.
 2. Wählen Sie die **Nutzung**:
-   - **Persönliches Gerät** – gehört einer Person; sie meldet sich mit ihrem eigenen Konto an.
-   - **Poolgerät (mehrere Personen)** – z. B. das iPad einer Kolonne; mehrere Mitarbeiter melden sich nacheinander an
+   - **Persönliches Gerät**: gehört einer Person; sie meldet sich mit ihrem eigenen Konto an.
+   - **Poolgerät (mehrere Personen)**: z. B. das iPad einer Kolonne; mehrere Mitarbeiter melden sich nacheinander an
      und entsperren mit ihrer Pool-PIN.
 3. Optional einen **Gerätenamen** (z. B. „iPad Kolonne Huber“) und **Code erzeugen**.
-4. In der App **QR-Code scannen** wählen und den angezeigten Code scannen – oder den **Code zum Abtippen** eingeben.
+4. In der App **QR-Code scannen** wählen und den angezeigten Code scannen, oder den **Code zum Abtippen** eingeben.
    Der Code gilt nur kurz und nur einmal; die Uhrzeit steht darunter.
 
 ![Gerät einrichten](bilder/geraet-einrichten.png "Gerät einrichten: Nutzung wählen")
@@ -149,23 +149,23 @@ neuen Code für dasselbe Gerät.
 **Verwaltung** → **App-Updates** (auch unter Systemeinstellungen → Weitere Bereiche) zeigt, welche App-Versionen
 bereitstehen, welche Regeln gelten und welche Geräte eine ältere App haben.
 
-**Verfügbare Versionen.** Die Android-App liefert der Server selbst aus – sie ist im Server-Update enthalten und hat
+**Verfügbare Versionen.** Die Android-App liefert der Server selbst aus. Sie ist im Server-Update enthalten und hat
 immer dieselbe Version wie der Server. Die Seite zeigt Version, Signatur (Release oder Testversion) und die geprüfte
 Prüfsumme. **Android-App laden** zeigt einen QR-Code mit dem Download-Link für die Erstinstallation. iPhone und iPad
 aktualisieren über App Store, TestFlight oder die Geräteverwaltung Ihres Betriebs (MDM).
 
 **Regeln:**
 
-- **Hinweis „Update verfügbar“** – die Apps zeigen oben einen Hinweis, sobald eine neuere Version bereitsteht.
-- **Mindestversion erzwingen** – ältere Apps zeigen nur noch den Bildschirm „Update erforderlich“. Leer gelassen gilt
+- **Hinweis „Update verfügbar“**: die Apps zeigen oben einen Hinweis, sobald eine neuere Version bereitsteht.
+- **Mindestversion erzwingen**: ältere Apps zeigen nur noch den Bildschirm „Update erforderlich“. Leer gelassen gilt
   die Version des Servers. Die Seite nennt vorab, wie viele Geräte das sofort betrifft. Nicht übertragene Änderungen
   bleiben auf den Geräten und werden nach dem Update gesendet.
-- **Hinweis an die Benutzer** – eigener Text, z. B. „Bitte bis Freitag aktualisieren“.
-- **iPhone und iPad: Link zum Update** – App-Store-, TestFlight- oder MDM-Link. **Dort verfügbare Version**: die Version,
+- **Hinweis an die Benutzer**: eigener Text, z. B. „Bitte bis Freitag aktualisieren“.
+- **iPhone und iPad: Link zum Update**: App-Store-, TestFlight- oder MDM-Link. **Dort verfügbare Version**: die Version,
   die über diesen Link tatsächlich bereitsteht (leer = Serverversion). Die Mindestversion liegt nie darüber.
-- **Android: Eigener Download** – nur für eine Geräteverwaltung; ohne Eintrag lädt die App das Update vom Server.
+- **Android: Eigener Download**: nur für eine Geräteverwaltung; ohne Eintrag lädt die App das Update vom Server.
 
-**Geräte.** Die Liste zeigt je Gerät Person, App-Version, Stand (**Aktuell**, **Update verfügbar**, **Gesperrt – Update
+**Geräte.** Die Liste zeigt je Gerät Person, App-Version, Stand (**Aktuell**, **Update verfügbar**, **Gesperrt, Update
 nötig**, **Neuer als der Server**) und letzte Verbindung. **Zum Update auffordern** schickt der Person eine
 Benachrichtigung (einmal je Version). Steht dort **Neuer als der Server**, aktualisieren Sie den Server (Abschnitt
 „Updates und Sicherheitsupdates“).
@@ -198,7 +198,7 @@ Speicher, Module und Pushnachrichten haben zusätzlich eine eigene Karte auf der
 |---|---|
 | **Firma** | Firmendaten (Briefkopf) und Firmenlogo |
 | **Bauakten** | Hinweis „Erstbegehung fehlt“, vorgeschlagene Vorlage, Status-Automatik („Geplant“ → „In Ausführung“ am ersten Einsatztag oder bei erster Aktivität vor Ort, nach Abnahme abschließen), Gültigkeit des Freigabelinks für Kunden |
-| **Nummernkreise** | Nummern aller Datensätze in einer Tabelle (Datensatz, Muster, nächste Nummer, Bereich, Vorschau, verbleibend mit Warnung): Bauakten `{JJJJ}-{NNN}`, Kunden `60{NNNN}`, Lieferanten `70{NNNN}`, Personal `10{NNN}`, Maschinen und Fahrzeuge `20{NNN}`, Kolonnen `K{NN}`, Material `50{NNNN}`, Bestellungen `B-{JJJJ}-{NNNN}`, Anfragen `A-{JJJJ}-{NNNN}`, Aufgaben `AU-{JJJJ}-{NNNN}`, Mängel `M-{JJJJ}-{NNNN}`, Helpdesk-Tickets `T-{JJJJ}-{NNNN}`, Fehler und Wünsche `F-{JJJJ}-{NNNN}`, Tankbelege `TB-{JJJJ}-{NNNN}`. Muster mit Jahr zählen jedes Jahr neu. Die Nummer vergibt der Server beim Anlegen (Web, App, Import); vergebene Nummern werden übersprungen, vorhandene nie geändert. Von Hand lassen sich Nummern nicht eingeben oder ändern – auch nicht von Administratoren; Nummernfelder in den Formularen sind schreibgeschützt („wird automatisch vergeben“). Nur der **Kunden-Import** übernimmt vorhandene Kundennummern aus der Datei. Änderungen stehen im Protokoll. |
+| **Nummernkreise** | Nummern aller Datensätze in einer Tabelle (Datensatz, Muster, nächste Nummer, Bereich, Vorschau, verbleibend mit Warnung): Bauakten `{JJJJ}-{NNN}`, Kunden `60{NNNN}`, Lieferanten `70{NNNN}`, Personal `10{NNN}`, Maschinen und Fahrzeuge `20{NNN}`, Kolonnen `K{NN}`, Material `50{NNNN}`, Bestellungen `B-{JJJJ}-{NNNN}`, Anfragen `A-{JJJJ}-{NNNN}`, Aufgaben `AU-{JJJJ}-{NNNN}`, Mängel `M-{JJJJ}-{NNNN}`, Helpdesk-Tickets `T-{JJJJ}-{NNNN}`, Fehler und Wünsche `F-{JJJJ}-{NNNN}`, Tankbelege `TB-{JJJJ}-{NNNN}`. Muster mit Jahr zählen jedes Jahr neu. Die Nummer vergibt der Server beim Anlegen (Web, App, Import); vergebene Nummern werden übersprungen, vorhandene nie geändert. Von Hand lassen sich Nummern nicht eingeben oder ändern, auch nicht von Administratoren; Nummernfelder in den Formularen sind schreibgeschützt („wird automatisch vergeben“). Nur der **Kunden-Import** übernimmt vorhandene Kundennummern aus der Datei. Änderungen stehen im Protokoll. |
 | **Dokumente und Freigaben** | Vorgeschlagene Frist und Rolle für Freigaben, Kommentar beim Freigeben verlangen, Verweis auf Ordner- und Bauakten-Vorlagen und Aufbewahrungsfristen |
 | **Anmeldung** | Sitzungen im Browser (Abmelden nach Leerlauf, Dauer von „Angemeldet bleiben“), Zwei-Faktor-Pflicht für Administratoren, wie lange Apps auf Smartphones und Tablets ohne Nutzung angemeldet bleiben |
 | **Benachrichtigungen** | Welche E-Mails verschickt werden, nach wie vielen Minuten ein Ausfall von Archivserver bzw. Backup-Ziel gemeldet wird, Web Push, Inhalt in Pushnachrichten, Apple Push (APNs) für die iOS-App |
@@ -212,7 +212,7 @@ Speicher, Module und Pushnachrichten haben zusätzlich eine eigene Karte auf der
 
 ![Anmeldung](bilder/einstellungen-anmeldung.png "Reiter Anmeldung: Sitzungen, Zwei-Faktor-Pflicht, Apps")
 
-Bei Aktivität verlängert sich eine Sitzung von selbst. Läuft sie ab, erscheint ein Anmeldedialog – Eingaben bleiben
+Bei Aktivität verlängert sich eine Sitzung von selbst. Läuft sie ab, erscheint ein Anmeldedialog, Eingaben bleiben
 erhalten. **Pflicht für Administratoren** bewirkt, dass Konten mit Verwaltungsrechten (Benutzer, Rollen, Einstellungen,
 Backup, Geräte, Protokoll, Archiv) diese Rechte erst nutzen, wenn sie eine Authenticator-App eingerichtet haben.
 Registrierte Apps bleiben angemeldet, solange sie innerhalb der eingestellten Frist genutzt werden; entsperrt wird mit
@@ -225,8 +225,8 @@ und in der iOS-App über den Apple Push Notification Service (**APNs**). Mit **I
 steht auf dem Sperrbildschirm nur „Neue Benachrichtigung“.
 
 **Ausfall von Archivserver und Backup-Zielen › Melden nach** (Standard **3 Minuten**, 0 = sofort, höchstens 60):
-EstrichONE prüft Archivserver und Backup-Ziele jede Minute. Ein Ausfall wird – als Banner, Warnung in der Überwachung und
-Benachrichtigung – erst gemeldet, wenn der Server so lange **ununterbrochen** nicht erreichbar ist. Kurze Aussetzer (Neustart,
+EstrichONE prüft Archivserver und Backup-Ziele jede Minute. Ein Ausfall wird erst dann gemeldet (als Banner, Warnung in der Überwachung und
+Benachrichtigung), wenn der Server so lange **ununterbrochen** nicht erreichbar ist. Kurze Aussetzer (Neustart,
 Netzwackler) bleiben still; jeder erfolgreiche Kontakt setzt die Frist zurück. „Wieder erreichbar“ kommt nur, wenn vorher ein
 Ausfall gemeldet wurde.
 
@@ -273,7 +273,7 @@ Dokumentation, Kommunikation und Service). Die Schalter wirken **sofort** für a
   nach Rückfrage mit.
 - **Immer aktiv** sind Bauakten, Kunden und Kontakte, Benutzer und Rechte, Einstellungen und Sicherung.
 - Jede Änderung steht im **Protokoll** („settings.modules_changed“).
-- Bei gehosteten Instanzen sieht der Betreiber in der Hosting-Konsole, welche Module eingeschaltet sind – nur lesend,
+- Bei gehosteten Instanzen sieht der Betreiber in der Hosting-Konsole, welche Module eingeschaltet sind, nur lesend,
   über eine eigene, mit dem Instanz-Schlüssel gesicherte Schnittstelle. Ein- und ausschalten können Module nur Sie.
 - **Chat**: Schalter auf der Karte unter „Kommunikation und Service“; darunter **Löschfrist (Tage)**, **Vorschau in
   Pushnachrichten** (aus empfohlen: nur „Neue Nachricht von …“), **Mitarbeiter untereinander** (aus: Mitarbeiter ohne
@@ -290,7 +290,7 @@ Zugangsbriefe und Fehlermeldungen verschickt.
 1. **E-Mail-Versand** einschalten.
 2. **SMTP-Server** (z. B. smtp.ionos.de, smtp.office365.com), **Port** und **Verschlüsselung** (STARTTLS auf Port 587 ist
    üblich, SSL/TLS auf Port 465, „Keine“ nur für ein internes Relay).
-3. **Benutzername** (meist die E-Mail-Adresse) und **Passwort** – es wird verschlüsselt gespeichert und nie wieder
+3. **Benutzername** (meist die E-Mail-Adresse) und **Passwort**. Es wird verschlüsselt gespeichert und nie wieder
    angezeigt.
 4. **Absenderadresse**, **Absendername** und optional **Antworten an**.
 5. **Speichern** und mit **Testmail senden** prüfen.
@@ -301,7 +301,7 @@ Im Reiter **Vorlagen** passen Sie Betreff und Text jeder E-Mail an (**Standardte
 ## Microsoft Teams {#teams}
 
 **Verwaltung** → **Microsoft Teams** verlagert Unterhaltungen nach Microsoft Teams: je Bauakte ein Kanal im Team
-„Baustellen“ oder ein Gruppenchat mit dem Bauakten-Team, **In Teams öffnen** in Web und Apps und – auf Wunsch – Karten bei
+„Baustellen“ oder ein Gruppenchat mit dem Bauakten-Team, **In Teams öffnen** in Web und Apps und (auf Wunsch) Karten bei
 neuen Mängeln, Abnahmen und Terminänderungen. Ohne Einrichtung ändert sich nichts. Recht: **Integrationen einrichten**
 (`settings.integrations`, ab Werk nur Administrator).
 
@@ -310,11 +310,11 @@ neuen Mängeln, Abnahmen und Terminänderungen. Ohne Einrichtung ändert sich ni
 - **EstrichONE-Chat** (Standard): wie bisher, keine Teams-Knöpfe.
 - **Beides**: eingebauter Chat wie bisher, zusätzlich **Microsoft Teams** in der Navigation, auf der Startseite und
   **In Teams öffnen** an jeder verknüpften Bauakte.
-- **Microsoft Teams**: Der eingebaute Chat wird zum **Chat-Archiv** – alle Verläufe bleiben lesbar und lassen sich
+- **Microsoft Teams**: Der eingebaute Chat wird zum **Chat-Archiv**, alle Verläufe bleiben lesbar und lassen sich
   exportieren (Symbol **Herunterladen** im Chat-Archiv), neue Nachrichten und Chats gibt es nur noch in Teams. Es wird
   nichts gelöscht; die eingestellte Löschfrist läuft weiter. Zurückschalten ist jederzeit möglich.
 
-### Ohne App-Registrierung (einfacher Weg)
+### Ohne App-Registrierung
 
 1. Chat-Modus **Beides** oder **Microsoft Teams** wählen und **Speichern**.
 2. In der Bauakte **Teams-Chat anlegen …** (öffnet den Chat direkt in Teams) oder **Per Link verknüpfen …**. Den Link
@@ -362,7 +362,7 @@ Person ohne Microsoft-Konto) zeigt die Bauakte als Hinweis am Knopf **In Teams �
 Bauakte **Teams-Chat anlegen …** mit frei gewählten Teilnehmern (Bauakten-Team, Kolonnen, Gruppen = Benutzerrollen,
 Personen) und unter **Kolonnen** je Kolonne **Teams-Chat**. Microsoft legt Gruppenchats erst ab **drei Personen mit
 Microsoft-Konto** an; bei weniger öffnet EstrichONE stattdessen einen Einzelchat direkt in Teams. Ein neuer Chat erscheint
-in der Teams-Chatliste erst nach der ersten Nachricht – mit verbundenem Dienstkonto schreibt EstrichONE sie selbst,
+in der Teams-Chatliste erst nach der ersten Nachricht, mit verbundenem Dienstkonto schreibt EstrichONE sie selbst,
 sonst bitte gleich über **In Teams öffnen** die erste Nachricht schreiben. Antwortet Microsoft beim Anlegen nicht
 rechtzeitig, wiederholt EstrichONE das Anlegen bewusst nicht (sonst entstünde der Chat doppelt) und bittet, in Teams
 nachzusehen.
@@ -371,7 +371,7 @@ nachzusehen.
 Berechtigungen `ChannelMessage.Send`, `ChatMessage.Send` und `offline_access` hinzufügen und zustimmen, unter
 **Authentifizierung** „Öffentliche Clientflows zulassen“ auf **Ja** stellen. Dann unter **Nachrichten** → **Dienstkonto
 verbinden** mit einem eigenen Konto (z. B. estrichone@firma.de, Teams-Lizenz nötig) anmelden: Seite öffnen, Code
-eingeben. Microsoft erlaubt Anwendungen kein Senden ohne angemeldetes Konto – daher das Dienstkonto.
+eingeben. Microsoft erlaubt Anwendungen kein Senden ohne angemeldetes Konto. Daher das Dienstkonto.
 
 **Archivieren und Löschen** (zusätzliche Anwendungsberechtigungen `ChannelSettings.ReadWrite.All`, `Channel.Delete.All`
 und `Chat.ManageDeletion.All`; Recht **Teams-Unterhaltungen archivieren und löschen**, `teams.delete`, ab Werk nur
@@ -383,7 +383,7 @@ in Teams bestehen. Kanäle archiviert EstrichONE automatisch beim Abschließen d
 Bauakte abgeschlossen oder storniert wird: **Kanal archivieren** (Standard), **Nichts tun** oder **löschen**. Welche
 Berechtigungen fehlen, zeigt **Verbindung testen** im Schritt „Berechtigungen (Anwendung)“.
 
-**Einzel- und Gruppenchats:** Bei Personen erscheint ein Teams-Symbol (**Chat in Teams**) – in der Bauakte unter
+**Einzel- und Gruppenchats:** Bei Personen erscheint ein Teams-Symbol (**Chat in Teams**): in der Bauakte unter
 Kontakte › Team im Betrieb und in der Personalakte; im Menü der Bauakte **Chat mit dem ganzen Bauakten-Team**, in der
 Kopfzeile **Chat in Teams starten …**. Personen ohne Microsoft-Konto bekommen kein Symbol. Ohne App-Registrierung
 verwendet EstrichONE die E-Mail-Adresse als Teams-Konto. Mit **Einzelchats über Microsoft Graph anlegen** (Verbindung,
@@ -399,13 +399,13 @@ Teams“** sehen alle einmal einen Hinweis auf der Startseite und in den Apps, m
 > der eingebaute Chat und alle anderen Funktionen arbeiten weiter.
 
 > **Datenschutz:** Vor der Umstellung mit dem Betriebsrat regeln und die Beschäftigten informieren (Vorlage für den
-> Datenschutzhinweis: `docs/microsoft-teams.md`). EstrichONE übermittelt nur Kontozuordnung, Mitgliedschaften und – falls
-> eingeschaltet – kurze Ereigniskarten ohne Namen, Kommentare oder Kundendaten; es liest keine Nachrichten aus Teams.
+> Datenschutzhinweis: `docs/microsoft-teams.md`). EstrichONE übermittelt nur Kontozuordnung, Mitgliedschaften und, falls
+> eingeschaltet, kurze Ereigniskarten ohne Namen, Kommentare oder Kundendaten; es liest keine Nachrichten aus Teams.
 
 ## Backup Center {#backup}
 
 **Verwaltung** → **Sicherung** ist das **Backup Center**. EstrichONE sichert täglich vollständig: Datenbank (alle Bauakten,
-Kontakte, Planung, Zeiten, Benutzer, Archiv-Nachweise), alle Dateien (Fotos, Dokumente, Videos, Pläne – Originale und
+Kontakte, Planung, Zeiten, Benutzer, Archiv-Nachweise), alle Dateien (Fotos, Dokumente, Videos, Pläne; Originale und
 Vorschaubilder) und die Einstellungen (Konfiguration des Servers, Zeitplan, Backup-Ziele, Schlüsselbund). Die Sicherung
 ist mit AES-256 verschlüsselt, jeder Block hat eine Prüfsumme; wöchentlich wird geprüft und probeweise wiederhergestellt.
 
@@ -416,12 +416,12 @@ Zeitplan. **Jetzt sichern** startet sofort eine zusätzliche Vollsicherung.
 
 ### Sicherungen und Wiederherstellen
 
-Der Reiter **Sicherungen** listet alle Stände mit Zeitpunkt, Art, Umfang und Kennung – je **Quelle** (Hauptziel auf
+Der Reiter **Sicherungen** listet alle Stände mit Zeitpunkt, Art, Umfang und Kennung, je **Quelle** (Hauptziel auf
 diesem Server oder ein Backup-Ziel).
 
 ![Sicherungen](bilder/sicherung-staende.png "Alle Sicherungsstände mit Umfang und Kennung")
 
-- Das Dokumentsymbol holt eine **einzelne Datei** (Foto, Dokument) aus dieser Sicherung zurück – ohne den Rest zu
+- Das Dokumentsymbol holt eine **einzelne Datei** (Foto, Dokument) aus dieser Sicherung zurück, ohne den Rest zu
   verändern.
 - **Wiederherstellen** setzt das **ganze System** auf diesen Stand zurück: Datenbank, Fotos, Dokumente, Videos und
   Einstellungen. Zur Sicherheit tippen Sie `WIEDERHERSTELLEN` ein.
@@ -451,17 +451,17 @@ Der Reiter **Notfall** erklärt die Neuinstallation nach einem Totalausfall und 
 ![Notfall](bilder/sicherung-notfall.png "Reiter Notfall mit Notfallblatt und Befehl für die Neuinstallation")
 
 > **Wichtig:** Drucken Sie das Notfallblatt **jetzt** aus und bewahren Sie es getrennt vom Server auf (Tresor). Es
-> enthält den **Wiederherstellungsschlüssel** – ohne ihn sind die Sicherungen wertlos.
+> enthält den **Wiederherstellungsschlüssel**, ohne ihn sind die Sicherungen wertlos.
 
 Server komplett ausgefallen? 1. Neuen Linux-Server mit Docker bereitstellen und die Domain auf ihn zeigen lassen.
 2. Den Befehl aus dem Reiter Notfall ausführen (**Befehl kopieren**). 3. Quelle (Ordner oder Zugang vom Notfallblatt)
-und Wiederherstellungsschlüssel eingeben – der Installer holt die letzte Sicherung, stellt alles her und startet
+und Wiederherstellungsschlüssel eingeben, der Installer holt die letzte Sicherung, stellt alles her und startet
 EstrichONE.
 
 ## Backup-Ziele {#backup-ziele}
 
 **Verwaltung** → **Backup-Ziele** richtet eine zusätzliche Sicherung auf einem **anderen Rechner** ein (NAS, alter PC,
-Raspberry Pi). Die Ziele arbeiten „nur anhängen“: Löschen ist dort unmöglich – Schutz vor Brand, Diebstahl und
+Raspberry Pi). Die Ziele arbeiten „nur anhängen“: Löschen ist dort unmöglich, Schutz vor Brand, Diebstahl und
 Verschlüsselungstrojanern.
 
 ![Backup-Ziele](bilder/backup-ziele.png "Backup-Ziele: koppeln, Ziele, die ziehen, und Aktualisierung der Zusatzserver")
@@ -470,16 +470,16 @@ Verschlüsselungstrojanern.
    `sudo docker run --rm -v /var/run/docker.sock:/var/run/docker.sock ghcr.io/florians25/estrichone-installer:latest backup-ziel`.
    Er zeigt Adresse und Kopplungscode.
 2. In EstrichONE **Backup-Ziel koppeln** wählen und Adresse und Code eingeben.
-3. **Notfallzugang** herunterladen und zusammen mit dem Backup-Passwort getrennt vom Server aufbewahren – nur damit lässt
+3. **Notfallzugang** herunterladen und zusammen mit dem Backup-Passwort getrennt vom Server aufbewahren, nur damit lässt
    sich nach einem Totalverlust vom Backup-Ziel wiederherstellen.
 
 **Backup-Ziele, die ziehen** sind für Ziele ohne feste Adresse (zuhause hinter dem Router), wenn dieser Server öffentlich
-erreichbar ist (z. B. im Rechenzentrum): Das Ziel verbindet sich selbst und holt die verschlüsselten Sicherungen – keine
+erreichbar ist (z. B. im Rechenzentrum): Das Ziel verbindet sich selbst und holt die verschlüsselten Sicherungen, keine
 Portfreigabe nötig (**Ziel, das zieht, hinzufügen**).
 
 ### Kombiserver: Backup-Ziel und Archiv auf einem Rechner {#kombiserver}
 
-Wer nur einen weiteren Rechner hat, richtet dort **Backup-Ziel und Archivserver zusammen** ein – mit einem Befehl und
+Wer nur einen weiteren Rechner hat, richtet dort **Backup-Ziel und Archivserver zusammen** ein, mit einem Befehl und
 einem Kopplungscode. Beide Dienste laufen getrennt (eigene Container, eigene Daten), teilen sich aber den Rechner.
 
 1. Auf dem Kombiserver (Linux mit Docker) einmal ausführen:
@@ -492,9 +492,9 @@ einem Kopplungscode. Beide Dienste laufen getrennt (eigene Container, eigene Dat
 
 Steht der Kombiserver zuhause hinter dem Router und dieser Server im Rechenzentrum, wählen Sie **Kombiserver, der zieht**:
 EstrichONE zeigt den Befehl mit Code; das Backup-Ziel holt die Sicherungen selbst, das Archiv koppeln Sie im zweiten
-Schritt über eine weitergeleitete Adresse (Port 8443) oder eine Tunnel-Adresse – mit demselben Code.
+Schritt über eine weitergeleitete Adresse (Port 8443) oder eine Tunnel-Adresse, mit demselben Code.
 
-Wichtig: Backup und Archiv auf demselben Rechner ist bequem, aber **kein zweiter Standort für das Archiv**. Stellen Sie
+Wichtig: Backup und Archiv auf demselben Rechner spart einen Rechner, ist aber **kein zweiter Standort für das Archiv**. Stellen Sie
 den Kombiserver räumlich getrennt vom EstrichONE-Server auf (anderes Gebäude, zuhause, Rechenzentrum). Status-Banner
 (rot Backup, gelb Archiv) und Aktualisierung gelten für beide Dienste getrennt.
 
@@ -512,7 +512,7 @@ den Seiten Backup-Ziele und Archiv) sehen Sie je Zusatzserver die installierte u
 ## Archiv (revisionssicher) {#archiv}
 
 **Verwaltung** → **Archiv** bewahrt Dokumente revisionssicher nach GoBD auf: unveränderbar, mit Prüfsummen, Hash-Kette und
-Löschsperre bis zum Fristende – auf einem eigenen **Archivserver**.
+Löschsperre bis zum Fristende, auf einem eigenen **Archivserver**.
 
 ![Archiv](bilder/archiv.png "Archiv: gekoppelter Archivserver, Bestand, Einstellungen und Zusatzserver")
 
@@ -526,7 +526,7 @@ die Außenprüfung.
 
 Unter **Aufbewahrung je Dokumentart** legen Sie fest, ob und wann archiviert wird (**Sofort nach dem Hochladen**,
 **Nach der Freigabe**, **Wenn die Bauakte abgeschlossen ist** oder **Nur manuell**) und wie lange die Frist läuft. Die
-Vorschläge folgen § 147 AO und § 257 HGB (6 bzw. 10 Jahre ab Jahresende) – maßgeblich ist Ihre steuerliche Beratung.
+Vorschläge folgen § 147 AO und § 257 HGB (6 bzw. 10 Jahre ab Jahresende), maßgeblich ist Ihre steuerliche Beratung.
 **Regeln speichern** übernimmt sie. Unter **Archivierte Dokumente (Nachweis)** sehen Sie jedes Dokument mit Stand
 (wartend, Fehler, archiviert).
 
@@ -546,7 +546,7 @@ Hand aus.
 **Verwaltung** → **Überwachung** zeigt den Zustand aller Systeme: Produktivsystem (Platte, Datenbank, Sicherung,
 Archiv-Warteschlange), Archivserver und Backup-Ziele. Warnschwellen: Platte ab 85 % (kritisch ab 95 % oder wenn sie in
 weniger als 14 Tagen voll wäre), Sicherung älter als 36 Stunden, Archivserver bzw. Backup-Ziel länger als die eingestellte
-Frist (Standard 3 Minuten) nicht erreichbar. Davor steht dort nur „kurzzeitig nicht erreichbar – wird weiter geprüft“.
+Frist (Standard 3 Minuten) nicht erreichbar. Davor steht dort nur „kurzzeitig nicht erreichbar. Wird weiter geprüft …“.
 
 ![Überwachung](bilder/ueberwachung.png "Überwachung von Produktivsystem, Archivserver und Backup-Ziel")
 
@@ -576,10 +576,10 @@ Hinweise des Betreibers (bei gehosteten Instanzen aus der Hosting-Konsole) ersch
 EstrichONE prüft regelmäßig, ob eine neue Version verfügbar ist. Administratoren (Recht „Backups verwalten“) sehen
 dann oben einen Hinweis:
 
-- **Update verfügbar** (blau) – eine neue Version derselben Versionslinie. Lässt sich je Version ausblenden.
-- **Sicherheitsupdate verfügbar** (rot) – bitte zeitnah einspielen. Der Hinweis lässt sich nur für die laufende Sitzung
+- **Update verfügbar** (blau), eine neue Version derselben Versionslinie. Lässt sich je Version ausblenden.
+- **Sicherheitsupdate verfügbar** (rot). Bitte zeitnah einspielen. Der Hinweis lässt sich nur für die laufende Sitzung
   ausblenden.
-- **Automatisches Update fehlgeschlagen** (gelb) – das Ergebnis der Automatik, mit Verweis auf das Protokoll.
+- **Automatisches Update fehlgeschlagen** (gelb), das Ergebnis der Automatik, mit Verweis auf das Protokoll.
 
 Der Hinweis nennt den Befehl für den Server und verlinkt die **Versionshinweise**. Aktualisiert wird auf dem Server:
 
@@ -590,7 +590,7 @@ automatisch einspielen:
 
 | Befehl | Wirkung |
 |---|---|
-| `sudo /opt/estrichone/update.sh --automatik sicherheit` | nur Sicherheitsupdates, nachts 02:00–05:00 Uhr |
+| `sudo /opt/estrichone/update.sh --automatik sicherheit` | nur Sicherheitsupdates, nachts 02:00 bis 05:00 Uhr |
 | `sudo /opt/estrichone/update.sh --automatik patch 01:00-04:00` | alle Fehlerbehebungen der Versionslinie im gewählten Zeitfenster |
 | `sudo /opt/estrichone/update.sh --automatik aus` | Automatik ausschalten |
 | `sudo /opt/estrichone/update.sh --pruefen` | nur prüfen |
@@ -600,12 +600,12 @@ ziehen Sie die Zusatzserver nach (Abschnitt 9.9).
 
 ### Ablauf eines Updates für die Benutzer {#update-ablauf}
 
-Ein Update dauert mindestens zweieinhalb Minuten und läuft immer gleich ab – egal ob per `update.sh`, automatisch nachts oder
+Ein Update dauert mindestens zweieinhalb Minuten und läuft immer gleich ab, egal ob per `update.sh`, automatisch nachts oder
 über die Hosting-Konsole:
 
-1. **Ankündigung (1 Minute):** Alle Angemeldeten sehen oben eine gelbe Leiste „Update auf Version X beginnt in 0:59 –
-   bitte Arbeit speichern“. Die Apps übertragen offene Änderungen sofort. Neue Anmeldungen sind in dieser Minute gesperrt.
-2. **Update (mindestens 1 Minute):** Alle werden abgemeldet – auch Administratoren. Web und Apps zeigen den
+1. **Ankündigung (1 Minute):** Alle Angemeldeten sehen oben eine gelbe Leiste „Update auf Version X beginnt in 0:59. Bitte
+   speichern Sie Ihre Arbeit.“. Die Apps übertragen offene Änderungen sofort. Neue Anmeldungen sind in dieser Minute gesperrt.
+2. **Update (mindestens 1 Minute):** Alle werden abgemeldet, auch Administratoren. Web und Apps zeigen den
    Wartungsbildschirm mit Phase, Zielversion und Fortschritt; er bleibt auch stehen, solange der Server neu startet.
 3. **Abschluss (30 Sekunden):** Die neue Version läuft, der Bildschirm zeigt „Freigabe in 0:29“. Danach lädt das Web neu
    und zeigt die Anmeldung mit „EstrichONE wurde auf Version X aktualisiert“; die Apps führen zur Anmeldung. Auf dem
@@ -628,7 +628,7 @@ Ein neuer Server wird mit einem Befehl eingerichtet:
 
 Das Skript prüft zuerst den Server (Arbeitsspeicher, Speicherplatz, Docker, Ports, DNS-Eintrag, Firewall) und nennt zu
 jedem Befund die Abhilfe. Beim DNS-Eintrag vergleicht es auch mit der öffentlichen Adresse des Servers: Steht der Server
-hinter einem Router (NAT), ist ein Eintrag auf die Adresse des Routers richtig – es erinnert dann nur daran, die Ports
+hinter einem Router (NAT), ist ein Eintrag auf die Adresse des Routers richtig. Es erinnert dann nur daran, die Ports
 80 und 443 am Router auf den Server weiterzuleiten. Fehlt Docker, installiert es Docker nach Rückfrage (Debian und
 Ubuntu). Läuft auf dem Server bereits Caddy, trägt es EstrichONE dort auf Wunsch als eigene Website ein; vorhandene
 Websites bleiben unverändert (Sicherungskopie `/etc/caddy/Caddyfile.vor-estrichone`). Danach fragt es nur die Adresse und den
@@ -638,7 +638,7 @@ Proxy) und zeigt am Ende Adresse, Backup-Passwort und Einrichtungscode (Kapitel 
 | Befehl (an `… \| sudo bash -s --` angehängt) | Wirkung |
 |---|---|
 | (nichts) | installieren; erneut ausgeführt: reparieren, ohne Rückfragen, Daten bleiben |
-| `pruefen` | nur prüfen, nichts verändern – z. B. vor einem Umzug oder bei Störungen |
+| `pruefen` | nur prüfen, nichts verändern, z. B. vor einem Umzug oder bei Störungen |
 | `aktualisieren` | wie `update.sh`: sichern, aktualisieren, Dienste prüfen |
 | `wiederherstellen` | neuer Server aus einer Sicherung (Notfallblatt bereithalten) |
 | `archiv`, `backup-ziel`, `kombi` | Zusatzserver einrichten (siehe „Backup-Ziele“ und „Archiv“) |

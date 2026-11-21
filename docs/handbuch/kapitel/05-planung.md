@@ -1,6 +1,6 @@
 # Planung
 
-Die Planung beantwortet die Frage „Wer fährt wann wohin – mit welchem Gerät?“. Geplant wird je **Einsatz**: ein
+Die Planung beantwortet die Frage „Wer fährt wann wohin, mit welchem Gerät?“. Geplant wird je **Einsatz**: ein
 Arbeitstag einer Kolonne (oder einzelner Mitarbeiter) auf einer Baustelle, mit Tätigkeit, Uhrzeit und Geräten.
 EstrichONE bietet dafür mehrere Ansichten auf dieselben Daten:
 
@@ -18,13 +18,13 @@ EstrichONE bietet dafür mehrere Ansichten auf dieselben Daten:
 
 ![Planungs-Cockpit](bilder/cockpit.png "Das Planungs-Cockpit in der Wochenansicht")
 
-1. **Vorrat** – Bauvorhaben, die noch eingeplant werden müssen (**Ungeplant**) bzw. alle offenen. Sortieren Sie nach
+1. **Vorrat**: Bauvorhaben, die noch eingeplant werden müssen (**Ungeplant**) bzw. alle offenen. Sortieren Sie nach
    Dringlichkeit und suchen Sie nach Name oder Nummer. Ziehen Sie eine Karte auf eine Kolonne und einen Tag, um sie
-   einzuplanen – oder klicken Sie auf **Einplanen**.
-2. **Konflikte** – Doppelbelegungen, abwesende Mitarbeiter, Geräte an zwei Orten oder überlastete Kolonnen. Die
+   einzuplanen, oder klicken Sie auf **Einplanen**.
+2. **Konflikte**: Doppelbelegungen, abwesende Mitarbeiter, Geräte an zwei Orten oder überlastete Kolonnen. Die
    Schaltfläche zeigt die Anzahl; ein Klick öffnet die Liste.
-3. **Plan freigeben** – macht die Planung für die Mitarbeiter verbindlich.
-4. **Ansicht** – **Tag**, **Woche**, **2 Wochen** oder **Monat**; **Mo–Fr** blendet das Wochenende aus. Mit **Heute**
+3. **Plan freigeben**: macht die Planung für die Mitarbeiter verbindlich.
+4. **Ansicht**: **Tag**, **Woche**, **2 Wochen** oder **Monat**; **Mo bis Fr** blendet das Wochenende aus. Mit **Heute**
    und den Pfeilen wechseln Sie den Zeitraum.
 
 Oben stehen die Kennzahlen **Ungeplant**, **Einsätze** und **Auslastung** (geplante gegen verfügbare Stunden). Jede
@@ -39,12 +39,12 @@ stehen Arbeitsstunden und Hinweise, z. B. ein rotes Dreieck bei Konflikten oder 
 | Doppelklick | Einsatz bearbeiten; in einer leeren Zelle: neuen Einsatz planen |
 | Ziehen | Einsatz verschieben (Tag, Kolonne; in der Zeitachse auch die Uhrzeit) |
 | <kbd>Strg</kbd> + Ziehen | Einsatz kopieren |
-| Kante ziehen | Woche: auf weitere Tage ausdehnen · Zeitachse: Dauer ändern |
+| Kante ziehen | Woche: auf weitere Tage ausdehnen, Zeitachse: Dauer ändern |
 | <kbd>Strg</kbd> + Klick | Mehrfachauswahl (gemeinsam ziehen, verschieben, löschen) |
 | Rechtsklick | Schnellaktionen für Einsatz bzw. Zelle (Tagesbesetzung, Kolonne tauschen …) |
 | Vorrat ziehen | Bauvorhaben auf Kolonne und Tag einplanen |
 
-Jede Änderung meldet EstrichONE kurz unten am Bildschirm – mit Hinweisen, falls ein Konflikt entsteht. Mit
+Jede Änderung meldet EstrichONE kurz unten am Bildschirm, mit Hinweisen, falls ein Konflikt entsteht. Mit
 <kbd>Strg</kbd> + <kbd>Z</kbd> nehmen Sie sie zurück, mit <kbd>Strg</kbd> + <kbd>Y</kbd> stellen Sie sie wieder her (auch
 über die Pfeilsymbole oben).
 
@@ -64,10 +64,10 @@ Anhang A.
 
 ![Konflikte im Zeitraum](bilder/cockpit-konflikte.png "Liste der Konflikte im angezeigten Zeitraum")
 
-Die Liste **Konflikte im Zeitraum** nennt jeden Konflikt mit Kolonne und Tag – etwa einen Mitarbeiter, der krank
+Die Liste **Konflikte im Zeitraum** nennt jeden Konflikt mit Kolonne und Tag, etwa einen Mitarbeiter, der krank
 gemeldet oder im Urlaub ist, aber eingeplant wurde. Ein Klick auf das Warndreieck in einer Tageszelle zeigt die
 Hinweise genau dieses Tages. Lösen Sie den Konflikt, indem Sie den Einsatz verschieben, die Tagesbesetzung ändern
-(Rechtsklick auf die Zelle) oder die Kolonnen tauschen. Konflikte sind Hinweise – EstrichONE verhindert die Planung
+(Rechtsklick auf die Zelle) oder die Kolonnen tauschen. Konflikte sind Hinweise, EstrichONE verhindert die Planung
 nicht, damit Sie bewusst entscheiden können.
 
 ### Plan freigeben
@@ -94,7 +94,7 @@ Spätere Änderungen werden markiert, bis Sie erneut freigeben.
 
 ## Kolonnenplanung
 
-**Planung** → **Kolonnenplanung** zeigt die Einsätze als Plantafel – wahlweise nach **Kolonnen** oder **Mitarbeitern**,
+**Planung** → **Kolonnenplanung** zeigt die Einsätze als Plantafel, wahlweise nach **Kolonnen** oder **Mitarbeitern**,
 als **Tag**, **Woche** oder **Monat**. Oben stehen Abwesenheiten, darunter je Kolonne die Einsätze mit Uhrzeit, Art,
 Baustelle, Tätigkeit, Gerät und Hinweisen (z. B. „Jonas Schmid ist im Urlaub“).
 
@@ -110,7 +110,7 @@ Baustelle, Tätigkeit, Gerät und Hinweisen (z. B. „Jonas Schmid ist im Urlaub
 
 ## Teamplaner
 
-Der **Teamplaner** zeigt Kolonnen bzw. Mitarbeiter auf einer **Zeitachse in Stunden** – ideal, um mehrere kurze Termine
+Der **Teamplaner** zeigt Kolonnen bzw. Mitarbeiter auf einer **Zeitachse in Stunden**, ideal, um mehrere kurze Termine
 an einem Tag zu planen (z. B. Erstbegehung um 8 Uhr, CM-Messung um 10:30 Uhr). Termine aus dem Kalender und
 Abwesenheiten werden mit angezeigt; die Legende unten erklärt die Farben der Terminarten.
 
@@ -133,11 +133,11 @@ Lieferungen, Schulungen, Urlaub oder Privates.
 - Links schalten Sie die Kalender ein und aus: **Mein Kalender**, gemeinsame Kalender wie **Firmenkalender** und
   **Kundentermine** sowie **Einsätze der Planung**. Mit **+** legen Sie weitere Kalender an.
 - **Farben nach** **Kalender** oder **Terminart**.
-- Ansichten **Tag**, **Woche**, **Mo–Fr**, **Monat** und **Agenda**. Termine lassen sich per Ziehen verschieben.
+- Ansichten **Tag**, **Woche**, **Mo bis Fr**, **Monat** und **Agenda**. Termine lassen sich per Ziehen verschieben.
 
 ## Arbeitsplan
 
-Der **Arbeitsplan** ist die Liste „wer ist wann wo“ für die nächsten **7 Tage** oder **14 Tage** – je Tag die
+Der **Arbeitsplan** ist die Liste „wer ist wann wo“ für die nächsten **7 Tage** oder **14 Tage**, je Tag die
 Abwesenheiten und alle Einsätze mit Zeit, Baustelle, Tätigkeit, Kolonne, Team und Geräten. **Navigation starten**
 öffnet die Route zur Baustelle, **Nur meine Einsätze** zeigt nur Ihre eigenen. **PDF** und **Drucken** geben die Liste
 aus.
@@ -150,7 +150,7 @@ aus.
 Status. **Kolonne anlegen** bzw. **Bearbeiten**: Name, Farbe (erscheint in allen Plantafeln), Kolonnenführer, Mitglieder
 und Reihenfolge. **Deaktivieren** blendet eine Kolonne aus der Planung aus, ohne ihre Einsätze zu löschen.
 
-**Teams-Chat** (nur wenn Microsoft Teams eingerichtet ist): öffnet den Teams-Chat der Kolonne bzw. legt ihn an – mit
+**Teams-Chat** (nur wenn Microsoft Teams eingerichtet ist): öffnet den Teams-Chat der Kolonne bzw. legt ihn an, mit
 allen Mitgliedern der Kolonne, die ein Microsoft-Konto haben, und Ihnen. Ändert sich die Kolonne, passt EstrichONE die
 Mitglieder im Chat automatisch an. Löschen (Recht `teams.delete`) über **…** → **Teams-Chat löschen …**. Ohne
 App-Registrierung öffnet **Teams-Chat** einen Gruppenchat direkt in Teams (nicht gespeichert).
@@ -168,5 +168,5 @@ EstrichONE erkennt, wenn ein Gerät an zwei Orten gleichzeitig eingeplant ist.
 
 ![Geräte und Fahrzeuge](bilder/geraete-fahrzeuge.png "Fahrzeuge mit Kennzeichen, TÜV, Wartung und Kolonne")
 
-> **Tipp:** Abwesenheiten (Urlaub, Krankheit, Schule) pflegen Sie im Personalbereich (Kapitel 6). Die Planung
+> **Hinweis:** Abwesenheiten (Urlaub, Krankheit, Schule) pflegen Sie im Personalbereich (Kapitel 6). Die Planung
 > berücksichtigt sie automatisch und zeigt sie als Hinweis.

@@ -1,5 +1,5 @@
 % datei: Spickzettel-Tastaturkuerzel-Web
-% art: Spickzettel · Web
+% art: Spickzettel, Web
 % fuer: alle, die im Browser mit EstrichONE arbeiten
 % stil: kurz
 % klasse: spick

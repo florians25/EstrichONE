@@ -57,7 +57,7 @@ suchen**.
 Ist Ihre App-Version zu alt für den Server, zeigt die App **Update erforderlich**. Ihre Daten und die Anmeldung bleiben
 erhalten; Änderungen, die noch nicht übertragen sind, sendet die App nach dem Update.
 
-Nach einem Update der App oder des Servers zeigt die App nach der Anmeldung einmal **Was gibt’s Neues** – nur, wenn es
+Nach einem Update der App oder des Servers zeigt die App nach der Anmeldung einmal **Was gibt’s Neues**, nur, wenn es
 Neuerungen für die App gibt. **Verstanden** schließt das Blatt; es erscheint dann auch auf Ihren anderen Geräten nicht
 erneut. Unter **Mehr** → **Gerät, Server und App** → **Was gibt’s Neues** lässt es sich jederzeit wieder öffnen.
 
@@ -82,20 +82,20 @@ angemeldet.
 > übertragen. Beim Abmelden gehen sie verloren.“ Stellen Sie dann besser eine Verbindung her und warten Sie, bis alles
 > übertragen ist. **Trotzdem abmelden und Daten löschen** verwirft sie endgültig.
 
-Zum kurzen Unterbrechen genügt **Sperren** (persönliches Gerät) bzw. **Benutzer wechseln** (Poolgerät) – dabei bleiben
+Zum kurzen Unterbrechen genügt **Sperren** (persönliches Gerät) bzw. **Benutzer wechseln** (Poolgerät), dabei bleiben
 Sie angemeldet und nichts wird gelöscht.
 
 ## App zurücksetzen
 
-**App zurücksetzen** (**Mehr** → **Gerät, Server und App**) löscht **alles** auf diesem Gerät – Server, Gerät, alle Personen, Fotos, noch nicht übertragene
-Daten und Einstellungen – und startet bei der Einrichtung. Auf dem Server bleibt alles erhalten. Nach der Rückfrage
+**App zurücksetzen** (**Mehr** → **Gerät, Server und App**) löscht **alles** auf diesem Gerät, Server, Gerät, alle Personen, Fotos, noch nicht übertragene
+Daten und Einstellungen, und startet bei der Einrichtung. Auf dem Server bleibt alles erhalten. Nach der Rückfrage
 tippen Sie auf **Alles löschen und neu einrichten**.
 
 Sie brauchen das, wenn ein Gerät an eine andere Person oder einen anderen Betrieb geht oder mit einem anderen Server
 verbunden werden soll. **App zurücksetzen** steht auch auf der Anmeldeseite, bei der Benutzerauswahl und beim Warten auf
 die Freigabe.
 
-> **Tipp:** Startet die App nicht mehr richtig, öffnen Sie die **Einstellungen-App** von iOS → **EstrichONE** und
+> **Hinweis:** Startet die App nicht mehr richtig, öffnen Sie die **Einstellungen-App** von iOS → **EstrichONE** und
 > schalten **Beim nächsten Start zurücksetzen** ein. Beim nächsten Öffnen setzt sich die App zurück.
 
 ## Konto löschen beantragen

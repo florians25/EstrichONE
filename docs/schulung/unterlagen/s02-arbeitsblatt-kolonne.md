@@ -1,14 +1,14 @@
 % datei: Arbeitsblatt-Kolonne
-% art: Arbeitsblatt · Schulung
-% fuer: Kolonne / Monteure – App auf iPhone oder iPad
+% art: Arbeitsblatt, Schulung
+% fuer: Kolonne / Monteure, App auf iPhone oder iPad
 % felder: Name, Datum, Gerät
 
 # Arbeitsblatt Kolonne: Ein Arbeitstag mit der App
 
 Arbeiten Sie die Übungen der Reihe nach am eigenen Gerät durch. Hilfe: die Kurzanleitungen 01, 02, 03, 05 und 07.
-Ohne Server üben Sie im **Demomodus** (**Demo ausprobieren – ohne Server**) mit der Bauakte **EFH Schneider, Neubau**.
+Ohne Server üben Sie im **Demomodus** (**Demo ohne Server starten**) mit der Bauakte **EFH Schneider, Neubau**.
 
-## Übung 1 – Anmelden und entsperren
+## Übung 1: Anmelden und entsperren
 
 1. Richten Sie die App ein (QR-Code vom Trainer oder Demomodus).
 2. Persönliches Gerät: **Mehr** → **Sperre und Face ID** öffnen. Poolgerät: **Mehr** → **Benutzer wechseln**.
@@ -17,7 +17,7 @@ Wann sperrt sich die App bei Ihnen? Was müssen Sie danach eingeben?
 
 <div class="linien n2"></div>
 
-## Übung 2 – Mein Einsatz heute
+## Übung 2: Mein Einsatz heute
 
 1. Heute-Seite: Lesen Sie **Mein Einsatz** und tragen Sie ein:
 
@@ -30,7 +30,7 @@ Wann sperrt sich die App bei Ihnen? Was müssen Sie danach eingeben?
 
 <div class="linien n1"></div>
 
-## Übung 3 – Fotoserie und Lieferschein
+## Übung 3: Fotoserie und Lieferschein
 
 1. Unter **Mein Einsatz** auf **Foto** tippen, Beschriftung „Randdämmung OG“, zwei Fotos, **Übernehmen**.
 2. **Akte** → **Scanner** → ein Blatt scannen → Dokumentart **Lieferschein** → **Als PDF ablegen**.
@@ -38,7 +38,7 @@ Wann sperrt sich die App bei Ihnen? Was müssen Sie danach eingeben?
 
 <div class="linien n1"></div>
 
-## Übung 4 – Bautagebuch und Mangel
+## Übung 4: Bautagebuch und Mangel
 
 1. **Tagebuch** → Textbaustein „Estrich eingebracht“ → **Sichern**.
 2. **Mangel** → „Randdämmstreifen im Bad fehlt“ → Frist **Morgen** → zuständig: Sie selbst → **Sichern**.
@@ -46,7 +46,7 @@ Wann sperrt sich die App bei Ihnen? Was müssen Sie danach eingeben?
 
 <div class="linien n1"></div>
 
-## Übung 5 – Ohne Netz
+## Übung 5: Ohne Netz
 
 1. Flugmodus ein, ein Foto aufnehmen.
 2. **Mehr** → **Synchronisation**: Was steht unter **Ausstehend**?
@@ -60,7 +60,7 @@ Wann sperrt sich die App bei Ihnen? Was müssen Sie danach eingeben?
 - [ ] Ich weiß, was die **graue Leiste „Nur Ansicht“** bedeutet.
 - [ ] Ich weiß, wen ich bei der **roten Leiste** (Backup) sofort informiere: <span class="luecke"></span>
 
-## Übung 6 – Chat und Problem melden
+## Übung 6: Chat und Problem melden
 
 1. (Wenn der Chat eingeschaltet ist) Im Chat Ihrer Kolonne ein Foto senden und eine Person mit `@Name` erwähnen.
 2. **Mehr** → **Problem melden** öffnen und **Anzeigen, was gesendet wird** antippen. Was wird **nie** mitgesendet?
