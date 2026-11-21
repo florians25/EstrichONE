@@ -61,7 +61,7 @@
 						</VBox>
 						<Text text="{view>supplierName}"/>
 						<VBox>
-							<Link text="{view>bauakteNumber} · {view>bauakteTitle}" wrapping="true" href="/bauakten/{view>bauakteId}?abschnitt=material" visible="{= !!${view>bauakteId} }"/>
+							<Link text="{view>bauakteNumber}, {view>bauakteTitle}" wrapping="true" href="/bauakten/{view>bauakteId}?abschnitt=material" visible="{= !!${view>bauakteId} }"/>
 							<Text text="Lager / ohne Bauakte" visible="{= !${view>bauakteId} }"/>
 							<Text text="{view>address}" class="eoMuted"/>
 						</VBox>

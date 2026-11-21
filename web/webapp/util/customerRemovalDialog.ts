@@ -44,8 +44,8 @@ function referenceList(refs: CustomerReferencesResponse, close: () => void): Con
 		box.addItem(head);
 		for (const item of ref.items) {
 			box.addItem(item.link
-				? new Link({ text: `– ${item.text}`, press: () => { close(); navTo(item.link!); } }).addStyleClass("sapUiSmallMarginBegin")
-				: new Text({ text: `– ${item.text}` }).addStyleClass("sapUiSmallMarginBegin"));
+				? new Link({ text: `• ${item.text}`, press: () => { close(); navTo(item.link!); } }).addStyleClass("sapUiSmallMarginBegin")
+				: new Text({ text: `• ${item.text}` }).addStyleClass("sapUiSmallMarginBegin"));
 		}
 		if (ref.count > ref.items.length) {
 			box.addItem(new Text({ text: `… und ${ref.count - ref.items.length} weitere` }).addStyleClass("sapUiSmallMarginBegin eoMuted"));
@@ -184,7 +184,7 @@ function openAnonymize(refs: CustomerReferencesResponse): Promise<RemovalResult>
 					new MessageStrip({
 						type: "Error", showIcon: true,
 						text: "Name und alle Kontaktdaten des Kunden werden durch „Anonymisierter Kunde"
-							+ (refs.customerNumber ? ` ${refs.customerNumber}` : "") + "“ ersetzt – auch in den Projektbeteiligten der Bauakten "
+							+ (refs.customerNumber ? ` ${refs.customerNumber}` : "") + "“ ersetzt, auch in den Projektbeteiligten der Bauakten "
 							+ "und in Anrufnotizen. Bauakten, Dokumente und Kundennummer bleiben erhalten. Das lässt sich nicht rückgängig machen.",
 					}),
 					...field.controls, irreversible.addStyleClass("sapUiSmallMarginTop"), error,

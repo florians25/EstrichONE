@@ -82,8 +82,8 @@ export function formatPeriod(startsAt: string | null | undefined, endsAt: string
 	const start = parse(startsAt);
 	const end = parse(endsAt);
 	if (start && end) {
-		if (sameDay(start, end)) return `${shortDate(start, now)}, ${clock(start)}–${clock(end)} Uhr`;
-		return `${shortDate(start, now)}, ${clock(start)} Uhr – ${shortDate(end, now)}, ${clock(end)} Uhr`;
+		if (sameDay(start, end)) return `${shortDate(start, now)}, ${clock(start)} bis ${clock(end)} Uhr`;
+		return `${shortDate(start, now)}, ${clock(start)} Uhr bis ${shortDate(end, now)}, ${clock(end)} Uhr`;
 	}
 	if (start) return `ab ${shortDate(start, now)}, ${clock(start)} Uhr`;
 	if (end) return `bis ${shortDate(end, now)}, ${clock(end)} Uhr`;

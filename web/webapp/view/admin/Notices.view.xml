@@ -59,7 +59,7 @@
 					</List>
 				</Panel>
 				<Panel backgroundDesign="Solid" class="eoDangerPanel">
-					<headerToolbar><OverflowToolbar style="Clear"><core:Icon src="sap-icon://wrench"/><Title text="Wartungsmodus" level="H2"/><Text text="– sperrt Benutzer aus" class="eoMuted"/></OverflowToolbar></headerToolbar>
+					<headerToolbar><OverflowToolbar style="Clear"><core:Icon src="sap-icon://wrench"/><Title text="Wartungsmodus" level="H2"/><Text text="(sperrt Benutzer aus)" class="eoMuted"/></OverflowToolbar></headerToolbar>
 					<VBox class="sapUiSmallMarginBeginEnd sapUiSmallMarginBottom">
 						<ObjectStatus text="{view>/maintenance/text}" state="{view>/maintenance/state}" icon="sap-icon://wrench" class="sapUiTinyMarginBottom"/>
 						<Text text="{view>/maintenance/detail}" visible="{= !!${view>/maintenance/detail} }" class="eoMuted"/>

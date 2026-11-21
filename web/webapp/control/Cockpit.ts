@@ -105,7 +105,7 @@ export function startCockpitDrag(event: PointerEvent, source: HTMLElement, paylo
 			}
 			const time = control.preview(payload, target, e);
 			const verb = payload.kind === "bauakte" ? "Einplanen" : copy ? "Kopieren" : "Verschieben";
-			hint.textContent = `${verb}: ${target.dataset.dropLabel ?? ""}${time ? ` · ${time}` : ""}`;
+			hint.textContent = `${verb}: ${target.dataset.dropLabel ?? ""}${time ? `, ${time}` : ""}`;
 		},
 		onEnd: () => {
 			last?.clearPreview();
@@ -335,7 +335,7 @@ export default class Cockpit extends Control {
 			fill.style.width = `${Math.min(100, percent)}%`;
 			bar.append(fill);
 			const pct = el("span", `eoCkLoadText ${this.loadState(percent)}`, `${percent} %`);
-			pct.append(el("span", "eoCkLoadHours", ` · ${hours(planned)}/${hours(capacity)} h`));
+			pct.append(el("span", "eoCkLoadHours", `, ${hours(planned)}/${hours(capacity)} h`));
 			load.append(bar, pct);
 			load.title = `Auslastung im Zeitraum: ${percent} % (${hours(planned)} von ${hours(capacity)} h verplant)`;
 			text.append(load);
@@ -398,8 +398,8 @@ export default class Cockpit extends Control {
 			const absent = info.members.filter((m) => m.absenceNote);
 			const nobody = info.members.length > 0 && info.availableMembers === 0;
 			const tip = info.capacityMinutes
-				? `${hours(planned)} von ${hours(info.capacityMinutes)} h verplant (${percent} %) · ${info.availableMembers} von ${info.members.length} Mitarbeitern verfügbar`
-				: nobody ? `Niemand aus der Kolonne verfügbar · ${hours(planned)} h verplant` : `Kein Arbeitstag · ${hours(planned)} h verplant`;
+				? `${hours(planned)} von ${hours(info.capacityMinutes)} h verplant (${percent} %), ${info.availableMembers} von ${info.members.length} Mitarbeitern verfügbar`
+				: nobody ? `Niemand aus der Kolonne verfügbar, ${hours(planned)} h verplant` : `Kein Arbeitstag, ${hours(planned)} h verplant`;
 			// Auslastung als schmaler Balken oben in der Zelle (nur wenn etwas geplant ist).
 			if (planned > 0) {
 				const meter = el("div", `eoCkCap ${this.loadState(percent)}`);
@@ -420,14 +420,14 @@ export default class Cockpit extends Control {
 			if (info.rosterChanged) {
 				const r = el("span", "eoCkRoster");
 				r.append(icon("sap-icon://switch-classes"));
-				r.title = `Tagesbesetzung: ${info.members.map((m) => m.name).join(", ") || "niemand"}${info.vehicles.length ? ` · ${info.vehicles.map((v) => v.name).join(", ")}` : ""}${info.rosterNote ? ` · ${info.rosterNote}` : ""}`;
+				r.title = `Tagesbesetzung: ${info.members.map((m) => m.name).join(", ") || "niemand"}${info.vehicles.length ? `, ${info.vehicles.map((v) => v.name).join(", ")}` : ""}${info.rosterNote ? `, ${info.rosterNote}` : ""}`;
 				r.setAttribute("aria-label", r.title);
 				facts.append(r);
 			}
 			if (absent.length && (d.isWorkday || jobs.length)) {
 				const chip = el("span", `eoCkAbsent${month ? " eoCkAbsentMini" : ""}`);
 				chip.append(icon("sap-icon://employee-rejections"));
-				if (!month) chip.append(el("span", "eoCkAbsentText", absent.map((m) => `${firstName(m.name)}: ${m.absenceNote}`).join(" · ")));
+				if (!month) chip.append(el("span", "eoCkAbsentText", absent.map((m) => `${firstName(m.name)}: ${m.absenceNote}`).join(", ")));
 				chip.title = absent.map((m) => `${m.name}: ${m.absenceNote}`).join("\n");
 				chip.setAttribute("aria-label", `Abwesend: ${chip.title}`);
 				facts.append(chip);
@@ -473,13 +473,13 @@ export default class Cockpit extends Control {
 		if (selected) card.classList.add("eoCkSelected");
 		if (data.dimmed.includes(a.id)) card.classList.add("eoCkDim");
 		card.setAttribute("aria-pressed", String(selected));
-		const time = a.startTime ? `${hhmm(a.startTime)}${a.endTime ? `–${hhmm(a.endTime)}` : ""}` : "ganztags";
-		const title = `${a.bauakteNumber ? `${a.bauakteNumber} · ` : ""}${a.bauakteTitle}`;
+		const time = a.startTime ? `${hhmm(a.startTime)}${a.endTime ? ` bis ${hhmm(a.endTime)}` : ""}` : "ganztags";
+		const title = `${a.bauakteNumber ? `${a.bauakteNumber}, ` : ""}${a.bauakteTitle}`;
 		const city = a.bauakteAddress?.split(",").pop()?.trim().replace(/^\d{5}\s*/, "") ?? "";
 		card.setAttribute("aria-label", `${a.activity}, ${title}, ${time}${a.warnings.length ? `, ${a.warnings.length === 1 ? "1 Hinweis" : `${a.warnings.length} Hinweise`}` : ""}${a.change ? ", geändert seit Freigabe" : ""}`);
-		card.title = [title, `${a.activity} · ${time}`, a.bauakteAddress ?? "", a.people.length ? `Team: ${a.people.map((p) => p.name).join(", ")}` : "",
+		card.title = [title, `${a.activity}, ${time}`, a.bauakteAddress ?? "", a.people.length ? `Team: ${a.people.map((p) => p.name).join(", ")}` : "",
 			a.resources.length ? `Geräte: ${a.resources.map((r) => r.name).join(", ")}` : "", ...a.warnings.map((w) => `Hinweis: ${w}`),
-			a.change ? (a.change === "new" ? "Neu seit Freigabe" : "Geändert seit Freigabe") : "", "Klick: Details · Doppelklick: bearbeiten"].filter(Boolean).join("\n");
+			a.change ? (a.change === "new" ? "Neu seit Freigabe" : "Geändert seit Freigabe") : "", "Klick: Details, Doppelklick: bearbeiten"].filter(Boolean).join("\n");
 		if (safeColor(kind?.color)) card.style.setProperty("--eo-kind", safeColor(kind?.color));
 		if (timeline) {
 			card.style.left = `${timeline.left}%`;
@@ -519,7 +519,7 @@ export default class Cockpit extends Control {
 			top.append(t);
 			if (marks.childElementCount) top.append(marks);
 			card.append(top, el("span", "eoCkTitle", a.bauakteTitle));
-			card.append(el("span", "eoCkSub", [a.activity, city].filter(Boolean).join(" · ")));
+			card.append(el("span", "eoCkSub", [a.activity, city].filter(Boolean).join(", ")));
 		}
 		if (data.canPlan) {
 			card.classList.add("eoCkMovable");
@@ -605,7 +605,7 @@ export default class Cockpit extends Control {
 		const head = el("div", "eoCkTRow eoCkHead");
 		const corner = el("div", "eoCkLane eoCkCorner");
 		corner.append(el("span", "eoCkCornerTitle", longDay(day.day)), el("span", "eoCkCornerSub", day.holiday ? `Feiertag: ${day.holiday}` : day.release
-			? (day.release.changedCount ? `Freigegeben · ${day.release.changedCount} geändert` : "Freigegeben") : "Entwurf, nicht freigegeben"));
+			? (day.release.changedCount ? `Freigegeben, ${day.release.changedCount} geändert` : "Freigegeben") : "Entwurf, nicht freigegeben"));
 		head.append(corner);
 		const scale = el("div", "eoCkScale");
 		for (let h = from; h < to; h++) scale.append(el("span", `eoCkHour${h < WORK[0] || h >= WORK[1] ? " eoCkHourOff" : ""}`, `${String(h).padStart(2, "0")}:00`));
@@ -648,7 +648,7 @@ export default class Cockpit extends Control {
 				if (info?.rosterChanged) {
 					const r = el("span", "eoCkRoster");
 					r.append(icon("sap-icon://switch-classes"), el("span", "eoCkAbsentText", "Tagesbesetzung"));
-					r.title = `Tagesbesetzung: ${info.members.map((m) => m.name).join(", ") || "niemand"}${info.rosterNote ? ` · ${info.rosterNote}` : ""}`;
+					r.title = `Tagesbesetzung: ${info.members.map((m) => m.name).join(", ") || "niemand"}${info.rosterNote ? `, ${info.rosterNote}` : ""}`;
 					facts.append(r);
 				}
 				if (info?.warnings.length && jobs.length) facts.append(this.conflictButton(info.warnings, crew?.id ?? "", day.day));
@@ -708,7 +708,7 @@ export default class Cockpit extends Control {
 		const move = (e: PointerEvent) => {
 			end = Math.max(start + 30, Math.min(to * 60, this.timeAt(track, e.clientX)));
 			card.style.width = `${((end - start) / span) * 100}%`;
-			if (label) label.textContent = `${toTime(start).slice(0, 5)}–${toTime(end).slice(0, 5)}`;
+			if (label) label.textContent = `${toTime(start).slice(0, 5)} bis ${toTime(end).slice(0, 5)}`;
 		};
 		const up = () => {
 			window.removeEventListener("pointermove", move, true);
@@ -749,7 +749,7 @@ export default class Cockpit extends Control {
 		}
 		mark.style.left = `${((start - from * 60) / span) * 100}%`;
 		mark.style.width = `${Math.max(2, ((end - start) / span) * 100)}%`;
-		mark.textContent = `${hhmm(toTime(start))}–${hhmm(toTime(end))}`;
+		mark.textContent = `${hhmm(toTime(start))} bis ${hhmm(toTime(end))}`;
 		return `${hhmm(toTime(start))} Uhr`;
 	}
 

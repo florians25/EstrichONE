@@ -79,7 +79,7 @@ export function openAcceptanceWizard(options: AcceptanceWizardOptions): Promise<
 		const roomTotal = new Text().addStyleClass("eoMuted sapUiTinyMarginTop");
 		const rooms = options.rooms?.rooms ?? [];
 		for (const room of rooms) {
-			const item = new StandardListItem({ title: room.name, description: [room.floor, room.screedTypeName].filter(Boolean).join(" · "),
+			const item = new StandardListItem({ title: room.name, description: [room.floor, room.screedTypeName].filter(Boolean).join(", "),
 				info: room.areaSquareMeters !== null ? area(room.areaSquareMeters) : "", selected: true });
 			item.data("id", room.id);
 			item.data("area", room.areaSquareMeters ?? 0);
@@ -87,7 +87,7 @@ export function openAcceptanceWizard(options: AcceptanceWizardOptions): Promise<
 		}
 		const updateTotal = () => {
 			const sum = roomList.getSelectedItems().reduce((s, i) => s + Number(i.data("area") ?? 0), 0);
-			roomTotal.setText(rooms.length ? `${roomList.getSelectedItems().length} von ${rooms.length} Räumen · ${area(sum)}` : "");
+			roomTotal.setText(rooms.length ? `${roomList.getSelectedItems().length} von ${rooms.length} Räumen, ${area(sum)}` : "");
 		};
 		roomList.attachSelectionChange(updateTotal);
 		updateTotal();

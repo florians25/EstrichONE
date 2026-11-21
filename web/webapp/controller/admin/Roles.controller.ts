@@ -138,7 +138,7 @@ export default class Roles extends BaseController {
 			fields: [
 				{ key: "name", label: "Name", required: true, maxLength: 100, placeholder: "z. B. Disposition" },
 				{ key: "description", label: "Beschreibung", type: "textarea", rows: 2, maxLength: 500 },
-				{ key: "copyFrom", label: "Rechte übernehmen von", type: "select", options: [{ key: "", text: "– keine –" }, ...this.roles.map((r) => ({ key: r.id, text: r.name }))] },
+				{ key: "copyFrom", label: "Rechte übernehmen von", type: "select", options: [{ key: "", text: "(keine)" }, ...this.roles.map((r) => ({ key: r.id, text: r.name }))] },
 			],
 			submit: (v) => put<RoleResponse>(`access/roles/${uuidv7()}`, {
 				name: String(v.name).trim(), description: (v.description as string) || null,

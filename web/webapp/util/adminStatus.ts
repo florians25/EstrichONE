@@ -25,8 +25,8 @@ export function adminStatus(issues: (Issue | string | false | null | undefined)[
 	if (errors.length || warnings.length) {
 		const texts = [...errors, ...warnings].map((i) => i.text);
 		return { type: errors.length ? "Error" : "Warning", icon: errors.length ? "sap-icon://error" : "sap-icon://alert",
-			text: `Handlungsbedarf: ${texts.join(" · ")}` };
+			text: `Handlungsbedarf: ${texts.join(", ")}` };
 	}
-	if (infos.length) return { type: "Information", icon: "sap-icon://hint", text: [ok, ...infos.map((i) => i.text)].filter(Boolean).join(" · ") };
-	return { type: "Success", icon: "sap-icon://sys-enter-2", text: ok ? `Alles in Ordnung · ${ok}` : "Alles in Ordnung" };
+	if (infos.length) return { type: "Information", icon: "sap-icon://hint", text: [ok, ...infos.map((i) => i.text)].filter(Boolean).join(", ") };
+	return { type: "Success", icon: "sap-icon://sys-enter-2", text: ok ? `Alles in Ordnung, ${ok}` : "Alles in Ordnung" };
 }

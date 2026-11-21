@@ -23,7 +23,7 @@ export interface LightboxOptions {
 	title?: string;
 }
 
-const metaOf = (f: FileResponse) => `${fileSize(f.sizeBytes)} · ${dateTime(f.capturedAt ?? f.createdAt)}`;
+const metaOf = (f: FileResponse) => `${fileSize(f.sizeBytes)}, ${dateTime(f.capturedAt ?? f.createdAt)}`;
 
 export function openLightbox(files: FileResponse[], start: number, options: LightboxOptions = {}): MediaViewer | null {
 	const startId = files[start]?.id;
@@ -60,10 +60,10 @@ export function openLightbox(files: FileResponse[], start: number, options: Ligh
 		const f = byId.get(item.id)!;
 		currentId = f.id;
 		captured.setText(`Aufnahme: ${dateTime(f.capturedAt ?? f.createdAt)}`);
-		author.setText(`Von: ${session.name(f.uploadedByUserId)} · hochgeladen ${dateTime(f.createdAt)}`);
+		author.setText(`Von: ${session.name(f.uploadedByUserId)}, hochgeladen ${dateTime(f.createdAt)}`);
 		const parts = [options.roomName?.(f.roomId), options.workName?.(f.workItemId)].filter(Boolean);
-		relation.setText(parts.length ? `Bezug: ${parts.join(" · ")}` : "Bezug: –");
-		size.setText(`${f.originalName} · ${fileSize(f.sizeBytes)}`);
+		relation.setText(parts.length ? `Bezug: ${parts.join(", ")}` : "Bezug: –");
+		size.setText(`${f.originalName}, ${fileSize(f.sizeBytes)}`);
 		caption.setValue(f.caption ?? "");
 	};
 	const items = list.map((f) => fileMedia(f, metaOf(f)));

@@ -92,7 +92,7 @@ export const orderStatus: Record<OrderStatus, { text: string; tone: Tone }> = {
 };
 /** Übliche Einheiten im Estrichbau; frei erweiterbar. */
 export const units = ["t", "m³", "Sack", "Palette", "m²", "lfm", "Rolle", "Stk", "kg", "l", "Eimer"];
-export const deliveryWindows = ["6:00–7:00", "7:00–8:00", "8:00–10:00", "vormittags", "nachmittags", "nach telefonischer Absprache"];
+export const deliveryWindows = ["6 bis 7 Uhr", "7 bis 8 Uhr", "8 bis 10 Uhr", "vormittags", "nachmittags", "nach telefonischer Absprache"];
 
 export const assignmentKinds: Record<AssignmentKind, { text: string; color: string; icon: string; activity: string }> = {
 	screed: { text: "Estrich / Ausführung", color: "#0B2D5B", icon: "sap-icon://building", activity: "Estrich einbringen" },

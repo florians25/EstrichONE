@@ -58,7 +58,7 @@ describe('Kunden löschen oder archivieren', () => {
     expect(customerState({ archivedAt: '2026-11-01T10:00:00Z' }).text).toBe('Archiviert');
     expect(customerState({ archivedAt: '2026-11-01T10:00:00Z', anonymizedAt: '2026-11-02T10:00:00Z' }).text).toBe('Anonymisiert');
     const archived = { id: '1', name: 'Alt', customerNumber: '600001', archivedAt: '2026-11-01T10:00:00Z' } as ContactResponse;
-    expect(candidateLine(archived)).toMatch(/^archiviert · Kd\.-Nr\. 600001/);
+    expect(candidateLine(archived)).toMatch(/^archiviert, Kd\.-Nr\. 600001/);
   });
 });
 

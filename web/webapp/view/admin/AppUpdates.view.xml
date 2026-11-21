@@ -25,7 +25,7 @@
 						<Text text="{view>/hashText}" class="eoMuted eoTabular" visible="{= !!${view>/hashText} }"/>
 					</VBox>
 					<Label text="iPhone und iPad"/><Text id="appIosVersion" text="{view>/iosText}"/>
-					<Label text="Mindestversion"/><Text text="Android {view>/o/android/minimumVersion} · iOS {view>/o/ios/minimumVersion}"/>
+					<Label text="Mindestversion"/><Text text="Android {view>/o/android/minimumVersion}, iOS {view>/o/ios/minimumVersion}"/>
 				</form:SimpleForm>
 				<form:SimpleForm id="appRules" editable="true" layout="ResponsiveGridLayout" labelSpanL="3" labelSpanM="4" maxContainerCols="1" width="56rem">
 					<core:Title text="Regeln"/>
@@ -45,7 +45,7 @@
 					<Label text=""/>
 					<MessageStrip id="appEnforcePreview" text="{view>/enforcePreview}" type="Warning" showIcon="true" visible="{= !!${view>/enforcePreview} }"/>
 					<Label text="Hinweis an die Benutzer" labelFor="appMessage"/>
-					<TextArea id="appMessage" value="{view>/s/message}" rows="2" maxLength="500" width="100%" placeholder="z. B. Bitte bis Freitag aktualisieren – neue Abnahme-Funktion" enabled="{view>/canSave}"/>
+					<TextArea id="appMessage" value="{view>/s/message}" rows="2" maxLength="500" width="100%" placeholder="z. B. Bitte bis Freitag aktualisieren (neue Abnahme-Funktion)" enabled="{view>/canSave}"/>
 					<core:Title text="iPhone und iPad"/>
 					<Label text="Link zum Update" labelFor="appIosUrl"/>
 					<Input id="appIosUrl" value="{view>/s/iosUpdateUrl}" placeholder="App Store, TestFlight (https://testflight.apple.com/join/…) oder MDM-Portal" maxLength="500" enabled="{view>/canSave}"/>

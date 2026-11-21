@@ -102,12 +102,12 @@ export function projectView(p: BauakteProject | null | undefined): Record<string
 		construction: q.construction ? constructions[q.construction] ?? q.construction : "–",
 		thickness: q.nominalThicknessMm != null ? `${q.nominalThicknessMm} mm` : "–",
 		strengthClass: q.strengthClass || "–",
-		heating: q.underfloorHeating ? `ja${q.heatingType ? ` · ${q.heatingType}` : ""}` : yesNo(q.underfloorHeating),
-		insulation: [q.insulation, q.insulationThicknessMm != null ? `${q.insulationThicknessMm} mm` : null].filter(Boolean).join(" · ") || "–",
+		heating: q.underfloorHeating ? `ja${q.heatingType ? `, ${q.heatingType}` : ""}` : yesNo(q.underfloorHeating),
+		insulation: [q.insulation, q.insulationThicknessMm != null ? `${q.insulationThicknessMm} mm` : null].filter(Boolean).join(", ") || "–",
 		floors: q.floors || "–",
 		priority: q.priority ? priorities[q.priority]?.text ?? q.priority : "–",
 		siteAccess: q.siteAccess || "–",
-		utilities: `Wasser ${yesNo(q.waterOnSite)} · Strom ${yesNo(q.powerOnSite)}`,
+		utilities: `Wasser ${yesNo(q.waterOnSite)}, Strom ${yesNo(q.powerOnSite)}`,
 	};
 }
 

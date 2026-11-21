@@ -32,7 +32,7 @@ export function orderText(o: OrderResponse, company: CompanyResponse | null): st
 }
 
 export function mailto(o: OrderResponse, company: CompanyResponse | null): string {
-	const subject = `Bestellung ${o.number}${o.bauakteTitle ? ` – ${o.bauakteTitle}` : ""}`;
+	const subject = `Bestellung ${o.number}${o.bauakteTitle ? `: ${o.bauakteTitle}` : ""}`;
 	return `mailto:${encodeURIComponent(o.supplierEmail ?? "")}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(orderText(o, company))}`;
 }
 
@@ -46,8 +46,8 @@ export function orderSheet(o: OrderResponse, company: CompanyResponse | null): s
 	const priced = o.lines.some((l) => l.unitPrice != null);
 	const rows = o.lines.map((l) => `<tr><td>${l.position}</td><td>${e(l.articleNumber)}</td><td>${e(l.description)}</td><td class="num">${quantity(l.quantity)}</td><td>${e(l.unit)}</td>${priced ? `<td class="num">${l.unitPrice != null ? money(l.unitPrice) : ""}</td><td class="num">${l.total != null ? money(l.total) : ""}</td>` : ""}</tr>`).join("");
 	return `<div class="eoSheet order-sheet">
-<div class="head"><div><h1>${e(company?.name)}</h1><div class="muted">${e([company?.street, [company?.postalCode, company?.city].filter(Boolean).join(" ")].filter(Boolean).join(" · "))}</div>
-<div class="muted">${e([company?.phone && `Tel. ${company.phone}`, company?.email].filter(Boolean).join(" · "))}</div></div>
+<div class="head"><div><h1>${e(company?.name)}</h1><div class="muted">${e([company?.street, [company?.postalCode, company?.city].filter(Boolean).join(" ")].filter(Boolean).join(", "))}</div>
+<div class="muted">${e([company?.phone && `Tel. ${company.phone}`, company?.email].filter(Boolean).join(", "))}</div></div>
 <div style="text-align:right"><div>Bestellung</div><h1>${e(o.number)}</h1></div></div>
 <div class="grid" style="margin-top:1rem"><div><div class="muted">Lieferant</div><strong>${e(o.supplierName)}</strong>${o.supplierCustomerNumber ? `<div>Unsere Kundennummer: ${e(o.supplierCustomerNumber)}</div>` : ""}</div>
 <div><div>Datum: ${new Date(o.orderedAt ?? o.updatedAt).toLocaleDateString("de-DE")}</div><div>Liefertermin: ${e(o.deliveryDate ? day(o.deliveryDate) : "nach Absprache")}${o.deliveryTime ? `, ${e(o.deliveryTime)}` : ""}</div>

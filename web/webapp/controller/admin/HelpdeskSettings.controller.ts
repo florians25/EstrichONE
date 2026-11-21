@@ -26,7 +26,7 @@ export default class HelpdeskSettings extends BaseController {
 	onInit(): void {
 		const year = new Date().getFullYear();
 		this.local({ busy: false, dirty: false, tab: "sla", canManage: false, s: null, days: [], dayOptions: days, holidays: "", holidayState: "None",
-			holidayError: "", groups: [], subcategories: [], rules: [], responses: [], stateKey: "", states: [{ key: "", text: "Keins – nur zusätzliche Tage" }],
+			holidayError: "", groups: [], subcategories: [], rules: [], responses: [], stateKey: "", states: [{ key: "", text: "Keins (nur zusätzliche Tage)" }],
 			holidayYear: String(year), holidayYears: [{ key: String(year) }, { key: String(year + 1) }], holidayDays: [], holidayEmpty: "" });
 	}
 
@@ -80,7 +80,7 @@ export default class HelpdeskSettings extends BaseController {
 		const state = String(m.getProperty("/stateKey") ?? "");
 		const preview = await get<HelpdeskHolidays>("helpdesk/holidays", { year: m.getProperty("/holidayYear"), state: state || "-" }).catch(() => null);
 		if (!preview) return;
-		m.setProperty("/states", [{ key: "", text: "Keins – nur zusätzliche Tage" }, ...preview.states.map((x) => ({ key: x.code, text: x.name }))]);
+		m.setProperty("/states", [{ key: "", text: "Keins (nur zusätzliche Tage)" }, ...preview.states.map((x) => ({ key: x.code, text: x.name }))]);
 		const day = (iso: string) => iso.split("-").reverse().slice(0, 2).join(".") + ".";
 		m.setProperty("/holidayDays", preview.days.map((d) => ({ ...d, text: `${day(d.date)} ${d.name}` })));
 		m.setProperty("/holidayEmpty", state ? "Keine Feiertage gefunden." : "Kein Bundesland gewählt: Es zählen nur die zusätzlichen Tage.");

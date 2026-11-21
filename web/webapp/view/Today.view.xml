@@ -33,7 +33,7 @@
 				<!-- Kopf nur im Ausdruck -->
 				<VBox renderType="Bare" class="eoPrintOnly eoDayPrintHead">
 					<Title text="{= 'Tagesübersicht ' + ${view>/dayText} }" level="H2"/>
-					<Text text="{= (${session>/server/serverName} || '') + ' · gedruckt ' + ${view>/printedAt} }" class="eoMuted"/>
+					<Text text="{= (${session>/server/serverName} || '') + ', gedruckt ' + ${view>/printedAt} }" class="eoMuted"/>
 				</VBox>
 				<!-- Kennzahlen: kompakte, anklickbare Kacheln in einer Zeile -->
 				<List id="todayKpis" items="{view>/kpis}" showSeparators="None" class="eoDayKpis" ariaLabelledBy="kpiLabel" showNoData="false">
@@ -148,7 +148,7 @@
 								<List items="{view>/deliveries}" showSeparators="Inner" class="eoDayList">
 									<CustomListItem type="Navigation" press=".onOrder">
 										<HBox class="eoDayItem" renderType="Bare">
-											<VBox class="eoDayItemText" renderType="Bare"><Text text="{view>supplierName}{= ${view>deliveryTime} ? ' · ' + ${view>deliveryTime} : '' }" class="eoStrong"/><Text text="{view>linesText}" class="eoMuted eoDayItemSub"/></VBox>
+											<VBox class="eoDayItemText" renderType="Bare"><Text text="{view>supplierName}{= ${view>deliveryTime} ? ', ' + ${view>deliveryTime} : '' }" class="eoStrong"/><Text text="{view>linesText}" class="eoMuted eoDayItemSub"/></VBox>
 											<ObjectStatus text="{path: 'view>status', formatter: 'fmt.orderStatusText'}" class="eoNoShrink"/>
 										</HBox>
 									</CustomListItem>
@@ -181,7 +181,7 @@
 									<CustomListItem type="Navigation" press=".onApproval">
 										<HBox class="eoDayItem" renderType="Bare">
 											<core:Icon src="sap-icon://document"/>
-											<VBox class="eoDayItemText" renderType="Bare"><Text text="{view>fileName}" class="eoStrong"/><Text text="{= (${view>bauakteNumber} || '') + ' ' + ${view>bauakteTitle} + ' · von ' + ${view>requestedByName} }" class="eoMuted eoDayItemSub"/></VBox>
+											<VBox class="eoDayItemText" renderType="Bare"><Text text="{view>fileName}" class="eoStrong"/><Text text="{= (${view>bauakteNumber} || '') + ' ' + ${view>bauakteTitle} + ', von ' + ${view>requestedByName} }" class="eoMuted eoDayItemSub"/></VBox>
 										</HBox>
 									</CustomListItem>
 								</List>
@@ -213,7 +213,7 @@
 								<List items="{view>/tickets}" showSeparators="Inner" class="eoDayList">
 									<CustomListItem type="Navigation" press=".onTicket">
 										<HBox class="eoDayItem" renderType="Bare">
-											<VBox class="eoDayItemText" renderType="Bare"><Text text="{view>title}" class="eoStrong"/><Text text="{view>number} · {= ${view>reporterDisplayName} || '–' }" class="eoMuted eoDayItemSub"/></VBox>
+											<VBox class="eoDayItemText" renderType="Bare"><Text text="{view>title}" class="eoStrong"/><Text text="{view>number}, {= ${view>reporterDisplayName} || '–' }" class="eoMuted eoDayItemSub"/></VBox>
 											<ObjectStatus text="{= ${view>reporterBlocked} ? 'kann nicht arbeiten' : '' }" state="Error" class="eoNoShrink"/>
 										</HBox>
 									</CustomListItem>

@@ -50,5 +50,5 @@ export function callForm(kind: CallKind, call: CallResponse | null): Promise<Cal
 	});
 }
 
-export const caller = (c: Pick<CallResponse, "callerName" | "company" | "customerName">) => [c.callerName, c.company ?? c.customerName].filter(Boolean).join(" · ") || "–";
+export const caller = (c: Pick<CallResponse, "callerName" | "company" | "customerName">) => [c.callerName, c.company ?? c.customerName].filter(Boolean).join(", ") || "–";
 export const callTime = (v: string) => new Date(v).toLocaleString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });

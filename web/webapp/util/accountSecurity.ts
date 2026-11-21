@@ -41,5 +41,5 @@ export function sessionLabel(s: Pick<SessionInfo, "client" | "clientName">): str
 		const parts = [browser, system].filter(Boolean).join(" auf ");
 		return parts ? `Browser (${parts})` : "Browser";
 	}
-	return name ? `${kinds[s.client]} · ${name}` : kinds[s.client];
+	return name ? `${kinds[s.client]}, ${name}` : kinds[s.client];
 }

@@ -70,8 +70,8 @@ export default class Knowledge extends BaseController {
 		m.setProperty("/voted", false);
 		m.setProperty("/html", articleHtml(a.body));
 		const date = new Date(a.updatedAt).toLocaleDateString("de-DE");
-		m.setProperty("/meta", `Zuletzt geändert am ${date}${a.updatedByName ? ` von ${a.updatedByName}` : ""}${m.getProperty("/agent") ? ` · ${a.views}× gelesen` : ""}`);
-		document.title = `${a.title} – EstrichONE`;
+		m.setProperty("/meta", `Zuletzt geändert am ${date}${a.updatedByName ? ` von ${a.updatedByName}` : ""}${m.getProperty("/agent") ? `, ${a.views}× gelesen` : ""}`);
+		document.title = `${a.title} (EstrichONE)`;
 	}
 
 	onHelpdesk(): void { this.nav("/it-center/helpdesk"); }

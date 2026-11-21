@@ -42,7 +42,7 @@ export default class Audit extends BaseController {
 		m.setProperty("/items", more ? [...m.getProperty("/items"), ...rows] : rows);
 		m.setProperty("/cursor", page.nextCursor);
 		const count = (m.getProperty("/items") as unknown[]).length;
-		this.statusLine([{ text: `${count}${page.nextCursor ? "+" : ""} Ereignisse im gewählten Zeitraum · unveränderbar gespeichert`, level: "info" }], "");
+		this.statusLine([{ text: `${count}${page.nextCursor ? "+" : ""} Ereignisse im gewählten Zeitraum, unveränderbar gespeichert`, level: "info" }], "");
 	}
 
 	/** Details lesbar: deutsche Feldnamen und Werte, Personen statt IDs, Datum deutsch; Bauakte-ID steckt im Link „Bauakte öffnen“. */
@@ -55,6 +55,6 @@ export default class Audit extends BaseController {
 			else if (k === "fingerprint" && v.length > 16) v = `${v.slice(0, 16).toUpperCase().replace(/(.{4})(?=.)/g, "$1 ")} …`;
 			else v = auditDetailValues[v] ?? auditDetailValues[v.toLowerCase()] ?? v;
 			return `${auditDetailLabels[k] ?? k}: ${v}`;
-		}).join(" · ");
+		}).join(", ");
 	}
 }

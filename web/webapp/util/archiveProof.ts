@@ -20,12 +20,12 @@ import type { ArchiveRecordDto } from "./infraModels";
 import { session } from "./session";
 
 export function proofLines(r: ArchiveRecordDto): string[] {
-	const lines = [`${r.documentTypeLabel} · ${fileSize(r.sizeBytes)} · SHA-256 ${r.sha256}`];
+	const lines = [`${r.documentTypeLabel}, ${fileSize(r.sizeBytes)}, SHA-256 ${r.sha256}`];
 	if (r.status === "archived") {
-		lines.push(`Archiviert ${dateTime(r.archivedAt)} auf „${r.archiveServerName ?? "Archivserver"}“ · aufbewahren bis ${date(r.retainUntil)} (${r.retentionYears} Jahre)`);
-		lines.push(`Journal Nr. ${r.ledgerSeq} · ${r.ledgerHash}`);
+		lines.push(`Archiviert ${dateTime(r.archivedAt)} auf „${r.archiveServerName ?? "Archivserver"}“, aufbewahren bis ${date(r.retainUntil)} (${r.retentionYears} Jahre)`);
+		lines.push(`Journal Nr. ${r.ledgerSeq}, ${r.ledgerHash}`);
 	} else if (r.lastError) {
-		lines.push(`Fehler: ${r.lastError} · nächster Versuch ${dateTime(r.nextAttemptAt)}`);
+		lines.push(`Fehler: ${r.lastError}, nächster Versuch ${dateTime(r.nextAttemptAt)}`);
 	}
 	return lines;
 }

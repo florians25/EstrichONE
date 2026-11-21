@@ -29,7 +29,7 @@ describe('Tagesübersicht', () => {
     ]);
     expect(crews.map((c) => c.name)).toEqual(['Alpha', 'Zeta', 'Ohne Kolonne']);
     expect(crews[1].items.map((i) => i.id)).toEqual(['4', '1']);
-    expect(crews[1].countText).toBe('2 Einsätze · 2 Personen');
+    expect(crews[1].countText).toBe('2 Einsätze, 2 Personen');
     expect(crews[0].items[0].startText).toBe('10:00');
     expect(crews[0].items[0].endText).toBe('bis 12:30');
     expect(crews[0].warningText).toBe('2 Hinweise');
@@ -39,7 +39,7 @@ describe('Tagesübersicht', () => {
   it('ganztägige Einsätze', () => {
     const [crew] = groupByCrew([a({ activity: 'Estrich einbringen EG' })]);
     expect(crew.items[0].startText).toBe('ganztags');
-    expect(crew.items[0].kindText).toBe('Estrich / Ausführung · Estrich einbringen EG');
+    expect(crew.items[0].kindText).toBe('Estrich / Ausführung, Estrich einbringen EG');
   });
 });
 
@@ -111,8 +111,8 @@ describe('Verwaltung', () => {
   });
 
   it('Statuszeile: Alles in Ordnung oder Handlungsbedarf', () => {
-    expect(adminStatus([false, null], '3 Konten')).toMatchObject({ type: 'Success', text: 'Alles in Ordnung · 3 Konten' });
-    expect(adminStatus(['A fehlt', { text: 'B kaputt', level: 'error' }], 'x')).toMatchObject({ type: 'Error', text: 'Handlungsbedarf: B kaputt · A fehlt' });
-    expect(adminStatus([{ text: '2 wartend', level: 'info' }], '5 archiviert')).toMatchObject({ type: 'Information', text: '5 archiviert · 2 wartend' });
+    expect(adminStatus([false, null], '3 Konten')).toMatchObject({ type: 'Success', text: 'Alles in Ordnung, 3 Konten' });
+    expect(adminStatus(['A fehlt', { text: 'B kaputt', level: 'error' }], 'x')).toMatchObject({ type: 'Error', text: 'Handlungsbedarf: B kaputt, A fehlt' });
+    expect(adminStatus([{ text: '2 wartend', level: 'info' }], '5 archiviert')).toMatchObject({ type: 'Information', text: '5 archiviert, 2 wartend' });
   });
 });

@@ -140,8 +140,8 @@ export default class Vacation extends BaseController {
 		this.model().setProperty("/sickNotes", s.map((x) => {
 			const f = first.get(x.caseId ?? x.id) ?? x;
 			const cert = certificateStatus(x.certificateStatus, x.certificateDueOn);
-			return { ...x, rangeText: `${date(x.from)} – ${date(x.to)}`, kindText: x.isFollowUp ? "Folgebescheinigung" : "Erstmeldung",
-				typeName: this.typeById(x.typeId)?.name ?? "Krankheit", caseLabel: `${f.userName} · seit ${date(f.from)}`,
+			return { ...x, rangeText: `${date(x.from)} bis ${date(x.to)}`, kindText: x.isFollowUp ? "Folgebescheinigung" : "Erstmeldung",
+				typeName: this.typeById(x.typeId)?.name ?? "Krankheit", caseLabel: `${f.userName}, seit ${date(f.from)}`,
 				certificateText: cert.text, certificateState: cert.state };
 		}));
 	}
@@ -248,8 +248,8 @@ export default class Vacation extends BaseController {
 		m.setProperty("/myAbsences", (me.absences ?? []).map((a) => ({ ...a, rangeText: range(a.from, a.to, a.halfDayStart, a.halfDayEnd), dot: colorDot(a.color),
 			workingDaysText: num(a.workingDays) })));
 		const closures = (me.closures ?? []).map((c) => `${c.name} ${range(c.from, c.to)}`);
-		m.setProperty("/myInfoText", [closures.length ? `Betriebsferien: ${closures.join(" · ")}` : null,
-			`Feiertage ${me.year}: ${me.holidays.map((h) => `${date(h.date)} ${h.name}`).join(" · ")}`].filter(Boolean).join("\n"));
+		m.setProperty("/myInfoText", [closures.length ? `Betriebsferien: ${closures.join(", ")}` : null,
+			`Feiertage ${me.year}: ${me.holidays.map((h) => `${date(h.date)} ${h.name}`).join(", ")}`].filter(Boolean).join("\n"));
 		m.setProperty("/subtitle", v ? `Resturlaub ${v.year}: ${num(v.remaining)} Tage` : "Urlaub beantragen und Anträge verfolgen");
 		m.setProperty("/kpi/remaining", v ? num(v.remaining) : "–");
 		m.setProperty("/kpi/expiring", v && v.carryOverExpiring > 0 ? `${num(v.carryOverExpiring)} Tage` : "");
@@ -297,11 +297,11 @@ export default class Vacation extends BaseController {
 		this.renderPlan();
 		m.setProperty("/monthTitle", m.getProperty("/planMode") === "year" ? String(this.month.getFullYear())
 			: this.month.toLocaleDateString("de-DE", { month: "long", year: "numeric" }));
-		m.setProperty("/holidayText", plan.holidays.length ? `Feiertage: ${plan.holidays.map((h) => `${date(h.date)} ${h.name}`).join(" · ")}` : "Keine Feiertage im Zeitraum.");
-		m.setProperty("/closureText", (plan.closures ?? []).length ? `Betriebsferien: ${(plan.closures ?? []).map((c) => `${c.name} ${range(c.from, c.to)}`).join(" · ")}` : "");
+		m.setProperty("/holidayText", plan.holidays.length ? `Feiertage: ${plan.holidays.map((h) => `${date(h.date)} ${h.name}`).join(", ")}` : "Keine Feiertage im Zeitraum.");
+		m.setProperty("/closureText", (plan.closures ?? []).length ? `Betriebsferien: ${(plan.closures ?? []).map((c) => `${c.name} ${range(c.from, c.to)}`).join(", ")}` : "");
 		const minimums = (plan.crewMinimums ?? []).map((c) => `${c.name} mindestens ${c.minimumStaff} von ${c.members}`);
 		const settings = await get<Settings>("hr/settings").catch(() => null);
-		m.setProperty("/stateText", [settings ? `Feiertage: ${settings.stateName}` : null, minimums.length ? `Mindestbesetzung: ${minimums.join(", ")}` : null].filter(Boolean).join(" · "));
+		m.setProperty("/stateText", [settings ? `Feiertage: ${settings.stateName}` : null, minimums.length ? `Mindestbesetzung: ${minimums.join(", ")}` : null].filter(Boolean).join(", "));
 	}
 
 	/** Teamkalender filtern (Kolonne, Art, Status) und nach Kolonne gruppieren. */
@@ -376,7 +376,7 @@ export default class Vacation extends BaseController {
 			const t = accountTexts(r.vacation);
 			return {
 				...r, ...t, sub: [r.personnelNumber, r.crews.map((c) => c.name).join(", "), r.entryDate?.startsWith(String(this.accountsYear)) ? `Eintritt ${date(r.entryDate)}` : null,
-					r.exitDate?.startsWith(String(this.accountsYear)) ? `Austritt ${date(r.exitDate)}` : null].filter(Boolean).join(" · "),
+					r.exitDate?.startsWith(String(this.accountsYear)) ? `Austritt ${date(r.exitDate)}` : null].filter(Boolean).join(", "),
 				byTypeText: (r.vacation.byType ?? []).filter((x) => x.typeId !== this.types.find((y) => y.key === "vacation")?.id).map((x) => `${x.name} ${num(x.days)}`).join(", "),
 			};
 		}));
@@ -572,7 +572,7 @@ export default class Vacation extends BaseController {
 		let file: File | null = null;
 		const saved = await openForm<SickNote>({
 			title: o.existing ? "Krankmeldung bearbeiten" : o.followUpOf ? `Folgebescheinigung: ${o.followUpOf.userName}` : "Krankmeldung erfassen", width: "32rem",
-			intro: o.followUpOf ? `Verlängerung der Krankmeldung vom ${date(o.followUpOf.from)} – ${date(o.followUpOf.to)} (gleicher Krankheitsfall).`
+			intro: o.followUpOf ? `Verlängerung der Krankmeldung vom ${date(o.followUpOf.from)} bis ${date(o.followUpOf.to)} (gleicher Krankheitsfall).`
 				: "Vertraulich, nur für die Personalverwaltung sichtbar. Ohne Genehmigung; andere sehen nur „abwesend“.",
 			initial: { userId: base?.userId, typeId: base?.typeId ?? sickTypes[0]?.id, from: o.existing?.from ?? next, to: o.existing?.to ?? null, note: o.existing?.note ?? "",
 				certificateRetrievedOn: o.existing?.certificateRetrievedOn ?? null },
@@ -630,8 +630,8 @@ export default class Vacation extends BaseController {
 		const last = all[all.length - 1] ?? s;
 		const days = all.reduce((sum, x) => sum + x.workingDays, 0);
 		const list = new List({ headerText: "Verlauf", items: all.map((x, i) => new StandardListItem({
-			title: `${i === 0 ? "Erstmeldung" : `Folgebescheinigung ${i}`}: ${date(x.from)} – ${date(x.to)} (${x.workingDays} AT)`,
-			description: [x.note, x.recordedAt ? `erfasst ${dateTime(x.recordedAt)}` : null].filter(Boolean).join(" · "),
+			title: `${i === 0 ? "Erstmeldung" : `Folgebescheinigung ${i}`}: ${date(x.from)} bis ${date(x.to)} (${x.workingDays} AT)`,
+			description: [x.note, x.recordedAt ? `erfasst ${dateTime(x.recordedAt)}` : null].filter(Boolean).join(", "),
 			info: x.certificateFileId ? "AU vorhanden" : `AU ${certificateStatus(x.certificateStatus, x.certificateDueOn).text}`,
 			infoState: certificateStatus(x.certificateFileId ? "attached" : x.certificateStatus, x.certificateDueOn).state,
 			icon: "sap-icon://stethoscope", type: x.certificateFileId ? "Active" : "Inactive",
@@ -640,7 +640,7 @@ export default class Vacation extends BaseController {
 		const dialog = new Dialog({
 			title: `Krankmeldung ${s.userName}`, contentWidth: "36rem",
 			content: [
-				new TextControl({ text: `Zeitraum ${date(first.from)} – ${date(last.to)} · ${days} Arbeitstage · ${all.length > 1 ? `${all.length - 1} Folgebescheinigung(en)` : "Erstmeldung"}` })
+				new TextControl({ text: `Zeitraum ${date(first.from)} bis ${date(last.to)}, ${days} Arbeitstage, ${all.length > 1 ? `${all.length - 1} Folgebescheinigung(en)` : "Erstmeldung"}` })
 					.addStyleClass("sapUiSmallMargin"),
 				list,
 			],

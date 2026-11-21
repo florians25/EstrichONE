@@ -30,7 +30,7 @@ test('Microsoft Teams: Einstellungen, Chat-Modus, Bauakte per Link verknüpfen, 
   expect((await apiCall(page, 'PUT', '/api/v1/chat/me/settings', { privacyAccepted: true })).status).toBe(200);
 
   await page.goto('/system/microsoft-teams');
-  await expect(page.getByText('Nicht eingerichtet – der eingebaute Chat arbeitet wie bisher')).toBeVisible();
+  await expect(page.getByText('Nicht eingerichtet. Der eingebaute Chat arbeitet wie bisher.')).toBeVisible();
   await page.getByRole('tab', { name: 'Berechtigungen' }).click();
   await expect(page.getByText('User.Read.All')).toBeVisible();
   await expect(page.getByText('ChannelMessage.Send')).toBeVisible();

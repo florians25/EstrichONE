@@ -45,7 +45,7 @@ export function newDraft(day: string, crewId: string | null, bauakte?: { id: str
 export function draftOf(a: AssignmentView, crews: CrewResponse[]): AssignmentDraft {
 	const crewMembers = new Set(crews.find((c) => c.id === a.crewId)?.memberUserIds ?? []);
 	return {
-		id: a.id, existing: true, bauakteId: a.bauakteId, bauakteLabel: `${a.bauakteNumber ?? "neu"} · ${a.bauakteTitle}`, kind: a.kind, day: a.day,
+		id: a.id, existing: true, bauakteId: a.bauakteId, bauakteLabel: `${a.bauakteNumber ?? "neu"}, ${a.bauakteTitle}`, kind: a.kind, day: a.day,
 		startTime: a.startTime, endTime: a.endTime, activity: a.activity, crewId: a.crewId,
 		userIds: a.people.map((p) => p.id).filter((id) => !crewMembers.has(id)), resourceIds: a.resources.map((r) => r.id), notes: a.notes ?? "", warnings: a.warnings,
 		excludedUserIds: (a as AssignmentView & { excludedUserIds?: string[] | null }).excludedUserIds ?? [],

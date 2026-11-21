@@ -39,7 +39,7 @@
 					<Label text="Speicher"/><Text text="{view>/stats/disk}"/>
 					<Label text="Journal"/><Text text="{view>/stats/ledger}"/>
 					<Label text="Letzte Prüfung"/><ObjectStatus text="{view>/stats/verification/text}" state="{view>/stats/verification/state}"/>
-					<Label text="Warteschlange"/><Text text="{view>/o/counts/archived} archiviert · {view>/o/counts/pending} wartend · {view>/o/counts/failed} fehlgeschlagen"/>
+					<Label text="Warteschlange"/><Text text="{view>/o/counts/archived} archiviert, {view>/o/counts/pending} wartend, {view>/o/counts/failed} fehlgeschlagen"/>
 				</form:SimpleForm>
 				<form:SimpleForm visible="{view>/o/connected}" editable="true" layout="ResponsiveGridLayout" labelSpanL="3" labelSpanM="4" title="Einstellungen" width="48rem">
 					<Label text="Automatisch archivieren" labelFor="arAuto"/><Switch id="arAuto" state="{view>/settings/autoArchive}" customTextOn=" " customTextOff=" "/>
@@ -68,7 +68,7 @@
 						<HBox justifyContent="SpaceBetween" alignItems="Start" wrap="Wrap" class="sapUiSmallMargin">
 						<VBox>
 							<Title text="{view>name}" level="H3"/>
-							<Text text="{view>kindText} · {view>versionText} · {view>reachText}"/>
+							<Text text="{view>kindText}, {view>versionText}, {view>reachText}"/>
 							<ObjectStatus text="{view>stateText}" state="{view>state}" class="sapUiTinyMarginTop"/>
 							<Text text="Noch ohne Updater: einmal am Rechner mit dem aktuellen Installer aktualisieren, danach per Knopfdruck." visible="{view>needsLocal}" class="sapUiTinyMarginTop"/>
 							<HBox alignItems="Center" class="sapUiTinyMarginTop">
@@ -141,7 +141,7 @@
 				</columns>
 				<items>
 					<ColumnListItem>
-						<ObjectIdentifier title="{view>name}" text="{view>documentTypeLabel} · {view>size}"/>
+						<ObjectIdentifier title="{view>name}" text="{view>documentTypeLabel}, {view>size}"/>
 						<VBox>
 							<ObjectStatus text="{view>statusText}" state="{view>statusState}"/>
 							<Text text="{view>lastError}" visible="{= !!${view>lastError} }" wrapping="true" class="sapUiTinyMarginTop"/>

@@ -85,9 +85,8 @@ export default class NoticeCard extends Control {
 			if (mode === "banner") {
 				// Eine Zeile: Zeitraum · Text (abgeschnitten, vollständig über „Details“ bzw. Tooltip).
 				if (period || text) {
-					rm.openStart("div").class("eoNoticeLine").attr("title", [period, text].filter(Boolean).join(" · ")).openEnd();
-					if (period) rm.openStart("span").class("eoNoticePeriod").openEnd().text(period).close("span");
-					if (period && text) rm.openStart("span").class("eoNoticeSep").attr("aria-hidden", "true").openEnd().text("·").close("span");
+					rm.openStart("div").class("eoNoticeLine").attr("title", [period, text].filter(Boolean).join(": ")).openEnd();
+					if (period) rm.openStart("span").class("eoNoticePeriod").openEnd().text(text ? `${period}:` : period).close("span");
 					if (text) rm.openStart("span").class("eoNoticeText").openEnd().text(text).close("span");
 					rm.close("div");
 				}

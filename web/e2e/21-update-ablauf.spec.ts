@@ -56,7 +56,7 @@ test('Update: Ankündigung mit Countdown, Wartungsbildschirm auch ohne API, Frei
   await page.locator('.sapTntNLI').filter({ hasText: /^Bauakten$/ }).first().click();
   const banner = page.locator('[id$="--updateAnnounce"]');
   await expect(banner).toBeVisible({ timeout: 35_000 });
-  await expect(banner).toContainText(/Update auf Version 9\.9\.9 beginnt in 0:[0-5]\d – bitte Arbeit speichern/);
+  await expect(banner).toContainText(/Update auf Version 9\.9\.9 beginnt in 0:[0-5]\d\. Bitte speichern Sie Ihre Arbeit/);
   // Hinweisleisten bündig mit dem Seiteninhalt, nicht am Rand bzw. an der Kopfzeile.
   const box = (await banner.boundingBox())!;
   const main = (await page.locator('.eoMain').first().boundingBox())!;

@@ -136,7 +136,7 @@ export function personChatState(person: TeamsPerson | null | undefined, self = f
 	if (self) return { enabled: false, tooltip: "Das sind Sie selbst." };
 	if (!person) return { enabled: false, tooltip: "Kein aktives Benutzerkonto mit Microsoft-Konto." };
 	if (!person.upn) return { enabled: false, tooltip: `Chat in Teams nicht möglich: ${person.reason ?? "kein Microsoft-Konto zugeordnet."}` };
-	return { enabled: true, tooltip: `Chat in Microsoft Teams mit ${person.name} (${person.upn})${person.fromEmail ? " – über die E-Mail-Adresse" : ""}` };
+	return { enabled: true, tooltip: `Chat in Microsoft Teams mit ${person.name} (${person.upn})${person.fromEmail ? ", über die E-Mail-Adresse" : ""}` };
 }
 
 /** Fortschritt der Massenverknüpfung. */
@@ -145,8 +145,8 @@ export function jobText(job: TeamsLinkJob | null | undefined): string {
 	const counts = `${job.linked} verknüpft, ${job.skipped} übersprungen, ${job.failed} fehlgeschlagen`;
 	switch (job.state) {
 		case "running": return `Läuft: ${job.processed} von ${job.total} Bauakten (${counts})`;
-		case "completed": return `Fertig: ${job.total} Bauakten bearbeitet – ${counts}`;
-		case "cancelled": return `Abgebrochen nach ${job.processed} von ${job.total} Bauakten – ${counts}`;
+		case "completed": return `Fertig: ${job.total} Bauakten bearbeitet (${counts})`;
+		case "cancelled": return `Abgebrochen nach ${job.processed} von ${job.total} Bauakten (${counts})`;
 		default: return `Abgebrochen: ${job.error ?? "Fehler"} (${counts})`;
 	}
 }
@@ -195,7 +195,7 @@ export function linkSummary(link: TeamsLink | null | undefined): string {
 	if (!link) return "Noch nicht mit Teams verknüpft";
 	const kind = link.kind === "channel" ? "Kanal" : "Gruppenchat";
 	const name = link.displayName ? ` „${link.displayName}“` : "";
-	const sync = !link.syncMembers ? "" : link.lastSyncError ? " · Abgleich mit Hinweis" : link.lastSyncAt ? ` · ${link.syncedMembers} Mitglieder abgeglichen` : "";
+	const sync = !link.syncMembers ? "" : link.lastSyncError ? ", Abgleich mit Hinweis" : link.lastSyncAt ? `, ${link.syncedMembers} Mitglieder abgeglichen` : "";
 	return `${kind}${name}${sync}`;
 }
 
@@ -271,7 +271,7 @@ export function participantHint(data: Pick<TeamsParticipants, "options" | "peopl
 	if (data.viaGraph && withAccount.length < data.minMembers) {
 		parts.push(withAccount.length <= 1
 			? "Bitte weitere Personen auswählen."
-			: `Ein Gruppenchat braucht mindestens ${data.minMembers} Personen mit Microsoft-Konto – „Anlegen“ öffnet stattdessen einen Einzelchat in Teams (wird nicht in der Bauakte gespeichert).`);
+			: `Ein Gruppenchat braucht mindestens ${data.minMembers} Personen mit Microsoft-Konto. „Anlegen“ öffnet stattdessen einen Einzelchat in Teams (wird nicht in der Bauakte gespeichert).`);
 	}
 	return parts.join(" ");
 }

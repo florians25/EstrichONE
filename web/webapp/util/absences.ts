@@ -75,7 +75,7 @@ export function num(v: number | null | undefined): string {
 
 /** Zeitraum „12.03.2027“ oder „12.03. – 14.03.2027“, mit Hinweis auf halbe Tage. */
 export function range(from: string, to: string, halfDayStart = false, halfDayEnd = false): string {
-	const text = from === to ? de(from) : `${from.slice(0, 4) === to.slice(0, 4) ? de(from).slice(0, 6) : de(from)} – ${de(to)}`;
+	const text = from === to ? de(from) : `${from.slice(0, 4) === to.slice(0, 4) ? de(from).slice(0, 6) : de(from)} bis ${de(to)}`;
 	const half = from === to ? (halfDayStart || halfDayEnd ? " (halber Tag)" : "")
 		: [halfDayStart ? "erster Tag halb" : null, halfDayEnd ? "letzter Tag halb" : null].filter(Boolean).join(", ");
 	return half && from !== to ? `${text} (${half})` : `${text}${half}`;
@@ -118,7 +118,7 @@ export function requestRow(r: RequestView, own: boolean) {
 		workingDaysText: num(r.workingDays),
 		remainingAfterText: num(r.remainingAfter),
 		changeText: r.replacesRequestId && r.status === "pending" ? "Änderungsantrag" : "",
-		detailText: [r.substituteName ? `Vertretung: ${r.substituteName}` : null, r.decisionComment, r.note].filter(Boolean).join(" · "),
+		detailText: [r.substituteName ? `Vertretung: ${r.substituteName}` : null, r.decisionComment, r.note].filter(Boolean).join(", "),
 		canEdit: own && r.status === "pending",
 	};
 }

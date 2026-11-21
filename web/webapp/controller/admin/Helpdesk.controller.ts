@@ -208,7 +208,7 @@ export default class Helpdesk extends BaseController {
 			key: c.category, text: ticketCategories[c.category] ?? c.category, open: String(c.open), percent: Math.round((c.open / maxCategory) * 100) })));
 		const maxAgent = Math.max(1, ...stats.byAgent.map((a) => a.open));
 		m.setProperty("/byAgent", stats.byAgent.slice(0, 8).map((a) => ({ ...a, percent: Math.round((a.open / maxAgent) * 100),
-			label: a.overdue ? `${a.open} offen · ${a.overdue} überfällig` : `${a.open} offen` })));
+			label: a.overdue ? `${a.open} offen, ${a.overdue} überfällig` : `${a.open} offen` })));
 	}
 
 	private applyList(): void {
@@ -236,7 +236,7 @@ export default class Helpdesk extends BaseController {
 			const sla = slaInfo(t, now);
 			return { ...t, slaText: sla.text, slaTone: sla.tone, slaIcon: sla.icon, slaShort: ["overdue", "dueSoon"].includes(sla.key) ? sla.text : "",
 				highlight: highlight[sla.key] ?? "None",
-				who: agent ? `${t.reporterDisplayName ?? "–"} · ${t.assigneeName ? `bei ${t.assigneeName}` : "nicht zugewiesen"}`
+				who: agent ? `${t.reporterDisplayName ?? "–"}, ${t.assigneeName ? `bei ${t.assigneeName}` : "nicht zugewiesen"}`
 					: t.assigneeName ? `bei ${t.assigneeName}` : "noch nicht zugewiesen" };
 		}));
 		const unread = list.filter((t) => t.hasUnread).length;
@@ -411,7 +411,7 @@ export default class Helpdesk extends BaseController {
 		m.setProperty("/timeline", []);
 		m.setProperty("/facts", []);
 		m.setProperty("/ctx", null);
-		document.title = "Helpdesk – EstrichONE";
+		document.title = "Helpdesk (EstrichONE)";
 	}
 
 	private async open(id: string): Promise<void> {
@@ -459,7 +459,7 @@ export default class Helpdesk extends BaseController {
 		m.setProperty("/timeText", t.totalMinutes ? formatMinutes(t.totalMinutes) : "");
 		m.setProperty("/timeTotal", formatMinutes(t.totalMinutes ?? 0));
 		m.setProperty("/watcherText", t.watcherNames?.length ? `Verfolgt außerdem: ${t.watcherNames.join(", ")}` : "");
-		document.title = `${s.number} ${s.title} – EstrichONE`;
+		document.title = `${s.number} ${s.title} (EstrichONE)`;
 		const timeline = t.timeline ?? [];
 		const ids = [...new Set(timeline.flatMap((i) => i.attachmentFileIds))].filter((id) => !this.files.has(id));
 		await Promise.all(ids.map(async (id) => this.files.set(id, await get<FileResponse>(`files/${id}`).catch(() => null))));
@@ -488,7 +488,7 @@ export default class Helpdesk extends BaseController {
 			{ label: "Kategorie", value: `${ticketCategories[s.category] ?? s.category}${s.subcategoryName ? ` › ${s.subcategoryName}` : ""}`, state: "None", icon: "" },
 			{ label: "Melder", value: s.reporterDisplayName ?? "–", state: "None", icon: "" },
 			{ label: "Zuständig", value: `${s.assigneeName ?? "nicht zugewiesen"}${s.groupName ? ` (${s.groupName})` : ""}`, state: s.assigneeName ? "None" : "Warning", icon: "" },
-			{ label: "Gemeldet", value: `${waitingSince(s.createdAt)} · ${s.channel && s.channel !== "selfService"
+			{ label: "Gemeldet", value: `${waitingSince(s.createdAt)}, ${s.channel && s.channel !== "selfService"
 				? `${ticketChannels[s.channel].text}${s.createdByName ? `, aufgenommen von ${s.createdByName}` : ""}` : sources[s.source] ?? s.source}`, state: "None",
 			icon: s.channel && s.channel !== "selfService" ? ticketChannels[s.channel].icon : "" },
 		];
@@ -518,7 +518,7 @@ export default class Helpdesk extends BaseController {
 				return {
 					...i, bubble, icon: icons[i.kind] ?? "sap-icon://history", kindText: kindTexts[i.kind] ?? i.kind,
 					tone: i.kind, who: i.kind === "note" ? "note" : i.isReporter ? "reporter" : "agent",
-					headline: i.kind === "created" ? (i.fromValue && i.fromValue !== "SelfService" ? i.summary : `${i.actorName ?? "Melder"} hat gemeldet`) : i.kind === "note" ? `${i.actorName ?? ""} · interne Notiz` : i.actorName ?? "",
+					headline: i.kind === "created" ? (i.fromValue && i.fromValue !== "SelfService" ? i.summary : `${i.actorName ?? "Melder"} hat gemeldet`) : i.kind === "note" ? `${i.actorName ?? ""}, interne Notiz` : i.actorName ?? "",
 					eventText: eventTexts.get(i.id) ?? null,
 					mentions: i.mentionUserIds?.length ? `Benachrichtigt: ${i.mentionUserIds.map((id) => names.get(id) ?? "Kollege").join(", ")}` : "",
 					attachments: i.attachmentFileIds.map((id) => {
@@ -703,7 +703,7 @@ export default class Helpdesk extends BaseController {
 		const list = await get<HdSummary[]>("tickets", { filter: "all", limit: 300, sort: "recent" }).catch(() => [] as HdSummary[]);
 		return list.filter((t) => t.id !== id && !t.mergedIntoTicketId)
 			.sort((a, b) => Number(done(a.status)) - Number(done(b.status)))
-			.map((t) => ({ key: t.id, text: `${t.number} · ${t.title}`, additionalText: ticketStatus[t.status]?.text ?? t.status }));
+			.map((t) => ({ key: t.id, text: `${t.number}, ${t.title}`, additionalText: ticketStatus[t.status]?.text ?? t.status }));
 	}
 
 	async onMerge(): Promise<void> {

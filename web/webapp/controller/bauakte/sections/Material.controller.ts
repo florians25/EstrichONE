@@ -35,7 +35,7 @@ export default class Material extends SectionBase {
 		this.computeNeeds();
 		this.mt().setProperty("/orders", orders.map((o: OrderResponse) => ({
 			...o, deliveryText: `${o.deliveryDate ? day(o.deliveryDate) : "nach Absprache"}${o.deliveryTime ? `, ${o.deliveryTime}` : ""}`,
-			linesText: o.lines.map((l) => `${quantity(l.quantity)} ${l.unit} ${l.description}`).join(" · "), totalText: orderTotal(o),
+			linesText: o.lines.map((l) => `${quantity(l.quantity)} ${l.unit} ${l.description}`).join(", "), totalText: orderTotal(o),
 		})));
 	}
 
@@ -55,7 +55,7 @@ export default class Material extends SectionBase {
 
 	private label(): { id: string; label: string } {
 		const b = this.bauakte();
-		return { id: b.id, label: `${b.number ?? "neu"} · ${b.title}` };
+		return { id: b.id, label: `${b.number ?? "neu"}, ${b.title}` };
 	}
 
 	async onOrderNeeds(): Promise<void> {

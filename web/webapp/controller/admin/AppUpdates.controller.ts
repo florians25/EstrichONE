@@ -58,11 +58,11 @@ export default class AppUpdates extends BaseController {
 		m.setProperty("/dirty", false);
 		const p = o.androidPackage;
 		m.setProperty("/androidText", o.android.latestVersion
-			? `${o.android.latestVersion}${o.android.download.kind === "package" ? " – vom Server ausgeliefert" : o.android.download.kind === "link" ? " – Download über Link" : ""}`
+			? `${o.android.latestVersion}${o.android.download.kind === "package" ? " (vom Server ausgeliefert)" : o.android.download.kind === "link" ? " (Download über Link)" : ""}`
 			: "keine Bezugsquelle");
-		m.setProperty("/packageText", p ? `${p.releaseSigned ? "Release-Signatur" : "Testversion (Debug-Signatur)"} · ${fileSize(p.size)} · Versionscode ${p.versionCode}` : "");
-		m.setProperty("/hashText", p ? `SHA-256 ${shortHash(p.sha256)}${p.valid ? " · geprüft" : ` · ${p.error ?? "ungültig"}`}` : "");
-		m.setProperty("/iosText", `${o.ios.latestVersion ?? "–"}${o.settings.iosUpdateUrl ? " – über den hinterlegten Link" : " – Link noch nicht hinterlegt"}`);
+		m.setProperty("/packageText", p ? `${p.releaseSigned ? "Release-Signatur" : "Testversion (Debug-Signatur)"}, ${fileSize(p.size)}, Versionscode ${p.versionCode}` : "");
+		m.setProperty("/hashText", p ? `SHA-256 ${shortHash(p.sha256)}${p.valid ? ", geprüft" : `, ${p.error ?? "ungültig"}`}` : "");
+		m.setProperty("/iosText", `${o.ios.latestVersion ?? "–"}${o.settings.iosUpdateUrl ? " (über den hinterlegten Link)" : " (Link noch nicht hinterlegt)"}`);
 		this.statusLine(overviewIssues(o), "alle Apps aktuell");
 		this.applyFilter();
 		this.updatePreview();

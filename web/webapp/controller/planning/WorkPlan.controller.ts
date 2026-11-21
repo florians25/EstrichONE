@@ -59,15 +59,15 @@ export default class WorkPlan extends BaseController {
 			return {
 				day: d, title: longDay(d), today: d === today,
 				countText: `${own.length} ${own.length === 1 ? "Einsatz" : "Einsätze"}`,
-				absences: (this.data?.absences ?? []).filter((a) => a.from <= d && d <= a.to).map((a) => ({ text: `${a.userName} · ${absenceKinds[a.kind] ?? a.kind}` })),
+				absences: (this.data?.absences ?? []).filter((a) => a.from <= d && d <= a.to).map((a) => ({ text: `${a.userName}, ${absenceKinds[a.kind] ?? a.kind}` })),
 				items: own.map((a) => ({
 					...a,
 					icon: assignmentKinds[a.kind]?.icon ?? "sap-icon://appointment-2",
 					kindText: assignmentKinds[a.kind]?.text ?? a.kind,
 					timeText: timeRange(a.startTime, a.endTime) || "ganztags",
 					bauakteText: `${a.bauakteNumber ?? ""} ${a.bauakteTitle}`.trim(),
-					line: [a.activity, a.bauakteAddress].filter(Boolean).join(" · "),
-					team: [a.people.map((p) => p.name).join(", ") || "–", a.resources.map((r) => r.name).join(", ")].filter(Boolean).join(" · "),
+					line: [a.activity, a.bauakteAddress].filter(Boolean).join(", "),
+					team: [a.people.map((p) => p.name).join(", ") || "–", a.resources.map((r) => r.name).join(", ")].filter(Boolean).join(", "),
 					warningText: a.warnings.join("\n"),
 					route: route(a),
 				})),

@@ -111,10 +111,10 @@ export default class Documentation extends SectionBase {
 			...a,
 			resultText: acceptanceResults[a.result].text, resultState: acceptanceResults[a.result].state,
 			stateText: acceptanceStates[a.state].text, stateState: acceptanceStates[a.state].state,
-			line: `${dateTime(a.performedAt)} · ${[a.clientName, a.contractorName].filter(Boolean).join(" / ") || session.name(a.performedByUserId)}`,
+			line: `${dateTime(a.performedAt)}, ${[a.clientName, a.contractorName].filter(Boolean).join(" / ") || session.name(a.performedByUserId)}`,
 			customerLine: a.customerDecision
-				? `Kunde ${a.customerDecision === "approved" ? "hat freigegeben" : "hat abgelehnt"}: ${a.customerDecisionName} am ${dateTime(a.customerDecidedAt)}${a.customerComment ? ` – „${a.customerComment}“` : ""}`
-				: a.state === "awaitingCustomer" && a.customerLinkExpiresAt ? `Link gültig bis ${dateTime(a.customerLinkExpiresAt)}${a.customerEmail ? ` · an ${a.customerEmail}` : ""}` : "",
+				? `Kunde ${a.customerDecision === "approved" ? "hat freigegeben" : "hat abgelehnt"}: ${a.customerDecisionName} am ${dateTime(a.customerDecidedAt)}${a.customerComment ? `: „${a.customerComment}“` : ""}`
+				: a.state === "awaitingCustomer" && a.customerLinkExpiresAt ? `Link gültig bis ${dateTime(a.customerLinkExpiresAt)}${a.customerEmail ? `, an ${a.customerEmail}` : ""}` : "",
 		})));
 	}
 
@@ -185,7 +185,7 @@ export default class Documentation extends SectionBase {
 			timeText: timeRange(e.startTime, e.endTime),
 			photos: this.photoRefs(e.photoFileIds),
 			own: e.authorUserId === own && session.has("diary.write") && this.writable(),
-			meta: `${session.name(e.authorUserId)} · ${dateTime(e.createdAt)}${e.editedAt ? " · bearbeitet" : ""}`,
+			meta: `${session.name(e.authorUserId)}, ${dateTime(e.createdAt)}${e.editedAt ? ", bearbeitet" : ""}`,
 		}));
 		m.setProperty("/diary", entries);
 		m.setProperty("/diaryCount", String(entries.length));
@@ -206,11 +206,11 @@ export default class Documentation extends SectionBase {
 		m.setProperty("/latestPhotos", this.photoRefs(latest?.photoFileIds));
 		m.setProperty("/initialAll", initial.map((i) => ({
 			...i, resultText: inspectionResult(i).text, resultTone: inspectionResult(i).tone,
-			line: `${dateTime(i.performedAt)} · ${session.name(i.performedByUserId)}${i.correctsInspectionId ? " · Korrektur" : ""}`,
+			line: `${dateTime(i.performedAt)}, ${session.name(i.performedByUserId)}${i.correctsInspectionId ? ", Korrektur" : ""}`,
 		})));
 		m.setProperty("/initialDocs", files.filter(isInitialInspectionDocument)
 			.sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-			.map((f) => ({ ...f, meta: `${dateTime(f.createdAt)} · ${f.caption ?? "Protokoll"}` })));
+			.map((f) => ({ ...f, meta: `${dateTime(f.createdAt)}, ${f.caption ?? "Protokoll"}` })));
 		this.appointment = relevantAppointment(initialAppointments(id, planning?.assignments ?? [], events), today);
 		this.showWaiver(this.bauakte(), all);
 		m.setProperty("/screeds", [...new Set((rooms?.rooms ?? []).map((r) => r.screedTypeName).filter(Boolean))].join(", "));
@@ -322,7 +322,7 @@ export default class Documentation extends SectionBase {
 		m.setProperty("/ib", {
 			status, statusText: view.text, statusState: view.state, statusIcon: view.icon,
 			appointment: this.appointment, appointmentText: appointmentText(this.appointment),
-			doneText: latest ? `${dateTime(latest.performedAt)} · ${session.name(latest.performedByUserId)}` : "",
+			doneText: latest ? `${dateTime(latest.performedAt)}, ${session.name(latest.performedByUserId)}` : "",
 			canPlan: session.has("planning.manage"),
 		});
 	}
@@ -374,7 +374,7 @@ export default class Documentation extends SectionBase {
 				}
 			}
 			const b = this.bauakte();
-			const draft = newDraft(addDays(isoDay(new Date()), 1), null, { id: b.id, label: `${b.number ?? "neu"} · ${b.title}` });
+			const draft = newDraft(addDays(isoDay(new Date()), 1), null, { id: b.id, label: `${b.number ?? "neu"}, ${b.title}` });
 			// Speichern meldet „planningChanged“; die Einsätze der Akte werden dann neu geladen.
 			// Vorbelegt mit der zuständigen Person (sonst mit dem eigenen Benutzer); Kolonne lässt sich ergänzen.
 			const who = b.responsibleUserId ?? session.userId;

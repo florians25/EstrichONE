@@ -14,13 +14,13 @@ import type { DossierDto } from "./infraModels";
 import { session } from "./session";
 
 export function dossierText(d: DossierDto): string {
-	const base = `${dossierStatus[d.status].text} · Fassung ${d.version}`;
+	const base = `${dossierStatus[d.status].text}, Fassung ${d.version}`;
 	switch (d.status) {
-		case "archived": return `${base} · liegt auf dem Archivserver. Zum Ansehen abrufen (danach 5 Tage verfügbar).`;
-		case "restoring": return `${base} · ${d.filesDone} von ${d.filesTotal} Dateien geholt …`;
-		case "available": return `${base} · verfügbar bis ${dateTime(d.availableUntil)}. Änderungen erst nach Entsperren.`;
-		case "unlocked": return `${base} · bis ${dateTime(d.unlockedUntil)}; danach wird eine neue Fassung archiviert.`;
-		default: return `${base} · ${d.filesDone} von ${d.filesTotal} Dateien übertragen …`;
+		case "archived": return `${base}, liegt auf dem Archivserver. Zum Ansehen abrufen (danach 5 Tage verfügbar).`;
+		case "restoring": return `${base}, ${d.filesDone} von ${d.filesTotal} Dateien geholt …`;
+		case "available": return `${base}, verfügbar bis ${dateTime(d.availableUntil)}. Änderungen erst nach Entsperren.`;
+		case "unlocked": return `${base}, bis ${dateTime(d.unlockedUntil)}; danach wird eine neue Fassung archiviert.`;
+		default: return `${base}, ${d.filesDone} von ${d.filesTotal} Dateien übertragen …`;
 	}
 }
 

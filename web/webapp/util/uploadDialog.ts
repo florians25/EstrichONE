@@ -160,7 +160,7 @@ export function openUploadDialog(options_: UploadDialogOptions): Dialog {
 							new Icon({ src: "{icon}", size: "1.25rem", decorative: true }).addStyleClass("sapUiSmallMarginEnd"),
 							new VBox({ items: [
 								new Text({ text: "{name}", wrapping: true }),
-								new Text({ text: "{sizeText} · {statusText}" }).addStyleClass("eoMuted"),
+								new Text({ text: "{sizeText}, {statusText}" }).addStyleClass("eoMuted"),
 								new Text({ text: "{error}", visible: "{= !!${error} }", wrapping: true }).addStyleClass("eoErrorText"),
 							] }),
 						] }),

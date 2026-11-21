@@ -97,7 +97,7 @@ export function candidateState(score: number): "Error" | "Warning" {
 export function candidateLine(c: ContactResponse): string {
 	// Archivierte Kunden erscheinen nur hier (Dublettenprüfung): Hinweis, statt neu anzulegen lieber zu reaktivieren.
 	return [c.archivedAt ? "archiviert" : null, c.customerNumber ? `Kd.-Nr. ${c.customerNumber}` : null, addressLine(c), c.phone, c.email]
-		.filter(Boolean).join(" · ") || "Keine weiteren Angaben";
+		.filter(Boolean).join(", ") || "Keine weiteren Angaben";
 }
 
 export function addressLine(a: Address | null | undefined): string {

@@ -32,7 +32,7 @@ export function requirements(rooms: RoomOverview, reservePercent: number): Need[
 		if (e.volume > 0) {
 			needs.push({
 				key: `screed-${name}`, description: name, unit: "m³", amount: roundUp(e.volume * factor, 0.5),
-				detail: `${quantity(e.area)} m² · ${quantity(Math.round(e.volume * 100) / 100)} m³ netto${e.missing ? ` · ${e.missing} Räume ohne Dicke nicht berechnet` : ""}`,
+				detail: `${quantity(e.area)} m², ${quantity(Math.round(e.volume * 100) / 100)} m³ netto${e.missing ? `, ${e.missing} Räume ohne Dicke nicht berechnet` : ""}`,
 			});
 		}
 	}

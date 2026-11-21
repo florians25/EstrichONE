@@ -1,4 +1,4 @@
-# Sicherheitslücke gefunden? Bitte vertraulich melden – nicht öffentlich als Issue.
+# Sicherheitslücke gefunden? Bitte vertraulich melden, nicht öffentlich als Issue.
 # Diese Datei beschreibt die Software EstrichONE. Betreiber einer Installation können eigene Kontaktdaten ergänzen
 # (siehe docs/sicherheit.md, Abschnitt App).
 Contact: https://github.com/florians25/EstrichONE/security/advisories/new

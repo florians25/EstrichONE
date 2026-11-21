@@ -120,7 +120,7 @@ const statusTexts: Record<number, string> = {
 };
 
 /** Antwort eines vorgeschalteten Proxys (Cloudflare, Caddy, Nginx), nicht der API: Zeitüberschreitung oder abgebrochene Antwort. */
-export const gatewayMessage = "Der Server hat nicht rechtzeitig oder nur unvollständig geantwortet – bitte erneut versuchen. "
+export const gatewayMessage = "Der Server hat nicht rechtzeitig oder nur unvollständig geantwortet. Bitte versuchen Sie es erneut. "
 	+ "Bleibt es dabei, stehen die Einzelheiten im Server-Log (docker compose logs api).";
 
 /**

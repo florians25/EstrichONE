@@ -136,10 +136,10 @@ export default class PlanBoard extends Control {
 		b.tabIndex = 0;
 		const color = safeColor(o.color) || safeColor(o.calendarColor) || safeColor(kind?.color);
 		if (color) b.style.borderLeftColor = color;
-		const time = o.allDay ? "ganztags" : `${parseLocal(o.start).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })}–${parseLocal(o.end).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })}`;
+		const time = o.allDay ? "ganztags" : `${parseLocal(o.start).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })} bis ${parseLocal(o.end).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })}`;
 		b.setAttribute("aria-label", `Termin ${o.title}, ${time}`);
 		const head = el("span", "eoPlanTime");
-		head.append(icon(kind?.icon ?? "sap-icon://appointment"), document.createTextNode(` ${time}${compact ? "" : ` · ${kind?.text ?? "Termin"}`}`));
+		head.append(icon(kind?.icon ?? "sap-icon://appointment"), document.createTextNode(` ${time}${compact ? "" : `, ${kind?.text ?? "Termin"}`}`));
 		b.append(head, el("strong", undefined, o.title));
 		if (!compact) {
 			if (o.location) b.append(el("span", undefined, o.location));
@@ -182,7 +182,7 @@ export default class PlanBoard extends Control {
 		const head = el("span", "eoPlanTime");
 		const i = icon(kind?.icon ?? "sap-icon://appointment-2");
 		if (safeColor(kind?.color)) i.style.color = safeColor(kind?.color);
-		head.append(i, document.createTextNode(` ${timeRange(a.startTime, a.endTime) || "ganztags"}${compact ? "" : ` · ${kind?.text ?? a.kind}`}`));
+		head.append(i, document.createTextNode(` ${timeRange(a.startTime, a.endTime) || "ganztags"}${compact ? "" : `, ${kind?.text ?? a.kind}`}`));
 		b.append(head, el("strong", undefined, `${a.bauakteNumber ?? ""} ${a.bauakteTitle}`.trim()));
 		if (!compact) {
 			if (a.activity) b.append(el("span", undefined, a.activity));
@@ -252,7 +252,7 @@ export default class PlanBoard extends Control {
 			for (const d of data.days) {
 				const c = el("div", "eoPlanCell");
 				c.setAttribute("role", "cell");
-				for (const a of this.absentOn(data, d)) c.append(el("span", `eoPlanAbsence eoAbs-${a.kind}`, `${a.userName} · ${absenceKinds[a.kind] ?? a.kind}`));
+				for (const a of this.absentOn(data, d)) c.append(el("span", `eoPlanAbsence eoAbs-${a.kind}`, `${a.userName}, ${absenceKinds[a.kind] ?? a.kind}`));
 				row.append(c);
 			}
 			table.append(row);

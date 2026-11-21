@@ -52,7 +52,7 @@ export function openMediaViewer(items: MediaItem[], start: number, options: Medi
 		heading.setText(options.title ?? (item.kind === "video" ? "Video" : item.kind === "image" ? "Foto" : "Medien"));
 		counter.setText(position(index, list.length));
 		name.setText(item.caption || item.name);
-		meta.setText([item.caption ? item.name : "", item.meta].filter(Boolean).join(" · "));
+		meta.setText([item.caption ? item.name : "", item.meta].filter(Boolean).join(", "));
 		meta.setVisible(!!meta.getText());
 		stage.setContent(`<div class="eoMediaStage" data-kind="${item.kind}">${stageHtml(item)}</div>`);
 		options.side?.update(item, index);

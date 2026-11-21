@@ -34,7 +34,7 @@ describe('Meldungen: Bereich und technische Angaben', () => {
 
   it('stellt Seite, Browser, Bildschirm und Version zusammen', () => {
     const context = collectContext({
-      path: '/planung?tag=2026-11-08', title: 'Kolonnenplanung – EstrichONE', userAgent: edge, screenWidth: 1920, screenHeight: 1080,
+      path: '/planung?tag=2026-11-08', title: 'Kolonnenplanung (EstrichONE)', userAgent: edge, screenWidth: 1920, screenHeight: 1080,
       innerWidth: 1536, innerHeight: 730, devicePixelRatio: 1.25, language: 'de-DE', timeZone: 'Europe/Berlin', appVersion: '1.4.0',
     });
     expect(context).toMatchObject({ page: '/planung?tag=2026-11-08', pageTitle: 'Kolonnenplanung', browser: 'Edge 140', platform: 'Windows',

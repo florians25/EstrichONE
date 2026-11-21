@@ -43,7 +43,7 @@ export default class SiteMap extends BaseController {
 		m.setProperty("/shown", shown);
 		m.setProperty("/subtitle", `${shown.length} von ${this.points.length} Baustellen mit Standort`);
 		m.setProperty("/markers", shown.map((p) => ({
-			id: p.id, latitude: p.latitude, longitude: p.longitude, color: statusMarkerColors[p.status], label: `${p.number ?? "neu"} · ${p.title}`,
+			id: p.id, latitude: p.latitude, longitude: p.longitude, color: statusMarkerColors[p.status], label: `${p.number ?? "neu"}, ${p.title}`,
 			popup: [
 				{ text: p.number ?? "noch ohne Nummer" }, { text: p.title, href: `/bauakten/${p.id}`, strong: true },
 				{ text: [p.street, p.city].filter(Boolean).join(", ") || "–" }, { text: bauakteStatus[p.status].text },

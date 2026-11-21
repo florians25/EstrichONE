@@ -36,7 +36,7 @@ describe('api', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ title: 'Bad gateway', status: 502, detail: cloudflare }),
       { status: 502, headers: { 'Content-Type': 'application/json' } })));
     let message = problemMessage(await api('settings/integrations/teams/users/match', { method: 'POST' }).catch((e: unknown) => e));
-    expect(message).toMatch(/^Der Server hat nicht rechtzeitig oder nur unvollständig geantwortet – bitte erneut versuchen/);
+    expect(message).toMatch(/^Der Server hat nicht rechtzeitig oder nur unvollständig geantwortet\. Bitte versuchen Sie es erneut/);
     expect(message).toContain('Server-Log');
     expect(message).not.toContain('Cloudflare');
     // … oder HTML bzw. Text (504, 520–524).

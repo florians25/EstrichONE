@@ -76,7 +76,7 @@ export default class Employee extends BaseController {
 			const userId = e.userId;
 			void teamsChatStates([userId]).then((states) => { if (m.getProperty("/e/userId") === userId) m.setProperty("/teamsChat", states[userId]); });
 		}
-		m.setProperty("/headline", [e.jobTitle, employmentTypes[e.employmentType], e.personnelNumber ? `Nr. ${e.personnelNumber}` : null].filter(Boolean).join(" · "));
+		m.setProperty("/headline", [e.jobTitle, employmentTypes[e.employmentType], e.personnelNumber ? `Nr. ${e.personnelNumber}` : null].filter(Boolean).join(", "));
 		const away = e.absences.find((a) => a.from <= today && today <= a.to);
 		m.setProperty("/statusText", !e.isActive ? (e.exitDate && e.exitDate < today ? `Ausgetreten am ${date(e.exitDate)}` : `Eintritt am ${date(e.entryDate)}`)
 			: away ? `${absenceKinds[away.kind] ?? "Abwesend"} bis ${date(away.to)}` : "Aktiv");
@@ -84,9 +84,9 @@ export default class Employee extends BaseController {
 		m.setProperty("/crewText", e.crews.map((c) => c.name).join(", ") || "–");
 		m.setProperty("/address", [e.street, [e.postalCode, e.city].filter(Boolean).join(" ")].filter(Boolean).join(", ") || "–");
 		m.setProperty("/employmentText", employmentTypes[e.employmentType] ?? e.employmentType);
-		m.setProperty("/periodText", `${e.entryDate ? date(e.entryDate) : "–"} / ${e.exitDate ? date(e.exitDate) : "–"}${e.probationEnd ? ` · Probezeit bis ${date(e.probationEnd)}` : ""}`);
+		m.setProperty("/periodText", `${e.entryDate ? date(e.entryDate) : "–"} / ${e.exitDate ? date(e.exitDate) : "–"}${e.probationEnd ? `, Probezeit bis ${date(e.probationEnd)}` : ""}`);
 		const days = weekdays.filter((w) => e.workDays.includes(w.key)).map((w) => w.short).join(", ");
-		m.setProperty("/workText", [e.workTimeModel, e.weeklyHours != null ? `${num(e.weeklyHours)} h/Woche` : null, days].filter(Boolean).join(" · ") || "–");
+		m.setProperty("/workText", [e.workTimeModel, e.weeklyHours != null ? `${num(e.weeklyHours)} h/Woche` : null, days].filter(Boolean).join(", ") || "–");
 		m.setProperty("/rateText", e.hourlyRate != null ? `${e.hourlyRate.toLocaleString("de-DE", { minimumFractionDigits: 2 })} € je Stunde` : "–");
 		m.setProperty("/vacation", {
 			entitlement: num(e.vacation.entitlement), carryOver: num(e.vacation.carryOver), taken: num(e.vacation.taken), planned: num(e.vacation.planned),
@@ -104,13 +104,13 @@ export default class Employee extends BaseController {
 			}
 			return n;
 		};
-		m.setProperty("/absences", e.absences.map((a) => ({ ...a, kindText: absenceKinds[a.kind] ?? a.kind, rangeText: `${date(a.from)} – ${date(a.to)}`, days: workdays(a.from, a.to) })));
+		m.setProperty("/absences", e.absences.map((a) => ({ ...a, kindText: absenceKinds[a.kind] ?? a.kind, rangeText: `${date(a.from)} bis ${date(a.to)}`, days: workdays(a.from, a.to) })));
 		m.setProperty("/equipment", e.equipment);
 		m.setProperty("/documents", e.documents.map((d) => ({
 			...d, categoryText: documentCategoriesStaff[d.category] ?? d.category,
-			fileText: [d.fileName, d.sizeBytes ? `${Math.max(1, Math.round(d.sizeBytes / 1024)).toLocaleString("de-DE")} KB` : null].filter(Boolean).join(" · "),
+			fileText: [d.fileName, d.sizeBytes ? `${Math.max(1, Math.round(d.sizeBytes / 1024)).toLocaleString("de-DE")} KB` : null].filter(Boolean).join(", "),
 		})));
-		document.title = `${e.displayName} – EstrichONE`;
+		document.title = `${e.displayName} (EstrichONE)`;
 	}
 
 	private row<T>(e: Event): T {
@@ -250,7 +250,7 @@ export default class Employee extends BaseController {
 			title: item ? "Gerät bearbeiten" : "Gerät oder Fahrzeug ausgeben", width: "32rem",
 			initial: item ? { ...item } : { issuedOn: new Date().toISOString().slice(0, 10) },
 			fields: [
-				{ key: "resourceId", label: "Aus Fahrzeugen und Geräten", type: "select", placeholder: "– anderes Gerät –",
+				{ key: "resourceId", label: "Aus Fahrzeugen und Geräten", type: "select", placeholder: "(anderes Gerät)",
 					options: resources.map((r) => ({ key: r.id, text: r.name, additionalText: r.identifier ?? "" })) },
 				{ key: "name", label: "Bezeichnung", maxLength: 100, placeholder: "z. B. Diensthandy, Laser, Schlüssel Halle",
 					validate: (v, all) => (!v && !all.resourceId ? "Bitte ein Gerät wählen oder eine Bezeichnung eingeben." : null) },

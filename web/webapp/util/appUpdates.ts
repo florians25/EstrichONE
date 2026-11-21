@@ -75,7 +75,7 @@ export function stateText(state: AppUpdateState | null): { text: string; state: 
 	switch (state) {
 		case "current": return { text: "Aktuell", state: "Success" };
 		case "recommended": return { text: "Update verfügbar", state: "Warning" };
-		case "required": return { text: "Gesperrt – Update nötig", state: "Error" };
+		case "required": return { text: "Gesperrt, Update nötig", state: "Error" };
 		case "newerThanServer": return { text: "Neuer als der Server", state: "Information" };
 		default: return { text: "Version unbekannt", state: "None" };
 	}
@@ -133,10 +133,10 @@ export function overviewIssues(o: AppUpdateOverview): StatusIssue[] {
 	const p = o.androidPackage;
 	if (p && !p.valid) issues.push({ text: `Android-Paket wird nicht ausgeliefert: ${p.error ?? "ungültig"}`, level: "error" });
 	else if (!p && o.android.download.kind !== "link") issues.push({ text: "Kein Android-Paket auf dem Server", level: "warning" });
-	else if (p && !p.releaseSigned) issues.push({ text: "Android-Paket ist eine Testversion (Debug-Signatur) – Updates nur mit Release-Schlüssel zuverlässig", level: "warning" });
+	else if (p && !p.releaseSigned) issues.push({ text: "Android-Paket ist eine Testversion (Debug-Signatur). Updates sind nur mit Release-Schlüssel zuverlässig.", level: "warning" });
 	if (o.counts.required > 0) issues.push({ text: `${o.counts.required} ${o.counts.required === 1 ? "Gerät ist" : "Geräte sind"} gesperrt, bis die App aktualisiert ist`, level: "error" });
 	if (o.counts.recommended > 0) issues.push({ text: `${o.counts.recommended} ${o.counts.recommended === 1 ? "Gerät hat" : "Geräte haben"} eine ältere App`, level: "warning" });
-	if (o.counts.newerThanServer > 0) issues.push({ text: `${o.counts.newerThanServer} ${o.counts.newerThanServer === 1 ? "App ist" : "Apps sind"} neuer als der Server – bitte den Server aktualisieren (sudo /opt/estrichone/update.sh)`, level: "info" });
+	if (o.counts.newerThanServer > 0) issues.push({ text: `${o.counts.newerThanServer} ${o.counts.newerThanServer === 1 ? "App ist" : "Apps sind"} neuer als der Server. Bitte den Server aktualisieren (sudo /opt/estrichone/update.sh)`, level: "info" });
 	if (o.settings.enforceMinimum && !o.settings.iosUpdateUrl && o.devices.some((d) => d.platform === "ios"))
 		issues.push({ text: "Mindestversion erzwungen, aber kein Link für iOS hinterlegt (App Store, TestFlight oder MDM)", level: "warning" });
 	return issues;

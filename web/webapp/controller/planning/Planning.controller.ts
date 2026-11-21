@@ -220,7 +220,7 @@ export default class Planning extends BaseController {
 		m.setProperty("/period", mode === "tag"
 			? parseDay(anchor).toLocaleDateString("de-DE", { weekday: "long", day: "2-digit", month: "long", year: "numeric" })
 			: mode === "woche" ? `KW ${isoWeek(days[0])}` : parseDay(anchor).toLocaleDateString("de-DE", { month: "long", year: "numeric" }));
-		m.setProperty("/periodSub", mode === "woche" ? `${short(days[0])} – ${short(days[days.length - 1])} ${parseDay(days[days.length - 1]).getFullYear()}` : "");
+		m.setProperty("/periodSub", mode === "woche" ? `${short(days[0])} bis ${short(days[days.length - 1])} ${parseDay(days[days.length - 1]).getFullYear()}` : "");
 	}
 
 	private filtered(): AssignmentView[] {
@@ -241,7 +241,7 @@ export default class Planning extends BaseController {
 			return this.people.filter((p) => !ids || ids.has(p.id)).map((p) => {
 				const crew = this.crews.find((c) => c.memberUserIds.includes(p.id) || c.leaderUserId === p.id);
 				const count = assignments.filter((a) => a.people.some((x) => x.id === p.id)).length;
-				return { id: p.id, name: p.displayName, color: crew?.color ?? null, userIds: [p.id], sub: [crew?.name, count ? `${count} ${count === 1 ? "Einsatz" : "Einsätze"}` : "frei"].filter(Boolean).join(" · ") };
+				return { id: p.id, name: p.displayName, color: crew?.color ?? null, userIds: [p.id], sub: [crew?.name, count ? `${count} ${count === 1 ? "Einsatz" : "Einsätze"}` : "frei"].filter(Boolean).join(", ") };
 			});
 		}
 		const name = (id: string) => this.people.find((p) => p.id === id)?.displayName ?? "?";
@@ -250,7 +250,7 @@ export default class Planning extends BaseController {
 			const members = [...new Set([c.leaderUserId, ...c.memberUserIds].filter((x): x is string => !!x))];
 			return {
 				id: c.id, name: c.name, color: c.color, userIds: members, load: this.mode() === "monat" ? null : crewLoad(c.id, this.range?.assignments ?? [], this.days()),
-				sub: `${count === 0 ? "Kapazität offen" : `${count} ${count === 1 ? "Einsatz" : "Einsätze"}`}${members.length ? ` · ${members.map(name).join(", ")}` : ""}`,
+				sub: `${count === 0 ? "Kapazität offen" : `${count} ${count === 1 ? "Einsatz" : "Einsätze"}`}${members.length ? `, ${members.map(name).join(", ")}` : ""}`,
 			};
 		});
 		if (!crewFilter || crewFilter === "none") lanes.push({ id: null, name: "Termine ohne Kolonne", color: null, userIds: [], sub: "Einzelne Mitarbeiter" });
@@ -274,7 +274,7 @@ export default class Planning extends BaseController {
 		const warnings = assignments.filter((a) => a.warnings.length > 0).length;
 		m.setProperty("/warningCount", warnings);
 		m.setProperty("/warningText", `${warnings} ${warnings === 1 ? "Einsatz hat" : "Einsätze haben"} Hinweise (z. B. Urlaub, Doppelbelegung oder Gerät mehrfach verplant).`);
-		m.setProperty("/bauakteOptions", [{ key: "", text: "Alle Bauakten" }, ...[...new Map(all.map((a) => [a.bauakteId, `${a.bauakteNumber ?? "neu"} · ${a.bauakteTitle}`])).entries()].map(([key, text]) => ({ key, text }))]);
+		m.setProperty("/bauakteOptions", [{ key: "", text: "Alle Bauakten" }, ...[...new Map(all.map((a) => [a.bauakteId, `${a.bauakteNumber ?? "neu"}, ${a.bauakteTitle}`])).entries()].map(([key, text]) => ({ key, text }))]);
 		m.setProperty("/crewOptions", [{ key: "", text: "Alle Kolonnen" }, ...this.crews.map((c) => ({ key: c.id, text: c.name })), { key: "none", text: "Termine ohne Kolonne" }]);
 	}
 
@@ -395,8 +395,8 @@ export default class Planning extends BaseController {
 				&& (!q || [b.number, b.title, b.city, b.customerName].some((v) => v?.toLowerCase().includes(q))))
 			.map((b) => ({
 				...b,
-				meta: [b.customerName, [b.postalCode, b.city].filter(Boolean).join(" ")].filter(Boolean).join(" · ") || "–",
-				meta2: [b.number ?? "neu", b.totalAreaSquareMeters > 0 ? area(b.totalAreaSquareMeters) : "", b.screedTypes.join(", ")].filter(Boolean).join(" · "),
+				meta: [b.customerName, [b.postalCode, b.city].filter(Boolean).join(" ")].filter(Boolean).join(", ") || "–",
+				meta2: [b.number ?? "neu", b.totalAreaSquareMeters > 0 ? area(b.totalAreaSquareMeters) : "", b.screedTypes.join(", ")].filter(Boolean).join(", "),
 				statusText: bauakteStatus[b.status]?.text ?? b.status,
 				planText: b.nextAssignment ? `ab ${short(b.nextAssignment)}` : "frei",
 			})));
@@ -412,7 +412,7 @@ export default class Planning extends BaseController {
 			dom.classList.add("eoBacklogDraggable", "eoPlanMovable");
 			dom.addEventListener("pointerdown", (ev) => {
 				const b = item.getBindingContext("view")?.getObject() as BacklogItem | undefined;
-				if (b) startDrag(ev, dom, { kind: "bauakte", bauakte: { id: b.bauakteId, label: `${b.number ?? "neu"} · ${b.title}` } });
+				if (b) startDrag(ev, dom, { kind: "bauakte", bauakte: { id: b.bauakteId, label: `${b.number ?? "neu"}, ${b.title}` } });
 			});
 		}
 	}
@@ -421,7 +421,7 @@ export default class Planning extends BaseController {
 		const b = (e.getSource() as Control).getBindingContext("view")?.getObject() as BacklogItem;
 		const days = this.days();
 		const today = isoDay(new Date());
-		void openAssignment(newDraft(days.includes(today) ? today : days[0], null, { id: b.bauakteId, label: `${b.number ?? "neu"} · ${b.title}` }));
+		void openAssignment(newDraft(days.includes(today) ? today : days[0], null, { id: b.bauakteId, label: `${b.number ?? "neu"}, ${b.title}` }));
 	}
 
 	// ---- PDF ------------------------------------------------------------------------------------------------------

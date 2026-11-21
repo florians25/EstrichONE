@@ -64,7 +64,7 @@ export function openPreview(options: PreviewOptions): Dialog {
 		const place = file.kind === "document"
 			? [documentCategories[(file.category ?? "other") as keyof typeof documentCategories]?.text, file.folder].filter(Boolean).join(" / ")
 			: file.kind === "photo" ? "Foto" : "Video";
-		meta.setText([place, fileSize(file.sizeBytes), `${dateTime(file.capturedAt ?? file.createdAt)} · ${session.name(file.uploadedByUserId)}`, file.caption].filter(Boolean).join(" · "));
+		meta.setText([place, fileSize(file.sizeBytes), `${dateTime(file.capturedAt ?? file.createdAt)}, ${session.name(file.uploadedByUserId)}`, file.caption].filter(Boolean).join(", "));
 		const label = escape(file.originalName);
 		body.setContent(kind === "pdf" ? `<iframe class="eoPreviewLarge" title="Vorschau ${label}" src="${url(file)}"></iframe>`
 			: kind === "image" ? `<div class="eoPreviewLarge eoPreviewCenter"><img class="eoPreviewMedia" alt="${label}" src="${url(file)}?variant=${file.variants === "ready" ? "display" : "original"}"></div>`

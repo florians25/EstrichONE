@@ -30,7 +30,7 @@
 							</columns>
 							<items>
 								<ColumnListItem>
-									<HBox alignItems="Center"><eo:Swatch color="{view>color}"/><Text text="{= (${view>number} ? ${view>number} + ' · ' : '') + ${view>name} }"/></HBox>
+									<HBox alignItems="Center"><eo:Swatch color="{view>color}"/><Text text="{= (${view>number} ? ${view>number} + ', ' : '') + ${view>name} }"/></HBox>
 									<Text text="{view>leaderName}"/>
 									<Text text="{view>memberNames}"/>
 									<ProgressIndicator percentValue="{= Math.min(100, ${view>load/percent}) }" displayValue="{view>load/percent} %" state="{view>load/state}"

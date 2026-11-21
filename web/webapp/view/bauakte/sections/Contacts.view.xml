@@ -102,7 +102,7 @@
 		<OverflowToolbar id="contactsEmpty" design="Transparent" style="Clear" height="auto" class="sapUiTinyMarginTop"
 			visible="{= ${ct>/partyCount} === 0 &amp;&amp; !${ct>/query} &amp;&amp; !${ct>/group} }">
 			<core:Icon src="sap-icon://group" decorative="true"/>
-			<Text text="Noch keine weiteren Beteiligten – Bauleiter, Architekt, Gewerke oder Lieferanten hinzufügen." wrapping="true">
+			<Text text="Noch keine weiteren Beteiligten. Fügen Sie Bauleiter, Architekt, Gewerke oder Lieferanten hinzu." wrapping="true">
 				<layoutData><OverflowToolbarLayoutData shrinkable="true" minWidth="12rem"/></layoutData>
 			</Text>
 			<ToolbarSpacer/>

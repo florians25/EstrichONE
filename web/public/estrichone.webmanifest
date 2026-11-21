@@ -1,7 +1,7 @@
 {
   "name": "EstrichONE",
   "short_name": "EstrichONE",
-  "description": "Die Software für Estrichbetriebe – Bauakten, Planung, Baustellendokumentation und Büro.",
+  "description": "Die Software für Estrichbetriebe: Bauakten, Planung, Baustellendokumentation und Büro.",
   "lang": "de",
   "dir": "ltr",
   "start_url": "/",

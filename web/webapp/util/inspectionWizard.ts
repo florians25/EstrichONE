@@ -199,7 +199,7 @@ export function openInitialInspectionWizard(options: InspectionWizardOptions): P
 		}
 		const photoCount = selectedPhotos().length;
 		const defectCount = defectChecks.filter((d) => d.box.getSelected()).length;
-		summary.addItem(new Text({ text: `${photoCount} ${photoCount === 1 ? "Foto" : "Fotos"} · ${defectCount === 1 ? "1 Mangel wird" : `${defectCount} Mängel werden`} angelegt` })
+		summary.addItem(new Text({ text: `${photoCount} ${photoCount === 1 ? "Foto" : "Fotos"}, ${defectCount === 1 ? "1 Mangel wird" : `${defectCount} Mängel werden`} angelegt` })
 			.addStyleClass("eoMuted sapUiTinyMarginTop"));
 	};
 

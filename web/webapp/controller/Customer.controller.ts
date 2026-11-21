@@ -71,7 +71,7 @@ export default class Customer extends BaseController {
 			this.nav("/kunden", true);
 			return;
 		}
-		document.title = `${c.name} – EstrichONE`;
+		document.title = `${c.name} (EstrichONE)`;
 		this.showContact(c);
 
 		const readAkten = this.has("bauakten.read");
@@ -95,12 +95,12 @@ export default class Customer extends BaseController {
 		this.files = items.map((i) => i.file);
 		m.setProperty("/documents", items.map((i) => ({
 			...i, icon: fileIcon(i.file.contentType, i.file.originalName),
-			group: `${i.bauakteNumber ? `${i.bauakteNumber} · ` : ""}${i.bauakteTitle} › ${i.file.category ? documentCategories[i.file.category]?.text ?? i.file.category : "Ohne Dokumentart"}`,
+			group: `${i.bauakteNumber ? `${i.bauakteNumber}, ` : ""}${i.bauakteTitle} › ${i.file.category ? documentCategories[i.file.category]?.text ?? i.file.category : "Ohne Dokumentart"}`,
 			approvalText: i.approvalStatus ? approvalStatus[i.approvalStatus].text : "",
 		})));
 		const people = value(persons, []);
 		m.setProperty("/persons", people);
-		m.setProperty("/mainPerson", people[0] ? [people[0].name, people[0].function, people[0].phone].filter(Boolean).join(" · ") : "");
+		m.setProperty("/mainPerson", people[0] ? [people[0].name, people[0].function, people[0].phone].filter(Boolean).join(", ") : "");
 
 		const callList = value(calls, []);
 		const history = [
@@ -124,7 +124,7 @@ export default class Customer extends BaseController {
 		m.setProperty("/stateHint", c.anonymizedAt
 			? `Dieser Kunde wurde am ${date(c.anonymizedAt)} anonymisiert (DSGVO). Bauakten und Unterlagen bleiben erhalten.`
 			: c.archivedAt ? `Archiviert seit ${date(c.archivedAt)}: Der Kunde erscheint nicht in Auswahllisten und Suche. Reaktivieren macht ihn wieder aktiv.` : "");
-		m.setProperty("/headline", [c.customerNumber ? `Kd.-Nr. ${c.customerNumber}` : "ohne Kundennummer", [c.postalCode, c.city].filter(Boolean).join(" ")].filter(Boolean).join(" · "));
+		m.setProperty("/headline", [c.customerNumber ? `Kd.-Nr. ${c.customerNumber}` : "ohne Kundennummer", [c.postalCode, c.city].filter(Boolean).join(" ")].filter(Boolean).join(", "));
 		m.setProperty("/address", [c.street, [c.postalCode, c.city].filter(Boolean).join(" ")].filter(Boolean).join(", ") || "–");
 		m.setProperty("/salutation", [c.salutation, c.title].filter(Boolean).join(" ") || "–");
 		m.setProperty("/channel", c.preferredChannel ? channels[c.preferredChannel] : "–");
@@ -135,7 +135,7 @@ export default class Customer extends BaseController {
 		m.setProperty("/routeUrl", routeUrl(c));
 		const kindText = Object.fromEntries(phoneKinds.map((k) => [k.key, k.text]));
 		m.setProperty("/reach", [
-			...(c.phones ?? []).map((p) => ({ value: p.number, label: [kindText[p.kind] ?? p.kind, p.label].filter(Boolean).join(" · "),
+			...(c.phones ?? []).map((p) => ({ value: p.number, label: [kindText[p.kind] ?? p.kind, p.label].filter(Boolean).join(", "),
 				icon: p.kind === "mobile" ? "sap-icon://iphone" : p.kind === "fax" ? "sap-icon://print" : "sap-icon://call", href: `tel:${p.number.replace(/\s/g, "")}` })),
 			...(c.emails ?? []).map((e) => ({ value: e.address, label: e.label ?? "E-Mail", icon: "sap-icon://email", href: `mailto:${e.address}` })),
 		]);
@@ -145,7 +145,7 @@ export default class Customer extends BaseController {
 		const kpis: { label: string; value: string; state: string; hint: string }[] = [];
 		if (f) {
 			kpis.push({ label: "Bauakten laufend", value: `${f.bauaktenActive} von ${f.bauaktenTotal}`, state: "None",
-				hint: [f.inquiries ? plural(f.inquiries, "Anfrage", "Anfragen") : null, f.completed ? `${f.completed} abgeschlossen` : null].filter(Boolean).join(" · ") });
+				hint: [f.inquiries ? plural(f.inquiries, "Anfrage", "Anfragen") : null, f.completed ? `${f.completed} abgeschlossen` : null].filter(Boolean).join(", ") });
 			kpis.push({ label: "Gesamtfläche", value: f.totalArea > 0 ? area(f.totalArea) : "–", state: "None", hint: "aus Kennwerten bzw. Räumen" });
 			if (f.openTasks !== null || f.openDefects !== null) {
 				const open = (f.openTasks ?? 0) + (f.openDefects ?? 0);
@@ -255,7 +255,7 @@ export default class Customer extends BaseController {
 		const people = await this.run(() => get<Person[]>(`contacts/${this.id}/persons`));
 		if (!people) return;
 		this.model().setProperty("/persons", people);
-		this.model().setProperty("/mainPerson", people[0] ? [people[0].name, people[0].function, people[0].phone].filter(Boolean).join(" · ") : "");
+		this.model().setProperty("/mainPerson", people[0] ? [people[0].name, people[0].function, people[0].phone].filter(Boolean).join(", ") : "");
 	}
 
 	onAddPerson(): void { void this.editPerson(null); }

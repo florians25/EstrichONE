@@ -85,7 +85,7 @@ export interface FeedbackListResponse { items: FeedbackSummary[]; counts: Feedba
 
 export const feedbackKinds: Record<FeedbackKind, { text: string; icon: string; intro: string }> = {
 	bug: { text: "Fehler", icon: "sap-icon://quality-issue", intro: "Etwas funktioniert nicht wie erwartet, zeigt eine Fehlermeldung oder hängt." },
-	feature: { text: "Funktionswunsch", icon: "sap-icon://lightbulb", intro: "Eine Idee, was EstrichONE zusätzlich können oder einfacher machen sollte." },
+	feature: { text: "Funktionswunsch", icon: "sap-icon://lightbulb", intro: "Ein Vorschlag, was EstrichONE zusätzlich können oder besser lösen sollte." },
 };
 
 /** Statusablauf in Reihenfolge; Abgelehnt und Duplikat schließen eine Meldung ebenfalls ab. */
@@ -198,7 +198,7 @@ export function collectContext(env: ContextEnvironment): FeedbackContext {
 	const ratio = Math.round(env.devicePixelRatio * 100);
 	return {
 		page: env.path || null,
-		pageTitle: env.title.replace(/ – EstrichONE$/, "") || null,
+		pageTitle: env.title.replace(/ \(EstrichONE\)$/, "") || null,
 		browser: browserName(env.userAgent),
 		userAgent: env.userAgent || null,
 		platform: platformName(env.userAgent),
@@ -215,12 +215,12 @@ export function collectContext(env: ContextEnvironment): FeedbackContext {
 export function contextRows(context: FeedbackContext | null | undefined, withUserAgent = false): { label: string; value: string }[] {
 	if (!context) return [];
 	const rows: [string, string | null][] = [
-		["Seite", [context.pageTitle, context.page].filter(Boolean).join(" · ") || null],
+		["Seite", [context.pageTitle, context.page].filter(Boolean).join(", ") || null],
 		["Browser", [context.browser, context.platform].filter(Boolean).join(" auf ") || null],
 		["Bildschirm", context.screen ? `${context.screen}${context.pixelRatio ? ` (Skalierung ${context.pixelRatio})` : ""}` : null],
 		["Fenster", context.viewport],
 		["EstrichONE-Version", context.appVersion],
-		["Sprache / Zeitzone", [context.language, context.timeZone].filter(Boolean).join(" · ") || null],
+		["Sprache / Zeitzone", [context.language, context.timeZone].filter(Boolean).join(", ") || null],
 		...(withUserAgent ? [["User-Agent", context.userAgent] as [string, string | null]] : []),
 	];
 	return rows.filter((r): r is [string, string] => !!r[1]).map(([label, value]) => ({ label, value }));

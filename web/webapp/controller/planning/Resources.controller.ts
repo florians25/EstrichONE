@@ -86,7 +86,7 @@ export default class Resources extends BaseController {
 			...r, kindText: resourceKinds[r.kind] ?? r.kind, crewName: r.crewId ? crewName.get(r.crewId) ?? "–" : "–",
 			thumb: r.imageFileId ? fileUrl(r.imageFileId, "thumb") : null, docCount: r.documentFileIds?.length ?? 0,
 			inspection: due(r.inspectionDue), service: due(r.serviceDue),
-			detailText: (r.kind === "vehicle" ? [r.model, r.licenseClass ? `Klasse ${r.licenseClass}` : null, r.tankCapacityLiters ? `Tank ${r.tankCapacityLiters.toLocaleString("de-DE")} l` : null] : [resourceKinds[r.kind] ?? r.kind, r.model]).filter(Boolean).join(" · ") || "–",
+			detailText: (r.kind === "vehicle" ? [r.model, r.licenseClass ? `Klasse ${r.licenseClass}` : null, r.tankCapacityLiters ? `Tank ${r.tankCapacityLiters.toLocaleString("de-DE")} l` : null] : [resourceKinds[r.kind] ?? r.kind, r.model]).filter(Boolean).join(", ") || "–",
 		}));
 		m.setProperty("/vehicles", resources.filter((r) => r.kind === "vehicle"));
 		m.setProperty("/machines", resources.filter((r) => r.kind !== "vehicle"));

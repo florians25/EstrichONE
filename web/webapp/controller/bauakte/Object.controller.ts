@@ -197,7 +197,7 @@ export default class ObjectController extends BaseController {
 		m.setProperty("/markers", b.latitude !== null && b.longitude !== null
 			? [{ id: b.id, latitude: b.latitude, longitude: b.longitude, color: statusMarkerColors[b.status], label: b.title }] : []);
 		this.updateContactFacts();
-		document.title = `${b.number ?? ""} ${b.title} – EstrichONE`.trim();
+		document.title = `${b.number ?? ""} ${b.title} (EstrichONE)`.trim();
 		void this.loadChatGroup(b.id);
 		if (this.m().getProperty("/teamsFor") !== b.id) void loadAkteTeams(this.m(), b.id, session.data.teams?.available === true);
 	}
@@ -279,7 +279,7 @@ export default class ObjectController extends BaseController {
 		const responsible = session.name(b?.responsibleUserId);
 		m.setProperty("/responsibleName", responsible);
 		m.setProperty("/createdDate", b ? new Intl.DateTimeFormat("de-DE", { dateStyle: "medium" }).format(new Date(b.createdAt)) : "");
-		m.setProperty("/createdText", b ? `${session.name(b.createdByUserId)} · ${new Intl.DateTimeFormat("de-DE", { dateStyle: "medium" }).format(new Date(b.createdAt))}` : "");
+		m.setProperty("/createdText", b ? `${session.name(b.createdByUserId)}, ${new Intl.DateTimeFormat("de-DE", { dateStyle: "medium" }).format(new Date(b.createdAt))}` : "");
 		m.setProperty("/assignedText", members.length === 0 ? responsible : members.length === 1 ? members[0].displayName : `${responsible} +${members.length - 1}`);
 		this.applyAccess();
 	}
@@ -394,7 +394,7 @@ export default class ObjectController extends BaseController {
 		if (files.status === "fulfilled") {
 			const photos = files.value.filter((f) => f.kind === "photo").length;
 			const docs = files.value.filter((f) => f.kind === "document").length;
-			kpi.filesText = `${photos} Fotos · ${docs} Dokumente`;
+			kpi.filesText = `${photos} Fotos, ${docs} Dokumente`;
 			kpi.photos = photos;
 			kpi.docs = docs;
 		}
@@ -409,7 +409,7 @@ export default class ObjectController extends BaseController {
 			const next = planning.value.assignments.filter((a) => a.day >= today)
 				.sort((a, b) => (a.day + (a.startTime ?? "")).localeCompare(b.day + (b.startTime ?? "")))[0];
 			if (next) {
-				kpi.nextText = `${parseDay(next.day).toLocaleDateString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit" })} ${next.startTime?.slice(0, 5) ?? ""} · ${assignmentKinds[next.kind]?.text ?? next.activity}${next.crewName ? ` · ${next.crewName}` : ""}`;
+				kpi.nextText = `${parseDay(next.day).toLocaleDateString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit" })} ${next.startTime?.slice(0, 5) ?? ""}, ${assignmentKinds[next.kind]?.text ?? next.activity}${next.crewName ? `, ${next.crewName}` : ""}`;
 			}
 		}
 		this.m().setProperty("/kpi", kpi);

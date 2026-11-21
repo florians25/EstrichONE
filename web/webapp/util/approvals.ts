@@ -82,7 +82,7 @@ export async function decideApproval(approval: ApprovalResponse, approve: boolea
 	const commentRequired = !approve || (await loadSystemSettings())?.settings.approvals.requireCommentOnApprove === true;
 	return openForm<ApprovalResponse>({
 		title: approve ? "Dokument freigeben" : "Freigabe ablehnen", submitText: approve ? "Freigeben" : "Ablehnen", danger: !approve, width: "32rem",
-		intro: `${approval.fileName} · ${approval.bauakteNumber ?? ""} ${approval.bauakteTitle}${approval.message ? `\nAnfrage von ${approval.requestedByName}: ${approval.message}` : ""}`,
+		intro: `${approval.fileName}, ${approval.bauakteNumber ?? ""} ${approval.bauakteTitle}${approval.message ? `\nAnfrage von ${approval.requestedByName}: ${approval.message}` : ""}`,
 		fields: [{ key: "comment", label: approve ? (commentRequired ? "Kommentar" : "Kommentar (optional)") : "Begründung", type: "textarea", rows: 3, maxLength: 2000, required: commentRequired }],
 		submit: (v) => post<ApprovalResponse>(`approvals/${approval.id}/${approve ? "approve" : "reject"}`, { comment: (v.comment as string) || null }),
 	});

@@ -11,12 +11,12 @@ const plus = (minutes: number) => new Date(now.getTime() + minutes * 60_000).toI
 
 describe('Zeitraum der Systemhinweise', () => {
   it('gleicher Tag, über Mitternacht, nur Beginn bzw. Ende, anderes Jahr', () => {
-    expect(formatPeriod(at(8, 22), at(8, 23, 30), now)).toBe('So., 08.11., 22:00–23:30 Uhr');
-    expect(formatPeriod(at(7, 22), at(8, 2), now)).toBe('Sa., 07.11., 22:00 Uhr – So., 08.11., 02:00 Uhr');
+    expect(formatPeriod(at(8, 22), at(8, 23, 30), now)).toBe('So., 08.11., 22:00 bis 23:30 Uhr');
+    expect(formatPeriod(at(7, 22), at(8, 2), now)).toBe('Sa., 07.11., 22:00 Uhr bis So., 08.11., 02:00 Uhr');
     expect(formatPeriod(at(7, 6, 5), null, now)).toBe('ab Sa., 07.11., 06:05 Uhr');
     expect(formatPeriod(null, at(13, 18), now)).toBe('bis Fr., 13.11., 18:00 Uhr');
     expect(formatPeriod(null, null, now)).toBe('');
-    expect(formatPeriod(at(2, 8, 0, 0, 2027), at(2, 9, 0, 0, 2027), now)).toBe('Sa., 02.01.2027, 08:00–09:00 Uhr');
+    expect(formatPeriod(at(2, 8, 0, 0, 2027), at(2, 9, 0, 0, 2027), now)).toBe('Sa., 02.01.2027, 08:00 bis 09:00 Uhr');
   });
 
   it('Dauer in Worten (Dativ für „in/seit“, Akkusativ für „noch“)', () => {
@@ -49,7 +49,7 @@ describe('Art und Darstellung', () => {
   it('Wartung: geplant = Information, binnen einer Stunde = Warnung, läuft = Warnung und nicht ausblendbar', () => {
     const planned = maintenanceCard({ startsAt: at(8, 22), endsAt: at(8, 23, 30), message: 'Update' }, now);
     expect(planned).toMatchObject({ kind: 'maintenance', tone: 'Information', title: 'Geplante Wartung', relative: 'in 2 Tagen',
-      period: 'So., 08.11., 22:00–23:30 Uhr', text: 'Update', dismissible: true });
+      period: 'So., 08.11., 22:00 bis 23:30 Uhr', text: 'Update', dismissible: true });
     expect(maintenanceKind({ startsAt: plus(30) }, now)).toBe('maintenanceSoon');
     const running = maintenanceCard({ active: true, startsAt: plus(-10), endsAt: plus(20) }, now, true);
     expect(running).toMatchObject({ kind: 'maintenanceRunning', tone: 'Warning', dismissible: false, relative: 'läuft seit 10 Min.', remaining: 'noch 20 Min.' });

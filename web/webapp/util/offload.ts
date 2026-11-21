@@ -66,32 +66,32 @@ export function offloadView(o: OffloadOverview): Record<string, unknown> {
 		statusText: o.status.text,
 		serverUsed: used ?? 0,
 		serverUsedLabel: `${(used ?? 0).toLocaleString("de-DE", { maximumFractionDigits: 1 })} %`,
-		serverUsedText: o.disk.totalBytes ? `${fileSize(o.disk.totalBytes - (o.disk.freeBytes ?? 0))} von ${fileSize(o.disk.totalBytes)} belegt · ${fileSize(o.disk.freeBytes ?? 0)} frei (${(o.disk.freePercent ?? 0).toLocaleString("de-DE", { maximumFractionDigits: 1 })} %)` : "Unbekannt",
+		serverUsedText: o.disk.totalBytes ? `${fileSize(o.disk.totalBytes - (o.disk.freeBytes ?? 0))} von ${fileSize(o.disk.totalBytes)} belegt, ${fileSize(o.disk.freeBytes ?? 0)} frei (${(o.disk.freePercent ?? 0).toLocaleString("de-DE", { maximumFractionDigits: 1 })} %)` : "Unbekannt",
 		serverState: o.disk.low ? "Warning" : (used ?? 0) > 100 - threshold - 5 ? "Information" : "Success",
 		thresholdText: `Knapp unter ${threshold} % frei${o.settings.thresholdFreeGb ? ` oder unter ${o.settings.thresholdFreeGb} GB` : ""}`
-			+ (o.disk.low && o.disk.bytesToFree > 0 ? ` · zum Ziel fehlen ${fileSize(o.disk.bytesToFree)}` : ""),
+			+ (o.disk.low && o.disk.bytesToFree > 0 ? `, zum Ziel fehlen ${fileSize(o.disk.bytesToFree)}` : ""),
 		storageUsed: storageUsed ?? 0,
 		storageUsedLabel: `${(storageUsed ?? 0).toLocaleString("de-DE", { maximumFractionDigits: 1 })} %`,
 		storageUsedText: o.server && o.server.diskTotalBytes ? `${fileSize(o.server.diskTotalBytes - (o.server.diskFreeBytes ?? 0))} von ${fileSize(o.server.diskTotalBytes)} belegt` : o.paired ? "Nicht erreichbar" : "Kein Storage gekoppelt",
 		storageObjects: o.server?.offload ? `${o.server.offload.objects} Objekte (${fileSize(o.server.offload.bytes)} verschlüsselt)`
-			+ (o.server.offload.trashObjects ? ` · Papierkorb ${o.server.offload.trashObjects} (${o.server.offload.trashDays} Tage)` : "") : "–",
-		verification: v ? (v.ok ? `In Ordnung · ${dateTime(v.at)} · ${v.objectsChecked} Objekte` : `${v.errors.length} Abweichung(en) · ${dateTime(v.at)}`) : "Noch nicht geprüft",
+			+ (o.server.offload.trashObjects ? `, Papierkorb ${o.server.offload.trashObjects} (${o.server.offload.trashDays} Tage)` : "") : "–",
+		verification: v ? (v.ok ? `In Ordnung, ${dateTime(v.at)}, ${v.objectsChecked} Objekte` : `${v.errors.length} Abweichung(en), ${dateTime(v.at)}`) : "Noch nicht geprüft",
 		verificationState: v ? (v.ok ? "Success" : "Error") : "None",
-		offloaded: `${o.counts.offloadedFiles} Dateien · ${fileSize(o.counts.offloadedBytes)}`,
+		offloaded: `${o.counts.offloadedFiles} Dateien, ${fileSize(o.counts.offloadedBytes)}`,
 		pending: o.counts.pendingBlobs ? `${o.counts.pendingBlobs} übertragen und geprüft (${fileSize(o.counts.pendingBytes)}), Sicherungskopie ausstehend` : "",
 		candidates: `${o.counts.candidateFiles} Dateien (${fileSize(o.counts.candidateBytes)}) entsprechen den Regeln`,
 		cache: fileSize(o.counts.cacheBytes),
-		contact: o.connection ? (o.connection.reachable ? `Erreichbar · ${dateTime(o.connection.lastContactAt)}` : `Nicht erreichbar · zuletzt ${dateTime(o.connection.lastContactAt)}`) : "",
+		contact: o.connection ? (o.connection.reachable ? `Erreichbar, ${dateTime(o.connection.lastContactAt)}` : `Nicht erreichbar, zuletzt ${dateTime(o.connection.lastContactAt)}`) : "",
 		contactState: o.connection?.reachable ? "Success" : "Warning",
 		backup: !o.settings.requireBackup ? "Aus: Originale liegen nach dem Auslagern nur auf dem Storage (nicht empfohlen)"
 			: !o.backupAvailable ? "Kein Backup-Dienst eingerichtet; es wird nichts lokal gelöscht"
-			: o.lastCopy ? `${copyText(o.lastCopy.status)} · ${dateTime(o.lastCopy.at)}${o.lastCopy.message ? ` · ${o.lastCopy.message}` : ""}`
+			: o.lastCopy ? `${copyText(o.lastCopy.status)}, ${dateTime(o.lastCopy.at)}${o.lastCopy.message ? `, ${o.lastCopy.message}` : ""}`
 			: "Bereit: jedes Original wird vor dem lokalen Löschen zusätzlich gesichert",
 		backupState: !o.settings.requireBackup || !o.backupAvailable || o.lastCopy?.status === "failed" ? "Warning" : "Success",
 		jobRunning: job.running,
 		jobPercent: job.total ? Math.round((job.processed / job.total) * 100) : 0,
 		jobText: job.running
-			? `${job.kind === "recall" ? "Rückholen" : "Auslagern"}: ${job.processed} von ${job.total}${job.failed ? `, ${job.failed} fehlgeschlagen` : ""} · ${fileSize(job.bytes)}`
+			? `${job.kind === "recall" ? "Rückholen" : "Auslagern"}: ${job.processed} von ${job.total}${job.failed ? `, ${job.failed} fehlgeschlagen` : ""}, ${fileSize(job.bytes)}`
 			: job.message ? `${job.message}${job.finishedAt ? ` (${dateTime(job.finishedAt)})` : ""}` : o.lastRunMessage ? `${o.lastRunMessage} (${dateTime(o.lastRunAt)})` : "Noch kein Lauf",
 		canRun: o.paired && !job.running,
 		hasMissing: o.counts.missingBlobs > 0,

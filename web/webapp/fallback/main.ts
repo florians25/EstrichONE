@@ -25,7 +25,7 @@ const back = params.get("zurueck") || (location.pathname === "/stoerung.html" ? 
 const since = new Intl.DateTimeFormat("de-DE", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }).format(new Date());
 const model = new JSONModel({
 	mode: "outage", title: "EstrichONE ist gerade nicht erreichbar",
-	text: "Der Server antwortet im Moment nicht – zum Beispiel wegen eines Neustarts. Eingaben in der App bleiben auf dem Gerät gespeichert.",
+	text: "Der Server antwortet im Moment nicht, zum Beispiel wegen eines Neustarts. Eingaben in der App bleiben auf dem Gerät gespeichert.",
 	status: "", since: `Seit ${since} Uhr`, checking: false, upd: { page: false }, updateOffline: true,
 });
 let update: UpdateState | null = null;
@@ -46,7 +46,7 @@ function render(): void {
 		model.setProperty("/mode", "update");
 	}
 	const offline = typeof navigator !== "undefined" && navigator.onLine === false;
-	model.setProperty("/status", update ? "" : offline ? `Keine Internetverbindung – Neuversuch in ${left} s` : `Automatischer Neuversuch in ${left} s`);
+	model.setProperty("/status", update ? "" : offline ? `Keine Internetverbindung. Neuversuch in ${left} s` : `Automatischer Neuversuch in ${left} s`);
 }
 
 async function check(): Promise<void> {

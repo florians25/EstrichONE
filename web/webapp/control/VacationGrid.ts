@@ -111,7 +111,7 @@ export default class VacationGrid extends Control {
 			const weekend = date.getDay() === 0 || date.getDay() === 6;
 			const th = el("th", `eoVacDay${weekend ? " eoVacWeekend" : ""}${data.holidays[d] ? " eoVacHoliday" : ""}${d === data.today ? " eoVacToday" : ""}${date.getDate() === 1 ? " eoVacFirst" : ""}`);
 			th.scope = "col";
-			th.title = [data.holidays[d], data.closures?.[d], date.toLocaleDateString("de-DE", { weekday: "long", day: "2-digit", month: "long" })].filter(Boolean).join(" · ");
+			th.title = [data.holidays[d], data.closures?.[d], date.toLocaleDateString("de-DE", { weekday: "long", day: "2-digit", month: "long" })].filter(Boolean).join(", ");
 			if (!compact) th.append(el("span", undefined, String(date.getDate())), el("small", undefined, date.toLocaleDateString("de-DE", { weekday: "short" }).slice(0, 2)));
 			head.append(th);
 		}

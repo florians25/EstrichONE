@@ -56,11 +56,11 @@ export default class BackupTargets extends BaseController {
 			...t,
 			paired: dateTime(t.pairedAt),
 			runText: t.lastRun
-				? `Letzte Sicherung dorthin: ${t.lastRun.status === "succeeded" ? "erfolgreich" : "fehlgeschlagen"} · ${dateTime(t.lastRun.at)}`
+				? `Letzte Sicherung dorthin: ${t.lastRun.status === "succeeded" ? "erfolgreich" : "fehlgeschlagen"}, ${dateTime(t.lastRun.at)}`
 				: "Noch keine Sicherung dorthin (nächster Lauf des Backup-Dienstes, oder „Jetzt sichern“ unter Sicherung)",
 			runState: !t.lastRun ? "Information" : t.lastRun.status === "succeeded" ? "Success" : "Error",
 			remoteText: t.remote
-				? `${t.remote.snapshots} Sicherungsstände · ${fileSize(t.remote.bytes)} belegt · ${t.remote.diskFreeBytes != null ? `${fileSize(t.remote.diskFreeBytes)} frei` : "Platz unbekannt"} · ${t.remote.appendOnly ? "nur anhängen" : "ACHTUNG: Löschen erlaubt"}`
+				? `${t.remote.snapshots} Sicherungsstände, ${fileSize(t.remote.bytes)} belegt, ${t.remote.diskFreeBytes != null ? `${fileSize(t.remote.diskFreeBytes)} frei` : "Platz unbekannt"}, ${t.remote.appendOnly ? "nur anhängen" : "ACHTUNG: Löschen erlaubt"}`
 				: "Ziel gerade nicht erreichbar",
 			remoteState: !t.remote ? "Warning" : t.remote.appendOnly && t.remote.serverRunning ? "Success" : "Warning",
 		})));
@@ -72,11 +72,11 @@ export default class BackupTargets extends BaseController {
 		this.model().setProperty("/mirrors", (r?.mirrors ?? []).map((m) => ({
 			...m,
 			title: m.targetName ? `${m.name} (${m.targetName})` : m.name,
-			stateText: !m.paired ? `Wartet auf Kopplung · Code gültig bis ${dateTime(m.codeExpiresAt)}`
-				: m.reachable ? `Verbunden · zuletzt gemeldet ${dateTime(m.lastSeenAt)}` : `Nicht erreichbar · zuletzt gemeldet ${m.lastSeenAt ? dateTime(m.lastSeenAt) : "nie"}`,
+			stateText: !m.paired ? `Wartet auf Kopplung (Code gültig bis ${dateTime(m.codeExpiresAt)})`
+				: m.reachable ? `Verbunden (zuletzt gemeldet ${dateTime(m.lastSeenAt)})` : `Nicht erreichbar (zuletzt gemeldet ${m.lastSeenAt ? dateTime(m.lastSeenAt) : "nie"})`,
 			state: !m.paired ? "Information" : m.reachable && !m.lastReport?.error ? "Success" : "Error",
 			detail: m.lastReport
-				? `${m.lastReport.snapshots} Sicherungsstände · ${fileSize(m.lastReport.bytes)} gespiegelt${m.lastReport.diskFreeBytes != null ? ` · ${fileSize(m.lastReport.diskFreeBytes)} frei` : ""}${m.lastReport.error ? ` · Fehler: ${m.lastReport.error}` : ""}`
+				? `${m.lastReport.snapshots} Sicherungsstände, ${fileSize(m.lastReport.bytes)} gespiegelt${m.lastReport.diskFreeBytes != null ? `, ${fileSize(m.lastReport.diskFreeBytes)} frei` : ""}${m.lastReport.error ? `, Fehler: ${m.lastReport.error}` : ""}`
 				: "Noch kein Abgleich",
 		})));
 	}

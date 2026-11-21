@@ -76,7 +76,7 @@ export default class Calendar extends BaseController {
 		this.views = {
 			tag: new SinglePlanningCalendarDayView(`${id}vDay`, { key: "tag", title: "Tag" }),
 			woche: new SinglePlanningCalendarWeekView(`${id}vWeek`, { key: "woche", title: "Woche" }),
-			arbeitswoche: new SinglePlanningCalendarWorkWeekView(`${id}vWorkWeek`, { key: "arbeitswoche", title: "Mo–Fr" }),
+			arbeitswoche: new SinglePlanningCalendarWorkWeekView(`${id}vWorkWeek`, { key: "arbeitswoche", title: "Mo bis Fr" }),
 			monat: new SinglePlanningCalendarMonthView(`${id}vMonth`, { key: "monat", title: "Monat" }),
 		};
 		spc.addView(this.views.woche);
@@ -234,7 +234,7 @@ export default class Calendar extends BaseController {
 				const kind = calendarEventKinds[o.kind];
 				return {
 					key: `e:${o.eventId}:${o.occurrenceDate ?? ""}:${o.start}`, title: o.title,
-					text: [o.location, o.people.length ? o.people.map((p) => p.name).join(", ") : null, o.bauakteTitle].filter(Boolean).join(" · "),
+					text: [o.location, o.people.length ? o.people.map((p) => p.name).join(", ") : null, o.bauakteTitle].filter(Boolean).join(", "),
 					start: parseLocal(o.start), end: parseLocal(o.end), color: this.colorOf(o), icon: o.isRecurring ? "sap-icon://repost" : kind?.icon ?? "",
 					tooltip: [o.title, o.calendarName, kind?.text, o.location, o.description].filter(Boolean).join("\n"),
 				};
@@ -244,7 +244,7 @@ export default class Calendar extends BaseController {
 				const span = assignmentSpan(a);
 				return {
 					key: `a:${a.id}`, title: `${a.bauakteNumber ? `${a.bauakteNumber} ` : ""}${a.bauakteTitle}`,
-					text: [a.activity, a.crewName ?? a.people.map((p) => p.name).join(", ")].filter(Boolean).join(" · "),
+					text: [a.activity, a.crewName ?? a.people.map((p) => p.name).join(", ")].filter(Boolean).join(", "),
 					start: span.timed ? span.start : parseDay(a.day), end: span.timed ? span.end : parseDay(addDays(a.day, 1)),
 					color: a.crewColor ?? kind?.color ?? "#0B2D5B", icon: kind?.icon ?? "sap-icon://building",
 					tooltip: ["Einsatz (Planung)", a.activity, a.bauakteAddress, ...a.warnings].filter(Boolean).join("\n"),
@@ -260,7 +260,7 @@ export default class Calendar extends BaseController {
 			const allDay = x.start.getHours() === 0 && x.start.getMinutes() === 0 && x.end.getHours() === 0 && x.end.getMinutes() === 0;
 			return {
 				key: x.key, title: x.title, meta: x.text, color: x.color, icon: x.icon || "sap-icon://appointment", kindText: x.tooltip.split("\n")[1] ?? "",
-				day: x.start.toLocaleDateString("de-DE", { weekday: "long", day: "2-digit", month: "long" }), time: allDay ? "ganztags" : `${hm(x.start)}–${hm(x.end)}`,
+				day: x.start.toLocaleDateString("de-DE", { weekday: "long", day: "2-digit", month: "long" }), time: allDay ? "ganztags" : `${hm(x.start)} bis ${hm(x.end)}`,
 			};
 		}));
 	}

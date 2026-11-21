@@ -17,9 +17,9 @@ describe('Abwesenheiten', () => {
   it('Zeiträume mit halben Tagen', () => {
     expect(range('2027-06-07', '2027-06-07')).toBe('07.06.2027');
     expect(range('2027-06-07', '2027-06-07', true)).toBe('07.06.2027 (halber Tag)');
-    expect(range('2027-06-07', '2027-06-09')).toBe('07.06. – 09.06.2027');
-    expect(range('2027-12-28', '2028-01-02', false, true)).toBe('28.12.2027 – 02.01.2028 (letzter Tag halb)');
-    expect(range('2027-06-07', '2027-06-09', true, true)).toBe('07.06. – 09.06.2027 (erster Tag halb, letzter Tag halb)');
+    expect(range('2027-06-07', '2027-06-09')).toBe('07.06. bis 09.06.2027');
+    expect(range('2027-12-28', '2028-01-02', false, true)).toBe('28.12.2027 bis 02.01.2028 (letzter Tag halb)');
+    expect(range('2027-06-07', '2027-06-09', true, true)).toBe('07.06. bis 09.06.2027 (erster Tag halb, letzter Tag halb)');
   });
 
   it('Tagesanteil und Zellfarbe', () => {
@@ -46,7 +46,7 @@ describe('Abwesenheiten', () => {
     const row = requestRow(request, true);
     expect(row.statusText).toBe('Beantragt');
     expect(row.workingDaysText).toBe('2,5');
-    expect(row.detailText).toBe('Vertretung: Ben Maier · Familie');
+    expect(row.detailText).toBe('Vertretung: Ben Maier, Familie');
     expect(row.canEdit).toBe(true);
     expect(requestRow(request, false).canEdit).toBe(false);
     expect(requestRow({ ...request, replacesRequestId: 'r0' }, true).changeText).toBe('Änderungsantrag');

@@ -31,7 +31,7 @@
 						<HBox justifyContent="SpaceBetween" alignItems="Start" wrap="Wrap" class="sapUiSmallMargin">
 							<VBox>
 								<Title text="{view>name}" level="H3"/>
-								<Text text="{view>address} · Version {view>serverVersion} · gekoppelt {view>paired}"/>
+								<Text text="{view>address}, Version {view>serverVersion}, gekoppelt {view>paired}"/>
 								<Text text="Fingerabdruck {view>fingerprintDisplay}" class="sapUiTinyMarginTop"/>
 								<ObjectStatus text="{view>runText}" state="{view>runState}" class="sapUiTinyMarginTop"/>
 								<ObjectStatus text="{view>remoteText}" state="{view>remoteState}" class="sapUiTinyMarginTop"/>
@@ -85,7 +85,7 @@
 							<HBox justifyContent="SpaceBetween" alignItems="Start" wrap="Wrap" class="sapUiSmallMargin">
 								<VBox>
 									<Title text="{view>name}" level="H3"/>
-									<Text text="{view>kindText} · {view>versionText} · {view>reachText}"/>
+									<Text text="{view>kindText}, {view>versionText}, {view>reachText}"/>
 									<ObjectStatus text="{view>stateText}" state="{view>state}" class="sapUiTinyMarginTop"/>
 									<Text text="Noch ohne Updater: einmal am Rechner mit dem aktuellen Installer aktualisieren, danach per Knopfdruck." visible="{view>needsLocal}" class="sapUiTinyMarginTop"/>
 									<HBox alignItems="Center" class="sapUiTinyMarginTop">

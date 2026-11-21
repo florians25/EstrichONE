@@ -80,7 +80,7 @@ export default class Overview extends SectionBase {
 			m.setProperty("/openWork", String(open.length));
 			m.setProperty("/overdue", overdue);
 			const defects = open.filter((w) => w.kind === "defect").length;
-			m.setProperty("/workFooter", [defects ? `${defects} ${defects === 1 ? "Mangel" : "Mängel"}` : "", overdue ? `${overdue} überfällig` : ""].filter(Boolean).join(" · "));
+			m.setProperty("/workFooter", [defects ? `${defects} ${defects === 1 ? "Mangel" : "Mängel"}` : "", overdue ? `${overdue} überfällig` : ""].filter(Boolean).join(", "));
 			m.setProperty("/work", open.slice(0, 6));
 		}
 		if (notes.status === "fulfilled") {
@@ -95,7 +95,7 @@ export default class Overview extends SectionBase {
 				m.setProperty("/inspectionValue", cmNumber(cm.measuredCmPercent));
 				m.setProperty("/inspectionScale", "CM-%");
 				m.setProperty("/inspectionColor", cm.isReadyForCovering ? "Good" : "Critical");
-				m.setProperty("/inspectionFooter", `${cm.isReadyForCovering ? "Belegreif" : "Noch nicht belegreif"} · ${cm.location ?? ""}`);
+				m.setProperty("/inspectionFooter", `${cm.isReadyForCovering ? "Belegreif" : "Noch nicht belegreif"}, ${cm.location ?? ""}`);
 			} else {
 				m.setProperty("/inspectionValue", initial ? "✓" : "–");
 				m.setProperty("/inspectionScale", "");
@@ -114,7 +114,7 @@ export default class Overview extends SectionBase {
 				time: a.startTime?.slice(0, 5) ?? "", kind: assignmentKinds[a.kind]?.text ?? a.activity ?? "", crew: a.crewName ?? "",
 			})));
 			m.setProperty("/nextValue", next ? parseDay(next.day).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" }) : "–");
-			m.setProperty("/nextFooter", next ? `${next.startTime?.slice(0, 5) ?? ""} ${assignmentKinds[next.kind]?.text ?? ""}${next.crewName ? ` · ${next.crewName}` : ""}` : "nicht eingeplant");
+			m.setProperty("/nextFooter", next ? `${next.startTime?.slice(0, 5) ?? ""} ${assignmentKinds[next.kind]?.text ?? ""}${next.crewName ? `, ${next.crewName}` : ""}` : "nicht eingeplant");
 		}
 		if (history.status === "fulfilled") {
 			m.setProperty("/activity", [...history.value].sort((a, b) => b.at.localeCompare(a.at)).slice(0, 8));

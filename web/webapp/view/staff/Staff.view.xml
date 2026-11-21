@@ -48,7 +48,7 @@
 						<ColumnListItem type="Navigation" press=".onOpen">
 							<VBox>
 								<Text text="{view>displayName}" class="eoStrong"/>
-								<Text text="{= (${view>personnelNumber} ? 'Nr. ' + ${view>personnelNumber} + ' · ' : '') + (${view>userName} ? 'Konto: ' + ${view>userName} : 'kein Benutzerkonto') }" class="eoMuted"/>
+								<Text text="{= (${view>personnelNumber} ? 'Nr. ' + ${view>personnelNumber} + ', ' : '') + (${view>userName} ? 'Konto: ' + ${view>userName} : 'kein Benutzerkonto') }" class="eoMuted"/>
 							</VBox>
 							<VBox>
 								<Text text="{= ${view>jobTitle} || '–' }"/>

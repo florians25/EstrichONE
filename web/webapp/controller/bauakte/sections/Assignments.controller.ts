@@ -35,7 +35,7 @@ export default class Assignments extends SectionBase {
 
 	onPlan(): void {
 		const b = this.bauakte();
-		void openAssignment(newDraft(isoDay(new Date()), null, { id: b.id, label: `${b.number ?? "neu"} · ${b.title}` }));
+		void openAssignment(newDraft(isoDay(new Date()), null, { id: b.id, label: `${b.number ?? "neu"}, ${b.title}` }));
 	}
 
 	async onOpen(event: Event): Promise<void> {

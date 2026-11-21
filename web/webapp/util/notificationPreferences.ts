@@ -114,7 +114,7 @@ export function openNotificationPreferences(): void {
 			devices.addItem(new StandardListItem({
 				icon: PLATFORM[d.platform].icon,
 				title: d.deviceName ?? PLATFORM[d.platform].text,
-				description: `${PLATFORM[d.platform].text}${d.appVersion ? ` · App ${d.appVersion}` : ""} · zuletzt ${relativeTime(d.lastSeenAt)}`,
+				description: `${PLATFORM[d.platform].text}${d.appVersion ? `, App ${d.appVersion}` : ""}, zuletzt ${relativeTime(d.lastSeenAt)}`,
 				info: d.lastError ? "Fehler" : d.lastSuccessAt ? `zugestellt ${relativeTime(d.lastSuccessAt)}` : "",
 				infoState: d.lastError ? "Error" : "Success",
 				type: "Active",

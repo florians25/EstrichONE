@@ -35,7 +35,7 @@ export default class Mail extends BaseController {
 		const log = await this.run(() => get<MailLogItem[]>("mail/log", { take: 300 }));
 		this.model().setProperty("/log", (log ?? []).map((l) => ({
 			...l, time: dateTime(l.createdAt),
-			statusText: `${status[l.status][0]}${l.attempts > 1 ? ` (${l.attempts} Versuche)` : ""}${l.sentAt ? ` · ${dateTime(l.sentAt)}` : ""}${l.attachmentNames ? ` · Anhang: ${l.attachmentNames}` : ""}`,
+			statusText: `${status[l.status][0]}${l.attempts > 1 ? ` (${l.attempts} Versuche)` : ""}${l.sentAt ? `, ${dateTime(l.sentAt)}` : ""}${l.attachmentNames ? `, Anhang: ${l.attachmentNames}` : ""}`,
 			statusState: status[l.status][1],
 		})));
 	}

@@ -22,7 +22,7 @@ describe('Update-Ablauf: Aufbereitung für Leiste und Wartungsbildschirm', () =>
     const view = updateView(state('announce', -1, 59), now);
     expect(view.banner).toBe(true);
     expect(view.page).toBe(false);
-    expect(view.bannerText).toBe('Update auf Version 1.0.16 beginnt in 0:59 – bitte Arbeit speichern. Danach ist eine neue Anmeldung nötig.');
+    expect(view.bannerText).toBe('Update auf Version 1.0.16 beginnt in 0:59. Bitte speichern Sie Ihre Arbeit. Danach ist eine neue Anmeldung nötig.');
     expect(view.steps.map((s) => s.state)).toEqual(['now', 'todo', 'todo']);
     expect(view.percent).toBe(2);
   });

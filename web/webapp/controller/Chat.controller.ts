@@ -251,7 +251,7 @@ export default class Chat extends BaseController {
 			m.setProperty("/retentionDays", status.retentionDays);
 			m.setProperty("/blocked", !!status.blocked);
 			m.setProperty("/attachmentsEnabled", status.attachmentsEnabled !== false);
-			m.setProperty("/retentionHint", `Verschlüsselt gespeichert · Löschung nach ${status.retentionDays} Tagen`);
+			m.setProperty("/retentionHint", `Verschlüsselt gespeichert. Löschung nach ${status.retentionDays} Tagen.`);
 			// Modus „Microsoft Teams“: nur lesen und exportieren.
 			m.setProperty("/archive", status.readOnly === true);
 			if (!status.privacyAccepted && !this.privacyShown) this.showPrivacy(status);
@@ -471,12 +471,12 @@ export default class Chat extends BaseController {
 			bauakteId: row.bauakteId ?? null, canPost: row.canPost !== false, isAdmin: !!row.isAdmin, announcementOnly: !!row.announcementOnly,
 			mutedUntil: row.mutedUntil ?? null,
 			subtitle: row.kind === "group"
-				? `${row.members.length} Mitglieder${row.bauakteId ? " · Baustelle" : row.crewId ? " · Kolonne" : ""}: ${row.members.map((p) => p.name.split(" ")[0]).join(", ")}`
-				: row.muted ? "Einzelchat · stumm geschaltet" : "Einzelchat",
+				? `${row.members.length} Mitglieder${row.bauakteId ? ", Baustelle" : row.crewId ? ", Kolonne" : ""}: ${row.members.map((p) => p.name.split(" ")[0]).join(", ")}`
+				: row.muted ? "Einzelchat, stumm geschaltet" : "Einzelchat",
 		});
 		m.setProperty("/hint", row.canPost === false ? "" : this.status?.attachmentsEnabled === false
-			? "Enter senden · Umschalt+Enter neue Zeile · @ erwähnt Mitglieder"
-			: "Enter senden · Umschalt+Enter neue Zeile · @ erwähnt · Fotos/PDF hineinziehen oder einfügen");
+			? "Enter: senden, Umschalt+Enter: neue Zeile, @: Mitglied erwähnen"
+			: "Enter: senden, Umschalt+Enter: neue Zeile, @: Mitglied erwähnen. Fotos und PDF-Dateien können Sie hineinziehen oder einfügen.");
 	}
 
 	private async open(id: string, focusMessage?: string): Promise<void> {
@@ -657,12 +657,12 @@ export default class Chat extends BaseController {
 				const more = i === 3 && photos.length > 4 ? `<span class="eoChatPhotoMore">+${photos.length - 4}</span>` : "";
 				return `<button type="button" class="eoChatPhoto" data-action="photo" data-id="${encodeXML(x.id)}" data-attachment="${encodeXML(a.id)}" aria-label="Foto öffnen"><img loading="lazy" src="${encodeXML(attachmentUrl(a.id, { thumbnail: a.hasThumbnail }))}" alt="${encodeXML(a.fileName)}"/>${more}</button>`;
 			}).join("")}</div>` : "";
-		const list = docs.map((a) => `<a class="eoChatDoc" href="${encodeXML(attachmentUrl(a.id))}" target="_blank" rel="noopener"><span class="eoChatGlyph">${glyph("pdf-attachment")}</span><span class="eoChatDocText"><span class="eoChatDocName">${encodeXML(a.fileName)}</span><span class="eoChatDocSize">PDF · ${encodeXML(formatBytes(a.sizeBytes))}</span></span><span class="eoChatGlyph eoChatDocDl" title="Herunterladen">${glyph("download")}</span></a>`).join("");
+		const list = docs.map((a) => `<a class="eoChatDoc" href="${encodeXML(attachmentUrl(a.id))}" target="_blank" rel="noopener"><span class="eoChatGlyph">${glyph("pdf-attachment")}</span><span class="eoChatDocText"><span class="eoChatDocName">${encodeXML(a.fileName)}</span><span class="eoChatDocSize">PDF, ${encodeXML(formatBytes(a.sizeBytes))}</span></span><span class="eoChatGlyph eoChatDocDl" title="Herunterladen">${glyph("download")}</span></a>`).join("");
 		return `<div class="eoChatFiles">${grid}${list}</div>`;
 	}
 
 	private renderLocation(location: ChatLocation): string {
-		return `<a class="eoChatLocation" href="${encodeXML(mapUrl(location))}" target="_blank" rel="noopener noreferrer"><span class="eoChatGlyph">${glyph("map")}</span><span class="eoChatDocText"><span class="eoChatDocName">${encodeXML(location.label || "Standort")}</span><span class="eoChatDocSize">${location.latitude.toFixed(5)}, ${location.longitude.toFixed(5)} · Karte öffnen</span></span></a>`;
+		return `<a class="eoChatLocation" href="${encodeXML(mapUrl(location))}" target="_blank" rel="noopener noreferrer"><span class="eoChatGlyph">${glyph("map")}</span><span class="eoChatDocText"><span class="eoChatDocName">${encodeXML(location.label || "Standort")}</span><span class="eoChatDocSize">${location.latitude.toFixed(5)}, ${location.longitude.toFixed(5)}, Karte öffnen</span></span></a>`;
 	}
 
 	private renderLog(scrollToEnd: boolean): void {
@@ -676,7 +676,7 @@ export default class Chat extends BaseController {
 		const names = this.memberNames();
 		const parts: string[] = [];
 		if (this.hasMore) parts.push('<div class="eoChatMoreWrap"><button type="button" class="eoChatMore" data-action="more">Ältere Nachrichten laden</button></div>');
-		else if (this.items.length) parts.push(`<div class="eoChatStart">Beginn der Unterhaltung · Nachrichten und Anhänge verschlüsselt gespeichert</div>`);
+		else if (this.items.length) parts.push(`<div class="eoChatStart">Beginn der Unterhaltung. Nachrichten und Anhänge werden verschlüsselt gespeichert.</div>`);
 		let previous: LocalMessage | undefined;
 		for (const x of this.items) {
 			if (!previous || dayKey(previous.createdAt) !== dayKey(x.createdAt)) {
@@ -689,7 +689,7 @@ export default class Chat extends BaseController {
 				? `<div class="eoChatSender eoChatSender${accentOf(x.senderUserId).replace("Accent", "")}">${encodeXML(x.senderName)}</div>` : "";
 			const forwarded = x.forwarded && !x.deleted ? `<div class="eoChatForwarded"><span class="eoChatGlyph eoChatGlyphInline">${glyph("forward")}</span> Weitergeleitet</div>` : "";
 			const reply = x.replyTo && !x.deleted
-				? `<button type="button" class="eoChatQuote" data-action="jump" data-id="${encodeXML(x.replyTo.id)}"><span class="eoChatQuoteName">${encodeXML(x.replyTo.senderName)}</span><span class="eoChatQuoteText">${encodeXML(x.replyTo.deleted ? "Nachricht gelöscht" : x.replyTo.text ?? (x.replyTo.attachment === "photo" ? "📷 Foto" : x.replyTo.attachment ? "📄 Dokument" : "…"))}</span></button>` : "";
+				? `<button type="button" class="eoChatQuote" data-action="jump" data-id="${encodeXML(x.replyTo.id)}"><span class="eoChatQuoteName">${encodeXML(x.replyTo.senderName)}</span><span class="eoChatQuoteText">${encodeXML(x.replyTo.deleted ? "Nachricht gelöscht" : x.replyTo.text ?? (x.replyTo.attachment === "photo" ? "Foto" : x.replyTo.attachment ? "Dokument" : "…"))}</span></button>` : "";
 			const body = x.deleted
 				? `<span class="eoChatText eoChatDeleted"><span class="eoChatGlyph eoChatGlyphInline">${glyph("cancel")}</span> Nachricht gelöscht</span>`
 				: `${this.renderAttachments(x)}${x.location ? this.renderLocation(x.location) : ""}${x.text !== null && x.text !== undefined ? `<span class="eoChatText">${richText(x.text, names)}</span>` : !x.attachments?.length && !x.location && !x.pending ? '<span class="eoChatText eoChatDeleted">Nachricht nicht lesbar (Schlüssel fehlt)</span>' : ""}`;
@@ -698,7 +698,7 @@ export default class Chat extends BaseController {
 				if (x.failed) state = '<span class="eoChatTick eoChatFailed" title="Nicht gesendet">!</span>';
 				else if (x.pending) state = `<span class="eoChatTick" title="Wird gesendet">${ICON_CLOCK}</span>`;
 				else if (x.status === "read") state = `<span class="eoChatTick eoChatRead" title="${group ? "Von allen gelesen" : "Gelesen"}">${ICON_CHECKS}</span>`;
-				else if (x.status === "delivered") state = `<span class="eoChatTick" title="Zugestellt${group && x.readBy ? ` · gelesen von ${x.readBy} von ${x.recipients}` : ""}">${ICON_CHECKS}</span>`;
+				else if (x.status === "delivered") state = `<span class="eoChatTick" title="Zugestellt${group && x.readBy ? `, gelesen von ${x.readBy} von ${x.recipients}` : ""}">${ICON_CHECKS}</span>`;
 				else state = `<span class="eoChatTick" title="Gesendet">${ICON_CHECK}</span>`;
 			}
 			const pinnedMark = x.pinnedAt && !x.deleted ? `<span class="eoChatPinMark" title="Angeheftet">${glyph("pushpin-off")}</span>` : "";
@@ -857,7 +857,7 @@ export default class Chat extends BaseController {
 		}
 		const list = new List({ showSeparators: "Inner" });
 		for (const x of pinned) {
-			list.addItem(new StandardListItem({ title: this.snippet(x), description: `${x.senderName} · ${listTime(x.createdAt)}`, type: "Active",
+			list.addItem(new StandardListItem({ title: this.snippet(x), description: `${x.senderName}, ${listTime(x.createdAt)}`, type: "Active",
 				press: () => { dialog.close(); void this.scrollToMessage(x.id); } }));
 		}
 		const dialog: Dialog = new Dialog({ title: "Angeheftete Nachrichten", contentWidth: "30rem", content: [list],
@@ -872,7 +872,7 @@ export default class Chat extends BaseController {
 		const items: MediaItem[] = photos.map((a) => ({
 			id: a.id, name: a.fileName, kind: "image", src: attachmentUrl(a.id), thumb: attachmentUrl(a.id, { thumbnail: a.hasThumbnail }),
 			download: attachmentUrl(a.id, { download: true }),
-			meta: `${formatBytes(a.sizeBytes)}${a.width ? ` · ${a.width} × ${a.height}` : ""} · ${listTime(a.createdAt)}`,
+			meta: `${formatBytes(a.sizeBytes)}${a.width ? `, ${a.width} × ${a.height}` : ""}, ${listTime(a.createdAt)}`,
 		}));
 		openMediaViewer(items, indexOf(items, startId), { title: "Fotos" });
 	}
@@ -914,7 +914,7 @@ export default class Chat extends BaseController {
 	private updateContext(minutes?: number): void {
 		const m = this.model();
 		if (this.editing) {
-			m.setProperty("/compose", { mode: "edit", title: `Nachricht bearbeiten${minutes ? ` · noch ${minutes} min` : ""}`, preview: this.snippet(this.editing) });
+			m.setProperty("/compose", { mode: "edit", title: `Nachricht bearbeiten${minutes ? `, noch ${minutes} min` : ""}`, preview: this.snippet(this.editing) });
 		} else if (this.replyTo) {
 			m.setProperty("/compose", { mode: "reply", title: `Antwort an ${this.replyTo.mine ? "sich selbst" : this.replyTo.senderName}`, preview: this.snippet(this.replyTo) });
 		} else {
@@ -1247,7 +1247,7 @@ export default class Chat extends BaseController {
 				for (const hit of result?.items ?? []) {
 					list.addItem(new CustomListItem({ type: "Active", press: () => { dialog.close(); void this.scrollToMessage(hit.messageId); },
 						content: [new VBox({ renderType: "Bare", items: [
-							new Text({ text: `${hit.senderName} · ${listTime(hit.createdAt)}` }).addStyleClass("eoMuted eoChatHitMeta"),
+							new Text({ text: `${hit.senderName}, ${listTime(hit.createdAt)}` }).addStyleClass("eoMuted eoChatHitMeta"),
 							new FormattedText({ htmlText: this.highlight(hit.snippet, q) }),
 						] }).addStyleClass("eoChatHit")] }));
 				}
@@ -1274,7 +1274,7 @@ export default class Chat extends BaseController {
 		const photos = all.filter((a) => a.kind === "photo");
 		const docs = all.filter((a) => a.kind === "document");
 		const grid = new HTMLControl({
-			content: `<div class="eoChatMediaGrid">${photos.length ? photos.map((a) => `<button type="button" class="eoChatMediaTile" data-attachment="${encodeXML(a.id)}" title="${encodeXML(`${a.fileName} · ${listTime(a.createdAt)}`)}"><img loading="lazy" src="${encodeXML(attachmentUrl(a.id, { thumbnail: a.hasThumbnail }))}" alt="${encodeXML(a.fileName)}"/></button>`).join("") : '<p class="eoMuted">Noch keine Fotos.</p>'}</div>`,
+			content: `<div class="eoChatMediaGrid">${photos.length ? photos.map((a) => `<button type="button" class="eoChatMediaTile" data-attachment="${encodeXML(a.id)}" title="${encodeXML(`${a.fileName}, ${listTime(a.createdAt)}`)}"><img loading="lazy" src="${encodeXML(attachmentUrl(a.id, { thumbnail: a.hasThumbnail }))}" alt="${encodeXML(a.fileName)}"/></button>`).join("") : '<p class="eoMuted">Noch keine Fotos.</p>'}</div>`,
 			afterRendering: () => {
 				const dom = grid.getDomRef() as HTMLElement | null;
 				dom?.addEventListener("click", (e) => {
@@ -1285,7 +1285,7 @@ export default class Chat extends BaseController {
 		});
 		const docList = new List({ noDataText: "Noch keine Dokumente.", showSeparators: "Inner" });
 		for (const a of docs) {
-			docList.addItem(new StandardListItem({ title: a.fileName, description: `${formatBytes(a.sizeBytes)} · ${listTime(a.createdAt)}`,
+			docList.addItem(new StandardListItem({ title: a.fileName, description: `${formatBytes(a.sizeBytes)}, ${listTime(a.createdAt)}`,
 				icon: "sap-icon://pdf-attachment", type: "Active", press: () => window.open(attachmentUrl(a.id), "_blank", "noopener") }));
 		}
 		const tabs = new IconTabBar({ expandable: false, items: [
@@ -1381,7 +1381,7 @@ export default class Chat extends BaseController {
 			backgroundColor: accentOf(group ? c.id : c.partnerUserId ?? c.id) as never, decorative: true }).addStyleClass("eoChatInfoAvatar");
 		const head = new VBox({ alignItems: "Center", renderType: "Bare", items: [avatar,
 			new Text({ text: c.title }).addStyleClass("eoChatInfoTitle"),
-			new Text({ text: group ? `Gruppe · ${detail.members.length} Mitglieder${c.bauakteId ? " · Baustelle" : c.crewId ? " · Kolonne" : ""}${c.announcementOnly ? " · nur Admins schreiben" : ""}` : "Einzelchat" })
+			new Text({ text: group ? `Gruppe, ${detail.members.length} Mitglieder${c.bauakteId ? ", Baustelle" : c.crewId ? ", Kolonne" : ""}${c.announcementOnly ? ", nur Admins schreiben" : ""}` : "Einzelchat" })
 				.addStyleClass("eoMuted"),
 		] }).addStyleClass("eoChatInfoHead");
 		const content: Control[] = [head];
@@ -1443,7 +1443,7 @@ export default class Chat extends BaseController {
 		}
 		const list = new List({ headerText: group ? "Mitglieder" : "Teilnehmer", showSeparators: "Inner" });
 		for (const member of detail.members) {
-			const info = [member.isAdmin ? "Admin" : "", member.fromCrew ? (c.bauakteId ? "über Bauakte" : "über Kolonne") : ""].filter(Boolean).join(" · ");
+			const info = [member.isAdmin ? "Admin" : "", member.fromCrew ? (c.bauakteId ? "über Bauakte" : "über Kolonne") : ""].filter(Boolean).join(", ");
 			const li = new StandardListItem({
 				title: member.name,
 				description: member.readUpTo ? `Zuletzt gelesen: ${listTime(member.readUpTo).includes(":") ? `heute ${listTime(member.readUpTo)}` : `${listTime(member.readUpTo)}, ${clock(member.readUpTo)}`}` : "Lesestand nicht sichtbar oder noch nichts gelesen",

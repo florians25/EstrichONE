@@ -136,10 +136,10 @@ export default class Feedback extends BaseController {
 			priorityText: feedbackPriorities[f.priority]?.text ?? f.priority, priorityState: feedbackPriorities[f.priority]?.tone ?? "None",
 			showPriority: manage && (f.priority === "high" || f.priority === "urgent"),
 			highlight: manage && f.status === "new" ? "Information" : "None",
-			who: manage ? `${f.reporterName ?? "–"} · ${f.area}` : `${feedbackKinds[f.kind].text} · ${f.area}`,
+			who: manage ? `${f.reporterName ?? "–"}, ${f.area}` : `${feedbackKinds[f.kind].text}, ${f.area}`,
 		})));
 		const open = list.filter((f) => !isClosed(f.status)).length;
-		m.setProperty("/countText", `${list.length} ${list.length === 1 ? "Meldung" : "Meldungen"}${open && open !== list.length ? ` · ${open} offen` : ""}`);
+		m.setProperty("/countText", `${list.length} ${list.length === 1 ? "Meldung" : "Meldungen"}${open && open !== list.length ? `, ${open} offen` : ""}`);
 		m.setProperty("/noData", filter.query ? `Keine Meldungen zu „${filter.query}“.`
 			: manage ? "Keine Meldungen in dieser Ansicht." : "Sie haben noch nichts gemeldet. Fehler oder Idee? „Neue Meldung“ führt durch die Angaben.");
 	}
@@ -219,13 +219,13 @@ export default class Feedback extends BaseController {
 		m.setProperty("/head", {
 			kindText: feedbackKinds[s.kind].text, kindIcon: feedbackKinds[s.kind].icon, statusText: status.text, statusState: status.tone,
 			priorityText: `Priorität ${feedbackPriorities[s.priority].text}`, priorityState: feedbackPriorities[s.priority].tone,
-			progress: `${progress.text} – ${status.hint}${s.status === "duplicate" && s.duplicateOfNumber ? ` (${s.duplicateOfNumber})` : ""}`,
+			progress: `${progress.text}. ${status.hint}${s.status === "duplicate" && s.duplicateOfNumber ? ` (${s.duplicateOfNumber})` : ""}`,
 			progressType: s.status === "done" ? "Success" : s.status === "rejected" ? "Warning" : "Information",
 		});
 		m.setProperty("/facts", [
 			{ label: "Bereich", value: s.area, state: "None" },
 			...(manage ? [{ label: "Eingereicht von", value: s.reporterName ?? "–", state: "None" }] : []),
-			{ label: "Eingereicht", value: `${new Date(s.createdAt).toLocaleDateString("de-DE")} · ${waitingSince(s.createdAt)}`, state: "None" },
+			{ label: "Eingereicht", value: `${new Date(s.createdAt).toLocaleDateString("de-DE")}, ${waitingSince(s.createdAt)}`, state: "None" },
 			{ label: s.kind === "bug" ? "Auswirkung" : "Wichtigkeit", value: impactShort[s.impact], state: s.impact === "high" ? "Warning" : "None" },
 			{ label: "Zuständig", value: s.assigneeName ?? "noch niemand", state: manage && !s.assigneeName ? "Warning" : "None" },
 			...(s.duplicateOfNumber ? [{ label: "Duplikat von", value: s.duplicateOfNumber, state: "None" }] : []),
@@ -253,7 +253,7 @@ export default class Feedback extends BaseController {
 		this.timeline = d.timeline;
 		this.renderTimeline();
 		this.patchRow(s);
-		document.title = `${s.number} ${s.title} – EstrichONE`;
+		document.title = `${s.number} ${s.title} (EstrichONE)`;
 		// Neue Meldung: oben beginnen (Angaben); nach einer Antwort: ans Ende des Verlaufs.
 		const same = this.shownId === s.id;
 		this.shownId = s.id;
@@ -270,7 +270,7 @@ export default class Feedback extends BaseController {
 				return {
 					...i, bubble, icon: icons[i.kind] ?? "sap-icon://history", kindText: kindTexts[i.kind] ?? i.kind, tone: i.kind,
 					who: i.kind === "note" ? "note" : i.isReporter ? "reporter" : "agent",
-					headline: i.kind === "note" ? `${i.actorName ?? ""} · interne Notiz` : i.actorName ?? "",
+					headline: i.kind === "note" ? `${i.actorName ?? ""}, interne Notiz` : i.actorName ?? "",
 					files: i.attachments.map(attachmentView),
 				};
 			}));

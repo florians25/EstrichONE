@@ -136,7 +136,7 @@ export function customerInput(id: string, initialId: string | null, initialText:
 	const fill = (list: ContactResponse[], text: string) => {
 		input.destroySuggestionItems();
 		for (const c of list) {
-			input.addSuggestionItem(new SuggestionItem({ key: c.id, text: c.name, description: [c.customerNumber, c.city].filter(Boolean).join(" · ") }));
+			input.addSuggestionItem(new SuggestionItem({ key: c.id, text: c.name, description: [c.customerNumber, c.city].filter(Boolean).join(", ") }));
 		}
 		if (text.trim().length >= 2 && !list.some((c) => c.name.toLowerCase() === text.trim().toLowerCase())) {
 			input.addSuggestionItem(new SuggestionItem({ key: CUSTOMER_NEW, text: `„${text.trim()}“ als neuen Kunden anlegen`, icon: "sap-icon://add" }));
@@ -219,7 +219,7 @@ export function bauakteInput(id: string, initialId: string | null, initialText: 
 			const page = await get<BauaktePage>("bauakten", { search: text.trim(), limit: 10 }).catch(() => ({ items: [] }));
 			input.destroySuggestionItems();
 			for (const b of page.items) {
-				input.addSuggestionItem(new SuggestionItem({ key: b.id, text: `${b.number ?? "neu"} · ${b.title}`, description: b.city ?? "" }));
+				input.addSuggestionItem(new SuggestionItem({ key: b.id, text: `${b.number ?? "neu"}, ${b.title}`, description: b.city ?? "" }));
 			}
 		}, 150);
 	});

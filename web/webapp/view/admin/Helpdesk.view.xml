@@ -385,7 +385,7 @@
 								</VBox>
 								<HBox class="eoTimelineEvent" visible="{= !${view>bubble} }" wrap="Wrap">
 									<Text text="{view>summary}" class="eoStrong sapUiTinyMarginEnd"/>
-									<Text text="{view>actorName} · {path: 'view>at', formatter: 'fmt.dateTime'}" class="eoTimelineMeta"/>
+									<Text text="{view>actorName}, {path: 'view>at', formatter: 'fmt.dateTime'}" class="eoTimelineMeta"/>
 								</HBox>
 								<Text text="{view>eventText}" class="eoPre eoMuted" visible="{= !${view>bubble} &amp;&amp; !!${view>eventText} }"/>
 							</VBox>
@@ -401,7 +401,7 @@
 							<VBox class="eoHdCard">
 								<Title text="Melder" level="H3"/>
 								<Text text="{= ${view>/ctx/reporter/displayName} || ${view>/t/summary/reporterDisplayName} || 'Gerät ohne Anmeldung' }" class="eoStrong"/>
-								<Text text="{= ${view>/ctx/reporter} ? 'Benutzername ' + ${view>/ctx/reporter/userName} + (${view>/ctx/reporter/isActive} ? '' : ' · gesperrt') : '' }" class="eoMuted"/>
+								<Text text="{= ${view>/ctx/reporter} ? 'Benutzername ' + ${view>/ctx/reporter/userName} + (${view>/ctx/reporter/isActive} ? '' : ', gesperrt') : '' }" class="eoMuted"/>
 								<Link text="{view>/ctx/reporter/email}" href="{= 'mailto:' + ${view>/ctx/reporter/email} }" visible="{= !!${view>/ctx/reporter/email} }"/>
 								<Link text="{view>/ctx/reporter/phone}" href="{= 'tel:' + ${view>/ctx/reporter/phone} }" visible="{= !!${view>/ctx/reporter/phone} }"/>
 								<Text text="{view>/lastLoginText}" class="eoMuted" visible="{= !!${view>/lastLoginText} }"/>
@@ -458,7 +458,7 @@
 							</VBox>
 						</Panel>
 						<List headerText="Weitere Tickets dieser Person" items="{view>/ctx/otherTickets}" noDataText="Keine weiteren Tickets." class="sapUiSmallMarginTop">
-							<StandardListItem title="{view>number} · {view>title}" description="{path: 'view>createdAt', formatter: 'fmt.date'}"
+							<StandardListItem title="{view>number}, {view>title}" description="{path: 'view>createdAt', formatter: 'fmt.date'}"
 								info="{path: 'view>status', formatter: 'fmt.ticketStatusText'}" infoState="{path: 'view>status', formatter: 'fmt.ticketStatusState'}"
 								type="Navigation" press=".onOpenOther"/>
 						</List>
@@ -471,7 +471,7 @@
 					<VBox class="eoHdScrollInner">
 						<List headerText="Verknüpfte Tickets" items="{view>/t/links}" noDataText="Keine Verknüpfungen. Ähnliche Meldungen über „Weitere Aktionen“ verknüpfen oder zusammenführen."
 							mode="Delete" delete=".onUnlink">
-							<StandardListItem title="{view>number} · {view>title}" description="{= ${view>kind} === 'duplicate' ? 'Duplikat (zusammengeführt)' : 'hängt zusammen' }"
+							<StandardListItem title="{view>number}, {view>title}" description="{= ${view>kind} === 'duplicate' ? 'Duplikat (zusammengeführt)' : 'hängt zusammen' }"
 								info="{path: 'view>status', formatter: 'fmt.ticketStatusText'}" infoState="{path: 'view>status', formatter: 'fmt.ticketStatusState'}"
 								type="Navigation" press=".onOpenLinked"/>
 						</List>

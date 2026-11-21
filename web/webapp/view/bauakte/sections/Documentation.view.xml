@@ -79,7 +79,7 @@
 				<MessageStrip id="waiverStatus" text="{dc>/waiverText}" type="Information" showIcon="true" visible="{= ${dc>/ib/status} === 'waived' }" class="sapUiSmallMarginBottom"/>
 				<MessageStrip id="initialEmpty" type="Information" showIcon="true" class="sapUiSmallMarginBottom"
 					visible="{= ${dc>/ib/status} === 'open' || ${dc>/ib/status} === 'planned' }"
-					text="{= ${dc>/ib/status} === 'planned' ? 'Termin steht. Die Erstbegehung wird vor Ort in der App oder hier durchgeführt; das Protokoll erscheint danach hier.' : 'Noch keine Erstbegehung. Termin planen oder direkt durchführen – vor Ort in der App oder hier.' }"/>
+					text="{= ${dc>/ib/status} === 'planned' ? 'Termin steht. Die Erstbegehung wird vor Ort in der App oder hier durchgeführt; das Protokoll erscheint danach hier.' : 'Noch keine Erstbegehung. Termin planen oder direkt durchführen, vor Ort in der App oder hier.' }"/>
 
 				<f:Card id="initialProtocolCard" class="sapUiSmallMarginTop" visible="{= !!${dc>/latest} }">
 					<f:header>

@@ -88,7 +88,7 @@
 										<VBox>
 											<Title text="{view>label}" level="H4" visible="{view>group}"/>
 											<Text text="{view>label}" visible="{= !${view>group} }"/>
-											<Text text="{= (${view>builtin} ? 'eingebaut' : 'eigenes Feld') + (${view>listText} ? ' · ' + ${view>listText} : '') }" class="eoMuted" visible="{= !${view>group} }"/>
+											<Text text="{= (${view>builtin} ? 'eingebaut' : 'eigenes Feld') + (${view>listText} ? ', ' + ${view>listText} : '') }" class="eoMuted" visible="{= !${view>group} }"/>
 										</VBox>
 										<Text text="{view>typeText}"/>
 										<CheckBox selected="{view>required}" visible="{= !${view>group} }" select=".onFormFlag" enabled="{view>/canManage}"/>

@@ -42,7 +42,7 @@ test('Kundenanlage: Dublettenhinweis beim Tippen, vorhandenen Kunden verwenden, 
   await expect(page).toHaveURL(/\/kunden\/[0-9a-f-]{36}/);
   await expect(pageTitle(page)).toHaveText('Wohnbau Süd GmbH');
   await expect(page.getByText(/Kd\.-Nr\. 60\d{4}/).filter({ visible: true }).first()).toBeVisible();
-  await expect(page.getByText('Thomas Berger · Bauleitung').first()).toBeVisible();
+  await expect(page.getByText('Thomas Berger, Bauleitung').first()).toBeVisible();
   await expect(page.getByText('Rechnungen nur per E-Mail, Zahlungsziel 30 Tage').first()).toBeVisible();
 });
 

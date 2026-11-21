@@ -35,7 +35,7 @@ export default class Report extends BaseController {
 		m.setProperty("/busy", true);
 		try {
 			m.setProperty("/html", await this.build(kind, match.query));
-			document.title = `${titles[kind]} – EstrichONE`;
+			document.title = `${titles[kind]} (EstrichONE)`;
 		} catch (error) {
 			this.showError(error);
 		} finally {
@@ -58,11 +58,11 @@ export default class Report extends BaseController {
 		const withPhotos = query.get("fotos") !== "0";
 		const withWork = query.get("aufgaben") !== "0";
 		const photo = (f: FileResponse) => `<figure><img src="/api/v1/files/${f.id}/content?variant=${f.variants === "ready" ? "display" : "original"}" alt="${e(f.caption ?? f.originalName)}"/>`
-			+ `<figcaption>${e(dateTime(f.capturedAt ?? f.createdAt))}${f.caption ? ` · ${e(f.caption)}` : ""}</figcaption></figure>`;
+			+ `<figcaption>${e(dateTime(f.capturedAt ?? f.createdAt))}${f.caption ? `, ${e(f.caption)}` : ""}</figcaption></figure>`;
 		const head = `<div class="head"><div><h1>${e(titles[kind])}</h1><div><strong>${e(b.number ?? "")} ${e(b.title)}</strong></div>
 <div class="muted">${e([b.street, [b.postalCode, b.city].filter(Boolean).join(" ")].filter(Boolean).join(", "))}</div></div>
-<div style="text-align:right"><strong>${e(company?.name)}</strong><div class="muted">${e([company?.street, [company?.postalCode, company?.city].filter(Boolean).join(" ")].filter(Boolean).join(" · "))}</div>
-<div class="muted">${e([company?.phone && `Tel. ${company.phone}`, company?.email].filter(Boolean).join(" · "))}</div>
+<div style="text-align:right"><strong>${e(company?.name)}</strong><div class="muted">${e([company?.street, [company?.postalCode, company?.city].filter(Boolean).join(" ")].filter(Boolean).join(", "))}</div>
+<div class="muted">${e([company?.phone && `Tel. ${company.phone}`, company?.email].filter(Boolean).join(", "))}</div>
 <div class="muted">Stand ${e(dateTime(new Date().toISOString()))}</div></div></div>`;
 		const facts = `<h2>Stammdaten</h2><div class="grid">
 <div>Kunde: <strong>${e(customer?.name ?? "–")}</strong></div><div>Status: ${e(bauakteStatus[b.status]?.text)}</div>
@@ -103,10 +103,10 @@ ${withWork ? workTable(openWork.filter((w) => w.kind === "defect"), "Bekannte of
 			const d = isoDay(new Date(p.capturedAt ?? p.createdAt));
 			return d >= from && d <= to;
 		});
-		const period = query.get("von") || query.get("bis") ? `Zeitraum ${date(query.get("von"))} – ${date(query.get("bis"))}` : "Gesamter Zeitraum";
+		const period = query.get("von") || query.get("bis") ? `Zeitraum ${date(query.get("von"))} bis ${date(query.get("bis"))}` : "Gesamter Zeitraum";
 		const diaryHtml = `<h2>Bautagebuch (${days.length} Einträge)</h2>${days.map((d) => {
 			const linked = (d.photoFileIds ?? []).map((pid) => photos.find((p) => p.id === pid)).filter((p): p is FileResponse => !!p);
-			return `<div class="entry"><strong>${e(longDay(d.day))}</strong> <span class="muted">${e([weatherLine(d), timeRange(d.startTime, d.endTime), d.crew].filter(Boolean).join(" · "))}</span>
+			return `<div class="entry"><strong>${e(longDay(d.day))}</strong> <span class="muted">${e([weatherLine(d), timeRange(d.startTime, d.endTime), d.crew].filter(Boolean).join(", "))}</span>
 <div class="pre">${e(d.text)}</div><div class="muted">${e(session.name(d.authorUserId))}</div>${withPhotos && linked.length ? `<div class="photos">${linked.map(photo).join("")}</div>` : ""}</div>`;
 		}).join("") || "<p>Keine Einträge im Zeitraum.</p>"}`;
 		return `<div class="eoSheet">${head}<p><strong>${e(period)}</strong></p>${facts}${roomTable}${diaryHtml}${checks}

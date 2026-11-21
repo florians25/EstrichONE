@@ -62,8 +62,8 @@ export function relevantAppointment(list: InitialAppointment[], today: string): 
 /** „Do., 19.11.2026, 08:00–10:00 · Kolonne Nord“ */
 export function appointmentText(a: InitialAppointment | null): string {
 	if (!a) return "";
-	const span = a.start ? `, ${a.start}${a.end && a.end !== a.start ? `–${a.end}` : ""}` : "";
-	return `${weekdayDate(a.day)}${span}${a.who ? ` · ${a.who}` : ""}`;
+	const span = a.start ? `, ${a.start}${a.end && a.end !== a.start ? ` bis ${a.end}` : ""}` : "";
+	return `${weekdayDate(a.day)}${span}${a.who ? `, ${a.who}` : ""}`;
 }
 
 /** Status der Erstbegehung: erfasst vor Vermerk vor Termin. */

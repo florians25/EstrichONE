@@ -53,7 +53,7 @@ describe('Bauakte', () => {
   });
 
   it('Zusammenfassung nennt Art, Name und Abgleich', () => {
-    expect(linkSummary(link)).toBe('Kanal „2026-0042 EFH Müller“ · 4 Mitglieder abgeglichen');
+    expect(linkSummary(link)).toBe('Kanal „2026-0042 EFH Müller“, 4 Mitglieder abgeglichen');
     expect(linkSummary({ ...link, kind: 'groupChat', lastSyncError: 'fehlt' })).toContain('Gruppenchat');
     expect(linkSummary({ ...link, lastSyncError: 'fehlt' })).toContain('Abgleich mit Hinweis');
     expect(linkSummary(null)).toBe('Noch nicht mit Teams verknüpft');
@@ -80,7 +80,7 @@ describe('Bauakte', () => {
 describe('Teams-Chat anlegen', () => {
   const person = (userId: string, upn: string | null) => ({ userId, name: userId.toUpperCase(), upn, fromEmail: false, reason: upn ? null : 'Kein Microsoft-Konto.' });
   const data: TeamsParticipants = {
-    selfUserId: 'me', viaGraph: true, minMembers: 3, topic: '2026-001 · EFH',
+    selfUserId: 'me', viaGraph: true, minMembers: 3, topic: '2026-001, EFH',
     people: [person('me', 'me@x.de'), person('anna', 'anna@x.de'), person('bernd', 'bernd@x.de'), person('ohne', null)],
     options: [
       { key: 'team', kind: 'team', name: 'Bauakten-Team (Zuständige und Mitarbeiter)', userIds: ['anna'] },

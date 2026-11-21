@@ -23,7 +23,7 @@
 									text="{view>/lastTestText}"
 									class="sapUiSmallMarginBottom"/>
 								<MessageStrip type="Information" showIcon="true" class="sapUiSmallMarginBottom" id="teamsPrivacy"
-									text="Datenschutz: An Microsoft gehen nur die Zuordnung der Konten (über die dienstliche E-Mail-Adresse), Mitgliedschaften in den Unterhaltungen der Bauakten und – falls eingeschaltet – kurze Ereigniskarten ohne Namen, Kommentare oder Kundendaten. EstrichONE liest keine Nachrichten aus Teams. Vor der Umstellung Betriebsrat einbinden und Beschäftigte informieren (Vorlage im Handbuch)."/>
+									text="Datenschutz: An Microsoft gehen nur die Zuordnung der Konten (über die dienstliche E-Mail-Adresse), Mitgliedschaften in den Unterhaltungen der Bauakten und (falls eingeschaltet) kurze Ereigniskarten ohne Namen, Kommentare oder Kundendaten. EstrichONE liest keine Nachrichten aus Teams. Vor der Umstellung Betriebsrat einbinden und Beschäftigte informieren (Vorlage im Handbuch)."/>
 								<List id="teamsTestSteps" items="{view>/steps}" visible="{= ${view>/steps}.length > 0 }" headerText="Ergebnis des Verbindungstests"
 									class="sapUiSmallMarginBottom" width="48rem">
 									<StandardListItem title="{view>name}" description="{view>detail}" icon="{= ${view>ok} ? (${view>warning} ? 'sap-icon://alert' : 'sap-icon://sys-enter-2') : 'sap-icon://error' }"
@@ -62,7 +62,7 @@
 								<Label text="Zertifikat (PEM)" labelFor="tmCert" visible="{= ${view>/s/authKind} === 'certificate' }"/>
 								<VBox visible="{= ${view>/s/authKind} === 'certificate' }">
 									<TextArea id="tmCert" value="{view>/certificate}" rows="4" width="100%"
-										placeholder="{= ${view>/s/certificateThumbprint} ? 'gespeichert – Fingerabdruck ' + ${view>/s/certificateThumbprint} : '-----BEGIN CERTIFICATE----- … -----BEGIN PRIVATE KEY----- …' }"/>
+										placeholder="{= ${view>/s/certificateThumbprint} ? 'gespeichert, Fingerabdruck ' + ${view>/s/certificateThumbprint} : '-----BEGIN CERTIFICATE----- … -----BEGIN PRIVATE KEY----- …' }"/>
 									<Text text="{view>/certificateText}" visible="{= !!${view>/certificateText} }" class="sapUiTinyMarginTop"/>
 								</VBox>
 								<core:Title text="Bauakten"/>
@@ -97,7 +97,7 @@
 								<Label text="Über Microsoft Graph anlegen" labelFor="tmChatsGraph"/>
 								<VBox>
 									<Switch id="tmChatsGraph" state="{view>/s/chatsViaGraph}" customTextOn=" " customTextOff=" "/>
-									<Text text="Aus: „Chat in Teams“ öffnet einen Teams-Link (keine Berechtigung nötig). Ein: Einzelchats werden über Microsoft Graph angelegt (Chat.Create) – stabiler Link."/>
+									<Text text="Aus: „Chat in Teams“ öffnet einen Teams-Link (keine Berechtigung nötig). Ein: Einzelchats werden über Microsoft Graph angelegt (Chat.Create) mit stabilem Link."/>
 								</VBox>
 							</form:SimpleForm>
 						</IconTabFilter>
@@ -176,7 +176,7 @@
 								<Label text="Webhook-URL" labelFor="tmWebhook" visible="{= ${view>/s/postVia} === 'webhook' }"/>
 								<VBox visible="{= ${view>/s/postVia} === 'webhook' }">
 									<Input id="tmWebhook" value="{view>/webhook}" type="Password"
-										placeholder="{= ${view>/s/hasWebhook} ? 'gespeichert (' + ${view>/s/webhookHost} + ') – leer lassen, um sie beizubehalten' : 'https://…logic.azure.com/… bzw. …powerplatform.com/…' }"/>
+										placeholder="{= ${view>/s/hasWebhook} ? 'gespeichert (' + ${view>/s/webhookHost} + '). Leer lassen, um sie beizubehalten.' : 'https://…logic.azure.com/… bzw. …powerplatform.com/…' }"/>
 									<Text text="In Teams beim Kanal „…“ › „Workflows“ › „Beim Empfang einer Webhookanforderung in einem Kanal posten“. Die URL ist geheim und wird verschlüsselt gespeichert."
 										class="sapUiTinyMarginTop"/>
 									<Button id="tmWebhookTest" text="Testkarte senden" icon="sap-icon://paper-plane" press=".onWebhookTest" class="sapUiTinyMarginTop"/>

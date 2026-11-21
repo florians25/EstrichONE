@@ -57,7 +57,7 @@ export default class Item extends BaseController {
 		m.setProperty("/place", file.kind === "document"
 			? [documentCategories[(file.category ?? "other") as keyof typeof documentCategories]?.text, file.folder].filter(Boolean).join(" / ")
 			: file.kind === "photo" ? "Fotos" : "Videos");
-		m.setProperty("/subtitle", `${fileSize(file.sizeBytes)} · ${dateTime(file.createdAt)}`);
+		m.setProperty("/subtitle", `${fileSize(file.sizeBytes)}, ${dateTime(file.createdAt)}`);
 		const row = documentRows(files).find((r) => r.id === file.id);
 		const chain = row?.chain ?? [file.id];
 		m.setProperty("/versions", chain.map((id, index) => {
@@ -71,8 +71,8 @@ export default class Item extends BaseController {
 		const list = file.kind === "document" ? await get<ApprovalResponse[]>(`files/${file.id}/approvals`).catch(() => [] as ApprovalResponse[]) : [];
 		m.setProperty("/approvals", list.map((a) => ({
 			...a, statusText: approvalStatus[a.status].text, statusState: approvalStatus[a.status].state,
-			line: `${a.requestedByName} → ${a.assigneeName} · ${dateTime(a.requestedAt)}${a.message ? ` · „${a.message}“` : ""}`,
-			decision: a.decidedAt ? `${a.decidedByName ?? "?"} · ${dateTime(a.decidedAt)}${a.decisionComment ? ` · „${a.decisionComment}“` : ""}` : "",
+			line: `${a.requestedByName} → ${a.assigneeName}, ${dateTime(a.requestedAt)}${a.message ? `, „${a.message}“` : ""}`,
+			decision: a.decidedAt ? `${a.decidedByName ?? "?"}, ${dateTime(a.decidedAt)}${a.decisionComment ? `, „${a.decisionComment}“` : ""}` : "",
 		})));
 		const pending = list.find((a) => a.status === "pending") ?? null;
 		m.setProperty("/pendingApproval", pending);
@@ -107,7 +107,7 @@ export default class Item extends BaseController {
 	/** Bild im Detailfenster in voller Größe. */
 	onEnlarge(): void {
 		const file = this.model("it").getProperty("/file") as FileResponse;
-		openMediaViewer([fileMedia(file, `${fileSize(file.sizeBytes)} · ${dateTime(file.capturedAt ?? file.createdAt)}`)], 0);
+		openMediaViewer([fileMedia(file, `${fileSize(file.sizeBytes)}, ${dateTime(file.capturedAt ?? file.createdAt)}`)], 0);
 	}
 
 	onNewTab(): void {

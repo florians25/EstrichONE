@@ -54,7 +54,7 @@
 								<Text text="{nt>authorName}" class="sapUiTinyMarginEnd"/>
 								<Text text="{path: 'nt>at', formatter: 'fmt.dateTime'}" class="eoMuted eoTabular sapUiTinyMarginEnd"/>
 								<ObjectStatus text="Angeheftet" state="Warning" visible="{= !!${nt>isPinned} }" class="sapUiTinyMarginEnd"/>
-								<Text text="· bearbeitet" visible="{= !!${nt>editedAt} }" class="eoMuted"/>
+								<Text text="(bearbeitet)" visible="{= !!${nt>editedAt} }" class="eoMuted"/>
 							</HBox>
 							<HBox visible="{= (${session>/permissions/notes.write} === true &amp;&amp; ${akte>/writable} !== false) }">
 								<Button icon="{= ${nt>isPinned} ? 'sap-icon://pushpin-off' : 'sap-icon://pushpin-on' }" type="Transparent"

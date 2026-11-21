@@ -30,7 +30,7 @@
 					</eo:LeafletMap>
 					<List items="{view>/shown}" noDataText="Keine Baustelle mit Standort in dieser Auswahl." headerText="Baustellen" width="22rem"
 						class="sapUiSmallMarginBegin eoMapList">
-						<StandardListItem title="{view>title}" description="{= ${view>number} || 'neu' } · {= ${view>city} || '–' }" type="Navigation" press=".onOpen"
+						<StandardListItem title="{view>title}" description="{= ${view>number} || 'neu' }, {= ${view>city} || '–' }" type="Navigation" press=".onOpen"
 							info="{path: 'view>status', formatter: 'fmt.bauakteStatusText'}" infoState="{path: 'view>status', formatter: 'fmt.bauakteStatusState'}"/>
 					</List>
 				</FlexBox>

@@ -45,7 +45,7 @@ export default class Orders extends BaseController {
 			]);
 			m.setProperty("/items", orders.map((o) => ({
 				...o, deliveryText: o.deliveryDate ? day(o.deliveryDate) : "nach Absprache", address: deliveryAddress(o) || "–", totalText: orderTotal(o),
-				linesText: o.lines.map((l) => `${quantity(l.quantity)} ${l.unit} ${l.description}`).join(" · ") || "–",
+				linesText: o.lines.map((l) => `${quantity(l.quantity)} ${l.unit} ${l.description}`).join(", ") || "–",
 				overdue: !!o.deliveryDate && o.deliveryDate < today && ["ordered", "confirmed"].includes(o.status),
 			})));
 			const overdue = open.filter((o) => o.deliveryDate && o.deliveryDate < today).length;

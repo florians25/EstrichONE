@@ -11,7 +11,7 @@ describe('Anmeldung und Sicherheit', () => {
       .toBe('Browser (Edge auf Windows)');
     expect(sessionLabel({ client: 'web', clientName: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 14_5) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15' }))
       .toBe('Browser (Safari auf macOS)');
-    expect(sessionLabel({ client: 'ios', clientName: 'iPhone von Max' })).toBe('iPhone/iPad-App · iPhone von Max');
+    expect(sessionLabel({ client: 'ios', clientName: 'iPhone von Max' })).toBe('iPhone/iPad-App, iPhone von Max');
     expect(sessionLabel({ client: 'desktop', clientName: null })).toBe('Windows-App');
   });
 });

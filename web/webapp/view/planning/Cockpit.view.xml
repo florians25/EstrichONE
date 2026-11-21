@@ -84,7 +84,7 @@
 				<Button id="ckFilterBtn" text="{= ${view>/filterCount} > 0 ? 'Filter (' + ${view>/filterCount} + ')' : 'Filter' }" icon="sap-icon://filter" type="{= ${view>/filterCount} > 0 ? 'Attention' : 'Default' }" press=".onFilterOpen" tooltip="Kolonnen, Region, Status">
 					<layoutData><OverflowToolbarLayoutData priority="NeverOverflow"/></layoutData>
 				</Button>
-				<Button id="ckViewBtn" icon="sap-icon://action-settings" type="Transparent" press=".onViewOptions" text="{= ${view>/weekend} ? 'Mo–So' : 'Mo–Fr' }"
+				<Button id="ckViewBtn" icon="sap-icon://action-settings" type="Transparent" press=".onViewOptions" text="{= ${view>/weekend} ? 'Mo bis So' : 'Mo bis Fr' }"
 					tooltip="Darstellung: Wochenende anzeigen (W), kompakte Karten" class="eoCkViewBtn" visible="{= ${view>/mode} !== 'day' }">
 					<layoutData><OverflowToolbarLayoutData priority="High"/></layoutData>
 				</Button>
@@ -140,7 +140,7 @@
 				</VBox>
 				<VBox class="eoCkPoolRail" renderType="Bare" visible="{= !${view>/poolOpen} }" alignItems="Center">
 					<Button icon="sap-icon://open-command-field" type="Transparent" tooltip="Vorrat einblenden" press=".onTogglePool" class="eoCkPoolOpen"/>
-					<Text text="{= 'Vorrat · ' + ${view>/poolCount} }" class="eoCkPoolRailText" wrapping="false"/>
+					<Text text="{= 'Vorrat, ' + ${view>/poolCount} }" class="eoCkPoolRailText" wrapping="false"/>
 				</VBox>
 				<VBox class="eoCkMain" renderType="Bare" busy="{view>/busy}" busyIndicatorDelay="400">
 					<eo:Cockpit id="cockpit" data="{view>/render}" drop=".onDrop" open=".onOpen" select=".onSelect" menu=".onMenu" extend=".onExtend"

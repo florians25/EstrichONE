@@ -30,7 +30,7 @@ const toLocal = (iso: string | null) => {
 };
 const toIso = (date: unknown, time: unknown) => (date ? new Date(`${date}T${time || "00:00:00"}`).toISOString() : null);
 const period = (a: { startsAt: string | null; endsAt: string | null }) =>
-	a.startsAt || a.endsAt ? `${a.startsAt ? dateTime(a.startsAt) : "sofort"} – ${a.endsAt ? dateTime(a.endsAt) : "offen"}` : "dauerhaft";
+	a.startsAt || a.endsAt ? `${a.startsAt ? dateTime(a.startsAt) : "sofort"} bis ${a.endsAt ? dateTime(a.endsAt) : "offen"}` : "dauerhaft";
 
 /** System › Hinweise & Wartung: Ankündigungen und Wartungsmodus der Instanz; Hinweise der Hosting-Konsole nur lesen. @namespace estrichone.controller.admin */
 export default class Notices extends BaseController {
@@ -63,14 +63,14 @@ export default class Notices extends BaseController {
 		}));
 		m.setProperty("/console", data.console.announcements.map((a) => ({ ...a, period: period(a), severityState: severities[a.severity]?.state ?? "None" })));
 		const cm = data.console.maintenance;
-		m.setProperty("/consoleMaintenance", cm ? `Wartung durch den Betreiber: ${period(cm)}${cm.message ? ` – ${cm.message}` : ""}` : "");
+		m.setProperty("/consoleMaintenance", cm ? `Wartung durch den Betreiber: ${period(cm)}${cm.message ? `. ${cm.message}` : ""}` : "");
 		const w = data.instance.maintenance;
 		const running = !!w && new Date(w.startsAt).getTime() <= now && (!w.endsAt || new Date(w.endsAt).getTime() > now);
 		m.setProperty("/maintenance", {
 			has: !!w && (!w.endsAt || new Date(w.endsAt).getTime() > now), running,
 			text: running ? "Wartung läuft" : w && (!w.endsAt || new Date(w.endsAt).getTime() > now) ? "Wartung geplant" : "Keine Wartung",
 			state: running ? "Error" : w ? "Warning" : "Success",
-			detail: w ? `${period(w)}${w.message ? ` · ${w.message}` : ""}${w.adminsMayWork ? " · Administratoren arbeiten weiter" : " · auch Administratoren gesperrt"}` : "",
+			detail: w ? `${period(w)}${w.message ? `, ${w.message}` : ""}${w.adminsMayWork ? ", Administratoren arbeiten weiter" : ", auch Administratoren gesperrt"}` : "",
 		});
 		// Vorschau: genau die Karten, die Benutzer jetzt sehen (Hinweise der Konsole und der Instanz, Wartung der Konsole hat Vorrang).
 		const nowDate = new Date(now);

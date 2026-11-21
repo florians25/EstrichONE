@@ -27,7 +27,7 @@ export const MODULE_AREAS: { key: string; title: string; description: string }[]
 	{ key: "hr", title: "Personal", description: "Mitarbeiter, Urlaub und Abwesenheit" },
 	{ key: "site", title: "Baustelle und Dokumentation", description: "Was auf der Baustelle erfasst und dokumentiert wird" },
 	{ key: "service", title: "Kommunikation und Service", description: "Chat, Helpdesk und Rückmeldungen" },
-	{ key: "core", title: "Immer aktiv", description: "Kern von EstrichONE – nicht abschaltbar" },
+	{ key: "core", title: "Immer aktiv", description: "Kern von EstrichONE, nicht abschaltbar" },
 ];
 
 /**
@@ -154,7 +154,7 @@ export function dependencyHint(modules: ModuleInfo[], module: ModuleInfo): strin
 	return [
 		module.requires.length ? `Benötigt: ${module.requires.map(title).join(", ")}` : "",
 		module.requiredBy.length ? `Wird benötigt von: ${module.requiredBy.map(title).join(", ")}` : "",
-	].filter(Boolean).join(" · ");
+	].filter(Boolean).join(", ");
 }
 
 /** Text für den Bestätigungsdialog beim Ausschalten. */

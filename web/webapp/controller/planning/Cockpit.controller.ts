@@ -239,10 +239,10 @@ export default class CockpitController extends BaseController {
 		const first = days[0];
 		const last = days[days.length - 1];
 		const year = parseDay(last).getFullYear();
-		const range = `${short(first)} – ${short(last)}${year !== new Date().getFullYear() ? ` ${year}` : ""}`;
+		const range = `${short(first)} bis ${short(last)}${year !== new Date().getFullYear() ? ` ${year}` : ""}`;
 		this.model().setProperty("/period", mode === "day" ? parseDay(first).toLocaleDateString("de-DE", { weekday: "long", day: "numeric", month: "long", year: "numeric" })
 			: mode === "month" ? parseDay(first).toLocaleDateString("de-DE", { month: "long", year: "numeric" })
-				: `KW ${isoWeek(first)}${mode === "twoWeeks" ? `–${isoWeek(last)}` : ""} · ${range}`);
+				: `KW ${isoWeek(first)}${mode === "twoWeeks" ? ` bis ${isoWeek(last)}` : ""}, ${range}`);
 	}
 
 	/** Untertitel im Kopf: Ansicht, Kolonnen, Stand. */
@@ -251,7 +251,7 @@ export default class CockpitController extends BaseController {
 		const view = { day: "Zeitachse eines Tages", week: "Wochenplan", twoWeeks: "Zwei Wochen", month: "Monatsübersicht" }[this.mode()];
 		const crews = board?.crews.length ?? 0;
 		const time = new Date().toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
-		this.model().setProperty("/subtitle", `${view} · ${crews} ${crews === 1 ? "Kolonne" : "Kolonnen"} · Stand ${time} Uhr${this.canPlan() ? "" : " · nur Ansicht"}`);
+		this.model().setProperty("/subtitle", `${view}, ${crews} ${crews === 1 ? "Kolonne" : "Kolonnen"}, Stand ${time} Uhr${this.canPlan() ? "" : ", nur Ansicht"}`);
 	}
 
 	private regionOf(a: { bauakteAddress?: string | null; postalCode?: string | null }): string {
@@ -311,7 +311,7 @@ export default class CockpitController extends BaseController {
 			+ board.assignments.filter((a) => !a.crewId).reduce((s, a) => s + a.warnings.length, 0);
 		m.setProperty("/kpi", {
 			unplanned: free.length, overdue: free.filter((b) => urgencyOf(b, today) === "overdue").length, assignments: board.assignments.length,
-			loadText: capacity ? `${percent} % · ${hours(planned)}/${hours(capacity)} h` : "–",
+			loadText: capacity ? `${percent} %, ${hours(planned)}/${hours(capacity)} h` : "–",
 			loadState: percent > 100 ? "Error" : "None",
 			releaseText: !releasable.length ? "–" : changed ? `${changed} ${changed === 1 ? "Änderung" : "Änderungen"} seit Freigabe`
 				: `${released.length} von ${releasable.length} Tagen freigegeben`,
@@ -354,7 +354,7 @@ export default class CockpitController extends BaseController {
 			title: "Darstellung", placement: "Bottom", contentWidth: "21rem",
 			content: [new VBox({ items: [
 				row("Wochenende anzeigen (Sa/So)", this.showWeekend(), () => this.onWeekend(),
-					"Aus: Woche Mo–Fr. Samstage und Sonntage mit Einsätzen bleiben trotzdem sichtbar."),
+					"Aus: Woche Mo bis Fr. Samstage und Sonntage mit Einsätzen bleiben trotzdem sichtbar."),
 				row("Kompakte Karten", m.getProperty("/compact") === true, () => { m.setProperty("/compact", !(m.getProperty("/compact") === true)); this.onCompact(); },
 					"Eine Zeile je Einsatz (Woche, 2 Wochen) für bessere Übersicht bei vielen Einsätzen."),
 			] }).addStyleClass("sapUiSmallMargin")],
@@ -397,7 +397,7 @@ export default class CockpitController extends BaseController {
 			const start = b.plannedStart ? short(b.plannedStart) : "";
 			return {
 				id: b.bauakteId, title: b.title, number: b.number,
-				meta: [b.number ?? "neu", b.customerName, [b.postalCode, b.city].filter(Boolean).join(" ")].filter(Boolean).join(" · "),
+				meta: [b.number ?? "neu", b.customerName, [b.postalCode, b.city].filter(Boolean).join(" ")].filter(Boolean).join(", "),
 				area: b.totalAreaSquareMeters > 0 ? area(b.totalAreaSquareMeters) : "",
 				due: urgency === "overdue" ? `Beginn überfällig (${start})` : urgency === "soon" ? `Beginn ${start}` : urgency === "later" ? `ab ${start}` : "ohne Termin",
 				urgency, planned: b.upcomingAssignments > 0 ? `${b.upcomingAssignments}× geplant` : b.screedTypes.join(", "),
@@ -406,7 +406,7 @@ export default class CockpitController extends BaseController {
 		const free = this.backlog.filter((b) => b.upcomingAssignments === 0);
 		m.setProperty("/poolCount", free.length);
 		const total = free.reduce((s, b) => s + b.totalAreaSquareMeters, 0);
-		m.setProperty("/poolFacts", `${items.length} angezeigt${total > 0 ? ` · ${area(total)} ungeplant` : ""}`);
+		m.setProperty("/poolFacts", `${items.length} angezeigt${total > 0 ? `, ${area(total)} ungeplant` : ""}`);
 	}
 
 	onPoolPlan(e: Event): void {
@@ -414,7 +414,7 @@ export default class CockpitController extends BaseController {
 		if (!b) return;
 		const days = this.days();
 		const today = isoDay(new Date());
-		void openAssignment(newDraft(days.includes(today) ? today : days[0], null, { id: b.bauakteId, label: `${b.number ?? "neu"} · ${b.title}` }));
+		void openAssignment(newDraft(days.includes(today) ? today : days[0], null, { id: b.bauakteId, label: `${b.number ?? "neu"}, ${b.title}` }));
 	}
 
 	onPoolOpen(e: Event): void { this.nav(`/bauakten/${String(e.getParameter("id" as never))}`); }
@@ -600,7 +600,7 @@ export default class CockpitController extends BaseController {
 	/** Bauvorhaben aus dem Vorrat einplanen: direkt anlegen (Kolonne) bzw. Dialog (ohne Kolonne). */
 	private async planBauakte(bauakteId: string, crewId: string | null, day: string, start: string | null): Promise<void> {
 		const b = this.backlog.find((x) => x.bauakteId === bauakteId);
-		const label = b ? `${b.number ?? "neu"} · ${b.title}` : "Bauvorhaben";
+		const label = b ? `${b.number ?? "neu"}, ${b.title}` : "Bauvorhaben";
 		if (!crewId) {
 			const draft = newDraft(day, null, { id: bauakteId, label });
 			if (start) draft.startTime = start;
@@ -642,7 +642,7 @@ export default class CockpitController extends BaseController {
 		if (!a) return;
 		const start = String(e.getParameter("start" as never));
 		const end = String(e.getParameter("end" as never));
-		await this.perform(`„${a.bauakteTitle}“ ${hhmm(start)}–${hhmm(end)}`, [{ op: "move", id: a.id, setTime: true, startTime: start, endTime: end }], [this.restoreOp(a)]);
+		await this.perform(`„${a.bauakteTitle}“ ${hhmm(start)} bis ${hhmm(end)}`, [{ op: "move", id: a.id, setTime: true, startTime: start, endTime: end }], [this.restoreOp(a)]);
 	}
 
 	// ---- Auswahl, Öffnen, Anlegen --------------------------------------------------------------------------------------
@@ -683,27 +683,27 @@ export default class CockpitController extends BaseController {
 		const kind = assignmentKinds[a.kind];
 		const can = this.canPlan();
 		const backlog = this.backlog.find((b) => b.bauakteId === a.bauakteId);
-		const time = a.startTime ? `${hhmm(a.startTime)}${a.endTime ? `–${hhmm(a.endTime)}` : ""} Uhr` : "ganztags";
+		const time = a.startTime ? `${hhmm(a.startTime)}${a.endTime ? ` bis ${hhmm(a.endTime)}` : ""} Uhr` : "ganztags";
 		const body = new VBox({ renderType: "Bare" }).addStyleClass("eoCkQvBody");
 		const row = (label: string, ...controls: (Text | Link | HBox | VBox)[]) => {
 			body.addItem(new Label({ text: label }));
 			body.addItem(controls.length === 1 ? controls[0] : new VBox({ renderType: "Bare", items: controls }));
 		};
-		row("Termin", new Text({ text: `${longDay(a.day)} · ${time}` }));
+		row("Termin", new Text({ text: `${longDay(a.day)}, ${time}` }));
 		row("Kolonne", new Text({ text: a.crewName ?? "Ohne Kolonne" }));
 		row("Tätigkeit", new Text({ text: a.activity || kind?.text || "–" }));
 		const address = new VBox({ renderType: "Bare", items: [new Text({ text: a.bauakteAddress ?? "keine Adresse hinterlegt" })] });
 		row("Adresse", address);
 		const contact = new VBox({ renderType: "Bare", items: [new Text({ text: "…" }).addStyleClass("eoMuted")] });
 		row("Kontakt", contact);
-		const areaText = new Text({ text: backlog && backlog.totalAreaSquareMeters > 0 ? `${area(backlog.totalAreaSquareMeters)}${backlog.screedTypes.length ? ` · ${backlog.screedTypes.join(", ")}` : ""}` : "…" });
+		const areaText = new Text({ text: backlog && backlog.totalAreaSquareMeters > 0 ? `${area(backlog.totalAreaSquareMeters)}${backlog.screedTypes.length ? `, ${backlog.screedTypes.join(", ")}` : ""}` : "…" });
 		row("Fläche", areaText);
 		row("Team", new Text({ text: a.people.length ? a.people.map((p) => p.name).join(", ") : "niemand zugeordnet" }));
 		if (a.resources.length) row("Geräte", new Text({ text: a.resources.map((r) => r.name).join(", ") }));
 		const notes = new Text({ text: a.notes || "–", wrapping: true, maxLines: 6 });
 		row("Notizen", notes);
 		const extra: (MessageStrip)[] = [];
-		if (a.warnings.length) extra.push(new MessageStrip({ type: "Warning", showIcon: true, text: a.warnings.join(" · ") }).addStyleClass("eoCkQvWarn"));
+		if (a.warnings.length) extra.push(new MessageStrip({ type: "Warning", showIcon: true, text: a.warnings.join(", ") }).addStyleClass("eoCkQvWarn"));
 		if (a.change) extra.push(new MessageStrip({ type: "Information", showIcon: true, text: a.change === "new" ? "Neu seit der letzten Freigabe. Für Mitarbeiter verbindlich nach erneuter Freigabe." : "Geändert seit der letzten Freigabe." }).addStyleClass("eoCkQvWarn"));
 		for (const x of extra) body.addItem(x);
 		const head = new VBox({
@@ -711,7 +711,7 @@ export default class CockpitController extends BaseController {
 			items: [
 				new HBox({ renderType: "Bare", items: [new Icon({ src: kind?.icon ?? "sap-icon://appointment-2", size: "0.875rem" }), new Text({ text: kind?.text ?? "Einsatz" })] }).addStyleClass("eoCkQvKind"),
 				new Title({ text: a.bauakteTitle, level: "H3", wrapping: true }).addStyleClass("eoCkQvTitle"),
-				new Text({ text: [a.bauakteNumber, a.bauakteStatus ? bauakteStatus[a.bauakteStatus]?.text : ""].filter(Boolean).join(" · ") }).addStyleClass("eoCkQvSub"),
+				new Text({ text: [a.bauakteNumber, a.bauakteStatus ? bauakteStatus[a.bauakteStatus]?.text : ""].filter(Boolean).join(", ") }).addStyleClass("eoCkQvSub"),
 			],
 		}).addStyleClass("eoCkQvHead");
 		const close = () => popover.close();
@@ -790,7 +790,7 @@ export default class CockpitController extends BaseController {
 			<div class="eoCkLegendTitle">Freigabe (Tageskopf)</div><div class="eoCkLegendGrid">
 				<div class="eoCkLegendItem"><span class="eoCkRelease">✓ freigegeben</span></div><div class="eoCkLegendItem"><span class="eoCkRelease eoCkReleaseChanged">✎ n geändert</span></div>
 				<div class="eoCkLegendItem"><span class="eoCkRelease eoCkReleaseDraft">Entwurf</span></div></div>
-			<div class="eoCkLegendTitle">Wochenende</div><div class="eoCkLegendText">Standardmäßig Mo–Fr (umschalten unter „Mo–Fr“ bzw. Taste W). Samstage und Sonntage mit Einsätzen werden trotzdem angezeigt und als „Wochenende“ markiert.</div></div>`;
+			<div class="eoCkLegendTitle">Wochenende</div><div class="eoCkLegendText">Standardmäßig Mo bis Fr (umschalten unter „Mo bis Fr“ oder mit Taste W). Samstage und Sonntage mit Einsätzen werden trotzdem angezeigt und als „Wochenende“ markiert.</div></div>`;
 		const popover = new Popover({
 			title: "Legende", placement: "Bottom", contentWidth: "22rem", content: [new HTML({ content: html, sanitizeContent: false })],
 			afterClose: () => { popover.destroy(); if (this.legend === popover) this.legend = null; },
@@ -807,7 +807,7 @@ export default class CockpitController extends BaseController {
 			["Doppelklick", "Einsatz bearbeiten; in einer leeren Zelle: neuen Einsatz planen"],
 			["Ziehen", "Einsatz verschieben (Tag, Kolonne; in der Zeitachse auch Uhrzeit)"],
 			["<kbd>Strg</kbd> + Ziehen", "Einsatz kopieren"],
-			["Kante ziehen", "Woche: auf weitere Tage ausdehnen · Zeitachse: Dauer ändern"],
+			["Kante ziehen", "Woche: auf weitere Tage ausdehnen, Zeitachse: Dauer ändern"],
 			["<kbd>Strg</kbd> + Klick", "Mehrfachauswahl (gemeinsam ziehen, verschieben, löschen)"],
 			["Rechtsklick", "Schnellaktionen für Einsatz bzw. Zelle (Tagesbesetzung, Kolonne tauschen …)"],
 			["Vorrat ziehen", "Bauvorhaben auf Kolonne und Tag einplanen"],
@@ -986,7 +986,7 @@ export default class CockpitController extends BaseController {
 				},
 			);
 		}
-		this.cockpit().showMenu(x, y, items, `${crew?.name ?? "Ohne Kolonne"} · ${longDay(day)}`);
+		this.cockpit().showMenu(x, y, items, `${crew?.name ?? "Ohne Kolonne"}, ${longDay(day)}`);
 	}
 
 	private copyDayOfAssignment(a: PlanAssignment): Promise<void> {
@@ -1033,7 +1033,7 @@ export default class CockpitController extends BaseController {
 		const day = String(e.getParameter("day" as never));
 		const crew = this.board?.crews.find((c) => c.id === crewId);
 		const cell = crew?.cells.find((c) => c.day === day);
-		MessageBox.warning(cell?.warnings.join("\n") || "Keine Konflikte.", { title: `${crew?.name ?? "Ohne Kolonne"} · ${longDay(day)}` });
+		MessageBox.warning(cell?.warnings.join("\n") || "Keine Konflikte.", { title: `${crew?.name ?? "Ohne Kolonne"}, ${longDay(day)}` });
 	}
 
 	onConflicts(): void {
@@ -1045,14 +1045,14 @@ export default class CockpitController extends BaseController {
 				if (!cell.assignmentIds.length || !cell.warnings.length) continue;
 				for (const w of cell.warnings) {
 					list.addItem(new StandardListItem({
-						title: w, description: `${crew.name} · ${longDay(cell.day)}`, icon: "sap-icon://alert", wrapping: true, type: "Active",
+						title: w, description: `${crew.name}, ${longDay(cell.day)}`, icon: "sap-icon://alert", wrapping: true, type: "Active",
 						press: () => { dialog.close(); this.go({ ansicht: "day", datum: cell.day }); },
 					}));
 				}
 			}
 		}
 		for (const a of board.assignments.filter((x) => !x.crewId && x.warnings.length)) {
-			for (const w of a.warnings) list.addItem(new StandardListItem({ title: w, description: `Ohne Kolonne · ${a.bauakteTitle} · ${longDay(a.day)}`, icon: "sap-icon://alert", wrapping: true }));
+			for (const w of a.warnings) list.addItem(new StandardListItem({ title: w, description: `Ohne Kolonne, ${a.bauakteTitle}, ${longDay(a.day)}`, icon: "sap-icon://alert", wrapping: true }));
 		}
 		const dialog = new Dialog({
 			title: "Konflikte im Zeitraum", contentWidth: "36rem", contentHeight: "28rem", content: [list],
@@ -1090,7 +1090,7 @@ export default class CockpitController extends BaseController {
 			}
 		};
 		const dialog = new Dialog({
-			title: `Tagesbesetzung ${crew.name} · ${longDay(day)}`, contentWidth: "30rem",
+			title: `Tagesbesetzung ${crew.name}, ${longDay(day)}`, contentWidth: "30rem",
 			content: [new VBox({
 				items: [
 					new Text({ text: "Gilt nur für diesen Tag: wer mitfährt und welches Fahrzeug/Gerät die Kolonne nutzt. Konflikte und „Wer fährt wohin“ richten sich danach." }).addStyleClass("eoMuted sapUiSmallMarginBottom"),
@@ -1135,13 +1135,13 @@ export default class CockpitController extends BaseController {
 				.map(({ c, s }) => ({
 					id: s.assignmentId, latitude: s.latitude!, longitude: s.longitude!, color: c?.color ?? "#64748B",
 					label: `${c ? `${c.name} ${s.order}` : ""}: ${s.title}`,
-					popup: [{ text: s.title, href: `/bauakten/${s.bauakteId}`, strong: true }, { text: `${c?.name ?? "Ohne Kolonne"} · ${s.order}. Station${s.startTime ? ` · ${hhmm(s.startTime)}` : ""}` },
+					popup: [{ text: s.title, href: `/bauakten/${s.bauakteId}`, strong: true }, { text: `${c?.name ?? "Ohne Kolonne"}, ${s.order}. Station${s.startTime ? `, ${hhmm(s.startTime)}` : ""}` },
 						{ text: s.address ?? "" }],
 				}));
 			map.setProperty("markers", markers);
 			side.destroyItems();
 			for (const c of p.crews.filter((x) => x.stops.length)) {
-				side.addItem(new Title({ text: `${c.name}${c.vehicles.length ? ` · ${c.vehicles.map((v) => v.name).join(", ")}` : ""}`, level: "H3", wrapping: true }).addStyleClass("sapUiSmallMarginTop"));
+				side.addItem(new Title({ text: `${c.name}${c.vehicles.length ? `, ${c.vehicles.map((v) => v.name).join(", ")}` : ""}`, level: "H3", wrapping: true }).addStyleClass("sapUiSmallMarginTop"));
 				const list = new List({ showSeparators: "Inner" });
 				c.stops.forEach((s, i) => {
 					const move = async (dir: number) => {
@@ -1158,7 +1158,7 @@ export default class CockpitController extends BaseController {
 							items: [
 								new VBox({ items: [
 									new Text({ text: `${s.order}. ${s.title}`, wrapping: true }).addStyleClass("eoStrong"),
-									new Text({ text: [s.startTime ? `${hhmm(s.startTime)} Uhr` : "ganztags", s.address].filter(Boolean).join(" · "), wrapping: true }).addStyleClass("eoMuted"),
+									new Text({ text: [s.startTime ? `${hhmm(s.startTime)} Uhr` : "ganztags", s.address].filter(Boolean).join(", "), wrapping: true }).addStyleClass("eoMuted"),
 									...(s.latitude === null ? [new ObjectStatus({ text: "ohne Standort", state: "Warning" })] : []),
 								] }),
 								new HBox({ visible: canPlan, items: [
@@ -1175,7 +1175,7 @@ export default class CockpitController extends BaseController {
 		};
 		fill(plan);
 		const dialog = new Dialog({
-			title: `Einsätze ${longDay(day)} · Karte und Fahrtreihenfolge`, contentWidth: "64rem", resizable: true, draggable: true,
+			title: `Einsätze ${longDay(day)}, Karte und Fahrtreihenfolge`, contentWidth: "64rem", resizable: true, draggable: true,
 			content: [new HBox({ items: [new VBox({ items: [map], width: "100%" }).addStyleClass("eoGrow"), side] }).addStyleClass("eoCkMapLayout")],
 			buttons: [
 				new Button({ text: "Schließen", press: () => dialog.close() }),
@@ -1195,7 +1195,7 @@ export default class CockpitController extends BaseController {
 		const days = board.days.map((d) => d.day);
 		const visible = days.filter((d) => d >= today);
 		const options = [
-			{ key: "visible", text: visible.length ? `Sichtbarer Zeitraum ab heute (${short(visible[0])} – ${short(visible[visible.length - 1])})` : "Sichtbarer Zeitraum", from: visible[0] ?? days[0], to: days[days.length - 1] },
+			{ key: "visible", text: visible.length ? `Sichtbarer Zeitraum ab heute (${short(visible[0])} bis ${short(visible[visible.length - 1])})` : "Sichtbarer Zeitraum", from: visible[0] ?? days[0], to: days[days.length - 1] },
 			{ key: "today", text: `Heute (${short(today)})`, from: today, to: today },
 			{ key: "tomorrow", text: `Morgen (${short(addDays(today, 1))})`, from: addDays(today, 1), to: addDays(today, 1) },
 			{ key: "week", text: `Nächste Woche (KW ${isoWeek(addDays(mondayOf(today), 7))})`, from: addDays(mondayOf(today), 7), to: addDays(mondayOf(today), 13) },

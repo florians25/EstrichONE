@@ -183,8 +183,8 @@ export function openBauakteWizard(options: WizardOptions): Promise<(BauakteDetai
 					alignItems: "Center", justifyContent: "SpaceBetween", width: "100%",
 					items: [
 						new VBox({ items: [
-							new Text({ text: `${contact.name}${contact.customerNumber ? ` · ${contact.customerNumber}` : ""}` }).addStyleClass("sapUiTinyMarginBottom"),
-							new Text({ text: [contact.street, [contact.postalCode, contact.city].filter(Boolean).join(" "), contact.phone, contact.email].filter(Boolean).join(" · ") || "–" }).addStyleClass("eoMuted"),
+							new Text({ text: `${contact.name}${contact.customerNumber ? `, ${contact.customerNumber}` : ""}` }).addStyleClass("sapUiTinyMarginBottom"),
+							new Text({ text: [contact.street, [contact.postalCode, contact.city].filter(Boolean).join(" "), contact.phone, contact.email].filter(Boolean).join(", ") || "–" }).addStyleClass("eoMuted"),
 							new ObjectStatus({ text: d.reasons.join(", "), state: d.score >= 60 ? "Error" : "Warning" }),
 						] }),
 						new Button({ text: useCandidateText(contact, "Diesen Kunden verwenden"), type: "Emphasized", visible: candidateUsable(contact),
@@ -209,7 +209,7 @@ export function openBauakteWizard(options: WizardOptions): Promise<(BauakteDetai
 				const list = await get<ContactResponse[]>("contacts", { search: text, limit: 10 });
 				c.name.destroySuggestionItems();
 				for (const contact of list) {
-					c.name.addSuggestionItem(new SuggestionItem({ key: contact.id, text: contact.name, description: [contact.customerNumber, contact.city].filter(Boolean).join(" · ") }));
+					c.name.addSuggestionItem(new SuggestionItem({ key: contact.id, text: contact.name, description: [contact.customerNumber, contact.city].filter(Boolean).join(", ") }));
 				}
 			} catch {
 				c.name.destroySuggestionItems();
@@ -368,7 +368,7 @@ export function openBauakteWizard(options: WizardOptions): Promise<(BauakteDetai
 			const found = atSameAddress(page.items, a);
 			addressLinks.destroyItems();
 			for (const b of found.slice(0, 5)) {
-				addressLinks.addItem(new Link({ text: `${b.number ? `${b.number} · ` : ""}${b.title} (${bauakteStatus[b.status]?.text ?? b.status})`,
+				addressLinks.addItem(new Link({ text: `${b.number ? `${b.number}, ` : ""}${b.title} (${bauakteStatus[b.status]?.text ?? b.status})`,
 					href: `/bauakten/${b.id}`, target: "_blank", tooltip: "Bauakte in neuem Fenster öffnen" }));
 			}
 			addressHint.setText(found.length === 1
@@ -393,7 +393,7 @@ export function openBauakteWizard(options: WizardOptions): Promise<(BauakteDetai
 	site.description.attachLiveChange(() => refreshSummary());
 	// Bauakten-Vorlagen aus den Stammdaten: Beschreibung und Standardräume.
 	let templates: BauakteTemplate[] = [];
-	const template = new Select("newTemplate", { width: "100%", forceSelection: false, selectedKey: "", items: [new Item({ key: "", text: "– ohne Vorlage –" })] });
+	const template = new Select("newTemplate", { width: "100%", forceSelection: false, selectedKey: "", items: [new Item({ key: "", text: "(ohne Vorlage)" })] });
 	void Promise.all([catalog<BauakteTemplate>("bauakteTemplate"), loadSystemSettings()]).then(([list, settings]) => {
 		templates = list;
 		for (const t of list) {
@@ -410,7 +410,7 @@ export function openBauakteWizard(options: WizardOptions): Promise<(BauakteDetai
 		refreshSummary();
 	});
 	// Zuständige(r): Bauleitung; Benachrichtigung über die Zuweisung wie beim Bearbeiten der Bauakte.
-	const responsible = new Select("newResponsible", { width: "100%", forceSelection: false, selectedKey: "", items: [new Item({ key: "", text: "– nicht festgelegt –" })] });
+	const responsible = new Select("newResponsible", { width: "100%", forceSelection: false, selectedKey: "", items: [new Item({ key: "", text: "(nicht festgelegt)" })] });
 	void session.people().then((people) => {
 		for (const p of people.filter((x) => x.isActive)) responsible.addItem(new Item({ key: p.id, text: p.displayName }));
 	}).catch(() => undefined);
@@ -621,7 +621,7 @@ export function openBauakteWizard(options: WizardOptions): Promise<(BauakteDetai
 		out.push({ title: "Kunde", rows: [
 			["Kunde", f.name ? `${f.name}${existing ? " (vorhanden)" : " (wird neu angelegt)"}` : ""],
 			...(f.street || f.postalCode || f.city ? [["Anschrift", [f.street, [f.postalCode, f.city].filter(Boolean).join(" ")].filter(Boolean).join(", ")] as [string, string]] : []),
-			...(f.phone || f.email ? [["Kontakt", [f.phone, f.email].filter(Boolean).join(" · ")] as [string, string]] : []),
+			...(f.phone || f.email ? [["Kontakt", [f.phone, f.email].filter(Boolean).join(", ")] as [string, string]] : []),
 		] });
 		const rows: [string, string][] = [
 			["Bauvorhaben", title.getValue().trim()],
@@ -643,7 +643,7 @@ export function openBauakteWizard(options: WizardOptions): Promise<(BauakteDetai
 				.map((fl) => [fl.label, displayValue(schema!, fl, values[fl.key])] as [string, string]) });
 		}
 		const person = (d: PartyDraft) => [d.name.trim(), d.company.trim() && d.company.trim() !== d.name.trim() ? d.company.trim() : "", d.phone.trim(), d.email.trim()]
-			.filter(Boolean).join(" · ");
+			.filter(Boolean).join(", ");
 		const people: [string, string][] = [];
 		const vorOrt = person({ name: onSite.name.getValue(), company: "", phone: onSite.phone.getValue(), email: onSite.email.getValue() });
 		if (vorOrt) people.push(["Vor Ort", vorOrt]);

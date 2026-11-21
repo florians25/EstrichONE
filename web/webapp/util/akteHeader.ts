@@ -31,13 +31,13 @@ export function akteContextOf(data: { bauakte?: { number: string | null; title: 
 
 export function akteHeader(context: AkteContext | null): Control[] {
 	if (!context) return [];
-	const facts = [context.customer ? `Kunde: ${context.customer}` : null, context.address].filter(Boolean).join(" · ");
+	const facts = [context.customer ? `Kunde: ${context.customer}` : null, context.address].filter(Boolean).join(", ");
 	return [new HBox({
 		alignItems: "Center",
 		items: [
 			new Icon({ src: "sap-icon://folder-full", size: "1.5rem", decorative: true }).addStyleClass("sapUiSmallMarginEnd"),
 			new VBox({ items: [
-				new Title({ text: `${context.number ? `${context.number} · ` : ""}${context.title}`, level: "H5", wrapping: true }),
+				new Title({ text: `${context.number ? `${context.number}, ` : ""}${context.title}`, level: "H5", wrapping: true }),
 				new Text({ text: facts || "–", wrapping: true }).addStyleClass("eoMuted"),
 			] }),
 		],

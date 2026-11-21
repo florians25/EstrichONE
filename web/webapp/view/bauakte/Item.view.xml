@@ -39,7 +39,7 @@
 					<Label text="Beschreibung"/><Text text="{= ${it>/file/caption} || '–' }"/>
 					<Label text="Größe"/><Text text="{path: 'it>/file/sizeBytes', formatter: 'fmt.fileSize'}"/>
 					<Label text="Typ"/><Text text="{it>/file/contentType}"/>
-					<Label text="Hochgeladen"/><Text text="{path: 'it>/file/createdAt', formatter: 'fmt.dateTime'} · {path: 'it>/file/uploadedByUserId', formatter: 'fmt.person'}"/>
+					<Label text="Hochgeladen"/><Text text="{path: 'it>/file/createdAt', formatter: 'fmt.dateTime'}, {path: 'it>/file/uploadedByUserId', formatter: 'fmt.person'}"/>
 					<Label text="Prüfsumme (SHA-256)"/><Text text="{it>/file/sha256}" class="eoTabular"/>
 				</form:SimpleForm>
 				<MessageStrip type="Warning" showIcon="true" visible="{= !!${it>/pendingApproval} }" class="sapUiSmallMarginTop"
@@ -54,7 +54,7 @@
 					</CustomListItem>
 				</List>
 				<List headerText="{i18n>item.versions}" items="{it>/versions}" visible="{= ${it>/versions}.length > 1 }">
-					<StandardListItem title="Fassung {it>number}: {it>originalName}" description="{path: 'it>createdAt', formatter: 'fmt.dateTime'} · {path: 'it>uploadedByUserId', formatter: 'fmt.person'}"
+					<StandardListItem title="Fassung {it>number}: {it>originalName}" description="{path: 'it>createdAt', formatter: 'fmt.dateTime'}, {path: 'it>uploadedByUserId', formatter: 'fmt.person'}"
 						type="{= ${it>current} ? 'Inactive' : 'Navigation' }" press=".onVersion" info="{= ${it>current} ? 'angezeigt' : (${it>latest} ? 'aktuell' : '') }"
 						infoState="Information" icon="sap-icon://document"/>
 				</List>

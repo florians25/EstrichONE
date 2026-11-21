@@ -373,12 +373,12 @@ export default class AppController extends BaseController {
 			field.addSuggestionItem(new SuggestionItem({ text, description, icon, key }));
 		// Verwaltungsbereiche (z. B. „Backup“, „Logo“, „Push“) direkt anspringen.
 		for (const area of adminAreas.filter((x) => (!x.permission || has(x.permission)) && session.pathEnabled(x.path) && matchesArea(x, value)).slice(0, 3)) {
-			add(area.title, `Verwaltung · ${adminGroups.find((g) => g.key === area.group)?.title ?? ""}`, area.icon, area.path);
+			add(area.title, `Verwaltung, ${adminGroups.find((g) => g.key === area.group)?.title ?? ""}`, area.icon, area.path);
 		}
-		for (const a of akten.items) add(`${a.number ?? "neu"} · ${a.title}`, `Bauakte${a.city ? ` · ${a.city}` : ""}`, "sap-icon://folder-full", `/bauakten/${a.id}`);
+		for (const a of akten.items) add(`${a.number ?? "neu"}, ${a.title}`, `Bauakte${a.city ? `, ${a.city}` : ""}`, "sap-icon://folder-full", `/bauakten/${a.id}`);
 		const contacts = Array.isArray(kunden) ? kunden : kunden.items ?? [];
-		for (const c of contacts.slice(0, 5)) add(c.name, `Kunde${c.city ? ` · ${c.city}` : ""}`, "sap-icon://customer", `/kunden/${c.id}`);
-		for (const d of docs.items) if (d.file.bauakteId) add(d.file.originalName, `Dokument · ${d.bauakteNumber ?? ""}`, "sap-icon://document", `/bauakten/${d.file.bauakteId}/datei/${d.file.id}?abschnitt=dokumente`);
+		for (const c of contacts.slice(0, 5)) add(c.name, `Kunde${c.city ? `, ${c.city}` : ""}`, "sap-icon://customer", `/kunden/${c.id}`);
+		for (const d of docs.items) if (d.file.bauakteId) add(d.file.originalName, `Dokument, ${d.bauakteNumber ?? ""}`, "sap-icon://document", `/bauakten/${d.file.bauakteId}/datei/${d.file.id}?abschnitt=dokumente`);
 		field.suggest();
 	}
 
@@ -530,7 +530,7 @@ export default class AppController extends BaseController {
 		this.model().setProperty("/navKey", navKeyFor(route.nav, match.query));
 		this.markNav();
 		if (route.nav && isAdminKey(route.nav) && route.nav !== "adminHub") this.adminBreadcrumbs(view, route.title);
-		document.title = `${route.title ? this.t(route.title) : ""} – EstrichONE`.replace(/^ – /, "");
+		document.title = route.title ? `${this.t(route.title)} (EstrichONE)` : "EstrichONE";
 		const controller = view.getController() as BaseController | undefined;
 		try {
 			await controller?.onRouteMatched?.(match);
@@ -576,7 +576,7 @@ export default class AppController extends BaseController {
 		if (session.has("contacts.read") && session.moduleOn("calls")) {
 			tasks.push(get<CallResponse[]>("calls", { due: true }).then((calls) => {
 				for (const c of calls.slice(0, 10)) {
-					items.push({ title: `${this.t("notice.followUp")}: ${[c.callerName, c.company ?? c.customerName].filter(Boolean).join(" · ") || "–"}`,
+					items.push({ title: `${this.t("notice.followUp")}: ${[c.callerName, c.company ?? c.customerName].filter(Boolean).join(", ") || "–"}`,
 						description: c.subject ?? c.notes?.slice(0, 80) ?? "", icon: "sap-icon://call", path: "/anrufe", priority: "Medium" });
 				}
 			}));

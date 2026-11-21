@@ -323,8 +323,8 @@ test('Baustellendokumentation: Tagesbericht mit Arbeitszeit, Kolonne und Fotos, 
   await diary.getByRole('button', { name: 'Speichern' }).click();
   await expect(toast(page)).toContainText('Tagesbericht erfasst');
   const entry = page.locator('#diaryList, [id$=diaryList]').getByRole('listitem').filter({ hasText: 'Heizestrich im EG eingebracht' });
-  await expect(entry).toContainText('Regen · 9 °C · 3 anwesend');
-  await expect(entry).toContainText('07:00–15:30');
+  await expect(entry).toContainText('Regen, 9 °C, 3 anwesend');
+  await expect(entry).toContainText('07:00 bis 15:30');
   await expect(entry).toContainText('Kolonne Nord');
   await expect(entry.getByRole('button', { name: 'Randdämmung Bad OG' })).toBeVisible();
 
@@ -403,7 +403,7 @@ test('Prüfungen und Bautagebuch aus der App erscheinen in der Bauakte', async (
   await page.goto(`/bauakten/${bauakte}?abschnitt=dokumentation`);
   await expect(page.getByRole('heading', { name: 'EFH Prüfung E2E' })).toBeVisible();
   await expect(page.getByText('Estrich im EG eingebracht')).toBeVisible();
-  await expect(page.getByText('Regen · 9 °C')).toBeVisible();
+  await expect(page.getByText('Regen, 9 °C')).toBeVisible();
   await page.getByRole('tab', { name: /Erstbegehung/ }).click();
   await expect(page.getByText('Erstbegehungsprotokoll', { exact: true }).filter({ visible: true }).first()).toBeVisible();
   await expect(page.getByText('Mit Mängeln, Klärung erforderlich').first()).toBeVisible();

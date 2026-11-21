@@ -75,12 +75,12 @@ export default class Photos extends SectionBase {
 				...f, takenAt: taken, dayKey: isoDay(new Date(taken)),
 				time: new Date(taken).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" }),
 				thumb: fileMedia(f).thumb,
-				relation: [this.roomName(f.roomId), this.workName(f.workItemId)].filter(Boolean).join(" · "),
+				relation: [this.roomName(f.roomId), this.workName(f.workItemId)].filter(Boolean).join(", "),
 			};
 		});
 		const m = this.ph();
 		m.setProperty("/roomOptions", [{ key: "", text: "Alle Räume" }, { key: "__none", text: "Ohne Raum" },
-			...(rooms?.rooms ?? []).map((r) => ({ key: r.id, text: [r.name, r.floor].filter(Boolean).join(" · ") }))]);
+			...(rooms?.rooms ?? []).map((r) => ({ key: r.id, text: [r.name, r.floor].filter(Boolean).join(", ") }))]);
 		m.setProperty("/workOptions", [{ key: "", text: "Alle Bezüge" }, { key: "__defects", text: "Nur Mängel-Fotos" },
 			...work.filter((w) => w.kind === "defect").map((w) => ({ key: w.id, text: `Mangel: ${w.title}` }))]);
 		// Videos als kleine Kacheln (Standbild mit Abspiel-Symbol); der Player öffnet sich im Detailfenster.
@@ -132,7 +132,7 @@ export default class Photos extends SectionBase {
 				? [new Sorter("dayKey", true, (context: Context) => {
 					const day = context.getProperty("dayKey") as string;
 					const count = (this.ph().getProperty("/photos") as PhotoRow[]).filter((p) => p.dayKey === day).length;
-					return { key: day, text: `${longDay(day)} · ${count} ${count === 1 ? "Foto" : "Fotos"}` };
+					return { key: day, text: `${longDay(day)}, ${count} ${count === 1 ? "Foto" : "Fotos"}` };
 				}), new Sorter("takenAt", true)]
 				: [new Sorter("takenAt", true)],
 		});
@@ -200,7 +200,7 @@ export default class Photos extends SectionBase {
 				caption: rows.length === 1 ? rows[0].caption ?? "" : "" },
 			fields: [
 				{ key: "roomId", label: "Raum", type: "select", placeholder: "kein Raum",
-					options: (this.rooms?.rooms ?? []).map((r) => ({ key: r.id, text: [r.name, r.floor].filter(Boolean).join(" · ") })) },
+					options: (this.rooms?.rooms ?? []).map((r) => ({ key: r.id, text: [r.name, r.floor].filter(Boolean).join(", ") })) },
 				{ key: "workItemId", label: "Aufgabe / Mangel", type: "select", placeholder: "kein Bezug",
 					options: this.work.map((w) => ({ key: w.id, text: `${w.kind === "defect" ? "Mangel" : "Aufgabe"}: ${w.title}` })) },
 				{ key: "caption", label: "Beschriftung", maxLength: 500,

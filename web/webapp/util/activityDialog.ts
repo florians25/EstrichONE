@@ -73,7 +73,7 @@ export function openActivityDialog(entries: BauakteHistoryEntry[], context: Akte
 				content: [new HBox({ alignItems: "Start", items: [
 					new Avatar({ initials: "{initials}", displaySize: "XS", tooltip: "{who}" }).addStyleClass("sapUiSmallMarginEnd"),
 					new VBox({ items: [
-						new Text({ text: "{time} · {who}" }).addStyleClass("eoMuted eoTabular"),
+						new Text({ text: "{time}, {who}" }).addStyleClass("eoMuted eoTabular"),
 						new Text({ text: "{text}", wrapping: true }),
 						new Text({ text: "{changeLines}", visible: "{= !!${changeLines} }", wrapping: true }).addStyleClass("eoPre eoChanges"),
 					] }),

@@ -79,7 +79,7 @@ export async function openCustomerForm(contact: ContactResponse | null, readOnly
 					})));
 					const found = [...new Map(checks.flat().map((d) => [d.contact.id, d])).values()];
 					if (found.length > 0) {
-						warn([`Mögliche Dubletten: ${found.map((d) => `${d.contact.name}${d.contact.city ? ` (${d.contact.city})` : ""} – ${d.reasons.join(", ")}`).join("; ")}.`,
+						warn([`Mögliche Dubletten: ${found.map((d) => `${d.contact.name}${d.contact.city ? ` (${d.contact.city})` : ""}: ${d.reasons.join(", ")}`).join("; ")}.`,
 							"Erneut „Speichern“ legt den Kunden trotzdem neu an."], false);
 						return KEEP_OPEN;
 					}

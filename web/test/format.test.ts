@@ -16,9 +16,9 @@ describe('Anzeigeformate', () => {
   });
 
   it('Wetterzeile und Arbeitszeit im Bautagebuch', () => {
-    expect(weatherLine({ weather: 'rain', temperatureCelsius: 9, workersPresent: null })).toBe('Regen · 9 °C');
+    expect(weatherLine({ weather: 'rain', temperatureCelsius: 9, workersPresent: null })).toBe('Regen, 9 °C');
     expect(weatherLine({ weather: null, temperatureCelsius: null, workersPresent: 3 })).toBe('3 anwesend');
-    expect(timeRange('07:00:00', '15:30:00')).toBe('07:00–15:30');
+    expect(timeRange('07:00:00', '15:30:00')).toBe('07:00 bis 15:30');
     expect(timeRange(null, null)).toBe('');
   });
 

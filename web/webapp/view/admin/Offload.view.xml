@@ -144,7 +144,7 @@
 						</columns>
 						<items>
 							<ColumnListItem>
-								<VBox><Text text="{view>name}"/><Text text="{view>kindText} · {view>when}" class="sapUiTinyMarginTop"/></VBox>
+								<VBox><Text text="{view>name}"/><Text text="{view>kindText}, {view>when}" class="sapUiTinyMarginTop"/></VBox>
 								<Link text="{view>bauakteTitle}" press=".onOpenBauakte"/>
 								<Text text="{view>size}"/>
 								<VBox><ObjectStatus text="{view>stateText}" state="{view>stateState}"/><Text text="{view>lastError}" visible="{= !!${view>lastError} }"/></VBox>
@@ -182,7 +182,7 @@
 						<CustomListItem>
 							<HBox justifyContent="SpaceBetween" alignItems="Start" wrap="Wrap" class="sapUiSmallMargin">
 								<VBox>
-									<Text text="{view>versionText} · {view>reachText}"/>
+									<Text text="{view>versionText}, {view>reachText}"/>
 									<ObjectStatus text="{view>stateText}" state="{view>state}" class="sapUiTinyMarginTop"/>
 									<HBox alignItems="Center" class="sapUiTinyMarginTop">
 										<Switch state="{view>autoUpdate}" customTextOn=" " customTextOff=" " change=".onPeerAuto" tooltip="Automatisch mitaktualisieren"/>

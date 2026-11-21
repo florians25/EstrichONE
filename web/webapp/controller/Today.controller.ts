@@ -15,7 +15,7 @@ import type { ArchiveOverview, MailSettingsDto } from "../util/infraModels";
 import { dateTime } from "../util/format";
 import { openOrderDetail } from "../util/orderDialogs";
 
-const who = (c: CallResponse) => [c.callerName, c.company ?? c.customerName].filter(Boolean).join(" · ") || c.callerPhone || "–";
+const who = (c: CallResponse) => [c.callerName, c.company ?? c.customerName].filter(Boolean).join(", ") || c.callerPhone || "–";
 
 /**
  * Tagesübersicht: Tagesnavigation (Vortag, Datum, Folgetag), oben Kennzahlen, links die Einsätze des Tages je Kolonne
@@ -130,7 +130,7 @@ export default class Today extends BaseController {
 		const warnings = assignments.filter((a) => a.warnings.length).length;
 		m.setProperty("/assignTitle", isToday ? "Einsätze heute" : `Einsätze am ${weekdayDate(day)}`);
 		m.setProperty("/assignSubtitle", assignments.length
-			? `${assignments.length} ${assignments.length === 1 ? "Einsatz" : "Einsätze"} · ${crews.length} ${crews.length === 1 ? "Kolonne" : "Kolonnen"}`
+			? `${assignments.length} ${assignments.length === 1 ? "Einsatz" : "Einsätze"}, ${crews.length} ${crews.length === 1 ? "Kolonne" : "Kolonnen"}`
 			: "Nichts eingeplant");
 		m.setProperty("/emptyAssignTitle", isToday ? "Heute ist nichts eingeplant." : `Am ${weekdayDate(day)} ist nichts eingeplant.`);
 		const absences = (range?.absences ?? []).map((a) => ({ ...a, kindText: absenceKinds[a.kind] ?? a.kind, state: a.kind === "sick" ? "Error" : "Warning" }))
@@ -141,7 +141,7 @@ export default class Today extends BaseController {
 		m.setProperty("/inquiries", value(inquiries, []).map((c) => ({ ...c, who: who(c) })));
 		m.setProperty("/work", value(work, []).filter((w) => w.status !== "done").slice(0, 10));
 		const dayDeliveries = value(deliveries, []).filter((o) => o.status !== "cancelled")
-			.map((o) => ({ ...o, linesText: o.lines.map((l) => `${quantity(l.quantity)} ${l.unit} ${l.description}`).join(" · ") }));
+			.map((o) => ({ ...o, linesText: o.lines.map((l) => `${quantity(l.quantity)} ${l.unit} ${l.description}`).join(", ") }));
 		m.setProperty("/deliveries", dayDeliveries);
 		m.setProperty("/deliverySubtitle", isToday ? "Heute erwartet" : `Erwartet am ${weekdayDate(day)}`);
 		m.setProperty("/recent", value(recent, { items: [], nextCursor: null }).items);

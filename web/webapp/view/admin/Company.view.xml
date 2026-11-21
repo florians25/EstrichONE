@@ -67,7 +67,7 @@
 						<form:SimpleForm editable="true" layout="ResponsiveGridLayout" labelSpanL="4" labelSpanM="4" maxContainerCols="1" width="56rem">
 							<core:Title text="Nummernkreise"/>
 							<Label text="Akten- und Kundennummer"/>
-							<Link id="setNumberRangesLink" text="Bauakte {view>/numbering/bauakte} · Kunde {view>/numbering/customer} – in „Nummernkreise“ ändern" press=".onNumberRanges"/>
+							<Link id="setNumberRangesLink" text="Bauakte {view>/numbering/bauakte}, Kunde {view>/numbering/customer}. In „Nummernkreise“ ändern" press=".onNumberRanges"/>
 							<core:Title text="Vorgaben für neue Bauakten"/>
 							<Label text="Hinweis „Erstbegehung fehlt“"/><Switch state="{view>/s/bauakte/warnMissingInspection}" customTextOn=" " customTextOff=" "/>
 							<Label text="Vorgeschlagene Vorlage" labelFor="setTemplate"/>
@@ -117,7 +117,7 @@
 									</ColumnListItem>
 								</items>
 							</Table>
-							<Text class="eoHelpText sapUiSmallMarginTop" text="Neue Datensätze erhalten ihre Nummer beim Anlegen vom Server – auch aus der App und beim Import. Bereits vergebene Nummern werden übersprungen, vorhandene nie geändert. Muster: \{JJJJ\} Jahr, \{JJ\} Jahr zweistellig, \{N…\} laufende Nummer mit Mindeststellen; Muster mit Jahr zählen je Jahr neu. Nummern lassen sich nicht von Hand eingeben oder ändern; nur der Kunden-Import übernimmt vorhandene Kundennummern aus der Datei. Jede Änderung eines Nummernkreises steht im Protokoll."/>
+							<Text class="eoHelpText sapUiSmallMarginTop" text="Neue Datensätze erhalten ihre Nummer beim Anlegen vom Server, auch aus der App und beim Import. Bereits vergebene Nummern werden übersprungen, vorhandene nie geändert. Muster: \{JJJJ\} Jahr, \{JJ\} Jahr zweistellig, \{N…\} laufende Nummer mit Mindeststellen; Muster mit Jahr zählen je Jahr neu. Nummern lassen sich nicht von Hand eingeben oder ändern; nur der Kunden-Import übernimmt vorhandene Kundennummern aus der Datei. Jede Änderung eines Nummernkreises steht im Protokoll."/>
 						</VBox>
 					</IconTabFilter>
 					<IconTabFilter key="dokumente" text="Dokumente und Freigaben">
@@ -183,7 +183,7 @@
 							<Label text="Kontakt für Push-Dienste" labelFor="pushSubject"/>
 							<Input id="pushSubject" value="{view>/push/vapidSubjectInput}" maxLength="200" placeholder="{view>/push/vapidSubject}"/>
 							<Label text="Registrierte Geräte"/>
-							<Text text="{= ${view>/push/webDevices} + ' Browser · ' + ${view>/push/iosDevices} + ' iPhone/iPad · ' + ${view>/push/androidDevices} + ' Android' }"/>
+							<Text text="{= ${view>/push/webDevices} + ' Browser, ' + ${view>/push/iosDevices} + ' iPhone/iPad, ' + ${view>/push/androidDevices} + ' Android' }"/>
 							<core:Title text="Apple Push (APNs) für die iOS-App"/>
 							<Label text="Status"/>
 							<ObjectStatus id="pushApnsStatus" text="{= ${view>/push/apnsReady} ? 'Eingerichtet' + (${view>/push/apnsFromEnvironment} ? ' (aus .env)' : '') : 'Nicht eingerichtet, App erhält nur das Postfach' }"
@@ -360,7 +360,7 @@
 							<Switch id="chatWorkers" state="{view>/chat/workersCanChatEachOther}" customTextOn=" " customTextOff=" "/>
 							<Label text=""/><Text text="Aus: Mitarbeiter ohne Recht „Chat verwalten“ können Einzelchats nur mit dem Büro beginnen." class="eoMuted"/>
 							<Label text="Bestand"/>
-							<Text text="{view>/chat/conversations} Unterhaltungen · {view>/chat/messages} Nachrichten (verschlüsselt){= ${view>/chat/lastCleanupAt} ? ' · letzte Löschung ' + ${view>/chat/cleanupText} : '' }"/>
+							<Text text="{view>/chat/conversations} Unterhaltungen, {view>/chat/messages} Nachrichten (verschlüsselt){= ${view>/chat/lastCleanupAt} ? ', letzte Löschung ' + ${view>/chat/cleanupText} : '' }"/>
 							<Label text="Betroffenenrechte"/>
 							<Text text="Auskunft und Löschung je Person: Verwaltung › Benutzer › Sprechblase in der Zeile der Person. Rechte: „Chat nutzen“ und „Chat verwalten“ (Rollen)." class="eoMuted"/>
 						</form:SimpleForm>

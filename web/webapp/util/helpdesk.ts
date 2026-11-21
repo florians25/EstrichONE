@@ -311,7 +311,7 @@ export function insertMention(text: string, start: number, caret: number, name: 
 export function pageText(loaded: number, total: number, unread = 0): string {
 	const noun = (n: number) => (n === 1 ? "Ticket" : "Tickets");
 	const base = total > loaded ? `${loaded.toLocaleString("de-DE")} von ${total.toLocaleString("de-DE")} ${noun(total)}` : `${loaded} ${noun(loaded)}`;
-	return `${base}${unread ? ` · ${unread} mit neuer Antwort` : ""}`;
+	return `${base}${unread ? `, ${unread} mit neuer Antwort` : ""}`;
 }
 
 /** Kennzahlen als Kacheln (Schlüssel = Ansicht, in die ein Klick springt). */
@@ -327,7 +327,7 @@ export function kpiTiles(s: HelpdeskStats): { key: string; label: string; value:
 		{ key: "mine", label: "Mir zugewiesen", value: String(s.mine), unit: "", color: "Neutral", footer: "offen" },
 		{ key: "done", label: "Gelöst diese Woche", value: String(s.resolvedThisWeek), unit: "", color: "Good", footer: `${s.createdThisWeek} neu diese Woche` },
 		{ key: "", label: "Ø erste Antwort", value: hours(s.avgFirstResponseMinutes), unit: s.avgFirstResponseMinutes != null && s.avgFirstResponseMinutes < 60 ? "min" : "h",
-			color: "Neutral", footer: `${s.timeBasis === "business" ? "Geschäftszeit · " : ""}${s.slaMetPercent == null ? "letzte 30 Tage" : `${s.slaMetPercent.toLocaleString("de-DE")} % im Ziel gelöst`}` },
+			color: "Neutral", footer: `${s.timeBasis === "business" ? "Geschäftszeit, " : ""}${s.slaMetPercent == null ? "letzte 30 Tage" : `${s.slaMetPercent.toLocaleString("de-DE")} % im Ziel gelöst`}` },
 		{ key: "", label: "Ø Lösungszeit", value: s.avgResolutionHours == null ? "–" : s.avgResolutionHours.toLocaleString("de-DE", { maximumFractionDigits: 1 }),
 			unit: s.avgResolutionHours == null ? "" : "h", color: "Neutral", footer: s.timeBasis === "business" ? "Geschäftszeit ohne Rückfrage" : "letzte 30 Tage" },
 		{ key: "", label: "Zufriedenheit", value: s.satisfactionAverage == null ? "–" : s.satisfactionAverage.toLocaleString("de-DE", { maximumFractionDigits: 1 }),
@@ -339,7 +339,7 @@ export function kpiTiles(s: HelpdeskStats): { key: string; label: string; value:
 /** Zeile „Modell und System“ im Kontext: „iPhone 15 · iOS 18.1“ (App-Version steht in eigener Spalte). */
 export function deviceLine(d: ReporterDevice): string {
 	const platform = d.platform === "ios" ? "iOS" : d.platform === "android" ? "Android" : d.platform === "windows" ? "Windows" : "";
-	return [d.model, d.osVersion ? `${platform} ${d.osVersion}`.trim() : platform].filter(Boolean).join(" · ");
+	return [d.model, d.osVersion ? `${platform} ${d.osVersion}`.trim() : platform].filter(Boolean).join(", ");
 }
 
 /** Verlauf für den Prüfpfad: alle Ereignisse, neueste zuerst, mit Art. */

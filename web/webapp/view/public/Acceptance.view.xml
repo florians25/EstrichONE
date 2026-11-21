@@ -10,12 +10,12 @@
 			<Title text="Abnahmeprotokoll" level="H1" titleStyle="H2"/>
 			<MessageStrip id="pubInvalid" type="Error" showIcon="true" visible="{= ${pub>/state} === 'invalid' }" text="{pub>/error}" class="sapUiSmallMarginTop"/>
 			<VBox visible="{= ${pub>/state} !== 'invalid' &amp;&amp; !!${pub>/v} }">
-				<Text text="{pub>/v/bauakteNumber} · {pub>/v/bauakteTitle}" class="eoPublicLead"/>
+				<Text text="{pub>/v/bauakteNumber}, {pub>/v/bauakteTitle}" class="eoPublicLead"/>
 				<Text text="{pub>/v/address}" visible="{= !!${pub>/v/address} }" class="eoMuted"/>
 				<Panel headerText="Abnahme" class="sapUiSmallMarginTop">
 					<VBox>
-						<Text text="Datum: {path: 'pub>/v/performedAt', formatter: 'fmt.dateTime'}{= ${pub>/v/location} ? ' · Ort: ' + ${pub>/v/location} : '' }"/>
-						<Text text="Für den Auftraggeber: {= ${pub>/v/clientName} || '–' } · Für den Auftragnehmer: {= ${pub>/v/contractorName} || '–' }"/>
+						<Text text="Datum: {path: 'pub>/v/performedAt', formatter: 'fmt.dateTime'}{= ${pub>/v/location} ? ', Ort: ' + ${pub>/v/location} : '' }"/>
+						<Text text="Für den Auftraggeber: {= ${pub>/v/clientName} || '–' }, Für den Auftragnehmer: {= ${pub>/v/contractorName} || '–' }"/>
 						<ObjectStatus text="{pub>/resultText}" state="{pub>/resultState}" inverted="true" class="sapUiSmallMarginTop"/>
 					</VBox>
 				</Panel>
@@ -62,7 +62,7 @@
 					text="{= ${pub>/decision} === 'approved' ? 'Vielen Dank. Das Abnahmeprotokoll ist freigegeben. Sie erhalten es vom Estrichbetrieb als PDF.' : 'Ihre Ablehnung wurde übermittelt. Der Estrichbetrieb meldet sich bei Ihnen.' }"
 					class="sapUiMediumMarginTop"/>
 			</VBox>
-			<Text text="Bereitgestellt mit EstrichONE · nur dieses Protokoll ist über den Link sichtbar." class="eoMuted sapUiMediumMarginTop"/>
+			<Text text="Bereitgestellt mit EstrichONE, nur dieses Protokoll ist über den Link sichtbar." class="eoMuted sapUiMediumMarginTop"/>
 		</VBox>
 	</ScrollContainer>
 </mvc:View>

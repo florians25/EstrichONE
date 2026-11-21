@@ -27,13 +27,13 @@ export default class Monitoring extends BaseController {
 		m.setProperty("/busy", false);
 		if (!o) return;
 		m.setProperty("/o", o);
-		m.setProperty("/subtitle", `Stand ${dateTime(o.at)} · Warnschwellen: Platte ab 85 % (kritisch ab 95 % oder voll in weniger als 14 Tagen), Sicherung älter als 36 Stunden`);
-		m.setProperty("/warningText", o.warnings.join(" · "));
+		m.setProperty("/subtitle", `Stand ${dateTime(o.at)}. Warnschwellen: Platte ab 85 % (kritisch ab 95 % oder voll in weniger als 14 Tagen), Sicherung älter als 36 Stunden`);
+		m.setProperty("/warningText", o.warnings.join(", "));
 		this.statusLine(o.warnings.map((w) => ({ text: w, level: o.level === "critical" ? "error" as const : "warning" as const })), "alle Systeme in Ordnung");
 		m.setProperty("/systems", o.systems.map((s) => ({
 			...s, levelText: text[s.level], state: state[s.level],
 			items: s.items.map((i) => ({ ...i, state: state[i.level] })),
-			diskText: s.disk ? `${s.disk.usedPercent.toLocaleString("de-DE", { maximumFractionDigits: 1 })} % belegt · ${fileSize(s.disk.freeBytes)} frei` : "",
+			diskText: s.disk ? `${s.disk.usedPercent.toLocaleString("de-DE", { maximumFractionDigits: 1 })} % belegt, ${fileSize(s.disk.freeBytes)} frei` : "",
 			diskState: !s.disk ? "None" : s.disk.usedPercent >= 95 ? "Error" : s.disk.usedPercent >= 85 ? "Warning" : "Success",
 		})));
 	}

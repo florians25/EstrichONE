@@ -25,7 +25,7 @@
 					<Column minScreenWidth="Tablet" demandPopin="true" width="10rem"><Text text="Gesendet"/></Column>
 					<Column width="9rem"><Text text="Gelesen"/></Column>
 					<Column minScreenWidth="Desktop" demandPopin="true" width="13rem">
-						<Text text="Zustellung" tooltip="Push: vom Push-Dienst angenommen · Postfach: kein Gerät mit Pushnachrichten · Fehler: Push abgelehnt"/>
+						<Text text="Zustellung" tooltip="Push: vom Push-Dienst angenommen, Postfach: kein Gerät mit Pushnachrichten, Fehler: Push abgelehnt"/>
 					</Column>
 				</columns>
 				<items>

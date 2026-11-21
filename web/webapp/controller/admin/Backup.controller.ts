@@ -10,9 +10,9 @@ import type { BackupRunInfo, BackupStatusResponse } from "../../util/models";
 import type { BackupPreferences, BackupSnapshotsResponse, RestoreProgress } from "../../util/infraModels";
 
 const info = (r: BackupRunInfo | null) => (r
-	? { text: `${r.status === "succeeded" ? "Erfolgreich" : r.status === "running" ? "Läuft" : "Fehlgeschlagen"} · ${dateTime(r.at)}${
+	? { text: `${r.status === "succeeded" ? "Erfolgreich" : r.status === "running" ? "Läuft" : "Fehlgeschlagen"}, ${dateTime(r.at)}${
 		// „Sicherung erfolgreich“ wiederholt nur den Status.
-		r.message && !(r.status === "succeeded" && /^\S*\s*erfolgreich\.?$/i.test(r.message.trim())) ? ` · ${r.message}` : ""}`,
+		r.message && !(r.status === "succeeded" && /^\S*\s*erfolgreich\.?$/i.test(r.message.trim())) ? `, ${r.message}` : ""}`,
 		state: r.status === "succeeded" ? "Success" : r.status === "running" ? "Information" : "Error" }
 	: { text: "Noch nie", state: "None" });
 
@@ -29,7 +29,7 @@ const restoreView = (p: RestoreProgress | null) => {
 		: p.status === "completed" ? `${what} abgeschlossen (${dateTime(p.at)}): ${p.message}`
 		: p.status === "failed" ? `${what} fehlgeschlagen (${dateTime(p.at)}): ${p.message}`
 		: `${what}: ${p.message}`;
-	return { active, text, type: active ? "Information" : p.status === "completed" ? "Success" : p.status === "failed" ? "Error" : "Information", percent: p.percent, phase: `${p.phase} · ${p.percent} %` };
+	return { active, text, type: active ? "Information" : p.status === "completed" ? "Success" : p.status === "failed" ? "Error" : "Information", percent: p.percent, phase: `${p.phase}, ${p.percent} %` };
 };
 
 /**
@@ -86,7 +86,7 @@ export default class Backup extends BaseController {
 	private async loadSettings(): Promise<void> {
 		const p = await get<BackupPreferences>("backup/settings");
 		this.model().setProperty("/p", { ...p, incrementalKey: String(p.incrementalEveryHours) });
-		this.model().setProperty("/planText", `Vollsicherung täglich um ${p.dailyTime} Uhr${p.incrementalEveryHours > 0 ? `, inkrementell alle ${p.incrementalEveryHours} h` : ""} · `
+		this.model().setProperty("/planText", `Vollsicherung täglich um ${p.dailyTime} Uhr${p.incrementalEveryHours > 0 ? `, inkrementell alle ${p.incrementalEveryHours} h` : ""}, `
 			+ `Aufbewahrung ${p.keepDaily} täglich / ${p.keepWeekly} wöchentlich / ${p.keepMonthly} monatlich / ${p.keepYearly} jährlich`);
 	}
 
@@ -96,7 +96,7 @@ export default class Backup extends BaseController {
 		if (repo && repo.key !== key) this.model().setProperty("/source", repo.key);
 		const list = (repo?.snapshots ?? []).map((s) => ({
 			...s, when: dateTime(s.time), age: age(s.time), files: s.files != null ? s.files.toLocaleString("de-DE") : "–",
-			size: s.bytes != null ? `${fileSize(s.bytes)} · ${s.addedBytes != null ? `+${fileSize(s.addedBytes)}` : "–"}` : "–",
+			size: s.bytes != null ? `${fileSize(s.bytes)}, ${s.addedBytes != null ? `+${fileSize(s.addedBytes)}` : "–"}` : "–",
 		}));
 		this.model().setProperty("/snapshots", list);
 		this.model().setProperty("/snapshotCount", String(list.length));

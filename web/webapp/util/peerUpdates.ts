@@ -24,7 +24,7 @@ export function peerRow(p: PeerUpdateDto): Record<string, unknown> {
 	let state: string;
 	if (active) {
 		stateText = p.status === "requested"
-			? (p.kind === "backup-mirror" ? `Wartet auf Abruf (meldet sich alle 2 Minuten) · Version ${p.targetVersion}` : `Beauftragt · Version ${p.targetVersion}`)
+			? (p.kind === "backup-mirror" ? `Wartet auf Abruf (meldet sich alle 2 Minuten), Version ${p.targetVersion}` : `Beauftragt, Version ${p.targetVersion}`)
 			: `Wird aktualisiert auf ${p.targetVersion} …`;
 		state = "Information";
 	} else if (p.status === "failed" && p.finishedAt) {
@@ -40,13 +40,13 @@ export function peerRow(p: PeerUpdateDto): Record<string, unknown> {
 		stateText = "Version noch unbekannt";
 		state = "None";
 	} else {
-		stateText = p.status === "succeeded" ? `Aktuell · aktualisiert ${dateTime(p.finishedAt)}` : "Aktuell";
+		stateText = p.status === "succeeded" ? `Aktuell, aktualisiert ${dateTime(p.finishedAt)}` : "Aktuell";
 		state = "Success";
 	}
 	return {
 		...p,
 		kindText: kindText[p.kind] ?? p.kind,
-		versionText: `Installiert ${p.installedVersion ?? "?"} · verfügbar ${p.availableVersion}`,
+		versionText: `Installiert ${p.installedVersion ?? "?"}, verfügbar ${p.availableVersion}`,
 		stateText, state, active,
 		canUpdate: p.updateAvailable && p.updaterAvailable && !active,
 		needsLocal: p.updateAvailable && !p.updaterAvailable && !active,

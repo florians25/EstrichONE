@@ -46,12 +46,12 @@
 							<items>
 								<SegmentedButtonItem key="tag" text="Tag"/>
 								<SegmentedButtonItem key="woche" text="Woche"/>
-								<SegmentedButtonItem key="arbeitswoche" text="Mo–Fr"/>
+								<SegmentedButtonItem key="arbeitswoche" text="Mo bis Fr"/>
 								<SegmentedButtonItem key="monat" text="Monat"/>
 								<SegmentedButtonItem key="agenda" text="Agenda"/>
 							</items>
 						</SegmentedButton>
-						<ToggleButton icon="sap-icon://full-screen" pressed="{view>/fullDay}" tooltip="Ganzen Tag (0–24 Uhr) zeigen"/>
+						<ToggleButton icon="sap-icon://full-screen" pressed="{view>/fullDay}" tooltip="Ganzen Tag (0 bis 24 Uhr) zeigen"/>
 						<ToggleButton icon="sap-icon://menu2" pressed="{view>/sidebar}" tooltip="Kalenderliste ein-/ausblenden"/>
 					</actions>
 					<appointments>
@@ -70,7 +70,7 @@
 							<items>
 								<SegmentedButtonItem key="tag" text="Tag"/>
 								<SegmentedButtonItem key="woche" text="Woche"/>
-								<SegmentedButtonItem key="arbeitswoche" text="Mo–Fr"/>
+								<SegmentedButtonItem key="arbeitswoche" text="Mo bis Fr"/>
 								<SegmentedButtonItem key="monat" text="Monat"/>
 								<SegmentedButtonItem key="agenda" text="Agenda"/>
 							</items>

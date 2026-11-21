@@ -32,7 +32,7 @@ describe('Erstbegehung: Termin und Status', () => {
 
   it('Termintext mit Wochentag, Uhrzeit und Beteiligten', () => {
     const [a] = initialAppointments(akte, [{ ...assignment('p', 'initialInspection', '2026-11-19'), endTime: '10:00:00' }], []);
-    expect(appointmentText(a)).toBe('Do., 19.11.2026, 08:00–10:00 · Kolonne Nord, Max Huber');
+    expect(appointmentText(a)).toBe('Do., 19.11.2026, 08:00 bis 10:00, Kolonne Nord, Max Huber');
     expect(appointmentText({ ...a, start: '', end: '', who: '' })).toBe('Do., 19.11.2026');
     expect(appointmentText(null)).toBe('');
   });

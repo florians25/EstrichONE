@@ -57,7 +57,7 @@ export function groupByCrew(assignments: AssignmentView[]): DayCrew[] {
 			startText: a.startTime ? time(a.startTime) : "ganztags",
 			endText: a.startTime && a.endTime ? `bis ${time(a.endTime)}` : "",
 			siteText: [a.bauakteNumber, a.bauakteTitle].filter(Boolean).join(" "),
-			kindText: a.activity && a.activity !== kind.activity ? `${kind.text} · ${a.activity}` : kind.text,
+			kindText: a.activity && a.activity !== kind.activity ? `${kind.text}, ${a.activity}` : kind.text,
 			kindIcon: kind.icon,
 			kindColor: kind.color,
 			peopleText: a.people.map((p) => p.name).join(", "),
@@ -70,7 +70,7 @@ export function groupByCrew(assignments: AssignmentView[]): DayCrew[] {
 	for (const crew of list) {
 		const people = new Set(crew.items.flatMap((i) => i.people.map((p) => p.id)));
 		crew.countText = [plural(crew.items.length, "Einsatz", "Einsätze"), people.size ? plural(people.size, "Person", "Personen") : ""]
-			.filter(Boolean).join(" · ");
+			.filter(Boolean).join(", ");
 		const warnings = crew.items.reduce((n, i) => n + i.warnings.length, 0);
 		crew.warningText = warnings ? plural(warnings, "Hinweis", "Hinweise") : "";
 	}

@@ -49,7 +49,7 @@ export async function startTeamsChat(userIds: string[], topic?: string, message?
 		const chat = await post<TeamsChatLink>("teams/chats", { userIds, topic: topic || null, message: message || null });
 		openTeamsUrl(chat.webUrl);
 		if (chat.missing.length > 0) {
-			MessageBox.warning(`Teams geöffnet. Nicht aufgenommen (kein Microsoft-Konto): ${chat.missing.map((m) => `${m.name} – ${m.reason}`).join("; ")}`,
+			MessageBox.warning(`Teams geöffnet. Nicht aufgenommen (kein Microsoft-Konto): ${chat.missing.map((m) => `${m.name} (${m.reason})`).join("; ")}`,
 				{ title: "Chat in Teams" });
 		} else {
 			showToast(chat.included.length > 1 ? `Gruppenchat mit ${chat.included.length} Personen in Teams geöffnet` : `Chat mit ${chat.included[0]} in Teams geöffnet`);

@@ -81,7 +81,7 @@ export default class MasterData extends BaseController {
 		invalidateCatalog();
 		await Promise.all([this.loadLists(), this.loadForm()]);
 		const lists = Number(m.getProperty("/listCount") ?? 0);
-		this.statusLine([], `${lists === 1 ? "1 Werteliste" : `${lists} Wertelisten`} mit ${this.items.length} Einträgen · ${all.length === 1 ? "1 Vorlage oder Textbaustein" : `${all.length} Vorlagen und Textbausteine`} · Änderungen gelten sofort für alle`);
+		this.statusLine([], `${lists === 1 ? "1 Werteliste" : `${lists} Wertelisten`} mit ${this.items.length} Einträgen, ${all.length === 1 ? "1 Vorlage oder Textbaustein" : `${all.length} Vorlagen und Textbausteine`}, Änderungen gelten sofort für alle`);
 	}
 
 	onNav(e: Event): void {
@@ -324,7 +324,7 @@ export default class MasterData extends BaseController {
 				...(f?.builtin ? [] : [
 					{ key: "type", label: "Typ (eigenes Feld)", type: "select" as const,
 						options: Object.entries(typeTexts).filter(([key]) => inspection || key !== "check").map(([key, text]) => ({ key, text })) },
-					...(inspection ? [{ key: "target", label: "Ergänzt in den Basisdaten", type: "select" as const, options: this.targets, placeholder: "– nicht übernehmen –",
+					...(inspection ? [{ key: "target", label: "Ergänzt in den Basisdaten", type: "select" as const, options: this.targets, placeholder: "(nicht übernehmen)",
 						help: "Der erfasste Wert wird beim Speichern der Erstbegehung in dieses Feld der Bauakte übernommen." }] : []),
 					{ key: "list", label: "Werteliste (bei Auswahl)", type: "select" as const, options: lists, placeholder: "–" },
 					{ key: "unit", label: "Einheit", maxLength: 20, placeholder: "z. B. m, mm, m²" },

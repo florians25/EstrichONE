@@ -191,7 +191,7 @@ export default class Start extends BaseController {
 					value: String(list.length), state: warnings ? "Critical" : "Neutral",
 					details: warnings ? `${warnings} mit Hinweisen` : crews ? `${crews} ${crews === 1 ? "Kolonne" : "Kolonnen"} unterwegs` : "",
 					rows: list.slice(0, CARD_ROWS).map((a) => ({
-						text: `${a.startTime ? a.startTime.slice(0, 5) + " · " : ""}${a.bauakteTitle}`, icon: "sap-icon://shipping-status",
+						text: `${a.startTime ? a.startTime.slice(0, 5) + ", " : ""}${a.bauakteTitle}`, icon: "sap-icon://shipping-status",
 						side: a.crewName ?? "", sideState: "None", to: `/bauakten/${a.bauakteId}`,
 					})),
 				});
@@ -243,7 +243,7 @@ export default class Start extends BaseController {
 				set("newFiles", {
 					value: count(p), state: "Neutral", details: p.items[0] ? `zuletzt ${shortDay(isoDay(new Date(p.items[0].updatedAt)))}` : "",
 					rows: p.items.slice(0, CARD_ROWS).map((b) => ({
-						text: `${b.number ? b.number + " · " : ""}${b.title}`, icon: "sap-icon://folder-blank", side: b.city ?? "", sideState: "None", to: `/bauakten/${b.id}`,
+						text: `${b.number ? b.number + ", " : ""}${b.title}`, icon: "sap-icon://folder-blank", side: b.city ?? "", sideState: "None", to: `/bauakten/${b.id}`,
 					})),
 				});
 			}).catch(failed("newFiles")) : Promise.resolve(),
@@ -270,7 +270,7 @@ export default class Start extends BaseController {
 				: { text: "Bisher wurde keine Sicherung abgeschlossen.", state: "Error", detail: b.summary })) : Promise.resolve(),
 			// Überwachung (System → Überwachung): Hinweis nur bei Warnung
 			this.has("backup.manage") ? get<{ level: string; warnings: string[] }>("system/monitoring").then((o) => m.setProperty("/monitor",
-				o.level === "ok" ? null : { type: o.level === "critical" ? "Error" : "Warning", text: o.warnings.slice(0, 3).join(" · ") })).catch(() => undefined) : Promise.resolve(),
+				o.level === "ok" ? null : { type: o.level === "critical" ? "Error" : "Warning", text: o.warnings.slice(0, 3).join(", ") })).catch(() => undefined) : Promise.resolve(),
 		]);
 		m.setProperty("/busy", false);
 	}

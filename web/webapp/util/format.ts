@@ -31,7 +31,7 @@ export function time(value: string | null | undefined): string {
 }
 
 export function timeRange(start: string | null | undefined, end: string | null | undefined): string {
-	return start ? `${time(start)}${end ? `–${time(end)}` : ""}` : "";
+	return start ? `${time(start)}${end ? ` bis ${time(end)}` : ""}` : "";
 }
 
 export function fileSize(bytes: number): string {
@@ -84,7 +84,7 @@ export function weatherLine(entry: { weather: string | null; temperatureCelsius:
 		entry.weather ? weatherNames[entry.weather] : null,
 		entry.temperatureCelsius !== null ? `${entry.temperatureCelsius} °C` : null,
 		entry.workersPresent !== null ? `${entry.workersPresent} anwesend` : null,
-	].filter(Boolean).join(" · ");
+	].filter(Boolean).join(", ");
 }
 
 /** Ein deutscher Zahlenwert aus einem Eingabefeld („42,5“ → 42.5); leer → null. */

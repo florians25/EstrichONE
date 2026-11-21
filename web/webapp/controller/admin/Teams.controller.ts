@@ -29,7 +29,7 @@ function lastTestText(s: TeamsSettings): string {
 	if (!s.lastTestAt) return "";
 	const at = dateTime(s.lastTestAt);
 	if (s.lastTestOk) return `Letzter Verbindungstest am ${at} erfolgreich.`;
-	return `Letzter Verbindungstest am ${at} fehlgeschlagen – ${s.lastTestError ?? "Ohne Angabe – bitte „Verbindung testen“ wählen."}`;
+	return `Letzter Verbindungstest am ${at} fehlgeschlagen: ${s.lastTestError ?? "Ohne Angabe. Bitte „Verbindung testen“ wählen."}`;
 }
 
 /** Einstellungen › Integrationen › Microsoft Teams. @namespace estrichone.controller.admin */
@@ -57,8 +57,8 @@ export default class Teams extends BaseController {
 	private applyRollout(r: TeamsRollout): void {
 		const m = this.model();
 		m.setProperty("/rollout", r);
-		m.setProperty("/rolloutUsersText", `${r.mapped} von ${r.activeUsers} mit Microsoft-Konto zugeordnet · ${r.notFound} ohne passendes Konto · `
-			+ `${r.unchecked} noch nicht geprüft · ${r.noEmail} ohne E-Mail-Adresse. Ob jemand die Teams-App nutzt, zeigt EstrichONE nicht (Teams Admin Center › Berichte).`);
+		m.setProperty("/rolloutUsersText", `${r.mapped} von ${r.activeUsers} mit Microsoft-Konto zugeordnet, ${r.notFound} ohne passendes Konto, `
+			+ `${r.unchecked} noch nicht geprüft, ${r.noEmail} ohne E-Mail-Adresse. Ob jemand die Teams-App nutzt, zeigt EstrichONE nicht (Teams Admin Center › Berichte).`);
 		m.setProperty("/rolloutBauaktenText", `${r.linkedOpen} von ${r.openBauakten} mit Teams verknüpft, ${r.unlinkedOpen} ohne Verknüpfung.`);
 		const job = r.job;
 		m.setProperty("/jobPercent", job && job.total > 0 ? Math.round(job.processed / job.total * 100) : job ? 100 : 0);
@@ -122,8 +122,8 @@ export default class Teams extends BaseController {
 			s.postVia === "webhook" && !s.hasWebhook && { text: "Karten per Webhook: allgemeine Webhook-URL fehlt (nur Bauakten mit eigener URL)", level: "info" },
 			!!s.lastPostError && { text: `Letzte Karte nicht gesendet: ${s.lastPostError}`, level: "error" },
 		], s.chatMode === "estrichOne" && !s.graphConfigured
-			? "Nicht eingerichtet – der eingebaute Chat arbeitet wie bisher"
-			: `Chat-Modus: ${chatModeLabels[s.chatMode]} · ${s.linkedBauakten} Bauakten verknüpft`);
+			? "Nicht eingerichtet. Der eingebaute Chat arbeitet wie bisher."
+			: `Chat-Modus: ${chatModeLabels[s.chatMode]}, ${s.linkedBauakten} Bauakten verknüpft`);
 	}
 
 	private applyHints(s: TeamsSettings | null): void {
@@ -133,7 +133,7 @@ export default class Teams extends BaseController {
 		m.setProperty("/certificateText", s.certificateThumbprint
 			? `Gespeichert: Fingerabdruck ${s.certificateThumbprint}${s.certificateExpiresAt ? `, gültig bis ${dateTime(s.certificateExpiresAt)}` : ""}` : "");
 		m.setProperty("/lastTestText", lastTestText(s));
-		m.setProperty("/lastPostText", s.lastPostAt ? `${dateTime(s.lastPostAt)}${s.lastPostError ? ` – ${s.lastPostError}` : " – gesendet"}` : "");
+		m.setProperty("/lastPostText", s.lastPostAt ? `${dateTime(s.lastPostAt)}${s.lastPostError ? `: ${s.lastPostError}` : ": gesendet"}` : "");
 	}
 
 	private applyUsers(users: TeamsUserMapping[]): void {

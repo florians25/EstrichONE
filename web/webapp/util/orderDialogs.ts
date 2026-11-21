@@ -69,7 +69,7 @@ export async function openOrderEditor(editing: OrderEditing): Promise<OrderRespo
 		lines: (o ? o.lines.map((l) => ({ id: l.id, materialId: l.materialId, description: l.description, quantity: fmt(l.quantity), unit: l.unit, unitPrice: fmt(l.unitPrice) }))
 			: (editing.lines?.length ? editing.lines.map((l) => ({ ...l, id: uuidv7() })) : [{ id: uuidv7(), materialId: null, description: "", quantity: "", unit: "Sack", unitPrice: "" }])) as LineDraft[],
 		total: "",
-		materials: [{ key: "", text: "– freier Artikel –" }, ...materials.map((m) => ({ key: m.id, text: `${m.name}${m.articleNumber ? ` · ${m.articleNumber}` : ""}` }))],
+		materials: [{ key: "", text: "(freier Artikel)" }, ...materials.map((m) => ({ key: m.id, text: `${m.name}${m.articleNumber ? `, ${m.articleNumber}` : ""}` }))],
 	});
 	const supplier = new Select({ width: "100%", forceSelection: false, items: [new Item({ key: "", text: "Lieferant wählen" }),
 		...suppliers.map((s) => new Item({ key: s.id, text: s.name }))], selectedKey: o?.supplierId ?? "" });
@@ -82,7 +82,7 @@ export async function openOrderEditor(editing: OrderEditing): Promise<OrderRespo
 	supplier.attachChange(showNotes);
 	showNotes();
 	const bauakte = bauakteInput(`orderBauakte${Date.now()}`, o?.bauakteId ?? (editing.order === null ? editing.bauakte?.id ?? null : null),
-		o?.bauakteId ? `${o.bauakteNumber ?? "neu"} · ${o.bauakteTitle}` : editing.order === null ? editing.bauakte?.label : undefined);
+		o?.bauakteId ? `${o.bauakteNumber ?? "neu"}, ${o.bauakteTitle}` : editing.order === null ? editing.bauakte?.label : undefined);
 	const date = new DatePicker({ valueFormat: "yyyy-MM-dd", displayFormat: "EE, dd.MM.yyyy", value: o?.deliveryDate ?? "", placeholder: "nach Absprache", width: "100%" });
 	const time = new ComboBox({ value: o?.deliveryTime ?? "", width: "100%", items: deliveryWindows.map((w) => new Item({ key: w, text: w })) });
 	const street = new Input({ value: o?.deliveryStreet ?? "", placeholder: "leer = Baustelle der Bauakte", width: "100%" });

@@ -49,7 +49,7 @@ describe('Dublettenabgleich bei der Kundenanlage', () => {
 
   it('zeigt Treffer mit Kundennummer, Anschrift und Erreichbarkeit', () => {
     expect(candidateLine(contact('a', 'X', { customerNumber: '10001', street: 'Am Hang 3', postalCode: '84028', city: 'Landshut', phone: '0871 1' })))
-      .toBe('Kd.-Nr. 10001 · Am Hang 3, 84028 Landshut · 0871 1');
+      .toBe('Kd.-Nr. 10001, Am Hang 3, 84028 Landshut, 0871 1');
     expect(candidateLine(contact('a', 'X'))).toBe('Keine weiteren Angaben');
   });
 

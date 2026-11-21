@@ -46,7 +46,7 @@ test('Hinweiskarten: Zeitraum, Zusammenfassen, Details, Ausblenden je Benutzer (
   const maintenance = cards(page).filter({ hasText: 'Geplante Wartung' });
   await expect(maintenance).toHaveClass(/eoNoticeCard--Information/);
   await expect(maintenance.locator('.eoNoticeChip')).toHaveText('in 2 Tagen');
-  await expect(maintenance.locator('.eoNoticePeriod')).toHaveText(/^[A-Z][a-z]\., \d\d\.\d\d\., \d\d:\d\d(–\d\d:\d\d)? Uhr/);
+  await expect(maintenance.locator('.eoNoticePeriod')).toHaveText(/^[A-Z][a-z]\., \d\d\.\d\d\., \d\d:\d\d( bis \d\d:\d\d)? Uhr/);
   await expect(maintenance).toContainText('Update auf die neue Version');
 
   // Details: vollständiger Text im Dialog.

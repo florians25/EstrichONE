@@ -94,7 +94,7 @@ export async function createAkteTeamsChat(model: JSONModel, bauakteId: string): 
 	applyAkteTeams(model, { ...teams, link: result.link });
 	const open = "In Teams öffnen";
 	MessageBox.success(`Teams-Chat „${result.link.displayName ?? ""}“ angelegt und mit der Bauakte verknüpft (${result.link.syncedMembers} Personen). `
-		+ "Tipp: gleich öffnen und die erste Nachricht schreiben – erst dann steht der Chat bei allen in der Teams-Chatliste.", {
+		+ "Öffnen Sie den Chat und schreiben Sie die erste Nachricht. Erst dann erscheint er bei allen in der Teams-Chatliste.", {
 		title: "Microsoft Teams", actions: [open, MessageBox.Action.CLOSE], emphasizedAction: open,
 		onClose: (action: unknown) => { if (action === open) openTeamsLink(result.link); },
 	});

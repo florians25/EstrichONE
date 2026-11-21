@@ -12,7 +12,7 @@
 				<Title id="updateCountdown" text="{notices>/upd/countdown}" level="H2" titleStyle="H1" visible="{= !!${notices>/upd/countdown} }"/>
 				<ProgressIndicator id="updateProgress" percentValue="{notices>/upd/percent}" displayValue="{notices>/upd/phaseText}" showValue="false"
 					state="{= ${notices>/upd/failed} ? 'Error' : 'None' }" width="20rem" class="sapUiSmallMarginTop"/>
-				<Text text="{= ${notices>/updateOffline} ? 'Server wird gerade getauscht – die Seite wartet automatisch.' : 'Die Seite prüft alle 5 Sekunden und lädt nach der Freigabe automatisch neu.' }"
+				<Text text="{= ${notices>/updateOffline} ? 'Der Server wird gerade getauscht. Die Seite wartet automatisch.' : 'Die Seite prüft alle 5 Sekunden und lädt nach der Freigabe automatisch neu.' }"
 					textAlign="Center" maxLines="3" width="22rem" class="sapUiSmallMarginTop"/>
 			</VBox>
 		</additionalContent>

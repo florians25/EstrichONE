@@ -138,7 +138,7 @@ export function contactLines(phones: ContactPhone[], emails: ContactEmail[], add
 		seen.add(key);
 		const kind = phoneKinds[p.kind] ?? phoneKinds.office;
 		lines.push({ kind: kind.text, icon: kind.icon, text: p.number, href: p.kind === "fax" ? null : telHref(p.number), target: "_self",
-			label: [kind.text, p.label].filter(Boolean).join(" · ") });
+			label: [kind.text, p.label].filter(Boolean).join(", ") });
 	}
 	for (const e of emails) {
 		if (!e.address || seen.has(e.address.toLowerCase())) continue;
@@ -472,8 +472,8 @@ export default class Contacts extends SectionBase {
 						const found = await get<DuplicateCandidate[]>("contacts/duplicates", { name, phone: text("phone") ?? text("mobile"), email: text("email"),
 							street: text("street"), postalCode: text("postalCode"), city: text("city") });
 						if (found.length > 0) {
-							warn([`Mögliche Dubletten im Kundenstamm: ${found.slice(0, 3).map((d) => `${d.contact.name}${d.contact.city ? ` (${d.contact.city})` : ""} – ${d.reasons.join(", ")}`).join("; ")}.`,
-								"Tipp: „Bestehenden Kontakt suchen“ verknüpft den vorhandenen Eintrag. Erneut „Speichern“ legt trotzdem neu an."], false);
+							warn([`Mögliche Dubletten im Kundenstamm: ${found.slice(0, 3).map((d) => `${d.contact.name}${d.contact.city ? ` (${d.contact.city})` : ""}: ${d.reasons.join(", ")}`).join("; ")}.`,
+								"„Bestehenden Kontakt suchen“ verknüpft den vorhandenen Eintrag. Erneut „Speichern“ legt trotzdem neu an."], false);
 							return KEEP_OPEN;
 						}
 					}

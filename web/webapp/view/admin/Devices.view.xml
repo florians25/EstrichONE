@@ -30,7 +30,7 @@
 							</HBox>
 							<Text text="{= ${view>kind} === 'pool' ? 'Poolgerät' : 'Persönlich' }"/>
 							<ObjectStatus text="{path: 'view>status', formatter: 'fmt.deviceStatusText'}" state="{path: 'view>status', formatter: 'fmt.deviceStatusState'}" inverted="true"/>
-							<Text text="{= (${view>appVersion} || '–') + ' · ' + (${view>osVersion} || '–') }"/>
+							<Text text="{= (${view>appVersion} || '–') + ', ' + (${view>osVersion} || '–') }"/>
 							<Text text="{path: 'view>lastSeenAt', formatter: 'fmt.dateTime'}" class="eoTabular"/>
 							<HBox justifyContent="End">
 								<Button text="Freigeben" type="Transparent" press=".onApprove" visible="{= ${view>status} === 'pending' }"/>

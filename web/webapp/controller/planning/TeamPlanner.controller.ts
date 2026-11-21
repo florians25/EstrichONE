@@ -149,7 +149,7 @@ export default class TeamPlanner extends BaseController {
 		const warn = a.warnings.length > 0;
 		return {
 			key: `a:${a.id}`, start, end, title: `${warn ? "⚠ " : ""}${a.bauakteNumber ? `${a.bauakteNumber} ` : ""}${a.bauakteTitle}`,
-			text: [a.activity, timed ? (a.endTime ? "" : "Ende offen") : "ohne Uhrzeit"].filter(Boolean).join(" · "),
+			text: [a.activity, timed ? (a.endTime ? "" : "Ende offen") : "ohne Uhrzeit"].filter(Boolean).join(", "),
 			icon: kind?.icon ?? "sap-icon://building", color: warn ? "#AA0808" : a.crewColor && this.model().getProperty("/rowsMode") === "mitarbeiter" ? a.crewColor : kind?.color ?? "#0B2D5B",
 			tooltip: [a.activity, a.bauakteAddress, a.people.map((p) => p.name).join(", "), a.resources.map((r) => r.name).join(", "), ...a.warnings].filter(Boolean).join("\n"),
 			tentative: !timed,
@@ -160,7 +160,7 @@ export default class TeamPlanner extends BaseController {
 		const kind = calendarEventKinds[o.kind];
 		return {
 			key: `e:${o.eventId}:${o.occurrenceDate ?? ""}:${o.start}`, start: parseLocal(o.start), end: parseLocal(o.end), title: o.title,
-			text: [kind?.text, o.location].filter(Boolean).join(" · "), icon: kind?.icon ?? "sap-icon://appointment",
+			text: [kind?.text, o.location].filter(Boolean).join(", "), icon: kind?.icon ?? "sap-icon://appointment",
 			color: o.color ?? o.calendarColor ?? kind?.color ?? "#0064D9",
 			tooltip: [o.title, o.location, o.calendarName, o.people.map((p) => p.name).join(", ")].filter(Boolean).join("\n"), tentative: false,
 		};
@@ -221,11 +221,11 @@ export default class TeamPlanner extends BaseController {
 		}
 		m.setProperty("/rows", rows);
 		const conflicts = assignments.filter((a) => a.warnings.length > 0);
-		m.setProperty("/conflicts", conflicts.map((a) => ({ id: a.id, title: `${a.day.split("-").reverse().join(".")} · ${a.bauakteTitle} · ${a.activity}`, text: a.warnings.join(" ") })));
+		m.setProperty("/conflicts", conflicts.map((a) => ({ id: a.id, title: `${a.day.split("-").reverse().join(".")}, ${a.bauakteTitle}, ${a.activity}`, text: a.warnings.join(" ") })));
 		m.setProperty("/conflictText", `${conflicts.length} ${conflicts.length === 1 ? "Einsatz hat" : "Einsätze haben"} Konflikte (Doppelbelegung, Abwesenheit oder Termin zur selben Zeit).`);
 		const { from, to } = this.days();
-		m.setProperty("/subtitle", `${byPeople ? "Mitarbeiter" : "Kolonnen"} · ${from === to ? parseDay(from).toLocaleDateString("de-DE", { weekday: "long", day: "2-digit", month: "long", year: "numeric" })
-			: `${parseDay(from).toLocaleDateString("de-DE")} – ${parseDay(to).toLocaleDateString("de-DE")}`} · ${assignments.length} ${assignments.length === 1 ? "Einsatz" : "Einsätze"}, ${(this.range?.appointments ?? []).length} ${(this.range?.appointments ?? []).length === 1 ? "Termin" : "Termine"}`);
+		m.setProperty("/subtitle", `${byPeople ? "Mitarbeiter" : "Kolonnen"}, ${from === to ? parseDay(from).toLocaleDateString("de-DE", { weekday: "long", day: "2-digit", month: "long", year: "numeric" })
+			: `${parseDay(from).toLocaleDateString("de-DE")} bis ${parseDay(to).toLocaleDateString("de-DE")}`}, ${assignments.length} ${assignments.length === 1 ? "Einsatz" : "Einsätze"}, ${(this.range?.appointments ?? []).length} ${(this.range?.appointments ?? []).length === 1 ? "Termin" : "Termine"}`);
 	}
 
 	// ---- Bearbeiten -------------------------------------------------------------------------------------------------

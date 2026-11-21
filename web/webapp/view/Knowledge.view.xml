@@ -49,7 +49,7 @@
 					<HBox justifyContent="SpaceBetween" alignItems="Start" wrap="Wrap">
 						<VBox>
 							<HBox alignItems="Center" class="eoHdTags">
-								<ObjectStatus text="Entwurf – nur für die IT sichtbar" state="Warning" inverted="true" visible="{= !${view>/a/isPublished} }"/>
+								<ObjectStatus text="Entwurf, nur für die IT sichtbar" state="Warning" inverted="true" visible="{= !${view>/a/isPublished} }"/>
 								<Text text="{path: 'view>/a/category', formatter: 'fmt.ticketCategoryText'}" class="eoMuted" visible="{= !!${view>/a/category} }"/>
 							</HBox>
 							<Title id="kbArticleTitle" text="{view>/a/title}" level="H2" wrapping="true" class="eoHdTitle"/>

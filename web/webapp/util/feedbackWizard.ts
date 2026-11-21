@@ -272,7 +272,7 @@ export function openFeedbackWizard(options: FeedbackWizardOptions = {}): Promise
 					drop,
 					new HBox({ alignItems: "Center", wrap: "Wrap", items: [
 						new Button("feedbackPick", { text: "Datei auswählen", icon: "sap-icon://attachment", press: pick }),
-						new Text({ text: "Tipp: Windows+Umschalt+S nimmt einen Bildschirmausschnitt auf, Strg+V fügt ihn hier ein." }).addStyleClass("eoFbHint sapUiSmallMarginBegin"),
+						new Text({ text: "Mit Windows+Umschalt+S nehmen Sie einen Bildschirmausschnitt auf, mit Strg+V fügen Sie ihn hier ein." }).addStyleClass("eoFbHint sapUiSmallMarginBegin"),
 					] }).addStyleClass("sapUiSmallMarginTop sapUiSmallMarginBottom"),
 					fileStrip, fileList,
 				]

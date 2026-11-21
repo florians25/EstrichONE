@@ -201,8 +201,8 @@ export default class Company extends BaseController {
 			const error = rangeError(v, r.maxLength);
 			const next = v.nextNumber ?? r.nextNumber;
 			const end = v.rangeEnd ?? (isYearly(v.pattern) ? null : capacity(v.pattern));
-			preview.setText(error ?? `Nächste Nummer: ${formatNumber(v.pattern, next)} · letzte im Bereich: ${end === null ? "unbegrenzt" : formatNumber(v.pattern, end)}`
-				+ (isYearly(v.pattern) ? " · zählt jedes Jahr ab dem Anfang neu" : ""));
+			preview.setText(error ?? `Nächste Nummer: ${formatNumber(v.pattern, next)}, letzte im Bereich: ${end === null ? "unbegrenzt" : formatNumber(v.pattern, end)}`
+				+ (isYearly(v.pattern) ? ", zählt jedes Jahr ab dem Anfang neu" : ""));
 		};
 		let current: Record<string, unknown> = { pattern: r.pattern, rangeStart: r.rangeStart, rangeEnd: r.rangeEnd, nextNumber: r.nextNumber };
 		const changed = (key: string) => (value: unknown) => { current = { ...current, [key]: value }; show(current); };
@@ -406,7 +406,7 @@ export default class Company extends BaseController {
 			storedText: `${bytes(stats.storedBytes)} in ${stats.kinds.reduce((n, k) => n + k.files, 0)} Dateien`,
 			savedText: stats.savedBytes > 0 ? `${bytes(stats.savedBytes)} durch Verdichtung` : "noch nichts",
 			duplicateText: stats.duplicateFiles ? `${stats.duplicateFiles === 1 ? "1 Datei" : `${stats.duplicateFiles} Dateien`} mehrfach hochgeladen, nur einmal abgelegt (${bytes(stats.duplicateBytes)} gespart)` : "keine",
-			diskText: `Originale ${bytes(stats.originalsDiskBytes)}, Vorschaustufen ${bytes(stats.variantsDiskBytes)}${stats.freeDiskBytes != null ? ` · frei ${bytes(stats.freeDiskBytes)}` : ""}`,
+			diskText: `Originale ${bytes(stats.originalsDiskBytes)}, Vorschaustufen ${bytes(stats.variantsDiskBytes)}${stats.freeDiskBytes != null ? `, frei ${bytes(stats.freeDiskBytes)}` : ""}`,
 			kinds: stats.kinds.map((k) => ({ ...k, label: kinds[k.kind] ?? k.kind, bytesText: bytes(k.bytes), uploadedText: bytes(k.uploadedBytes) })),
 			jobText: job.running ? `läuft: ${job.processed} geprüft, ${job.optimized} verdichtet (${bytes(job.savedBytes)} gespart)`
 				: job.finishedAt ? `zuletzt: ${job.optimized} verdichtet, ${bytes(job.savedBytes)} gespart, ${job.skipped} übersprungen${job.failed ? `, ${job.failed} Fehler` : ""}`

@@ -103,7 +103,7 @@ export default class Documents extends BaseController {
 				key: `c:${c.customerId ?? "none"}`, text: c.name, icon: "sap-icon://customer", count: akten.reduce((n, b) => n + sum(b.categories), 0),
 				category: null, bauakteId: null, customerAkten: akten.map((b) => b.id),
 				nodes: akten.map((b) => ({
-					key: `b:${b.id}`, text: `${b.number ?? "neu"} · ${b.title}`, icon: "sap-icon://folder-full", count: sum(b.categories), category: null, bauakteId: b.id,
+					key: `b:${b.id}`, text: `${b.number ?? "neu"}, ${b.title}`, icon: "sap-icon://folder-full", count: sum(b.categories), category: null, bauakteId: b.id,
 					nodes: Object.entries(documentCategories).filter(([key]) => (b.categories[key] ?? 0) > 0).map(([key, cat]) => ({
 						key: `b:${b.id}:${key}`, text: cat.text, icon: cat.icon, count: b.categories[key], category: key, bauakteId: b.id, nodes: [],
 					})),
@@ -128,7 +128,7 @@ export default class Documents extends BaseController {
 	private async loadAkten(): Promise<void> {
 		const page = await get<BauaktePage>("bauakten", { limit: 200 }).catch(() => null);
 		this.model().setProperty("/akten", [{ key: "", text: "Alle Bauakten" },
-			...(page?.items ?? []).map((b) => ({ key: b.id, text: `${b.number ?? "neu"} · ${b.title}` }))]);
+			...(page?.items ?? []).map((b) => ({ key: b.id, text: `${b.number ?? "neu"}, ${b.title}` }))]);
 	}
 
 	private async load(): Promise<void> {
@@ -153,7 +153,7 @@ export default class Documents extends BaseController {
 		m.setProperty("/items", result.items.map((i) => ({
 			...i,
 			icon: fileIcon(i.file.contentType, i.file.originalName),
-			akteText: `${i.bauakteNumber ?? "neu"} · ${i.bauakteTitle}`,
+			akteText: `${i.bauakteNumber ?? "neu"}, ${i.bauakteTitle}`,
 			categoryText: documentCategories[(i.file.category ?? "other") as keyof typeof documentCategories]?.text ?? "Sonstiges",
 			approvalText: i.approvalStatus ? approvalStatus[i.approvalStatus].text : "",
 			approvalState: i.approvalStatus ? approvalStatus[i.approvalStatus].state : "None",
@@ -167,7 +167,7 @@ export default class Documents extends BaseController {
 			get<ApprovalResponse[]>("approvals", { scope: "requested", status: "all", limit: 50 }).catch(() => [] as ApprovalResponse[]),
 		]);
 		const m = this.model();
-		m.setProperty("/mine", mine.map((a) => ({ ...a, requestText: `angefragt von ${a.requestedByName} am ${dateTime(a.requestedAt)}${a.dueDate ? ` · bis ${a.dueDate.split("-").reverse().join(".")}` : ""}` })));
+		m.setProperty("/mine", mine.map((a) => ({ ...a, requestText: `angefragt von ${a.requestedByName} am ${dateTime(a.requestedAt)}${a.dueDate ? `, bis ${a.dueDate.split("-").reverse().join(".")}` : ""}` })));
 		m.setProperty("/requested", requested.map((a) => ({ ...a, statusText: approvalStatus[a.status].text, statusState: approvalStatus[a.status].state })));
 	}
 

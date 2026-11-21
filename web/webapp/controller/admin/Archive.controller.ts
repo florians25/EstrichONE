@@ -14,8 +14,8 @@ import type { ArchiveConnectionDto, ArchiveOverview, ArchiveRecordDto, ArchiveRu
 export function verificationText(v: ArchiveVerification | null): { text: string; state: string } {
 	if (!v) return { text: "Noch nicht geprüft", state: "None" };
 	return v.ok
-		? { text: `In Ordnung · ${dateTime(v.at)} · ${v.objectsChecked} Dokumente, Journal ${v.ledgerEntries} Einträge`, state: "Success" }
-		: { text: `${v.errors.length} Abweichung(en) · ${dateTime(v.at)}`, state: "Error" };
+		? { text: `In Ordnung, ${dateTime(v.at)}, ${v.objectsChecked} Dokumente, Journal ${v.ledgerEntries} Einträge`, state: "Success" }
+		: { text: `${v.errors.length} Abweichung(en), ${dateTime(v.at)}`, state: "Error" };
 }
 
 /** System › Archiv: Archivserver koppeln, Regeln je Dokumentart, Warteschlange und Nachweis, Prüfung, Export. @namespace estrichone.controller.admin */
@@ -61,13 +61,13 @@ export default class Archive extends BaseController {
 		m.setProperty("/pairedText", c ? dateTime(c.pairedAt) : "");
 		m.setProperty("/settings", { autoArchive: c?.autoArchive ?? true, notifyEmail: c?.notifyEmail ?? "", dossierAfterMonths: c?.dossierAfterMonths ?? 0 });
 		m.setProperty("/contact", c?.lastError
-			? { text: `Fehler · zuletzt erreicht ${dateTime(c.lastContactAt)}`, state: "Error" }
-			: { text: o.server ? `Erreichbar · ${dateTime(c?.lastContactAt)}` : `Nicht erreichbar · zuletzt ${dateTime(c?.lastContactAt)}`, state: o.server ? "Success" : "Warning" });
+			? { text: `Fehler (zuletzt erreicht ${dateTime(c.lastContactAt)})`, state: "Error" }
+			: { text: o.server ? `Erreichbar (${dateTime(c?.lastContactAt)})` : `Nicht erreichbar (zuletzt ${dateTime(c?.lastContactAt)})`, state: o.server ? "Success" : "Warning" });
 		const s = o.server;
 		m.setProperty("/stats", {
 			objects: s?.archive ? `${s.archive.objects} (${fileSize(s.archive.bytes)})${s.archive.deleted ? `, ${s.archive.deleted} nach Fristablauf gelöscht` : ""}` : "–",
 			disk: s?.diskFreeBytes != null ? `${fileSize(s.diskFreeBytes)} frei von ${fileSize(s.diskTotalBytes ?? 0)}` : "–",
-			ledger: s?.archive ? `${s.archive.ledgerEntries} Einträge · Kopf ${s.archive.ledgerHead.slice(0, 16)}…` : "–",
+			ledger: s?.archive ? `${s.archive.ledgerEntries} Einträge, Kopf ${s.archive.ledgerHead.slice(0, 16)}…` : "–",
 			verification: verificationText(s?.lastVerification ?? null),
 		});
 		this.statusLine([
@@ -89,7 +89,7 @@ export default class Archive extends BaseController {
 			statusText: r.status === "archived" ? `Archiviert ${dateTime(r.archivedAt)}` : `${recordStatus[r.status].text}${r.attempts ? ` (${r.attempts} Versuch${r.attempts > 1 ? "e" : ""})` : ""}`,
 			statusState: recordStatus[r.status].state,
 			retain: r.retainUntil ? `${date(r.retainUntil)} (${r.retentionYears} Jahre)` : `${r.retentionYears} Jahre`,
-			proof: r.ledgerHash ? `Journal Nr. ${r.ledgerSeq} · ${r.ledgerHash.slice(0, 16)}… · SHA-256 ${r.sha256.slice(0, 12)}…` : "–",
+			proof: r.ledgerHash ? `Journal Nr. ${r.ledgerSeq}, ${r.ledgerHash.slice(0, 16)}…, SHA-256 ${r.sha256.slice(0, 12)}…` : "–",
 		})));
 	}
 

@@ -175,7 +175,7 @@
 							</VBox>
 							<HBox class="eoTimelineEvent" visible="{= !${view>bubble} }" wrap="Wrap">
 								<Text text="{view>summary}" class="eoStrong sapUiTinyMarginEnd"/>
-								<Text text="{view>actorName} · {path: 'view>at', formatter: 'fmt.dateTime'}" class="eoTimelineMeta"/>
+								<Text text="{view>actorName}, {path: 'view>at', formatter: 'fmt.dateTime'}" class="eoTimelineMeta"/>
 							</HBox>
 						</VBox>
 					</VBox>

@@ -102,7 +102,7 @@ describe('Helpdesk: Kennzahlen und Kontext', () => {
     expect(tiles[9]).toMatchObject({ value: '4,4', unit: 'von 5' });
     // Server rechnet in Geschäftszeit: Hinweis in der Kachel.
     const business = kpiTiles({ ...stats, timeBasis: 'business' });
-    expect(business[7].footer).toBe('Geschäftszeit · 87,5 % im Ziel gelöst');
+    expect(business[7].footer).toBe('Geschäftszeit, 87,5 % im Ziel gelöst');
     expect(business[8].footer).toBe('Geschäftszeit ohne Rückfrage');
     expect(kpiTiles({ ...stats, overdue: 0, satisfactionAverage: null, ratings: 0 })[2].color).toBe('Good');
   });
@@ -111,7 +111,7 @@ describe('Helpdesk: Kennzahlen und Kontext', () => {
     expect(deviceLine({
       id: '1', name: 'Fahrzeug 3', platform: 'ios', kind: 'personal', status: 'active', model: 'iPhone 15', osVersion: '18.1', appVersion: '1.0.12',
       updateState: 'recommended', latestVersion: '1.0.13', lastSeenAt: null, isTicketDevice: true,
-    })).toBe('iPhone 15 · iOS 18.1');
+    })).toBe('iPhone 15, iOS 18.1');
     const rows = auditRows([
       { id: '1', at: '2026-11-10T08:00:00Z', kind: 'created', actorUserId: null, actorName: 'Lukas', summary: '', text: 'Drucker', fromValue: null,
         toValue: null, isInternal: false, isReporter: true, attachmentFileIds: [] },
@@ -186,7 +186,7 @@ describe('Erwähnen mit @ beim Tippen', () => {
 describe('Arbeitsliste seitenweise und Eingangskanal', () => {
   it('zählt geladene und alle Tickets', () => {
     expect(pageText(100, 742)).toBe('100 von 742 Tickets');
-    expect(pageText(12, 12, 2)).toBe('12 Tickets · 2 mit neuer Antwort');
+    expect(pageText(12, 12, 2)).toBe('12 Tickets, 2 mit neuer Antwort');
     expect(pageText(1, 1)).toBe('1 Ticket');
     expect(pageText(1000, 1250)).toBe('1.000 von 1.250 Tickets');
   });

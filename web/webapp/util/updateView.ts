@@ -87,8 +87,8 @@ export function updateView(state: UpdateState, now: Date): UpdateView {
 	const base = { version: state.targetVersion ?? "", steps, percent, failed: state.phase === "failed", phaseText };
 	if (announcing) {
 		const text = running
-			? `Update auf ${target} beginnt in ${clock(left)} – bitte Arbeit speichern. Danach ist eine neue Anmeldung nötig.`
-			: `Update auf ${target} beginnt gleich – bitte Arbeit speichern.`;
+			? `Update auf ${target} beginnt in ${clock(left)}. Bitte speichern Sie Ihre Arbeit. Danach ist eine neue Anmeldung nötig.`
+			: `Update auf ${target} beginnt gleich. Bitte speichern Sie Ihre Arbeit.`;
 		return { ...base, banner: true, bannerText: text, page: false, title: "Update angekündigt", text,
 			countdown: running ? clock(left) : "", countdownLabel: "Beginnt in" };
 	}
@@ -101,8 +101,8 @@ export function updateView(state: UpdateState, now: Date): UpdateView {
 				steps: state.phase === "announce" ? steps.map((s, i) => ({ ...s, state: i === 0 ? "done" : i === 1 ? "now" : "todo" })) : steps };
 		case "finish":
 			return { ...base, banner: false, bannerText: "", page: true, title: "Update wird abgeschlossen",
-				text: `${target} läuft. Letzte Prüfungen – danach wird EstrichONE freigegeben und Sie können sich neu anmelden.`,
-				countdown: running ? clock(left) : "", countdownLabel: running ? "Freigabe in" : "Gleich geschafft …" };
+				text: `${target} läuft. Letzte Prüfungen laufen. Danach wird EstrichONE freigegeben und Sie können sich neu anmelden.`,
+				countdown: running ? clock(left) : "", countdownLabel: running ? "Freigabe in" : "Wird abgeschlossen …" };
 		case "rollback":
 			return { ...base, banner: false, bannerText: "", page: true, title: "Update wird zurückgenommen",
 				text: `Das Update auf ${target} hat nicht geklappt. Der bisherige Stand wird wiederhergestellt.`,
@@ -118,7 +118,7 @@ export function updateView(state: UpdateState, now: Date): UpdateView {
 export const doneKey = "eo.update.done";
 
 export function doneText(target: string | null | undefined, failed: boolean): string {
-	if (failed) return "Das Update konnte nicht eingespielt werden – EstrichONE läuft mit dem bisherigen Stand weiter. Bitte erneut anmelden.";
+	if (failed) return "Das Update konnte nicht eingespielt werden. EstrichONE läuft mit dem bisherigen Stand weiter. Bitte erneut anmelden.";
 	return target
 		? `EstrichONE wurde auf Version ${target} aktualisiert. Bitte erneut anmelden.`
 		: "EstrichONE wurde aktualisiert. Bitte erneut anmelden.";

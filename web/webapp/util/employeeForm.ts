@@ -6,7 +6,7 @@ import { session } from "./session";
 import { AUTO_NUMBER } from "./numberField";
 import { employmentTypes, weekdays, type EmployeeDetail } from "./planningModels";
 
-const workTimeModels = ["Vollzeit 40 h (Mo–Fr)", "Vollzeit 39 h (Mo–Fr)", "Teilzeit", "Saison (März–November)", "Minijob", "Gleitzeit", "4-Tage-Woche"];
+const workTimeModels = ["Vollzeit 40 h (Mo bis Fr)", "Vollzeit 39 h (Mo bis Fr)", "Teilzeit", "Saison (März bis November)", "Minijob", "Gleitzeit", "4-Tage-Woche"];
 
 export async function openEmployeeForm(existing: EmployeeDetail | null): Promise<EmployeeDetail | null> {
 	const people = (await session.people()).filter((p) => p.isActive || p.id === existing?.userId);
@@ -15,7 +15,7 @@ export async function openEmployeeForm(existing: EmployeeDetail | null): Promise
 		width: "44rem",
 		initial: existing ? { ...existing, workDays: existing.workDays } : {
 			employmentType: "fullTime", vacationDaysPerYear: 30, vacationCarryOver: 0, weeklyHours: 40,
-			workDays: ["monday", "tuesday", "wednesday", "thursday", "friday"], workTimeModel: "Vollzeit 40 h (Mo–Fr)",
+			workDays: ["monday", "tuesday", "wednesday", "thursday", "friday"], workTimeModel: "Vollzeit 40 h (Mo bis Fr)",
 		},
 		fields: [
 			{ key: "s1", label: "Person", type: "section" },

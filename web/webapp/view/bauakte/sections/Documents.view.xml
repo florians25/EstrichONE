@@ -33,7 +33,7 @@
 				<Select selectedKey="{doc>/sort}" change=".refreshRows" tooltip="{i18n>docs.sort}" ariaLabelledBy="sortLabel">
 					<core:Item key="newest" text="Neueste zuerst"/>
 					<core:Item key="oldest" text="Älteste zuerst"/>
-					<core:Item key="name" text="Name A–Z"/>
+					<core:Item key="name" text="Name (A bis Z)"/>
 					<core:Item key="size" text="Größte zuerst"/>
 					<core:Item key="category" text="Nach Ablage"/>
 				</Select>

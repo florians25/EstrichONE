@@ -59,7 +59,7 @@ export async function confirmSetup(setup: TwoFactorSetup): Promise<string[] | nu
 export function showRecoveryCodes(codes: string[], account: string): Promise<void> {
 	return new Promise((resolve) => {
 		const text = codes.join("\n");
-		const file = `EstrichONE – Wiederherstellungscodes für ${account}\nErstellt: ${new Date().toLocaleString("de-DE")}\n\nJeder Code gilt einmal (statt des Codes aus der App).\n\n${text}\n`;
+		const file = `EstrichONE: Wiederherstellungscodes für ${account}\nErstellt: ${new Date().toLocaleString("de-DE")}\n\nJeder Code gilt einmal (statt des Codes aus der App).\n\n${text}\n`;
 		const dialog = new Dialog({
 			title: "Wiederherstellungscodes", contentWidth: "26rem",
 			content: [new VBox({ items: [

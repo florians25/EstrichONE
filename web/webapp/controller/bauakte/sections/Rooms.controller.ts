@@ -43,7 +43,7 @@ export default class Rooms extends SectionBase {
 		m.setProperty("/count", String(o.rooms.length));
 		const ready = o.rooms.filter((r) => r.status === "ready").length;
 		const laid = o.rooms.filter((r) => r.status === "laid").length;
-		m.setProperty("/progress", `${laid} eingebracht · ${ready} belegreif`);
+		m.setProperty("/progress", `${laid} eingebracht, ${ready} belegreif`);
 		const volume = o.rooms.reduce((sum, r) => sum + ((r.areaSquareMeters ?? 0) * (r.thicknessMillimeters ?? 0)) / 1000, 0);
 		m.setProperty("/volume", volume.toLocaleString("de-DE", { maximumFractionDigits: 2 }));
 		m.setProperty("/sectionMenu", [

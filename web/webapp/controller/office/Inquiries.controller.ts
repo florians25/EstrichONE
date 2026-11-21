@@ -65,11 +65,11 @@ export default class Inquiries extends BaseController {
 		const row = (label: string, value: string | null | undefined) => [new Label({ text: label }), new Text({ text: value || "–" })];
 		const form = new SimpleForm({ editable: false, layout: "ResponsiveGridLayout", labelSpanL: 4, labelSpanM: 4, content: [
 			new Label({ text: "Status" }), new ObjectStatus({ text: inquiryStatus[c.inquiryStatus].text, state: inquiryStatus[c.inquiryStatus].tone, inverted: true }),
-			...row("Eingang", `${callTime(c.calledAt)} · ${callSources[c.source]}`), ...row("Name", c.callerName), ...row("Firma", c.company),
+			...row("Eingang", `${callTime(c.calledAt)}, ${callSources[c.source]}`), ...row("Name", c.callerName), ...row("Firma", c.company),
 			new Label({ text: "Telefon" }), new Link({ text: c.callerPhone ?? "–", href: c.callerPhone ? `tel:${c.callerPhone}` : undefined, enabled: !!c.callerPhone }),
 			new Label({ text: "E-Mail" }), new Link({ text: c.callerEmail ?? "–", href: c.callerEmail ? `mailto:${c.callerEmail}` : undefined, enabled: !!c.callerEmail }),
 			...row("Kunde", c.customerName), ...row("Baustelle", [c.siteStreet, [c.sitePostalCode, c.siteCity].filter(Boolean).join(" ")].filter(Boolean).join(", ")),
-			...row("Fläche / Estrich", `${c.areaSquareMeters ? `${c.areaSquareMeters.toLocaleString("de-DE")} m²` : "–"} · ${c.screedType ?? "–"}`),
+			...row("Fläche / Estrich", `${c.areaSquareMeters ? `${c.areaSquareMeters.toLocaleString("de-DE")} m²` : "–"}, ${c.screedType ?? "–"}`),
 			...row("Wunschtermin", date(c.desiredStart)), ...row("Anliegen", c.subject), ...row("Ticket-Notiz", c.notes), ...row("Nächster Schritt", c.nextStep),
 			new Label({ text: "Bauakte" }), new Link({ text: c.convertedBauakteNumber ?? (c.convertedBauakteId ? "öffnen" : "–"), enabled: !!c.convertedBauakteId,
 				press: () => { dialog.close(); this.nav(`/bauakten/${c.convertedBauakteId}`); } }),
