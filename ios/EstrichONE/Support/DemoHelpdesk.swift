@@ -77,11 +77,11 @@ final class DemoHelpdesk {
             event(ago(60 * 2), "assignee", "IT-Support", "IT-Support hat die Meldung Max Huber zugewiesen."),
             comment(ago(50), "Max Huber", "Welche Meldung zeigt das Display des Druckers?", reporter: false),
             event(ago(50), "status", "Max Huber", "Status: In Bearbeitung → Warten auf Anwenderinfo"),
-            comment(ago(12), "Sabine Wagner", "„Toner fast leer“ – neuer Toner ist aber drin.", reporter: true),
+            comment(ago(12), "Sabine Wagner", "„Toner fast leer“, neuer Toner ist aber drin.", reporter: true),
             event(ago(12), "status", "Sabine Wagner", "Status: Warten auf Anwenderinfo → Warten auf Support"),
         ]
         tickets[1].subcategoryId = "0193a1b2-de00-7000-8000-00000000e102"
-        tickets[0].timeline.insert(note(ago(60 * 24 + 5), "IT-Support", "Betrifft auch zwei andere Geräte der Kolonne – vermutlich der Upload-Server."), at: 3)
+        tickets[0].timeline.insert(note(ago(60 * 24 + 5), "IT-Support", "Betrifft auch zwei andere Geräte der Kolonne, vermutlich der Upload-Server."), at: 3)
         tickets[3].resolution = "Konto angelegt, Zugangsbrief per E-Mail verschickt."
         tickets[3].timeline += [
             comment(ago(60 * 24 * 5), "IT-Support", "Zugang ist eingerichtet, Einladung ging per E-Mail raus.", reporter: false),

@@ -98,9 +98,9 @@ public enum NoticePresentation {
         switch (start, end) {
         case let (start?, end?):
             if calendar.isDate(start, inSameDayAs: end) {
-                return "\(shortDate(start, now: now, calendar: calendar)), \(clock(start, calendar: calendar))–\(clock(end, calendar: calendar)) Uhr"
+                return "\(shortDate(start, now: now, calendar: calendar)), \(clock(start, calendar: calendar)) bis \(clock(end, calendar: calendar)) Uhr"
             }
-            return "\(shortDate(start, now: now, calendar: calendar)), \(clock(start, calendar: calendar)) Uhr – "
+            return "\(shortDate(start, now: now, calendar: calendar)), \(clock(start, calendar: calendar)) Uhr bis "
                 + "\(shortDate(end, now: now, calendar: calendar)), \(clock(end, calendar: calendar)) Uhr"
         case let (start?, nil):
             return "ab \(shortDate(start, now: now, calendar: calendar)), \(clock(start, calendar: calendar)) Uhr"

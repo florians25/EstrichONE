@@ -78,7 +78,7 @@ struct CaptureHub: View {
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Fertig", action: onDone) } }
             .task { await preselect() }
             .sheet(item: $picking) { task in
-                BauakteQuickPicker(title: task == .open ? "Baustelle wählen" : "\(task.title) – Baustelle", todayIds: todayIds) { bauakte in
+                BauakteQuickPicker(title: task == .open ? "Baustelle wählen" : "\(task.title): Baustelle", todayIds: todayIds) { bauakte in
                     picking = nil
                     guard let bauakte else { return }
                     site = bauakte
@@ -139,7 +139,7 @@ struct CaptureHub: View {
                         .lineLimit(2)
                         .multilineTextAlignment(.leading)
                     if let site {
-                        Text([isToday ? "Heutiger Einsatz" : nil, site.number, site.addressLine].compactMap { $0 }.joined(separator: " · "))
+                        Text([isToday ? "Heutiger Einsatz" : nil, site.number, site.addressLine].compactMap { $0 }.joined(separator: ", "))
                             .font(Typo.subhead)
                             .foregroundStyle(Theme.textSecondary)
                             .lineLimit(1)

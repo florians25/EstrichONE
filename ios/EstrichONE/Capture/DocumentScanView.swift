@@ -138,7 +138,7 @@ struct ScanReviewView: View {
                     }
                     .accessibilityIdentifier("scanCategoryPicker")
                 } header: {
-                    Text("Dokument für \(bauakte.number.map { "\($0) · " } ?? "")\(bauakte.title)")
+                    Text("Dokument für \(bauakte.number.map { "\($0), " } ?? "")\(bauakte.title)")
                 }
 
                 Section {

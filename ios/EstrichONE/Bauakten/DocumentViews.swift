@@ -47,7 +47,7 @@ struct DocumentRow: View {
         if let category = file.category { parts.append(category.title) }
         if let date = file.capturedAt ?? file.createdAt { parts.append(date.formatted(date: .abbreviated, time: .omitted)) }
         if file.sizeBytes > 0 { parts.append(ByteCountFormatter.string(fromByteCount: file.sizeBytes, countStyle: .file)) }
-        return parts.joined(separator: " · ")
+        return parts.joined(separator: ", ")
     }
 }
 

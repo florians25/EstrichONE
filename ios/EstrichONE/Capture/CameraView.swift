@@ -112,7 +112,7 @@ struct CameraView: View {
                     .accessibilityIdentifier("captionButton")
 
                     if model.active?.sync?.isOffline == true {
-                        Label("Offline – Fotos bleiben auf dem Gerät", systemImage: "wifi.slash")
+                        Label("Offline. Fotos bleiben auf dem Gerät.", systemImage: "wifi.slash")
                             .font(.footnote.weight(.semibold))
                             .foregroundStyle(.white)
                             .padding(.horizontal, 12)

@@ -184,7 +184,7 @@ struct PartyEditView: View {
                                 Avatar(name: linked.name, isCompany: linked.isCompany, size: 40)
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(linked.name).font(Typo.body)
-                                    Text([linked.customerNumber, linked.addressLine].compactMap { $0 }.joined(separator: " · "))
+                                    Text([linked.customerNumber, linked.addressLine].compactMap { $0 }.joined(separator: ", "))
                                         .font(Typo.meta).foregroundStyle(Theme.textSecondary).lineLimit(1)
                                 }
                                 Spacer()
@@ -244,7 +244,7 @@ struct PartyEditView: View {
                         Avatar(name: contact.name, isCompany: contact.isCompany, size: 36)
                         VStack(alignment: .leading, spacing: 2) {
                             Text(contact.name).font(Typo.body).foregroundStyle(Theme.textPrimary)
-                            let line = [contact.customerNumber, contact.city, contact.phone].compactMap { $0 }.joined(separator: " · ")
+                            let line = [contact.customerNumber, contact.city, contact.phone].compactMap { $0 }.joined(separator: ", ")
                             if !line.isEmpty { Text(line).font(Typo.meta).foregroundStyle(Theme.textSecondary).lineLimit(1) }
                         }
                         Spacer()
@@ -303,7 +303,7 @@ struct PartyEditView: View {
                         Image(systemName: "person.2.badge.gearshape").foregroundStyle(Theme.warning).frame(width: 22)
                         VStack(alignment: .leading, spacing: 2) {
                             Text(contact.name).font(Typo.body).foregroundStyle(Theme.textPrimary)
-                            Text([contact.customerNumber, contact.phone, contact.email].compactMap { $0 }.joined(separator: " · "))
+                            Text([contact.customerNumber, contact.phone, contact.email].compactMap { $0 }.joined(separator: ", "))
                                 .font(Typo.meta).foregroundStyle(Theme.textSecondary).lineLimit(1)
                         }
                         Spacer()

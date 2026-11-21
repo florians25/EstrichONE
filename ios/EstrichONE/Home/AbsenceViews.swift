@@ -369,7 +369,7 @@ struct AbsenceRequestRow: View {
                     Spacer(minLength: Space.s)
                     Chip(text: request.statusText, tone: tone)
                 }
-                Text([showsName ? request.typeName : nil, request.rangeText].compactMap { $0 }.joined(separator: " · "))
+                Text([showsName ? request.typeName : nil, request.rangeText].compactMap { $0 }.joined(separator: ", "))
                     .font(Typo.subhead).foregroundStyle(Theme.textPrimary)
                 Text("\(AbsenceText.days(request.workingDays)) Arbeitstage")
                     .font(Typo.subhead.monospacedDigit()).foregroundStyle(Theme.textSecondary)
@@ -383,7 +383,7 @@ struct AbsenceRequestRow: View {
                 }
                 let details = [request.substituteName.map { "Vertretung: \($0)" }, request.decisionComment, request.note].compactMap { $0 }
                 if !details.isEmpty {
-                    Text(details.joined(separator: " · ")).font(Typo.meta).foregroundStyle(Theme.textSecondary).lineLimit(3)
+                    Text(details.joined(separator: ", ")).font(Typo.meta).foregroundStyle(Theme.textSecondary).lineLimit(3)
                 }
                 if showsName, let rest = request.remainingAfter {
                     Text("Rest danach \(AbsenceText.days(rest)) Tage").font(Typo.meta).foregroundStyle(rest < 0 ? Theme.danger : Theme.textSecondary)

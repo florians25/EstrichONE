@@ -56,7 +56,7 @@ struct BauaktePickerSheet: View {
         Button { picked(bauakte) } label: {
             VStack(alignment: .leading, spacing: 2) {
                 Text(bauakte.title).font(Typo.body).foregroundStyle(Theme.textPrimary)
-                Text([bauakte.number, bauakte.addressLine].compactMap { $0 }.joined(separator: " · "))
+                Text([bauakte.number, bauakte.addressLine].compactMap { $0 }.joined(separator: ", "))
                     .font(Typo.meta)
                     .foregroundStyle(Theme.textSecondary)
             }
@@ -335,7 +335,7 @@ struct ChatMediaView: View {
                         Button { viewing = ViewedAttachment(message: message(for: item), attachment: item.attachment) } label: {
                             VStack(alignment: .leading, spacing: 2) {
                                 DocumentChip(attachment: item.attachment)
-                                Text("\(item.senderName ?? "") · \(ChatTime.short(item.createdAt))")
+                                Text("\(item.senderName ?? ""), \(ChatTime.short(item.createdAt))")
                                     .font(Typo.label)
                                     .foregroundStyle(Theme.textSecondary)
                                     .padding(.leading, Space.s)

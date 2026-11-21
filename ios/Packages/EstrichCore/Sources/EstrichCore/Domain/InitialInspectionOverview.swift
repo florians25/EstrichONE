@@ -58,7 +58,7 @@ public struct InitialInspectionOverview: Sendable {
         for name in [assignment.crewName].compactMap({ $0 }) + assignment.people.map(\.name) where !who.contains(name) {
             who.append(name)
         }
-        return who.isEmpty ? text : "\(text) · \(who.joined(separator: ", "))"
+        return who.isEmpty ? text : "\(text), \(who.joined(separator: ", "))"
     }
 
     /// Vom Server abgelegte Erstbegehungsprotokolle (PDF, Ordner „Erstbegehung“, Titel „Erstbegehung“).

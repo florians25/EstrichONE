@@ -155,10 +155,10 @@ struct MessageBubble: View {
             HStack(spacing: 3) {
                 Spacer(minLength: 0)
                 if message.pinned { Image(systemName: "pin.fill").accessibilityLabel("angeheftet") }
-                if message.editedAt != nil, !message.deleted { Text("bearbeitet ·") }
+                if message.editedAt != nil, !message.deleted { Text("bearbeitet,") }
                 // Gruppen: „gelesen 3/5“, solange noch nicht alle gelesen haben.
                 if isMine, isGroup, message.recipients > 1, message.state != .read, message.readBy > 0 {
-                    Text("gelesen \(message.readBy)/\(message.recipients) ·")
+                    Text("gelesen \(message.readBy)/\(message.recipients),")
                 }
                 Text(message.createdAt.shortTime)
                 if isMine { stateMark }
@@ -308,7 +308,7 @@ struct QuoteView: View {
     private var attachmentText: String {
         switch quote.attachmentKind {
         case "photo": "Foto"
-        case "document": "📄 Dokument"
+        case "document": "Dokument"
         default: "…"
         }
     }
@@ -399,7 +399,7 @@ struct DocumentChip: View {
                     .font(Typo.subheadStrong)
                     .foregroundStyle(onAccent ? Theme.onAccent : Theme.textPrimary)
                     .lineLimit(2)
-                Text(ChatFormat.size(attachment.sizeBytes) + (attachment.contentType == "application/pdf" ? " · PDF" : ""))
+                Text(ChatFormat.size(attachment.sizeBytes) + (attachment.contentType == "application/pdf" ? ", PDF" : ""))
                     .font(Typo.label)
                     .foregroundStyle(onAccent ? Theme.onAccent.opacity(0.8) : Theme.textSecondary)
             }

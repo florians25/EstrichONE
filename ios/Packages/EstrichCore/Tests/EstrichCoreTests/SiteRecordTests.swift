@@ -111,7 +111,7 @@ struct SiteRecordTests {
         #expect(overview.status == .planned && overview.status.title == "Geplant")
         #expect(overview.appointment?.id == planned.id)
         let text = InitialInspectionOverview.appointmentText(planned)
-        #expect(text.contains("19.11.2026, 08:00 · Kolonne Nord, Max Huber"), "\(text)")
+        #expect(text.contains("19.11.2026, 08:00, Kolonne Nord, Max Huber"), "\(text)")
         // Ältere Server ohne Terminart: Tätigkeit „Erstbegehung“ zählt.
         #expect(try assignment(nil, day: "2026-11-19").isInitialInspection)
         #expect(try !assignment(nil, day: "2026-11-19", activity: "Estrich").isInitialInspection)

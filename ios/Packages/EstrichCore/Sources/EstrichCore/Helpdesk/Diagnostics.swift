@@ -123,9 +123,9 @@ public struct DiagnosticsReport: Equatable, Sendable {
     /// Lesbar für „Anzeigen, was gesendet wird“.
     public var displayLines: [(label: String, value: String)] {
         var lines: [(String, String)] = [
-            ("App", "EstrichONE \(appVersion) (\(build))"), ("System", "\(platform) \(osVersion) · \(deviceModel)"),
+            ("App", "EstrichONE \(appVersion) (\(build))"), ("System", "\(platform) \(osVersion), \(deviceModel)"),
         ]
-        if let deviceKind { lines.append(("Gerät", (deviceKind == .pool ? "Poolgerät" : "Persönlich") + (deviceIdShort.map { " · \($0)…" } ?? ""))) }
+        if let deviceKind { lines.append(("Gerät", (deviceKind == .pool ? "Poolgerät" : "Persönlich") + (deviceIdShort.map { ", \($0)…" } ?? ""))) }
         if let sync {
             lines.append(("Synchronisation", "ausstehend: \(sync.pendingOperations) Vorgänge, \(sync.pendingUploads) Dateien; Probleme: \(sync.rejectedOperations + sync.failedUploads)"))
         }

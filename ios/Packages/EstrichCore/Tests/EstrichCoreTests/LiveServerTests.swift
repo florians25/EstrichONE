@@ -295,7 +295,7 @@ struct LiveServerTests {
 
         let history = try await device.client.history(of: bauakte)
         #expect(history.contains { $0.text.hasSuffix("hat das Bautagebuch für den 20.10.2026 ergänzt.") })
-        #expect(history.contains { $0.text.contains("0,3 CM-% bei Grenzwert 0,3 CM-% – belegreif.") })
+        #expect(history.contains { $0.text.contains("0,3 CM-% bei Grenzwert 0,3 CM-%, belegreif.") })
     }
 
     @Test("Kundenkartei über den echten Server: Anlage mit mehreren Nummern, Änderung per contact.update")
@@ -599,7 +599,7 @@ struct LiveServerTests {
                                                    startTime: "12:00:00", endTime: nil))
         var plan = try await device.client.dayPlan(day)
         var crew = try #require(plan.crew(crewId))
-        #expect(crew.stops.map(\.assignmentId) == [a, b] && crew.stops.first?.timeText == "07:00–11:00")
+        #expect(crew.stops.map(\.assignmentId) == [a, b] && crew.stops.first?.timeText == "07:00 bis 11:00")
         #expect(plan.canPlan && crew.isMine)
 
         // Reihenfolge tauschen, Uhrzeiten bleiben in der Reihenfolge.

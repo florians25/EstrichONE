@@ -253,7 +253,7 @@ struct CustomerRow: View {
                     .lineLimit(2)
                 let details = [contact.isArchived ? "Archiviert" : nil, contact.isCompany ? "Firma" : nil, contact.city, contact.customerNumber]
                     .compactMap { $0?.isEmpty == false ? $0 : nil }
-                Text(details.isEmpty ? "Keine weiteren Angaben" : details.joined(separator: " · "))
+                Text(details.isEmpty ? "Keine weiteren Angaben" : details.joined(separator: ", "))
                     .font(Typo.subhead)
                     .foregroundStyle(selected ? Color.white.opacity(0.85) : Theme.textSecondary)
                     .lineLimit(1)
@@ -439,7 +439,7 @@ struct CustomerCardView: View {
                 ForEach(contact.phones) { phone in
                     if let url = ContactLink.phone(phone.number) {
                         Button { openURL(url) } label: {
-                            channelRow(title: [phone.kind.title, phone.label].compactMap { $0 }.joined(separator: " · "), value: phone.number,
+                            channelRow(title: [phone.kind.title, phone.label].compactMap { $0 }.joined(separator: ", "), value: phone.number,
                                        symbol: phone.kind == .mobile ? "iphone" : (phone.kind == .fax ? "faxmachine" : "phone"),
                                        preferred: Self.isPreferred(phone, contact))
                         }
@@ -509,7 +509,7 @@ struct CustomerCardView: View {
                     .multilineTextAlignment(.center)
                     .accessibilityIdentifier("customerCardName")
                 Text([contact.isCompany ? "Firma" : "Privat", contact.customerNumber.map { "Kd.-Nr. \($0)" } ?? "noch ohne Kundennummer"]
-                    .joined(separator: " · "))
+                    .joined(separator: ", "))
                     .font(Typo.subhead)
                     .foregroundStyle(Theme.textSecondary)
                 if let channel = contact.preferredChannel {

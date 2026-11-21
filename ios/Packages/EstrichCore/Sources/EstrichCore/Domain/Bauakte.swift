@@ -232,7 +232,7 @@ public struct Contact: Identifiable, Equatable, Sendable {
 
     /// Kurzinfo für Listen: Kundennummer · Ort (oder „Neu“, solange das Büro noch keine Nummer vergeben hat).
     public var subtitle: String {
-        [customerNumber, city].compactMap { $0?.isEmpty == false ? $0 : nil }.joined(separator: " · ")
+        [customerNumber, city].compactMap { $0?.isEmpty == false ? $0 : nil }.joined(separator: ", ")
     }
 }
 

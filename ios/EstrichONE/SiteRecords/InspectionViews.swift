@@ -249,7 +249,7 @@ struct InitialInspectionView: View {
                             capturing = true
                         } label: {
                             let count = photoCount(for: check)
-                            Label(count == 0 ? "Foto zu diesem Punkt" : "\(count) Fotos zu diesem Punkt · weitere aufnehmen", systemImage: "camera")
+                            Label(count == 0 ? "Foto zu diesem Punkt" : "\(count) Fotos zu diesem Punkt, weitere aufnehmen", systemImage: "camera")
                         }
                         .accessibilityIdentifier("checkPhotoButton")
                     }
@@ -302,7 +302,7 @@ struct InitialInspectionView: View {
                     captureStarted = .now
                     capturing = true
                 } label: {
-                    Label(photoIds.isEmpty ? "Fotos aufnehmen (z. B. Zählerstand)" : "\(photoIds.count) Fotos · weitere aufnehmen",
+                    Label(photoIds.isEmpty ? "Fotos aufnehmen (z. B. Zählerstand)" : "\(photoIds.count) Fotos, weitere aufnehmen",
                           systemImage: "camera")
                 }
                 Button {
@@ -382,7 +382,7 @@ struct InitialInspectionView: View {
                             captureStarted = .now
                             capturing = true
                         } label: {
-                            Label(photoIds.isEmpty ? "Fotos aufnehmen (z. B. Zählerstand)" : "\(photoIds.count) Fotos · weitere aufnehmen",
+                            Label(photoIds.isEmpty ? "Fotos aufnehmen (z. B. Zählerstand)" : "\(photoIds.count) Fotos, weitere aufnehmen",
                                   systemImage: "camera")
                         }
                     }
@@ -459,7 +459,7 @@ struct InspectionRow: View {
     private var title: String {
         switch inspection.kind {
         case .initialInspection: "Erstbegehung"
-        case .cmMeasurement: ["CM-Messung", inspection.location?.compactText].compactMap { $0 }.joined(separator: " · ")
+        case .cmMeasurement: ["CM-Messung", inspection.location?.compactText].compactMap { $0 }.joined(separator: ", ")
         }
     }
 
@@ -469,9 +469,9 @@ struct InspectionRow: View {
             let value = inspection.measuredCmPercent.map { "\($0.formatted(.number.precision(.fractionLength(1...2)))) CM-%" }
             let limit = inspection.limitCmPercent.map { " (Grenze \($0.formatted(.number.precision(.fractionLength(1...2)))))" } ?? ""
             switch inspection.isReadyForCovering {
-            case true?: return ([value.map { $0 + limit }, "belegreif"].compactMap { $0 }.joined(separator: " · "), "checkmark.seal.fill",
+            case true?: return ([value.map { $0 + limit }, "belegreif"].compactMap { $0 }.joined(separator: ", "), "checkmark.seal.fill",
                                 Theme.success, Theme.successSoft)
-            case false?: return ([value.map { $0 + limit }, "noch nicht belegreif"].compactMap { $0 }.joined(separator: " · "), "hourglass",
+            case false?: return ([value.map { $0 + limit }, "noch nicht belegreif"].compactMap { $0 }.joined(separator: ", "), "hourglass",
                                  Theme.warning, Theme.warningSoft)
             case nil: return (value ?? "Messwert fehlt", "drop", Theme.textSecondary, Theme.fill)
             }
@@ -489,6 +489,6 @@ struct InspectionRow: View {
     private var meta: String {
         let photos = inspection.photoFileIds.count + inspection.checkPhotos.values.reduce(0) { $0 + $1.count }
         return [inspection.performedAt?.shortStamp, performerName,
-                photos == 0 ? nil : "\(photos) \(photos == 1 ? "Foto" : "Fotos")"].compactMap { $0 }.joined(separator: " · ")
+                photos == 0 ? nil : "\(photos) \(photos == 1 ? "Foto" : "Fotos")"].compactMap { $0 }.joined(separator: ", ")
     }
 }

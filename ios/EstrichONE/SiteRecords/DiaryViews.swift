@@ -129,7 +129,7 @@ struct DiaryRow: View {
             let people = entry.workersPresent.map { "\($0) \($0 == 1 ? "Person" : "Personen") vor Ort" }
             let meta = [authorName, people].compactMap { $0 }
             if !meta.isEmpty {
-                Text(meta.joined(separator: " · ")).font(Typo.meta).foregroundStyle(Theme.textSecondary)
+                Text(meta.joined(separator: ", ")).font(Typo.meta).foregroundStyle(Theme.textSecondary)
             }
         }
         .padding(.vertical, Space.xs)
@@ -143,8 +143,8 @@ struct DiaryRow: View {
         let sameYear = calendar.component(.year, from: date) == calendar.component(.year, from: now)
         let text = sameYear ? date.formatted(.dateTime.weekday(.wide).day().month(.wide))
                             : date.formatted(.dateTime.weekday(.wide).day().month(.wide).year())
-        if calendar.isDateInToday(date) { return "Heute · \(text)" }
-        if calendar.isDateInYesterday(date) { return "Gestern · \(text)" }
+        if calendar.isDateInToday(date) { return "Heute, \(text)" }
+        if calendar.isDateInYesterday(date) { return "Gestern, \(text)" }
         return text
     }
 }

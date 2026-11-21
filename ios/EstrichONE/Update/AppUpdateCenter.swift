@@ -173,7 +173,7 @@ final class AppUpdateCenter {
         check = scene == "update-neu" ? nil : AppUpdateCheck(
             installedVersion: installedVersion, serverVersion: "1.0.13", latestVersion: "1.0.13", minimumVersion: required ? "1.0.13" : "1.0.0",
             status: required ? .required : .recommended,
-            message: required ? "Neue Abnahme-Funktion – bitte heute noch aktualisieren." : "Bitte bis Freitag aktualisieren.",
+            message: required ? "Neue Abnahme-Funktion. Bitte heute noch aktualisieren." : "Bitte bis Freitag aktualisieren.",
             download: AppUpdateDownload(kind: "store", url: "https://testflight.apple.com/join/demo"), releaseNotes: notes)
         whatsNew = scene == "update-neu" ? notes : []
     }

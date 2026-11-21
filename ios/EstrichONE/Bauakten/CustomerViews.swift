@@ -79,7 +79,7 @@ struct CustomerSummary: View {
                     .accessibilityIdentifier("customerName")
                 let details = [contact.customerNumber, contact.phone, contact.addressLine].compactMap { $0 }
                 if !details.isEmpty {
-                    Text(details.joined(separator: " · "))
+                    Text(details.joined(separator: ", "))
                         .font(.caption)
                         .foregroundStyle(Theme.textSecondary)
                         .lineLimit(2)

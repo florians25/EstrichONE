@@ -59,7 +59,7 @@ struct BauakteQuickPicker: View {
     @State private var loaded = false
 
     init(task: SiteTask, todayIds: [UUID], onDone: @escaping (Bauakte?) -> Void) {
-        self.init(title: "\(task.title) – Baustelle wählen", todayIds: todayIds, onDone: onDone)
+        self.init(title: "\(task.title): Baustelle wählen", todayIds: todayIds, onDone: onDone)
     }
 
     init(title: String, todayIds: [UUID], onDone: @escaping (Bauakte?) -> Void) {

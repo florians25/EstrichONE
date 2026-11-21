@@ -118,7 +118,7 @@ struct BauakteRow: View {
                     SyncStateBadge(state: bauakte.syncState)
                 }
             }
-            Text([bauakte.number ?? "Neu", bauakte.addressLine ?? "ohne Adresse"].joined(separator: " · "))
+            Text([bauakte.number ?? "Neu", bauakte.addressLine ?? "ohne Adresse"].joined(separator: ", "))
                 .font(Typo.subhead)
                 .monospacedDigit()
                 .foregroundStyle(secondary)

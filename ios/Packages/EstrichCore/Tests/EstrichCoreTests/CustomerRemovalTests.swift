@@ -47,12 +47,12 @@ struct CustomerRemovalTests {
         let refs = try JSONCoding.decoder.decode(CustomerReferences.self, from: Data("""
             {"id":"01a00000-0000-7000-8000-000000000001","name":"Huber","customerNumber":"600001","deletable":false,"confirmText":"600001",
              "archived":false,"anonymized":false,"references":[
-               {"kind":"bauakten","label":"Bauakten","count":2,"link":"/bauakten?kunde=x","items":[{"id":"01a00000-0000-7000-8000-000000000002","text":"B-1 · Halle","link":null}]},
+               {"kind":"bauakten","label":"Bauakten","count":2,"link":"/bauakten?kunde=x","items":[{"id":"01a00000-0000-7000-8000-000000000002","text":"B-1, Halle","link":null}]},
                {"kind":"parties","label":"Projektbeteiligung","count":1,"link":null,"items":[]},
                {"kind":"calls","label":"Anrufe und Anfragen","count":3,"link":null,"items":[]}]}
             """.utf8))
         #expect(refs.summary == "2 Bauakten, 1 Projektbeteiligung und 3 Anrufe und Anfragen")
-        #expect(refs.references[0].items.first?.text == "B-1 · Halle")
+        #expect(refs.references[0].items.first?.text == "B-1, Halle")
         #expect(CustomerRemoval.describe([]) == "")
         #expect(CustomerRemoval.confirms(" 600001 ", "600001"))
         #expect(CustomerRemoval.confirms("familie huber", "Familie Huber"))

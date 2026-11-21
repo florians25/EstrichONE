@@ -131,7 +131,7 @@ struct ChatInfoView: View {
                 ForEach(hits) { hit in
                     Button { reveal(hit.message.id) } label: {
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("\(hit.message.senderName ?? "") · \(ChatTime.short(hit.message.createdAt))").font(Typo.label).foregroundStyle(Theme.textSecondary)
+                            Text("\(hit.message.senderName ?? ""), \(ChatTime.short(hit.message.createdAt))").font(Typo.label).foregroundStyle(Theme.textSecondary)
                             Text(hit.message.summary).font(Typo.subhead).foregroundStyle(Theme.textPrimary).lineLimit(2)
                         }
                     }
@@ -156,7 +156,7 @@ struct ChatInfoView: View {
     private var subtitle: String {
         guard let detail else { return chatKind.title }
         if chatKind == .direct { return "Einzelchat" }
-        return "\(chatKind.title) · \(detail.members.count) Mitglieder"
+        return "\(chatKind.title), \(detail.members.count) Mitglieder"
     }
 
     @ViewBuilder
@@ -237,7 +237,7 @@ struct ChatInfoView: View {
 
     private func memberNote(_ member: ChatMember) -> String? {
         let parts = [member.role, member.automatic ? (chatKind == .site ? "über die Bauakte" : "über die Kolonne") : nil].compactMap { $0 }
-        return parts.isEmpty ? nil : parts.joined(separator: " · ")
+        return parts.isEmpty ? nil : parts.joined(separator: ", ")
     }
 
     private func load() async {

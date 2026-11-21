@@ -25,13 +25,13 @@ JPEG=(-strip -profile "$ICC" -quality 94 -sampling-factor 4:4:4 -type TrueColor)
 
 # Motive in Upload-Reihenfolge (höchstens 10). Die ersten drei sieht man in der Suche.
 SCENES=(heute bauakte bereich-fotos disposition dispo-zuweisen erstbegehung chat-verlauf kundenkarte meldung-detail)
-TITLES=("Ihr Tag auf einen Blick" "Die Bauakte immer dabei" "Fotos und Scans, sauber abgelegt" "Wer fährt wohin"
-        "Disponieren in Sekunden" "Erstbegehung und Abnahme digital" "Kurzer Draht ins Büro" "Kunden griffbereit"
+TITLES=("Ihr Tag im Überblick" "Die Bauakte auf dem Gerät" "Fotos und Scans in der Bauakte" "Wer fährt wohin"
+        "Schnelldisposition" "Erstbegehung und Abnahme digital" "Chat mit dem Büro" "Kundendaten"
         "Hilfe direkt aus der App")
-SUBS=("Einsatz, Route und Aufgaben – auch offline" "Fotos, Bautagebuch, Mängel und Protokolle"
+SUBS=("Einsatz, Route und Aufgaben, auch offline" "Fotos, Bautagebuch, Mängel und Protokolle"
       "Beschriftet, als PDF gescannt, sofort im Büro" "Kolonnen, Fahrzeuge und Baustellen in Fahrtreihenfolge"
-      "Zuweisen, verschieben, tauschen – mit Konfliktprüfung" "Prüfpunkte, Fotos und Unterschrift als PDF"
-      "Chat mit Büro und Kolonne – nur in Ihrem Betrieb" "Anrufen, schreiben, Route starten"
+      "Zuweisen, verschieben, tauschen, mit Konfliktprüfung" "Prüfpunkte, Fotos und Unterschrift als PDF"
+      "Chat mit Büro und Kolonne, nur in Ihrem Betrieb" "Anrufen, schreiben, Route starten"
       "Problem melden, Antworten im Verlauf")
 
 check() {
@@ -44,7 +44,7 @@ check() {
       banner-*) want="1920 886" ;;
     esac
     n=$(find "$out/$dir" -maxdepth 1 -name '*.jpg' 2>/dev/null | wc -l)
-    if [ "$n" -lt 1 ] || [ "$n" -gt 10 ]; then echo "FALSCH: $dir enthält $n Bilder (1–10 erlaubt)"; status=1; fi
+    if [ "$n" -lt 1 ] || [ "$n" -gt 10 ]; then echo "FALSCH: $dir enthält $n Bilder (1 bis 10 erlaubt)"; status=1; fi
     for file in "$out/$dir"/*.jpg; do
       [ -f "$file" ] || continue
       read -r fw fh alpha space < <("$IM" "$file" -format '%w %h %A %[colorspace]\n' info:)

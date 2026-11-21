@@ -45,7 +45,7 @@ struct NewAcceptanceView: View {
                 Section {
                     VStack(alignment: .leading, spacing: Space.xs) {
                         Text(bauakte.title).font(Typo.title).foregroundStyle(Theme.textPrimary)
-                        Text([bauakte.number, bauakte.addressLine].compactMap { $0 }.joined(separator: " · "))
+                        Text([bauakte.number, bauakte.addressLine].compactMap { $0 }.joined(separator: ", "))
                             .font(Typo.subhead).foregroundStyle(Theme.textSecondary)
                     }
                     .listRowBackground(Color.clear)
@@ -99,7 +99,7 @@ struct NewAcceptanceView: View {
                         captureStarted = .now
                         capturing = true
                     } label: {
-                        Label(photoIds.isEmpty ? "Fotos aufnehmen" : "\(photoIds.count) \(photoIds.count == 1 ? "Foto" : "Fotos") · weitere aufnehmen", systemImage: "camera")
+                        Label(photoIds.isEmpty ? "Fotos aufnehmen" : "\(photoIds.count) \(photoIds.count == 1 ? "Foto" : "Fotos"), weitere aufnehmen", systemImage: "camera")
                     }
                 } header: {
                     Text("Fotos")

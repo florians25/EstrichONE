@@ -24,13 +24,13 @@ struct NoticePresentationTests {
 
     @Test("Zeitraum: gleicher Tag, über Mitternacht, nur Beginn bzw. Ende, anderes Jahr")
     func period() {
-        #expect(NoticePresentation.period(start: at(8, 22), end: at(8, 23, 30), now: now, calendar: calendar) == "So., 08.11., 22:00–23:30 Uhr")
-        #expect(NoticePresentation.period(start: at(7, 22), end: at(8, 2), now: now, calendar: calendar) == "Sa., 07.11., 22:00 Uhr – So., 08.11., 02:00 Uhr")
+        #expect(NoticePresentation.period(start: at(8, 22), end: at(8, 23, 30), now: now, calendar: calendar) == "So., 08.11., 22:00 bis 23:30 Uhr")
+        #expect(NoticePresentation.period(start: at(7, 22), end: at(8, 2), now: now, calendar: calendar) == "Sa., 07.11., 22:00 Uhr bis So., 08.11., 02:00 Uhr")
         #expect(NoticePresentation.period(start: at(7, 6, 5), end: nil, now: now, calendar: calendar) == "ab Sa., 07.11., 06:05 Uhr")
         #expect(NoticePresentation.period(start: nil, end: at(13, 18), now: now, calendar: calendar) == "bis Fr., 13.11., 18:00 Uhr")
         #expect(NoticePresentation.period(start: nil, end: nil, now: now, calendar: calendar) == "")
         #expect(NoticePresentation.period(start: at(2, 8, month: 1, year: 2027), end: at(2, 9, month: 1, year: 2027), now: now, calendar: calendar)
-            == "Sa., 02.01.2027, 08:00–09:00 Uhr")
+            == "Sa., 02.01.2027, 08:00 bis 09:00 Uhr")
     }
 
     @Test("Relative Angabe und Restdauer")
@@ -68,7 +68,7 @@ struct NoticePresentationTests {
         #expect(maintenance.tone == .information)
         #expect(maintenance.title == "Geplante Wartung")
         #expect(maintenance.relative == "in 2 Tagen")
-        #expect(maintenance.period == "So., 08.11., 22:00–23:30 Uhr")
+        #expect(maintenance.period == "So., 08.11., 22:00 bis 23:30 Uhr")
         #expect(maintenance.isDismissible)
 
         let collapsed = NoticePresentation.selection(items, dismissed: [], expanded: false)

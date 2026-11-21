@@ -81,9 +81,9 @@ struct BauakteContent {
         let calendar = Calendar.current
         let day = calendar.isDateInToday(date) ? "Heute" : calendar.isDateInTomorrow(date) ? "Morgen"
             : date.formatted(.dateTime.weekday(.wide).day().month(.abbreviated))
-        let title = [day + (next.startText.map { " ab \($0)" } ?? ""), next.activity].joined(separator: " · ")
+        let title = [day + (next.startText.map { " ab \($0)" } ?? ""), next.activity].joined(separator: ", ")
         let team = next.people.map(\.name) + next.resources.map(\.name)
-        let subtitle = [next.crewName, team.isEmpty ? nil : team.joined(separator: ", ")].compactMap { $0 }.joined(separator: " · ")
+        let subtitle = [next.crewName, team.isEmpty ? nil : team.joined(separator: ", ")].compactMap { $0 }.joined(separator: ", ")
         return (title, subtitle.isEmpty ? nil : subtitle)
     }
 
@@ -208,7 +208,7 @@ enum BauakteArea: String, CaseIterable, Identifiable, Hashable {
         case .media:
             let photos = content.photos.count
             let documents = content.documents.count
-            return ("\(photos) \(photos == 1 ? "Foto" : "Fotos") · \(documents) \(documents == 1 ? "Dokument" : "Dokumente")", false)
+            return ("\(photos) \(photos == 1 ? "Foto" : "Fotos"), \(documents) \(documents == 1 ? "Dokument" : "Dokumente")", false)
         case .work:
             let open = content.openItems.count
             if content.workItems.isEmpty { return ("keine", false) }
@@ -220,38 +220,38 @@ enum BauakteArea: String, CaseIterable, Identifiable, Hashable {
             let calendar = Calendar.current
             let when = calendar.isDateInToday(last) ? "heute" : calendar.isDateInYesterday(last) ? "gestern"
                 : last.formatted(.dateTime.day().month(.abbreviated))
-            return ("\(content.diary.count) \(content.diary.count == 1 ? "Eintrag" : "Einträge") · zuletzt \(when)", false)
+            return ("\(content.diary.count) \(content.diary.count == 1 ? "Eintrag" : "Einträge"), zuletzt \(when)", false)
         case .rooms:
             guard !content.rooms.isEmpty else { return ("noch keine Räume", false) }
             let totals = RoomTotals(content.rooms)
             let area = totals.area.formatted(.number.precision(.fractionLength(0...1)))
             let done = totals.laid + totals.ready
             let progress = done == 0 ? nil : done == totals.count ? "alle eingebracht" : "\(done) eingebracht"
-            return (["\(totals.count) \(totals.count == 1 ? "Raum" : "Räume")", "\(area) m²", progress].compactMap { $0 }.joined(separator: " · "), false)
+            return (["\(totals.count) \(totals.count == 1 ? "Raum" : "Räume")", "\(area) m²", progress].compactMap { $0 }.joined(separator: ", "), false)
         case .initialInspection:
             let overview = content.initialInspection
             switch overview.status {
             case .done:
                 let date = overview.protocols.first?.performedAt?.formatted(.dateTime.day().month(.abbreviated).year())
-                return (["Durchgeführt", date].compactMap { $0 }.joined(separator: " · "), false)
+                return (["Durchgeführt", date].compactMap { $0 }.joined(separator: ", "), false)
             case .planned:
-                return ("Geplant · \(overview.appointment.map(InitialInspectionOverview.appointmentText) ?? "")", false)
+                return ("Geplant, \(overview.appointment.map(InitialInspectionOverview.appointmentText) ?? "")", false)
             case .waived:
                 return ("Nicht erforderlich", false)
             case .open:
-                return ("Offen · noch kein Termin", content.warnMissingInspection && [.planned, .inProgress].contains(content.bauakte.status))
+                return ("Offen, noch kein Termin", content.warnMissingInspection && [.planned, .inProgress].contains(content.bauakte.status))
             }
         case .protocols:
             let acceptance = content.acceptances.isEmpty ? "keine Abnahme" : "\(content.acceptances.count) Abnahme"
             let measurements = content.measurements.isEmpty ? nil
                 : "\(content.measurements.count) \(content.measurements.count == 1 ? "CM-Messung" : "CM-Messungen")"
-            return ([acceptance, measurements].compactMap { $0 }.joined(separator: " · "), false)
+            return ([acceptance, measurements].compactMap { $0 }.joined(separator: ", "), false)
         case .project:
             return projectCount == 0 ? ("Angaben fehlen", true) : ("\(projectCount) Angaben", false)
         case .contacts:
             let parties = content.parties.isEmpty ? nil : "\(content.parties.count) \(content.parties.count == 1 ? "Kontakt" : "Kontakte")"
-            guard let customer = content.customer else { return ([parties, "Kunde fehlt"].compactMap { $0 }.joined(separator: " · "), true) }
-            return ([customer.name, parties].compactMap { $0 }.joined(separator: " · "), false)
+            guard let customer = content.customer else { return ([parties, "Kunde fehlt"].compactMap { $0 }.joined(separator: ", "), true) }
+            return ([customer.name, parties].compactMap { $0 }.joined(separator: ", "), false)
         case .notes:
             return (content.notes.isEmpty ? "keine Notizen" : "\(content.notes.count) \(content.notes.count == 1 ? "Notiz" : "Notizen")", false)
         }

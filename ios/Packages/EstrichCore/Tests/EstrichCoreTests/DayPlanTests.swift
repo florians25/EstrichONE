@@ -46,7 +46,7 @@ struct DayPlanTests {
         #expect(plan.sortedCrews.map(\.name) == ["Kolonne Kaya", "Kolonne Huber"])
         let huber = try #require(plan.crew(UUID(uuidString: Self.crew)!))
         #expect(huber.stops.map(\.title) == ["Halle Nord", "EFH Müller"])
-        #expect(huber.stops[0].timeText == "07:00–10:00" && huber.stops[1].timeText == "ab 11:00")
+        #expect(huber.stops[0].timeText == "07:00 bis 10:00" && huber.stops[1].timeText == "ab 11:00")
         #expect(huber.stops[0].mapsURL?.absoluteString == "https://maps.apple.com/?daddr=48.5,12.1")
         #expect(huber.stops[1].mapsURL?.absoluteString.contains("Ahornweg") == true && huber.stops[1].isChanged)
         #expect(huber.available.map(\.name) == ["Max Huber"] && huber.absent.map(\.name) == ["Tobias Lang"])

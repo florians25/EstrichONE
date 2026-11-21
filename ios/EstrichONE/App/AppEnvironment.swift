@@ -49,7 +49,7 @@ struct AppEnvironment {
     static func demo() -> AppEnvironment {
         let suite = "de.estrichone.demo"
         let info = """
-        {"product":"EstrichONE","serverName":"EstrichONE Demo – Estrichbau Muster GmbH","serverVersion":"0.1.0","apiVersions":["v1"],
+        {"product":"EstrichONE","serverName":"EstrichONE Demo (Estrichbau Muster GmbH)","serverVersion":"0.1.0","apiVersions":["v1"],
          "minClientVersion":"0.1.0","authMethods":["local"],"instanceEpoch":"0193a1b2-de00-7000-8000-000000000001","setupRequired":false}
         """
         var environment = AppEnvironment(

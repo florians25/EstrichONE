@@ -72,7 +72,7 @@ struct DispatchCrewTests {
         let crew = try #require(board.crews.first)
         #expect(crew.isDoubleBooked && crew.memberCount == 3 && crew.vehicles.first?.name == "Pumpe 1")
         #expect(crew.absentMembers.first?.note == "Urlaub")
-        #expect(board.sites.first?.crews.first?.timeText == "07:00–12:00")
+        #expect(board.sites.first?.crews.first?.timeText == "07:00 bis 12:00")
         #expect(board.unassignedCrews.isEmpty)
 
         let old = #"{"day":"2026-10-21","sites":[],"people":[],"vehicles":[],"mySiteIds":[],"canPlan":false}"#

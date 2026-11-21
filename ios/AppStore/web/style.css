@@ -12,4 +12,5 @@ a{color:var(--blau)}
 .box{background:var(--flaeche);border-radius:12px;padding:16px 20px;margin:16px 0}
 .platzhalter{background:#FFF3C4;border-radius:4px;padding:0 4px}
 footer{max-width:760px;margin:0 auto;padding:24px 16px;color:var(--grau);font-size:.9rem;border-top:1px solid #E3E7EF}
+footer a,footer span,p.links a{margin-right:1.5em}
 @media (prefers-color-scheme:dark){body{background:#0A1020;color:#E6EBF5}.box{background:#121B30}h2{color:#9CC7FF}a{color:#6FB1FF}footer{border-color:#24304A;color:#9AA6BC}.platzhalter{background:#5A4A10}}

@@ -31,7 +31,7 @@ struct TodayJob: Identifiable {
 
     var timeText: String {
         switch (startText, endText) {
-        case let (start?, end?): "\(start) – \(end)"
+        case let (start?, end?): "\(start) bis \(end)"
         case let (start?, nil): "ab \(start)"
         default: "ganztägig"
         }
@@ -278,12 +278,12 @@ struct TodayJobCard: View {
                         .foregroundStyle(Theme.textPrimary)
                         .multilineTextAlignment(.leading)
                         .fixedSize(horizontal: false, vertical: true)
-                    Text([job.activity, job.crewName].compactMap { $0 }.joined(separator: " · "))
+                    Text([job.activity, job.crewName].compactMap { $0 }.joined(separator: ", "))
                         .font(Typo.subhead)
                         .foregroundStyle(Theme.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
                     if let address = job.address {
-                        Text([address, distance].compactMap { $0 }.joined(separator: " · "))
+                        Text([address, distance].compactMap { $0 }.joined(separator: ", "))
                             .font(Typo.subhead)
                             .foregroundStyle(Theme.textSecondary)
                             .fixedSize(horizontal: false, vertical: true)

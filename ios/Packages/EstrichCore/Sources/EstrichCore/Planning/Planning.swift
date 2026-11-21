@@ -166,7 +166,7 @@ public struct DispatchBoard: Codable, Equatable, Sendable {
         /// „07:00–12:00“ bzw. „ab 07:00“.
         public var timeText: String? {
             switch (startText, endText) {
-            case let (start?, end?): "\(start)–\(end)"
+            case let (start?, end?): "\(start) bis \(end)"
             case let (start?, nil): "ab \(start)"
             default: nil
             }

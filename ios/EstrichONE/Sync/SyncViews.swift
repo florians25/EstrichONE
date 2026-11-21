@@ -218,7 +218,7 @@ struct SyncView: View {
             if let progress = sync.uploadProgress, progress.total > 0 {
                 VStack(alignment: .leading, spacing: Space.xs) {
                     ProgressBar(value: Double(progress.sent) / Double(progress.total))
-                    Text("\(progress.files) \(progress.files == 1 ? "Datei" : "Dateien") · \(ByteCountFormatter.string(fromByteCount: progress.sent, countStyle: .file)) von \(ByteCountFormatter.string(fromByteCount: progress.total, countStyle: .file))")
+                    Text("\(progress.files) \(progress.files == 1 ? "Datei" : "Dateien"), \(ByteCountFormatter.string(fromByteCount: progress.sent, countStyle: .file)) von \(ByteCountFormatter.string(fromByteCount: progress.total, countStyle: .file))")
                         .font(Typo.meta).foregroundStyle(Theme.textSecondary)
                 }
             }

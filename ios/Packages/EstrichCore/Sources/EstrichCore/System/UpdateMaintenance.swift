@@ -101,8 +101,8 @@ public enum UpdatePresentation {
         let countdown = running ? clock(left!) : ""
         if announcing {
             let text = running
-                ? "Update auf \(target) beginnt in \(clock(left!)) – bitte Arbeit speichern. Offene Änderungen werden jetzt übertragen."
-                : "Update auf \(target) beginnt gleich – bitte Arbeit speichern."
+                ? "Update auf \(target) beginnt in \(clock(left!)). Bitte speichern Sie Ihre Arbeit. Offene Änderungen werden jetzt übertragen."
+                : "Update auf \(target) beginnt gleich. Bitte speichern Sie Ihre Arbeit."
             return UpdateScreen(banner: true, bannerText: text, page: false, title: "Update angekündigt", text: text, countdown: countdown,
                                 countdownLabel: "Beginnt in", progress: progress, steps: steps(0), failed: false, version: version)
         }
@@ -114,8 +114,8 @@ public enum UpdatePresentation {
                                 steps: steps(1), failed: false, version: version)
         case "finish":
             return UpdateScreen(banner: false, bannerText: "", page: true, title: "Update wird abgeschlossen",
-                                text: "\(target) läuft. Letzte Prüfungen – danach geht es mit einer neuen Anmeldung weiter.",
-                                countdown: countdown, countdownLabel: running ? "Freigabe in" : "Gleich geschafft …", progress: progress,
+                                text: "\(target) läuft. Letzte Prüfungen laufen. Danach geht es mit einer neuen Anmeldung weiter.",
+                                countdown: countdown, countdownLabel: running ? "Freigabe in" : "Wird abgeschlossen …", progress: progress,
                                 steps: steps(2), failed: false, version: version)
         case "rollback":
             return UpdateScreen(banner: false, bannerText: "", page: true, title: "Update wird zurückgenommen",
@@ -132,7 +132,7 @@ public enum UpdatePresentation {
 
     /// Hinweis nach der Freigabe (Anmeldung).
     public static func doneText(version: String?, failed: Bool) -> String {
-        if failed { return "Das Update konnte nicht eingespielt werden – EstrichONE läuft mit dem bisherigen Stand weiter. Bitte erneut anmelden." }
+        if failed { return "Das Update konnte nicht eingespielt werden. EstrichONE läuft mit dem bisherigen Stand weiter. Bitte erneut anmelden." }
         if let version, !version.isEmpty { return "EstrichONE wurde auf Version \(version) aktualisiert. Bitte erneut anmelden." }
         return "EstrichONE wurde aktualisiert. Bitte erneut anmelden."
     }

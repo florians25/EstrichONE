@@ -90,7 +90,7 @@ struct UpdateMaintenanceScreen: View {
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, Space.xs)
                 Text(sync.updateOffline
-                     ? "Server wird gerade getauscht – die App wartet automatisch."
+                     ? "Der Server wird gerade getauscht. Die App wartet automatisch."
                      : "Die App prüft alle 5 Sekunden und geht nach der Freigabe zur Anmeldung.")
                     .font(.footnote)
                     .foregroundStyle(Theme.textSecondary)

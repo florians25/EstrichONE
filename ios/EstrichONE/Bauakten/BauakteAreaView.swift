@@ -404,7 +404,7 @@ struct BauakteAreaView: View {
             if let latest = overview.protocols.first {
                 LabeledContent("Durchgeführt", value: [latest.performedAt?.formatted(date: .numeric, time: .shortened),
                                                       latest.performedByUserId.flatMap { content.names[$0] }]
-                    .compactMap { $0 }.joined(separator: " · "))
+                    .compactMap { $0 }.joined(separator: ", "))
             }
             switch overview.status {
             case .waived:

@@ -101,7 +101,7 @@ struct DispatchSiteRow: View {
 
             NavigationLink(value: HomeRoute.bauakte(site.bauakteId)) {
                 VStack(alignment: .leading, spacing: 3) {
-                    Text([site.number, site.title].compactMap { $0 }.joined(separator: " · "))
+                    Text([site.number, site.title].compactMap { $0 }.joined(separator: ", "))
                         .font(Typo.subheadStrong)
                         .foregroundStyle(Theme.textPrimary)
                         .lineLimit(2)

@@ -216,7 +216,7 @@ struct SchemaInspectionView: View {
             }
             if field.photos {
                 Button { capture(field.key) } label: {
-                    Label(photoCount == 0 ? "Foto zu diesem Punkt" : "\(photoCount) \(photoCount == 1 ? "Foto" : "Fotos") · weitere aufnehmen", systemImage: "camera")
+                    Label(photoCount == 0 ? "Foto zu diesem Punkt" : "\(photoCount) \(photoCount == 1 ? "Foto" : "Fotos"), weitere aufnehmen", systemImage: "camera")
                 }
                 .estrichButton(.secondary)
             }
@@ -233,7 +233,7 @@ struct SchemaInspectionView: View {
                                 .joined(separator: "; ").nilIfEmpty)
         }
         return FormSchema(key: "erstbegehung", version: 0, groups: [
-            FormSchema.Group(key: group.key, label: separate ? "\(group.label) – Werte" : group.label, fields: mapped),
+            FormSchema.Group(key: group.key, label: separate ? "\(group.label): Werte" : group.label, fields: mapped),
         ])
     }
 

@@ -26,7 +26,7 @@ struct SystemStatusStrip: View {
             VStack(spacing: 0) {
                 ForEach(notices) { item in
                     StripRow(tone: item.tone == .error ? .danger : .warning, symbol: item.symbol,
-                             text: [item.title, item.relative].filter { !$0.isEmpty }.joined(separator: " · "),
+                             text: [item.title, item.relative].filter { !$0.isEmpty }.joined(separator: ", "),
                              actionTitle: "Details") { detail = item }
                         .accessibilityIdentifier("noticeStrip-\(item.kind.rawValue)")
                 }

@@ -34,7 +34,7 @@ struct MoreView: View {
                                 Text(user.displayName)
                                     .font(Typo.headline)
                                     .accessibilityIdentifier("currentUserName")
-                                Text([user.userName, model.deviceRegistration?.name].compactMap { $0 }.joined(separator: " · "))
+                                Text([user.userName, model.deviceRegistration?.name].compactMap { $0 }.joined(separator: ", "))
                                     .font(Typo.subhead)
                                     .foregroundStyle(Theme.textSecondary)
                             }

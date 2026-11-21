@@ -36,7 +36,7 @@ struct UpdateMaintenanceTests {
         #expect(UpdatePresentation.clock(-4) == "0:00")
         let view = UpdatePresentation.screen(state("announce", -1, 59), now: now)
         #expect(view.banner && !view.page)
-        #expect(view.bannerText == "Update auf Version 1.0.16 beginnt in 0:59 – bitte Arbeit speichern. Offene Änderungen werden jetzt übertragen.")
+        #expect(view.bannerText == "Update auf Version 1.0.16 beginnt in 0:59. Bitte speichern Sie Ihre Arbeit. Offene Änderungen werden jetzt übertragen.")
         #expect(view.steps.map(\.state) == [.now, .todo, .todo])
         let late = UpdatePresentation.screen(state("announce", -61, -1), now: now)
         #expect(late.page && late.title == "Update wird eingespielt")

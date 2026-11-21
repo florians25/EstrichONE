@@ -22,14 +22,14 @@ public struct RemoteBauakte: Identifiable, Equatable, Sendable {
 
 /// Hinweis-Streifen „Nur ansehen“ – gleicher Wortlaut auf allen Plattformen.
 public enum BauakteViewOnly {
-    public static let banner = "Nur ansehen: Trag dich als Beteiligter ein, um zu bearbeiten."
+    public static let banner = "Nur ansehen: Tragen Sie sich als Beteiligter ein, um zu bearbeiten."
     public static let join = "Mich als Beteiligten eintragen"
     public static let leave = "Als Beteiligter austragen"
 
     /// Verständliche Meldung zu einer abgelehnten Operation bzw. Antwort mit Code BAUAKTE_NOT_ASSIGNED.
     public static func message(forCode code: String?) -> String? {
         code == BauakteNotAssignedError.code
-            ? "Nicht übertragen: Du bist dieser Bauakte nicht (mehr) zugeteilt. Trag dich als Beteiligter ein und sende die Änderung erneut."
+            ? "Nicht übertragen: Sie sind dieser Bauakte nicht (mehr) zugeteilt. Tragen Sie sich als Beteiligter ein und senden Sie die Änderung erneut."
             : nil
     }
 }

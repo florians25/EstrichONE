@@ -416,7 +416,7 @@ public enum AbsenceText {
         if from == to { return german(from) + (halfDayStart || halfDayEnd ? " (halber Tag)" : "") }
         let start = from.prefix(4) == to.prefix(4) ? String(german(from).prefix(6)) : german(from)
         let half = [halfDayStart ? "erster Tag halb" : nil, halfDayEnd ? "letzter Tag halb" : nil].compactMap { $0 }.joined(separator: ", ")
-        return "\(start) – \(german(to))" + (half.isEmpty ? "" : " (\(half))")
+        return "\(start) bis \(german(to))" + (half.isEmpty ? "" : " (\(half))")
     }
 
     /// Tage mit höchstens einer Nachkommastelle, z. B. „2,5“.

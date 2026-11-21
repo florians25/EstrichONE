@@ -465,7 +465,7 @@ struct NotificationRow: View {
                         .lineLimit(typeSize.isAccessibilitySize ? 4 : 2)
                 }
                 HStack(spacing: Space.s) {
-                    Text(item.senderName.map { "\(item.kind.title) · \($0)" } ?? item.kind.title)
+                    Text(item.senderName.map { "\(item.kind.title), \($0)" } ?? item.kind.title)
                         .font(Typo.label)
                         .foregroundStyle(item.kind.tint)
                         .lineLimit(1)

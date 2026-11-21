@@ -66,7 +66,7 @@ struct NoteRow: View {
                 .fixedSize(horizontal: false, vertical: true)
             HStack(spacing: Space.s) {
                 Text([authorName, note.createdAt?.shortStamp].compactMap { $0 }
-                    .joined(separator: " · "))
+                    .joined(separator: ", "))
                     .font(Typo.meta)
                     .foregroundStyle(Theme.textSecondary)
                 Spacer(minLength: 0)

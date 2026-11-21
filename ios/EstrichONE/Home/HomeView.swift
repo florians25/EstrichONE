@@ -229,7 +229,7 @@ struct HomeView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Heute ist nichts für Sie eingeplant.")
                     if let next = tomorrow.first {
-                        Text("Morgen \([next.startText, next.bauakteTitle].compactMap { $0 }.joined(separator: " · "))")
+                        Text("Morgen \([next.startText, next.bauakteTitle].compactMap { $0 }.joined(separator: ", "))")
                             .font(Typo.subhead).foregroundStyle(Theme.textSecondary)
                     }
                 }
@@ -393,7 +393,7 @@ struct HomeView: View {
                                 .frame(minWidth: 52, alignment: .leading)
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(item.bauakteTitle)
-                                Text([item.activity, item.crewName].compactMap { $0 }.joined(separator: " · "))
+                                Text([item.activity, item.crewName].compactMap { $0 }.joined(separator: ", "))
                                     .font(Typo.subhead).foregroundStyle(Theme.textSecondary)
                             }
                         }

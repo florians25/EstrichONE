@@ -169,7 +169,7 @@ struct RoomRow: View {
             HStack(alignment: .firstTextBaseline, spacing: Space.s) {
                 let parts: [String?] = [room.thicknessMillimeters.map { "\($0) mm" }, room.underfloorHeating ? "Fußbodenheizung" : nil]
                 let details = parts.compactMap { $0 }
-                Text(details.isEmpty ? "Aufbau noch offen" : details.joined(separator: " · "))
+                Text(details.isEmpty ? "Aufbau noch offen" : details.joined(separator: ", "))
                     .font(Typo.subhead.monospacedDigit())
                     .foregroundStyle(Theme.textSecondary)
                     .frame(maxWidth: .infinity, alignment: .leading)

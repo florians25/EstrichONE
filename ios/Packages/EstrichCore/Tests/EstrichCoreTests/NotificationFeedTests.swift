@@ -24,7 +24,7 @@ struct NotificationFeedTests {
         [
             item(1, "planning", "Plan für morgen freigegeben", hoursAgo: 0.2),
             item(2, "chat", "Neue Nachricht von Sabine Wagner", hoursAgo: 1),
-            item(3, "work", "Mangel zugewiesen", body: "Randfuge Flur · Praxis Dr. Maier", hoursAgo: 9, read: true),
+            item(3, "work", "Mangel zugewiesen", body: "Randfuge Flur, Praxis Dr. Maier", hoursAgo: 9, read: true),
             item(4, "ticket", "Antwort zu T-2026-0007", hoursAgo: 14),          // gestern 20:00
             item(5, "bauakte", "Abnahme unterschrieben", hoursAgo: 40, read: true), // Montag 18:00
             item(6, "message", "Nachricht aus dem Büro", body: "Pumpe 2 erst ab 6:45 Uhr", sender: "Sabine Wagner", hoursAgo: 60), // Sonntag

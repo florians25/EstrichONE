@@ -37,7 +37,7 @@ struct AbsenceTests {
         #expect(mine.requestableTypes.map(\.key) == ["vacation"])
         let request = try #require(mine.requests.first)
         #expect(request.status == .approved)
-        #expect(request.rangeText == "07.06. – 09.06.2027 (erster Tag halb)")
+        #expect(request.rangeText == "07.06. bis 09.06.2027 (erster Tag halb)")
         #expect(AbsenceText.days(request.workingDays) == "2,5")
         #expect(mine.absences?.first?.workingDays == Decimal(string: "2.5"))
         #expect(request.canChange)
@@ -94,7 +94,7 @@ struct AbsenceTests {
     @Test("Zeiträume, Status und Tage")
     func texts() {
         #expect(AbsenceText.range(from: "2027-06-07", to: "2027-06-07", halfDayStart: true) == "07.06.2027 (halber Tag)")
-        #expect(AbsenceText.range(from: "2027-12-28", to: "2028-01-02", halfDayEnd: true) == "28.12.2027 – 02.01.2028 (letzter Tag halb)")
+        #expect(AbsenceText.range(from: "2027-12-28", to: "2028-01-02", halfDayEnd: true) == "28.12.2027 bis 02.01.2028 (letzter Tag halb)")
         #expect(AbsenceText.days(3) == "3")
         let replaced = AbsenceRequestItem(id: UUID(), userId: UUID(), userName: "A", from: "2027-01-04", to: "2027-01-05", status: .cancelled,
                                           workingDays: 2, decisionComment: "Durch Änderungsantrag ersetzt.")

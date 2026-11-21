@@ -78,7 +78,7 @@ struct AssignStopSheet: View {
         NavigationStack {
             Form {
                 if let selected {
-                    Section("\(crew.name) · \(day.formatted(.dateTime.weekday(.abbreviated).day().month()))") {
+                    Section("\(crew.name), \(day.formatted(.dateTime.weekday(.abbreviated).day().month()))") {
                         HStack {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(selected.title).font(Typo.bodyStrong)
@@ -119,7 +119,7 @@ struct AssignStopSheet: View {
                             .accessibilityIdentifier("pool-\(choice.title)")
                         }
                     } header: {
-                        Text("Bauvorhaben für \(crew.name) · \(day.formatted(.dateTime.weekday(.abbreviated).day().month()))")
+                        Text("Bauvorhaben für \(crew.name), \(day.formatted(.dateTime.weekday(.abbreviated).day().month()))")
                     }
                 }
             }
@@ -167,13 +167,13 @@ struct AssignStopSheet: View {
                 .prefix(60)
                 .map { entry in
                     let area = entry.totalAreaSquareMeters.flatMap { $0 > 0 ? "\(Int($0.rounded())) m²" : nil }
-                    return Choice(id: entry.bauakteId, title: [entry.number, entry.title].compactMap { $0 }.joined(separator: " · "),
-                                  subtitle: [entry.address, area].compactMap { $0 }.joined(separator: " · "), isFree: entry.isFree)
+                    return Choice(id: entry.bauakteId, title: [entry.number, entry.title].compactMap { $0 }.joined(separator: ", "),
+                                  subtitle: [entry.address, area].compactMap { $0 }.joined(separator: ", "), isFree: entry.isFree)
                 }
         } catch {
             offline = error == .offline
             let local = (try? await active.service?.bauakten(search: text.isEmpty ? nil : text)) ?? []
-            choices = local.prefix(60).map { Choice(id: $0.id, title: [$0.number, $0.title].compactMap { $0 }.joined(separator: " · "),
+            choices = local.prefix(60).map { Choice(id: $0.id, title: [$0.number, $0.title].compactMap { $0 }.joined(separator: ", "),
                                                     subtitle: $0.addressLine, isFree: false) }
         }
     }
@@ -215,7 +215,7 @@ struct MoveStopSheet: View {
                 Section {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(stop.title).font(Typo.bodyStrong)
-                        Text("\(stop.activity) · \(stop.timeText)").font(Typo.meta).foregroundStyle(Theme.textSecondary)
+                        Text("\(stop.activity), \(stop.timeText)").font(Typo.meta).foregroundStyle(Theme.textSecondary)
                     }
                 }
                 Section("Tag") {
@@ -497,7 +497,7 @@ struct SwapCrewsSheet: View {
             Text("Keine Baustelle").font(Typo.subhead).foregroundStyle(Theme.textSecondary)
         }
         ForEach(crew.stops) { stop in
-            Text("\(stop.startText ?? "–") · \(stop.title)")
+            Text("\(stop.startText ?? "–"), \(stop.title)")
                 .font(Typo.subhead.monospacedDigit())
                 .foregroundStyle(Theme.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -558,11 +558,11 @@ struct ReleasePlanSheet: View {
                     }
                     if plan.release != nil {
                         ForEach(changed, id: \.stop.id) { entry in
-                            changeRow(entry.stop.change == "new" ? "Neu" : "Geändert", "\(entry.stop.timeText) · \(entry.stop.title)",
-                                      "\(entry.crew) · \(entry.stop.activity)")
+                            changeRow(entry.stop.change == "new" ? "Neu" : "Geändert", "\(entry.stop.timeText), \(entry.stop.title)",
+                                      "\(entry.crew), \(entry.stop.activity)")
                         }
                         ForEach(plan.release?.removed ?? [], id: \.assignmentId) { removed in
-                            changeRow("Entfällt", removed.title, [removed.crewName, removed.activity].compactMap { $0 }.joined(separator: " · "))
+                            changeRow("Entfällt", removed.title, [removed.crewName, removed.activity].compactMap { $0 }.joined(separator: ", "))
                         }
                     }
                 }

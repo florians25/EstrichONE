@@ -61,7 +61,7 @@ public struct DayPlan: Codable, Equatable, Sendable {
         /// „07:00–12:00“, „ab 07:00“ oder „ganztägig“.
         public var timeText: String {
             switch (startText, endText) {
-            case let (start?, end?): "\(start)–\(end)"
+            case let (start?, end?): "\(start) bis \(end)"
             case let (start?, nil): "ab \(start)"
             default: "ganztägig"
             }

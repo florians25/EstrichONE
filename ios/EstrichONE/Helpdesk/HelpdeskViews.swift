@@ -217,7 +217,7 @@ struct TicketRow: View {
                 }
                 if showsReporter {
                     Text([ticket.reporterDisplayName, ticket.category.title, ticket.assigneeName.map { "zugewiesen an \($0)" } ?? "nicht zugewiesen"]
-                        .compactMap { $0 }.joined(separator: " · "))
+                        .compactMap { $0 }.joined(separator: ", "))
                         .font(Typo.meta).foregroundStyle(Theme.textSecondary).lineLimit(1)
                 }
             }
@@ -361,7 +361,7 @@ struct TicketDetailView: View {
     private func info(_ summary: TicketSummary) -> [InfoItem] {
         let category = summary.subcategoryName.map { "\(summary.category.title) › \($0)" } ?? summary.category.title
         var handler = summary.assigneeName ?? "noch offen"
-        if isAgent, let group = summary.groupName { handler += " · \(group)" }
+        if isAgent, let group = summary.groupName { handler += ", \(group)" }
         var items = [
             InfoItem(label: "Kategorie", value: category),
             InfoItem(label: "Gemeldet", value: summary.createdAt.formatted(.relative(presentation: .named))),
@@ -660,7 +660,7 @@ struct TicketTimelineRow: View {
         if let text = entry.text, entry.isComment {
             VStack(alignment: isOwn ? .trailing : .leading, spacing: 4) {
                 if !isOwn || entry.isInternal {
-                    Text(entry.isInternal ? "\(entry.actorName ?? "IT") · interne Notiz" : (entry.actorName ?? "IT"))
+                    Text(entry.isInternal ? "\(entry.actorName ?? "IT"), interne Notiz" : (entry.actorName ?? "IT"))
                         .font(Typo.labelStrong).foregroundStyle(Theme.textSecondary)
                 }
                 VStack(alignment: .leading, spacing: Space.s) {
@@ -682,7 +682,7 @@ struct TicketTimelineRow: View {
             .accessibilityElement(children: .combine)
         } else {
             // Symbol im Text, damit es beim Umbruch mit der ersten Zeile mitläuft; Zeitpunkt mit Tag (Verlauf über Tage).
-            Text("\(Image(systemName: entry.kind == "created" ? "plus.circle" : "arrow.triangle.swap")) \(entry.summary) · \(entry.at.shortStamp)")
+            Text("\(Image(systemName: entry.kind == "created" ? "plus.circle" : "arrow.triangle.swap")) \(entry.summary), \(entry.at.shortStamp)")
                 .font(.caption)
                 .foregroundStyle(Theme.textSecondary)
                 .frame(maxWidth: .infinity)
@@ -795,7 +795,7 @@ struct RecordTicketView: View {
                         HStack {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(reporter.displayName).font(Typo.bodyStrong)
-                                Text([reporter.userName, reporter.email].compactMap { $0 }.joined(separator: " · ")).font(Typo.meta).foregroundStyle(Theme.textSecondary)
+                                Text([reporter.userName, reporter.email].compactMap { $0 }.joined(separator: ", ")).font(Typo.meta).foregroundStyle(Theme.textSecondary)
                             }
                             Spacer()
                             Button("Ändern") { self.reporter = nil }
@@ -808,7 +808,7 @@ struct RecordTicketView: View {
                             Button { reporter = person } label: {
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(person.displayName).foregroundStyle(Theme.textPrimary)
-                                    Text([person.userName, person.email ?? person.phone].compactMap { $0 }.joined(separator: " · "))
+                                    Text([person.userName, person.email ?? person.phone].compactMap { $0 }.joined(separator: ", "))
                                         .font(Typo.meta).foregroundStyle(Theme.textSecondary)
                                 }
                             }

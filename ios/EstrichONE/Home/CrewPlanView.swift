@@ -262,7 +262,7 @@ struct DispatchView: View {
                     detail: changed > 0 ? "\(changed) \(changed == 1 ? "Änderung" : "Änderungen") seit Freigabe" : "von \(release.releasedByName)",
                     actionTitle: plan.canPlan ? "Freigabe" : nil,
                     action: plan.canPlan ? { sheet = .release } : nil,
-                    removed: release.removed.map { "\($0.title) · \($0.activity)" })
+                    removed: release.removed.map { "\($0.title), \($0.activity)" })
                     .accessibilityIdentifier("releaseStatus")))
             } else {
                 lines.append(AnyView(PlanStatusBar(
@@ -639,10 +639,10 @@ struct CrewCardHeader: View {
                 rosterLine(memberText, symbol: "person.2.fill")
             }
             if !crew.vehicles.isEmpty {
-                rosterLine(crew.vehicles.map(\.name).joined(separator: " · "), symbol: "truck.box.fill")
+                rosterLine(crew.vehicles.map(\.name).joined(separator: ", "), symbol: "truck.box.fill")
             }
             ForEach(crew.members.filter { $0.absenceNote != nil }) { member in
-                rosterLine("\(member.name) · \(member.absenceNote ?? "abwesend")", symbol: "person.fill.xmark", tint: Theme.warning)
+                rosterLine("\(member.name), \(member.absenceNote ?? "abwesend")", symbol: "person.fill.xmark", tint: Theme.warning)
             }
             if crew.rosterChanged {
                 rosterLine("Besetzung geändert", symbol: "arrow.triangle.swap", tint: Theme.accent)
@@ -797,7 +797,7 @@ struct StopRow: View {
                         Chip(text: change == "new" ? "Neu" : "Geändert", tone: .accent)
                     }
                 }
-                Text([stop.number, stop.title].compactMap { $0 }.joined(separator: " · "))
+                Text([stop.number, stop.title].compactMap { $0 }.joined(separator: ", "))
                     .font(Typo.body.weight(.semibold))
                     .foregroundStyle(Theme.textPrimary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -819,7 +819,7 @@ struct StopRow: View {
                     Button {
                         if let url = ContactLink.phone(stop.siteContactPhone) { openURL(url) }
                     } label: {
-                        Label([name, stop.siteContactName == nil ? nil : stop.siteContactPhone].compactMap { $0 }.joined(separator: " · "),
+                        Label([name, stop.siteContactName == nil ? nil : stop.siteContactPhone].compactMap { $0 }.joined(separator: ", "),
                               systemImage: "phone")
                             .labelStyle(TightLabelStyle())
                             .font(Typo.subhead)

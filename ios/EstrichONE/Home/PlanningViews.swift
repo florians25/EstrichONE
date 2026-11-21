@@ -34,7 +34,7 @@ struct MyWeekView: View {
                                     .frame(width: 52, alignment: .leading)
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(assignment.bauakteTitle).font(Typo.body)
-                                    Text([assignment.activity, assignment.crewName].compactMap { $0 }.joined(separator: " · "))
+                                    Text([assignment.activity, assignment.crewName].compactMap { $0 }.joined(separator: ", "))
                                         .font(Typo.subhead)
                                         .foregroundStyle(Theme.textSecondary)
                                     if let address = assignment.bauakteAddress {
@@ -146,7 +146,7 @@ struct MyTasksView: View {
         guard let service = model.active?.service else { return }
         items = ((try? await service.myWorkItems()) ?? []).sorted { ($0.dueDate ?? "9999") < ($1.dueDate ?? "9999") }
         let all = (try? await service.bauakten()) ?? []
-        titles = Dictionary(all.map { ($0.id, [$0.number, $0.title].compactMap { $0 }.joined(separator: " · ")) }, uniquingKeysWith: { a, _ in a })
+        titles = Dictionary(all.map { ($0.id, [$0.number, $0.title].compactMap { $0 }.joined(separator: ", ")) }, uniquingKeysWith: { a, _ in a })
         loaded = true
     }
 

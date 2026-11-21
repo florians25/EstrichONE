@@ -269,7 +269,7 @@ struct BauaktenListView: View {
             let assignments = (await MyPlanning(store: store).cached())?.assignments(on: CalendarDay.string(.now)) ?? []
             var texts: [UUID: String] = [:]
             for assignment in assignments where texts[assignment.bauakteId] == nil {
-                texts[assignment.bauakteId] = ["Heute", assignment.startText, assignment.crewName].compactMap { $0 }.joined(separator: " · ")
+                texts[assignment.bauakteId] = ["Heute", assignment.startText, assignment.crewName].compactMap { $0 }.joined(separator: ", ")
             }
             today = texts
         }

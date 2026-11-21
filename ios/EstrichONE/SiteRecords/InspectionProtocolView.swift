@@ -105,7 +105,7 @@ struct InspectionProtocolView: View {
                 IconBadge(symbol: statusSymbol, tint: statusColor, background: statusColor.opacity(0.14), size: 44)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(statusText).font(Typo.headline).foregroundStyle(Theme.textPrimary).accessibilityIdentifier("inspectionStatus")
-                    Text([inspection.performedAt?.shortStamp, performerName].compactMap { $0 }.joined(separator: " · "))
+                    Text([inspection.performedAt?.shortStamp, performerName].compactMap { $0 }.joined(separator: ", "))
                         .font(Typo.meta).foregroundStyle(Theme.textSecondary)
                     if inspection.correctsInspectionId != nil {
                         Label("Korrigierte Fassung", systemImage: "pencil.circle")
@@ -119,7 +119,7 @@ struct InspectionProtocolView: View {
             }
             .padding(.vertical, Space.xs)
         } header: {
-            Text(bauakte.number.map { "\($0) · \(bauakte.title)" } ?? bauakte.title)
+            Text(bauakte.number.map { "\($0), \(bauakte.title)" } ?? bauakte.title)
         }
     }
 

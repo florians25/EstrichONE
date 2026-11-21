@@ -284,7 +284,7 @@ struct NewBauakteView: View {
             LabeledContent("Kunde", value: customer?.name ?? newCustomer.map { "\($0.name) (neu)" } ?? "–")
             LabeledContent("Baustelle", value: addressLine ?? "noch ohne Adresse")
             if !projectBadges.isEmpty {
-                LabeledContent("Kenndaten", value: projectBadges.joined(separator: " · "))
+                LabeledContent("Kenndaten", value: projectBadges.joined(separator: ", "))
             }
         } header: {
             Text("Übersicht")
@@ -321,7 +321,7 @@ struct NewBauakteView: View {
                     } label: {
                         Label {
                             VStack(alignment: .leading) {
-                                Text("Ähnliche Bauakte: \(bauakte.number.map { "\($0) · " } ?? "")\(bauakte.title)")
+                                Text("Ähnliche Bauakte: \(bauakte.number.map { "\($0), " } ?? "")\(bauakte.title)")
                                 if let address = bauakte.addressLine { Text(address).font(.footnote) }
                                 Text("Öffnen statt neu anlegen").font(.footnote.weight(.semibold))
                             }

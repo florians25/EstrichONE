@@ -198,7 +198,7 @@ struct BauakteDetailView: View {
         let bauakte = content.bauakte
         return VStack(alignment: .leading, spacing: Space.xs) {
             HStack(alignment: .firstTextBaseline, spacing: Space.s) {
-                Text(bauakte.number ?? "Neu · noch ohne Nummer")
+                Text(bauakte.number ?? "Neu, noch ohne Nummer")
                     .font(Typo.subhead.monospacedDigit())
                     .foregroundStyle(Theme.textSecondary)
                     .accessibilityIdentifier("bauakteNumber")
@@ -285,7 +285,7 @@ struct BauakteDetailView: View {
         }
         if let customer = content.customer {
             list.append(Fact(id: "customer", symbol: customer.isCompany ? "building.2" : "person", title: customer.name,
-                             subtitle: ["Kunde", customer.customerNumber].compactMap { $0 }.joined(separator: " · "),
+                             subtitle: ["Kunde", customer.customerNumber].compactMap { $0 }.joined(separator: ", "),
                              link: ContactLink.phone(customer.phone), linkTitle: "Kunde anrufen", linkSymbol: "phone.fill"))
         } else {
             list.append(Fact(id: "customer", symbol: "person.crop.circle.badge.questionmark", title: "Kein Kunde zugeordnet",
@@ -299,7 +299,7 @@ struct BauakteDetailView: View {
         // Bauleitung – auf der Baustelle der häufigste Anruf nach dem Kunden.
         if let manager = content.parties.first(where: { $0.role == .siteManager }) {
             list.append(Fact(id: "manager", symbol: "person.badge.key", title: manager.name,
-                             subtitle: [manager.role.title, manager.company].compactMap { $0 }.joined(separator: " · "),
+                             subtitle: [manager.role.title, manager.company].compactMap { $0 }.joined(separator: ", "),
                              link: ContactLink.phone(manager.phone), linkTitle: "\(manager.role.title) anrufen", linkSymbol: "phone.fill"))
         }
         if let next = content.nextAssignmentText {
@@ -504,9 +504,9 @@ struct BauakteDetailView: View {
     private func footer(_ content: BauakteContent) -> some View {
         let state = content.bauakte.syncState == .synced ? "übertragen" : "Übertragung ausstehend"
         if let updated = content.bauakte.updatedAt {
-            return Text("Zuletzt geändert \(updated.formatted(.relative(presentation: .named))) · \(state)")
+            return Text("Zuletzt geändert \(updated.formatted(.relative(presentation: .named))), \(state)")
         }
-        return Text("Auf dem Gerät gespeichert · \(state)")
+        return Text("Auf dem Gerät gespeichert, \(state)")
     }
 
     // MARK: Status und Menü
@@ -609,7 +609,7 @@ struct BauakteDetailView: View {
         guard let start = bauakte.plannedStart.flatMap({ CalendarDay.date($0) }) else { return nil }
         let format = Date.FormatStyle.dateTime.day().month(.abbreviated)
         if let end = bauakte.plannedEnd.flatMap({ CalendarDay.date($0) }), end != start {
-            return "\(start.formatted(format)) – \(end.formatted(format))"
+            return "\(start.formatted(format)) bis \(end.formatted(format))"
         }
         return "ab \(start.formatted(format))"
     }

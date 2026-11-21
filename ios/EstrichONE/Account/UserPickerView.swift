@@ -56,7 +56,7 @@ struct UserPickerView: View {
                 .frame(maxWidth: 560)
                 .frame(maxWidth: .infinity)
             }
-            .navigationTitle("EstrichONE · \(model.deviceRegistration?.name ?? "")")
+            .navigationTitle("EstrichONE: \(model.deviceRegistration?.name ?? "")")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {

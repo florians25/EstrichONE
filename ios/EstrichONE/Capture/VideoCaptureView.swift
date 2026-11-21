@@ -38,7 +38,7 @@ struct VideoCaptureView: View {
                     }
                     .accessibilityIdentifier("pickVideoButton")
                 } header: {
-                    Text("Video für \(bauakte.number.map { "\($0) · " } ?? "")\(bauakte.title)")
+                    Text("Video für \(bauakte.number.map { "\($0), " } ?? "")\(bauakte.title)")
                 } footer: {
                     if !VideoRecorderView.isAvailable {
                         Text("Auf diesem Gerät ist keine Kamera verfügbar. Videos können aus der Mediathek übernommen werden.")
