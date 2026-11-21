@@ -6,10 +6,10 @@ import {
 
 const impact: AbsenceWarning = {
   key: 'plan:a1:abc', kind: 'planning_impact', severity: 'error', userId: 'u1', userName: 'Anna Kraus', employeeId: null, date: '2026-11-19',
-  title: 'Anna Kraus abwesend 18.11. – 20.11.2026', text: '1 geplanter Einsatz betroffen, unterbesetzt: Kolonne Süd.', absenceId: 'a1', caseId: null,
+  title: 'Anna Kraus abwesend 18.11. bis 20.11.2026', text: '1 geplanter Einsatz betroffen, unterbesetzt: Kolonne Süd.', absenceId: 'a1', caseId: null,
   link: '/planung?ansicht=tag&datum=2026-11-19',
   assignments: [{ id: 'x', day: '2026-11-19', bauakteId: 'b', bauakteTitle: 'Halle Süd', activity: 'Estrich', crewId: 'c', crewName: 'Kolonne Süd', present: 1,
-    minimumStaff: 2, understaffed: true, text: 'Do 19.11.: Halle Süd – Estrich, Kolonne Süd · unterbesetzt (1 von mindestens 2)' }],
+    minimumStaff: 2, understaffed: true, text: 'Do 19.11.: Halle Süd, Estrich (Kolonne Süd). Unterbesetzt: 1 von mindestens 2.' }],
 };
 const au: AbsenceWarning = { ...impact, key: 'au:a1', kind: 'certificate_missing', severity: 'warning', title: 'Anna Kraus: AU-Bescheinigung fehlt',
   text: 'Nachweis erwartet ab dem 18.11.2026', link: '/personal/urlaub?reiter=krank', assignments: [] };
@@ -37,7 +37,7 @@ describe('Abwesenheitswarnungen', () => {
   it('Zähler, MessageStrip und Kennzahl', () => {
     expect(warningCounts([impact, au, bem])).toEqual({ total: 3, errors: 1, warnings: 1, infos: 1, planning: 1 });
     expect(warningSummary({ enabled: true, items: [impact, au, bem] })).toEqual({
-      text: '1 dringend, 1 Warnung, 1 Hinweis · 1 Abwesenheit betrifft geplante Einsätze.', type: 'Error' });
+      text: '1 dringend, 1 Warnung, 1 Hinweis. 1 Abwesenheit betrifft geplante Einsätze.', type: 'Error' });
     expect(warningSummary({ enabled: true, items: [] }).type).toBe('Success');
     expect(warningSummary({ enabled: false, items: [] }).text).toContain('abgeschaltet');
     expect(warningKpi({ enabled: true, healthDetails: false, items: [impact], acknowledged: 0 }, false))
@@ -56,8 +56,8 @@ describe('Abwesenheitswarnungen', () => {
   });
 
   it('Kurzbeschreibung der Einstellungen', () => {
-    expect(settingsSummary(settings)).toBe('Einsätze (14 Tage Vorschau), AU ab 4. Kalendertag, Entgeltfortzahlung, BEM, Urlaubsüberschneidung · Benachrichtigung: Personal, Disposition');
-    expect(settingsSummary({ ...settings, frequentShortThreshold: 4, adjacent: true, notifyHr: false, notifyPlanners: false })).toContain('Häufung ab 4, angrenzende freie Tage · Benachrichtigung: niemand');
+    expect(settingsSummary(settings)).toBe('Aktiv: Einsätze (14 Tage Vorschau), AU ab 4. Kalendertag, Entgeltfortzahlung, BEM, Urlaubsüberschneidung. Benachrichtigung: Personal, Disposition.');
+    expect(settingsSummary({ ...settings, frequentShortThreshold: 4, adjacent: true, notifyHr: false, notifyPlanners: false })).toContain('Häufung ab 4, angrenzende freie Tage. Benachrichtigung: niemand.');
     expect(settingsSummary({ ...settings, enabled: false })).toBe('Abgeschaltet.');
   });
 });

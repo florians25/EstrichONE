@@ -167,10 +167,11 @@ public sealed class AbsenceWarningTests(PostgresFixture postgres) : IAsyncLifeti
         var input = Input(Settings(), [], absences: [absence], assignments: [assignment, later]);
         var w = AbsenceWarningRules.ImpactOf(absence, input).ShouldNotBeNull();
         w.Severity.ShouldBe("error");
-        w.Title.ShouldBe($"Anna Kraus abwesend {HrEndpoints.Range(Today, Today.AddDays(2))}");
+        w.Title.ShouldBe($"Anna Kraus abwesend {AbsenceWarningRules.Range(Today, Today.AddDays(2))}");
+        w.Title.ShouldNotContain("–");
         w.Text.ShouldContain("unterbesetzt: Kolonne Nord");
         w.Link.ShouldBe($"/planung?ansicht=tag&datum={day:yyyy-MM-dd}&tag={day:yyyy-MM-dd}"); // „tag“ für die Apps
-        w.Assignments.ShouldHaveSingleItem().Text.ShouldContain("1 von mindestens 2");
+        w.Assignments.ShouldHaveSingleItem().Text.ShouldContain("Unterbesetzt: 1 von mindestens 2.");
 
         // Halber Tag: die Person zählt noch zur Besetzung.
         var half = absence with { From = day, To = day, HalfDayStart = true };

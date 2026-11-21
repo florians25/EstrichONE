@@ -178,7 +178,7 @@ test('Warnungen bei Krankmeldungen: betroffene Einsätze, AU fehlt, eAU abgerufe
   const impact = table.getByRole('row', { name: /Anna Admin abwesend/ }).filter({ hasText: 'E2E Halle Warnung' });
   await expect(impact).toBeVisible();
   await expect(impact).toContainText('E2E Halle Warnung');
-  await expect(impact).toContainText('niemand mehr eingeplant');
+  await expect(impact).toContainText('Niemand mehr eingeplant');
   await expect(page.locator('[id$="warningStrip"]')).toContainText('dringend');
   await shot(page, 'web-krankmeldungen-warnungen');
 

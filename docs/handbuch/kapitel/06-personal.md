@@ -65,38 +65,40 @@ dem eingestellten Bundesland. **PDF Monat** und **PDF Jahr** drucken den Plan.
 
 **Krankmeldungen** erfasst die Personalverwaltung mit **Krankmeldung erfassen** – auf Wunsch mit AU-Bescheinigung.
 Krankmeldungen sind vertraulich: Sie sieht nur die Personalverwaltung; in der Planung erscheint lediglich „abwesend“.
-Wurde die elektronische AU (eAU) bei der Krankenkasse abgerufen, tragen Sie **eAU abgerufen am** ein; die Spalte
-**AU-Bescheinigung** zeigt dann „eAU abgerufen“, sonst „vorhanden“, „fehlt“, „ab …“ (noch nicht fällig) oder „nicht erforderlich“.
+Wurde die elektronische AU (eAU) bei der Krankenkasse abgerufen, tragen Sie **eAU abgerufen am** ein. Die Spalte
+**AU-Bescheinigung** zeigt dann „eAU abgerufen“. Andernfalls zeigt sie „vorhanden“, „fehlt“, „ab …“ (noch nicht fällig)
+oder „nicht erforderlich“.
 
 ### Warnungen bei Krankmeldungen und Abwesenheiten
 
 Über der Liste der Krankmeldungen stehen die **Warnungen** mit Status (Dringend, Warnung, Hinweis), Stichtag und
-Aktionen; oben auf der Seite zeigt die Kennzahl **Warnungen** die Anzahl. Es gibt folgende Warnungen:
+Aktionen. Die Kennzahl **Warnungen** oben auf der Seite zeigt ihre Anzahl. Folgende Warnungen gibt es:
 
-- **Einsätze betroffen:** Eine Abwesenheit fällt auf geplante Einsätze (Vorschau standardmäßig 14 Tage). „Dringend“, wenn
-  die Kolonne unter ihre Mindestbesetzung fällt oder niemand mehr eingeplant ist. **Zur Planung** öffnet den Tag.
+- **Einsätze betroffen:** Eine Abwesenheit fällt auf geplante Einsätze (Vorschau standardmäßig 14 Tage). Die Warnung
+  ist dringend, wenn die Kolonne unter ihre Mindestbesetzung fällt oder niemand mehr eingeplant ist. **Zur Planung**
+  öffnet den betroffenen Tag.
 - **AU-Nachweis fehlt:** Ab dem eingestellten Kalendertag (Standard: 4. Tag, also bei mehr als drei Tagen) fehlt eine
-  AU-Bescheinigung bzw. Folgebescheinigung. **eAU abgerufen** markiert die eAU mit dem heutigen Datum.
-- **Entgeltfortzahlung:** Eine Woche bevor die sechs Wochen eines Krankheitsfalls (Erstmeldung mit Folgebescheinigungen)
-  enden; frühere Krankmeldungen der letzten sechs Monate werden als möglicher Fortsetzungsfall genannt. Nur ein Hinweis –
-  ob dieselbe Ursache vorliegt, prüft die Personalverwaltung.
-- **BEM anbieten:** mehr als 42 Kalendertage arbeitsunfähig in den letzten zwölf Monaten (§ 167 Abs. 2 SGB IX).
+  AU-Bescheinigung oder Folgebescheinigung. **eAU abgerufen** markiert die eAU mit dem heutigen Datum.
+- **Entgeltfortzahlung:** Eine Woche bevor die sechs Wochen eines Krankheitsfalls (Erstmeldung mit
+  Folgebescheinigungen) enden. Frühere Krankmeldungen der letzten sechs Monate werden als möglicher Fortsetzungsfall
+  genannt. Dies ist nur ein Hinweis. Ob dieselbe Ursache vorliegt, prüft die Personalverwaltung.
+- **BEM anbieten:** mehr als 42 Kalendertage Arbeitsunfähigkeit in den letzten zwölf Monaten (§ 167 Abs. 2 SGB IX).
 - **Überschneidung mit Urlaub:** Krankmeldung im genehmigten Urlaub (die Tage werden nicht als Urlaub gezählt) oder
   während eines offenen Urlaubsantrags.
-- **Häufung kurzer Krankmeldungen** und **Krankmeldung direkt vor/nach Urlaub oder Wochenende:** neutrale Hinweise,
-  standardmäßig **aus**. Nur einschalten, wenn es eine Rechtsgrundlage bzw. Betriebsvereinbarung gibt.
+- **Häufung kurzer Krankmeldungen** und **Krankmeldung direkt vor oder nach Urlaub oder Wochenende:** neutrale Hinweise,
+  standardmäßig ausgeschaltet. Schalten Sie sie nur ein, wenn es dafür eine Rechtsgrundlage oder Betriebsvereinbarung gibt.
 
-**Zur Kenntnis genommen** blendet eine Warnung für alle aus, bis sich der Sachverhalt ändert (z. B. ein weiterer Einsatz
-betroffen ist). **Warnungen einstellen** (auch im Reiter **Arten und Betriebsferien**) legt Regeln, Schwellwerte und
-Empfänger fest; der Hauptschalter schaltet alles ab.
+**Zur Kenntnis genommen** blendet eine Warnung für alle aus, bis sich der Sachverhalt ändert (zum Beispiel wenn ein
+weiterer Einsatz betroffen ist). Mit **Warnungen einstellen** (auch im Reiter **Arten und Betriebsferien**) legen Sie
+Regeln, Schwellwerte und Empfänger fest. Der Hauptschalter schaltet alle Warnungen ab.
 
-**Datenschutz:** Diagnosen werden nie gespeichert. Gesundheitsbezogene Warnungen sieht nur, wer Krankmeldungen pflegen darf
-(Recht „Personalstamm pflegen …“). Die Disposition (Recht „Einsätze planen“) sieht nur „abwesend“ und die betroffenen
-Einsätze – in der **Kolonnenplanung** als Hinweisleiste mit **Betroffene Einsätze anzeigen** und auf der Startseite als
-Kennzahl. Benachrichtigungen (Postfach und Push) enthalten nie „krank“ oder Fristen: Die Disposition erhält „Abwesenheit
-betrifft Einsätze“ mit Name, Zeitraum und betroffenen Einsätzen, die Personalverwaltung „Neue Abwesenheitsmeldung“ bzw.
-„Personalhinweis“ mit der Bitte, in EstrichONE nachzusehen. In den Apps erscheinen die Warnungen unter **Urlaub und
-Abwesenheit** für dieselben Berechtigten.
+**Datenschutz:** Diagnosen werden nie gespeichert. Gesundheitsbezogene Warnungen sieht nur, wer Krankmeldungen pflegen
+darf (Recht „Personalstamm pflegen …“). Die Disposition (Recht „Einsätze planen“) sieht nur „abwesend“ und die
+betroffenen Einsätze. In der **Kolonnenplanung** erscheint dazu eine Hinweisleiste mit **Betroffene Einsätze anzeigen**,
+auf der Startseite eine Kennzahl. Benachrichtigungen (Postfach und Push) enthalten nie „krank“ oder Fristen. Die
+Disposition erhält „Abwesenheit betrifft Einsätze“ mit Name, Zeitraum und betroffenen Einsätzen. Die
+Personalverwaltung erhält „Neue Abwesenheitsmeldung“ oder „Personalhinweis“ mit der Bitte, in EstrichONE nachzusehen.
+In den Apps erscheinen die Warnungen für dieselben Berechtigten unter **Urlaub und Abwesenheit**.
 
 Der Reiter **Fristen & Qualifikationen** erinnert an ablaufende Qualifikationen und
 Führerscheine, Probezeitende, Geburtstage und Jubiläen. Über das Zahnrad stellen Sie **Bundesland**, die

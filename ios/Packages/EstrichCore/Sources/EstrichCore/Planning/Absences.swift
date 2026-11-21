@@ -472,7 +472,7 @@ extension AuthorizedClient {
 
 // MARK: - Warnungen bei Abwesenheiten
 
-/// Von einer Abwesenheit betroffener Einsatz (z. B. „Do 19.11.: Halle Süd – Estrich · unterbesetzt (1 von mindestens 2)“).
+/// Von einer Abwesenheit betroffener Einsatz (z. B. „Do 19.11.: Halle Süd, Estrich. Unterbesetzt: 1 von mindestens 2.“).
 public struct AffectedAssignment: Codable, Equatable, Sendable {
     public let day: String
     public let text: String

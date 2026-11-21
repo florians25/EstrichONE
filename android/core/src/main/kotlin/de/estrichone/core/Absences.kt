@@ -226,7 +226,7 @@ suspend fun EstrichOneApi.cancelAbsence(id: String): AbsenceRequestItem = send("
 @Serializable
 data class AffectedAssignmentItem(val id: String, val day: String, val bauakteTitle: String = "", val crewName: String? = null, val understaffed: Boolean = false, val text: String = "")
 
-/** Warnung: z. B. „Anna Kraus abwesend 18.11. – 20.11.“ mit betroffenen Einsätzen; gesundheitsbezogene Arten nur für die Personalverwaltung. */
+/** Warnung: z. B. „Anna Kraus abwesend 18.11. bis 20.11.“ mit betroffenen Einsätzen; gesundheitsbezogene Arten nur für die Personalverwaltung. */
 @Serializable
 data class AbsenceWarningItem(
     val key: String,

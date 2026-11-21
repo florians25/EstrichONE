@@ -120,7 +120,9 @@ public static class AbsenceWarningRules
 
     public static string D(DateOnly day) => day.ToString("dd.MM.yyyy", German);
 
-    private static string Range(DateOnly from, DateOnly to) => HrEndpoints.Range(from, to);
+    /// <summary>Zeitraum ohne Gedankenstrich: „17.11. bis 23.11.2026“.</summary>
+    public static string Range(DateOnly from, DateOnly to) =>
+        from == to ? D(from) : $"{from.ToString(from.Year == to.Year ? "dd.MM." : "dd.MM.yyyy", German)} bis {D(to)}";
 
     private static string Severity(bool error, bool warning = true) => error ? "error" : warning ? "warning" : "info";
 
@@ -204,10 +206,10 @@ public static class AbsenceWarningRules
             var present = a.People.Count(p => !input.Absences.Any(x => x.UserId == p && x.FullDay(a.Day)));
             var understaffed = present == 0 || (a.MinimumStaff is { } min && present < min);
             var half = !absence.FullDay(a.Day) ? " (halber Tag)" : string.Empty;
-            var crew = a.CrewName is null ? string.Empty : $", {a.CrewName}";
-            var text = $"{a.Day.ToString("ddd dd.MM.", German)}{half}: {a.BauakteTitle} – {a.Activity}{crew}" + (present == 0
-                ? " · niemand mehr eingeplant"
-                : a.MinimumStaff is { } m && present < m ? $" · unterbesetzt ({present} von mindestens {m})" : $" · noch {present} {(present == 1 ? "Person" : "Personen")}");
+            var crew = a.CrewName is null ? string.Empty : $" ({a.CrewName})";
+            var text = $"{a.Day.ToString("ddd dd.MM.", German)}{half}: {a.BauakteTitle}, {a.Activity}{crew}." + (present == 0
+                ? " Niemand mehr eingeplant."
+                : a.MinimumStaff is { } m && present < m ? $" Unterbesetzt: {present} von mindestens {m}." : $" Noch {present} {(present == 1 ? "Person" : "Personen")} eingeplant.");
             result.Add(new AffectedAssignment(a.Id, a.Day, a.BauakteId, a.BauakteTitle, a.Activity, a.CrewId, a.CrewName, present, a.MinimumStaff, understaffed, text));
         }
 
@@ -263,8 +265,8 @@ public static class AbsenceWarningRules
                 var what = index == 0 ? "AU-Bescheinigung" : "Folgebescheinigung";
                 yield return Warning(input, $"au:{e.Id}", AbsenceWarningKinds.Certificate, Severity(input.Today > due.AddDays(3)), e.UserId, due,
                     $"{Name(input, e.UserId)}: {what} fehlt",
-                    $"Arbeitsunfähig {Range(e.From, e.To)} ({day}. Kalendertag). Nachweis erwartet ab dem {D(due)} – eAU bei der Krankenkasse abrufen "
-                    + "(dann „eAU abgerufen“ markieren) oder die Bescheinigung anhängen.", e.Id, c.Id);
+                    $"Arbeitsunfähig {Range(e.From, e.To)} ({day}. Kalendertag). Nachweis erwartet ab dem {D(due)}. Bitte die eAU bei der Krankenkasse abrufen "
+                    + "und als abgerufen markieren oder die Bescheinigung anhängen.", e.Id, c.Id);
             }
         }
     }
@@ -293,7 +295,7 @@ public static class AbsenceWarningRules
                 : $"Die Entgeltfortzahlung (§ 3 EFZG, 6 Wochen) für den Krankheitsfall seit {D(c.From)} endet voraussichtlich am {D(end)}.";
             if (before > 0)
             {
-                text += $" Frühere Krankmeldungen in den 6 Monaten davor: {before} Kalendertage – bei derselben Ursache zählen sie mit"
+                text += $" Frühere Krankmeldungen in den 6 Monaten davor: {before} Kalendertage. Bei derselben Ursache zählen sie mit"
                     + (earliest < end ? $" (Ende dann bereits am {D(earliest)})." : ".");
             }
 

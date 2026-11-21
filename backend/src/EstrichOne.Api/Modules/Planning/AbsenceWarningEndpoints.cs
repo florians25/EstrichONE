@@ -209,7 +209,7 @@ internal static class AbsenceWarningNotifications
             if (ids.Count > 0)
             {
                 await notifier.NotifyAsync(ids, new NotificationRequest(NotificationCategory.Absence, "Neue Abwesenheitsmeldung",
-                    $"{userName}, {HrEndpoints.Range(absence.From, absence.To)}", HrLink, "absence", absence.Id, NotificationUrgency.Normal,
+                    $"{userName}, {AbsenceWarningRules.Range(absence.From, absence.To)}", HrLink, "absence", absence.Id, NotificationUrgency.Normal,
                     $"absence-new:{absence.Id}", NotificationEvents.AbsenceWarning), cancellationToken);
             }
         }
@@ -246,7 +246,7 @@ internal static class AbsenceWarningNotifications
             }
 
             await notifier.NotifyAsync(ids, new NotificationRequest(NotificationCategory.Absence, "Personalhinweis",
-                $"{w.UserName}: Hinweis zur Abwesenheit – bitte in EstrichONE unter Personal prüfen.", HrLink, "absenceWarning", w.AbsenceId, NotificationUrgency.Normal,
+                $"{w.UserName}: Hinweis zur Abwesenheit. Bitte in EstrichONE unter Personal prüfen.", HrLink, "absenceWarning", w.AbsenceId, NotificationUrgency.Normal,
                 $"absence-warning:{w.Key}", NotificationEvents.AbsenceWarning), cancellationToken);
             count++;
         }

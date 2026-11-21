@@ -87,8 +87,8 @@ export function warningSummary(list: Pick<AbsenceWarningList, "enabled" | "items
 	if (c.total === 0) return { text: "Keine offenen Warnungen.", type: "Success" };
 	const parts = [c.errors ? `${c.errors} dringend` : null, c.warnings ? `${c.warnings} ${c.warnings === 1 ? "Warnung" : "Warnungen"}` : null,
 		c.infos ? `${c.infos} ${c.infos === 1 ? "Hinweis" : "Hinweise"}` : null].filter(Boolean);
-	const planning = c.planning ? ` · ${c.planning === 1 ? "1 Abwesenheit betrifft" : `${c.planning} Abwesenheiten betreffen`} geplante Einsätze` : "";
-	return { text: `${parts.join(", ")}${planning}.`, type: c.errors ? "Error" : c.warnings ? "Warning" : "Information" };
+	const planning = c.planning ? ` ${c.planning === 1 ? "1 Abwesenheit betrifft" : `${c.planning} Abwesenheiten betreffen`} geplante Einsätze.` : "";
+	return { text: `${parts.join(", ")}.${planning}`, type: c.errors ? "Error" : c.warnings ? "Warning" : "Information" };
 }
 
 /** Kennzahl „Abwesenheitswarnungen“ auf der Startseite. */
@@ -126,5 +126,5 @@ export function settingsSummary(s: AbsenceWarningSettings): string {
 		s.adjacent ? "angrenzende freie Tage" : null,
 	].filter(Boolean);
 	const to = [s.notifyHr ? "Personal" : null, s.notifyPlanners ? "Disposition" : null, s.notifyCrewLeaders ? "Kolonnenführer" : null].filter(Boolean);
-	return `${on.length ? on.join(", ") : "keine Regel aktiv"} · Benachrichtigung: ${to.length ? to.join(", ") : "niemand"}`;
+	return `Aktiv: ${on.length ? on.join(", ") : "keine Regel"}. Benachrichtigung: ${to.length ? to.join(", ") : "niemand"}.`;
 }
