@@ -504,8 +504,7 @@ export default class ObjectController extends BaseController {
 				{ key: "street", label: "Straße", maxLength: 200 },
 				{ key: "postalCode", label: "PLZ", maxLength: 10 },
 				{ key: "city", label: "Ort", maxLength: 100 },
-				{ key: "siteNotes", label: "Hinweise und Behinderungen", type: "textarea", rows: 5, maxLength: 2000,
-					help: "Wird in der Bauakte und in den Apps hervorgehoben (Zufahrt, Schlüssel, Strom …)." },
+				{ key: "siteNotes", label: "Hinweise und Behinderungen", type: "textarea", rows: 5, maxLength: 2000 },
 				{ key: "description", label: "Beschreibung", type: "textarea", rows: 8, maxLength: 4000 },
 			],
 			submit: async (v) => {

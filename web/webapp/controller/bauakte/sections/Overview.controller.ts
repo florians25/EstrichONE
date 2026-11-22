@@ -218,9 +218,8 @@ export default class Overview extends SectionBase {
 		const schema = block.source === "schema" ? await bauakteSchema() : null;
 		if (block.source === "schema" && !schema) return;
 		const saved = await openForm<BauakteDetail>({
-			title: `${block.label} bearbeiten`, large: true, initial: { value: block.text },
-			fields: [{ key: "value", label: block.label, type: "textarea", rows: 10, maxLength: block.maxLength,
-				help: block.key === "siteNotes" ? "Wird in der Bauakte und in den Apps hervorgehoben (Zufahrt, Schlüssel, Strom …)." : undefined }],
+			title: `${block.label} bearbeiten`, width: "56rem", initial: { value: block.text },
+			fields: [{ key: "value", type: "textarea", rows: 16, maxLength: block.maxLength }],
 			submit: (v) => {
 				const current = this.bauakte();
 				const value = typeof v.value === "string" && v.value.trim() ? v.value.trim() : null;

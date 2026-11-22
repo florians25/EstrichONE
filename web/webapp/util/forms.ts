@@ -248,7 +248,7 @@ function build(field: Field, initial: unknown, prefix: string, handle: () => For
 	switch (type) {
 		case "textarea": {
 			const c = new TextArea(id, { value: (initial as string) ?? "", rows: field.rows ?? 3, width: "100%", placeholder: field.placeholder,
-				maxLength: field.maxLength ?? 0, showExceededText: !!field.maxLength, growing: true, growingMaxLines: 12 });
+				maxLength: field.maxLength ?? 0, showExceededText: !!field.maxLength, growing: true, growingMaxLines: Math.max(12, field.rows ?? 3) });
 			return { field, control: c, read: () => c.getValue().trim(), write: (v) => c.setValue((v as string) ?? "") };
 		}
 		case "number":
@@ -432,9 +432,11 @@ export function openForm<T>(spec: FormSpec<T>): Promise<T | null> {
 		if (field.label && field.type !== "info") {
 			form.addContent(new Label({ text: field.label, labelFor: b.control, required: !!field.required }));
 		}
-		form.addContent(b.control);
 		if (field.help && field.type !== "info") {
-			form.addContent(new Text().setText(field.help).addStyleClass("eoHelpText"));
+			// Hinweis unter dem Feld statt daneben: das Feld behält die volle Breite.
+			form.addContent(new VBox({ width: "100%", items: [b.control, new Text().setText(field.help).addStyleClass("eoHelpText")] }));
+		} else {
+			form.addContent(b.control);
 		}
 	}
 
