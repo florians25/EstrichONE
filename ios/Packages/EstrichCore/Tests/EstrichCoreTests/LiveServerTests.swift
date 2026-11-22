@@ -622,7 +622,7 @@ struct LiveServerTests {
         let device = try await syncingAccount()
         let client = device.client
         // Modul einschalten (Administrator, Standard ist aus).
-        let settings = try JSONSerialization.data(withJSONObject: ["enabled": true, "retentionDays": 90, "showPreview": true, "editWindowMinutes": 15])
+        let settings = try JSONSerialization.data(withJSONObject: ["enabled": true, "retentionDays": 90, "showPreview": true, "editWindowMinutes": 15, "attachmentsEnabled": true])
         let _: NoContent = try await client.send(APIRequest(method: "PUT", path: "chat/admin/settings", body: settings, contentType: "application/json"))
         let status = try await client.chatStatus()
         #expect(status.isAvailable && status.canAdmin && status.editWindowMinutes == 15)
