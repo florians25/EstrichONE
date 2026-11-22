@@ -35,7 +35,7 @@ public sealed class ChatMessengerTests(PostgresFixture postgres) : IAsyncLifetim
 
     private static async Task EnableAsync(HttpClient admin, bool showPreview = true)
     {
-        using var response = await admin.PutAsJsonAsync("/api/v1/chat/admin/settings", new { enabled = true, retentionDays = 90, showPreview }, Ct);
+        using var response = await admin.PutAsJsonAsync("/api/v1/chat/admin/settings", new { enabled = true, retentionDays = 90, showPreview, attachmentsEnabled = true }, Ct);
         response.StatusCode.ShouldBe(HttpStatusCode.OK, await response.Content.ReadAsStringAsync(Ct));
     }
 

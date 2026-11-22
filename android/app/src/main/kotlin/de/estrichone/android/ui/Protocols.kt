@@ -148,7 +148,7 @@ fun InspectionScreen(bauakteId: String, id: String?) {
                     } catch (e: IllegalArgumentException) {
                         error = e.message
                     }
-                }, modifier = Modifier.fillMaxWidth().height(52.dp)) { Text("Erstbegehung abschließen") }
+                }, modifier = Modifier.fillMaxWidth().height(48.dp)) { Text("Erstbegehung abschließen") }
             }
             Spacer(Modifier.height(40.dp))
         }
@@ -209,7 +209,7 @@ fun AcceptanceScreen(bauakteId: String, id: String?) {
                     } catch (e: IllegalArgumentException) {
                         error = e.message
                     }
-                }, modifier = Modifier.fillMaxWidth().height(52.dp)) { Text("Abnahme speichern") }
+                }, modifier = Modifier.fillMaxWidth().height(48.dp)) { Text("Abnahme speichern") }
             }
             Spacer(Modifier.height(40.dp))
         }

@@ -1,6 +1,13 @@
 package de.estrichone.android.ui
 
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.withLink
+import de.estrichone.core.chatBauakteGroup
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material3.Button
@@ -196,20 +203,8 @@ fun BauakteScreen(id: String, showBack: Boolean = true) {
             if (viewOnly) {
                 DropdownMenuItem(text = { Text(BauakteNotAssignedException.JOIN) }, onClick = { menu = false; join() })
             }
+            // Erfassen (Fotos, Scan, Tagebuch, Mangel …) steht unten im Knopf „Erfassen“; hier nur Verwaltung.
             if (!viewOnly) {
-            DropdownMenuItem(text = { Text("Dokument scannen") }, leadingIcon = { Icon(Icons.Filled.DocumentScanner, null) },
-                onClick = { menu = false; nav.push(Route.Camera(id, scan = true)) })
-            if (modules.isOn(AppModules.DIARY)) {
-                DropdownMenuItem(text = { Text("Bautagebuch-Eintrag") }, leadingIcon = { Icon(Icons.AutoMirrored.Outlined.MenuBook, null) },
-                    onClick = { menu = false; nav.captureTask = SiteTask.Diary.with(id) })
-            }
-            if (modules.isOn(AppModules.DEFECTS)) {
-                DropdownMenuItem(text = { Text("Mangel melden") }, leadingIcon = { Icon(Icons.Outlined.ReportProblem, null) },
-                    onClick = { menu = false; nav.captureTask = SiteTask.Defect.with(id) })
-            }
-            DropdownMenuItem(text = { Text("Weitere erfassen …") }, leadingIcon = { Icon(Icons.Outlined.MoreHoriz, null) },
-                onClick = { menu = false; nav.captureOpenFor = id })
-            HorizontalDivider()
             DropdownMenuItem(text = { Text("Basisdaten bearbeiten") }, onClick = { menu = false; nav.push(Route.Area(id, AreaKind.Project)) })
             }
             DropdownMenuItem(text = { Text("Bauakte als PDF") }, onClick = {
@@ -233,7 +228,14 @@ fun BauakteScreen(id: String, showBack: Boolean = true) {
                 })
             }
             if (chat?.isAvailable == true && chat?.readOnly != true) {
-                DropdownMenuItem(text = { Text("Baustellenchat") }, onClick = { menu = false; nav.push(Route.ChatList) })
+                DropdownMenuItem(text = { Text("Baustellenchat") }, onClick = {
+                    menu = false
+                    // Gruppe der Bauakte direkt öffnen (wenn Mitglied), sonst die Chatliste.
+                    scope.launch {
+                        val group = runCatching { withContext(Dispatchers.IO) { session.api.chatBauakteGroup(id) } }.getOrNull()
+                        nav.openChat(group?.conversationId?.takeIf { group.member })
+                    }
+                })
             }
             if (isMember) {
                 DropdownMenuItem(text = { Text(BauakteNotAssignedException.LEAVE) }, onClick = {
@@ -265,14 +267,11 @@ fun BauakteScreen(id: String, showBack: Boolean = true) {
             item { ContactCard(b, session) }
             item { PinnedNote(session, id) }
             item { InitialInspectionHint(session, b) }
+            item { FreeTexts(session, b, viewOnly) }
             item { ProjectGrid(session, b) }
             if (modules.anyOn(AppModules.TASKS, AppModules.DEFECTS)) item { OpenPoints(session, id) }
             item { PhotoStrip(session, id) }
             item { Areas(session, b) }
-            b.description?.takeIf { it.isNotBlank() }?.let { text ->
-                item { SectionHeader("Beschreibung") }
-                item { SectionCard(padding = androidx.compose.foundation.layout.PaddingValues(16.dp)) { Text(text) } }
-            }
         }
         }
     }
@@ -307,21 +306,85 @@ private fun Header(b: Bauakte, session: Session, viewOnly: Boolean = false) {
     }
 }
 
-/** Foto und Video – die zwei Hauptaktionen der Baustelle, groß unten. */
+/**
+ * Erfassen nur in der Bauakte: „Foto“ (häufigste Aktion) und „Erfassen“ mit allem anderen (Video, Scan, Datei, Tagebuch,
+ * Protokolle, Mangel, Aufgabe, Notiz) für genau diese Baustelle. 48 dp hoch, gut mit Handschuhen.
+ */
 @Composable
 private fun CaptureBar(id: String) {
     val nav = LocalNav.current
     Surface(color = MaterialTheme.colorScheme.surfaceContainer) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button(onClick = { nav.push(Route.Camera(id)) }, modifier = Modifier.weight(1f).heightIn(min = 52.dp)) {
-                Icon(Icons.Filled.PhotoCamera, null, modifier = Modifier.size(20.dp))
+            Button(onClick = { nav.push(Route.Camera(id)) }, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) {
+                Icon(Icons.Filled.PhotoCamera, null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
                 Text("Foto")
             }
-            FilledTonalButton(onClick = { nav.captureTask = SiteTask.Video.with(id) }, modifier = Modifier.weight(1f).heightIn(min = 52.dp)) {
-                Icon(Icons.Filled.Videocam, null, modifier = Modifier.size(20.dp))
+            FilledTonalButton(onClick = { nav.captureOpenFor = id }, modifier = Modifier.weight(1f).heightIn(min = 48.dp).testTag("bauakteCapture")) {
+                Icon(Icons.Filled.Add, null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
-                Text("Video")
+                Text("Erfassen")
+            }
+        }
+    }
+}
+
+/**
+ * Freitexte als Textblöcke mit Überschrift: Hinweise und Behinderungen (hervorgehoben), Beschreibung, Zugang und
+ * Besonderheiten u. a. Zeilenumbrüche bleiben, Links, E-Mail und Telefon sind antippbar, lange Texte zuerst gekürzt.
+ */
+@Composable
+private fun FreeTexts(session: Session, b: Bauakte, viewOnly: Boolean) {
+    val nav = LocalNav.current
+    val schema = remember(b.id) { session.service.schema("bauakte") }
+    val blocks = remember(b) { de.estrichone.core.FreeText.blocks(b, schema) }
+    if (blocks.isEmpty()) return
+    Column(Modifier.padding(top = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        blocks.forEach { block ->
+            FreeTextCard(block, onEdit = if (viewOnly) null else ({ nav.push(Route.Area(b.id, AreaKind.Project)) }))
+        }
+    }
+}
+
+@Composable
+private fun FreeTextCard(block: de.estrichone.core.FreeText.Block, onEdit: (() -> Unit)?) {
+    var expanded by remember(block.key, block.text) { mutableStateOf(false) }
+    val accent = if (block.important) tones.warning else MaterialTheme.colorScheme.primary
+    val linkStyle = androidx.compose.ui.text.TextLinkStyles(androidx.compose.ui.text.SpanStyle(color = MaterialTheme.colorScheme.primary,
+        textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline))
+    val text = remember(block.text, linkStyle) {
+        androidx.compose.ui.text.buildAnnotatedString {
+            de.estrichone.core.FreeText.segments(block.text).forEach { part ->
+                val target = part.target
+                if (target == null) append(part.text)
+                else withLink(androidx.compose.ui.text.LinkAnnotation.Url(target, linkStyle)) { append(part.text) }
+            }
+        }
+    }
+    SectionCard(Modifier.testTag("freeText-${block.key}")) {
+        Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
+            if (block.important) Box(Modifier.width(4.dp).fillMaxHeight().background(accent))
+            Column(Modifier.weight(1f).padding(start = 16.dp, end = 4.dp, top = 4.dp, bottom = 12.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (block.important) {
+                        Icon(Icons.Filled.Warning, null, tint = accent, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                    }
+                    Text(block.label, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                    if (onEdit != null) {
+                        IconButton(onClick = onEdit) { Icon(Icons.Filled.Edit, "${block.label} bearbeiten", tint = tones.textSecondary, modifier = Modifier.size(20.dp)) }
+                    } else {
+                        Spacer(Modifier.height(48.dp))
+                    }
+                }
+                Text(text, style = MaterialTheme.typography.bodyLarge, maxLines = if (expanded || !block.isLong) Int.MAX_VALUE else de.estrichone.core.FreeText.COLLAPSED_LINES,
+                    overflow = TextOverflow.Ellipsis)
+                if (block.isLong) {
+                    TextButton(onClick = { expanded = !expanded }, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 0.dp),
+                        modifier = Modifier.heightIn(min = 48.dp)) {
+                        Text(if (expanded) "Weniger anzeigen" else "Mehr anzeigen")
+                    }
+                }
             }
         }
     }
@@ -505,7 +568,8 @@ private fun ProjectGrid(session: Session, b: Bauakte) {
     val schema = remember(b.id) { session.service.schema("bauakte") }
     val lists = remember(b.id) { session.service.valueLists() }
     var expanded by remember(b.id) { mutableStateOf(false) }
-    val fields = keyDataFirst(schema?.groups?.flatMap { it.fields }.orEmpty().mapNotNull { field ->
+    // Mehrzeilige Freitexte stehen als eigene Textblöcke darüber (FreeTexts).
+    val fields = keyDataFirst(schema?.groups?.flatMap { it.fields }.orEmpty().filter { it.type != "textarea" }.mapNotNull { field ->
         field.display(b.project[field.path.removePrefix("project.")], lists)?.let { field.label to it }
     })
     SectionHeader("Basisdaten", action = if (fields.isEmpty()) null else "Bearbeiten", onAction = { nav.push(Route.Area(b.id, AreaKind.Project)) })
@@ -627,7 +691,7 @@ private fun OnlineBauakteScreen(id: String, showBack: Boolean) {
                             .onFailure { model.message(it.message ?: "Eintragen nicht möglich. Bitte mit Verbindung erneut versuchen.") }
                         working = false
                     }
-                }, enabled = !working, modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp)) { Text(BauakteNotAssignedException.JOIN) }
+                }, enabled = !working, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text(BauakteNotAssignedException.JOIN) }
             }
             Secondary("Auf dem Gerät liegen nur Bauakten, denen Sie zugeteilt sind. Nach dem Eintragen wird die Bauakte vollständig geladen, auch für unterwegs ohne Verbindung.")
         }

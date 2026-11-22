@@ -19,13 +19,13 @@ import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.Apartment
+import androidx.compose.material.icons.filled.Forum
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.WbSunny
-import androidx.compose.material.icons.outlined.AddCircleOutline
 import androidx.compose.material.icons.outlined.Apartment
+import androidx.compose.material.icons.outlined.Forum
 import androidx.compose.material.icons.outlined.MoreHoriz
 import androidx.compose.material.icons.outlined.People
 import androidx.compose.material.icons.outlined.WbSunny
@@ -54,11 +54,14 @@ import de.estrichone.android.AppModel
 import de.estrichone.android.Session
 import de.estrichone.core.NotificationRoute
 
-/** Reiter wie auf iOS: Heute · Baustellen · Erfassen · Kunden · Mehr. */
+/**
+ * Reiter: Heute, Baustellen, Chat, Kunden, Mehr. Erfassen gibt es nur noch in der Bauakte (Knopf „Erfassen“), damit immer
+ * klar ist, zu welcher Baustelle Fotos, Tagebuch und Mängel gehören. Chat nur mit Chat-Recht und eingeschaltetem Modul.
+ */
 enum class Tab(val label: String, val selected: ImageVector, val icon: ImageVector) {
     Today("Heute", Icons.Filled.WbSunny, Icons.Outlined.WbSunny),
     Bauakten("Baustellen", Icons.Filled.Apartment, Icons.Outlined.Apartment),
-    Capture("Erfassen", Icons.Filled.AddCircle, Icons.Outlined.AddCircleOutline),
+    Chat("Chat", Icons.Filled.Forum, Icons.Outlined.Forum),
     Customers("Kunden", Icons.Filled.People, Icons.Outlined.People),
     More("Mehr", Icons.Filled.MoreHoriz, Icons.Outlined.MoreHoriz),
 }
@@ -104,8 +107,7 @@ sealed interface Route {
 class Nav(initialTab: Tab) {
     var tab by mutableStateOf(initialTab)
     private val stacks = mutableStateMapOf<Tab, List<Route>>()
-    var captureOpen by mutableStateOf(false)
-    /** „Mehr“ in der Bauakte: Erfassen für diese Baustelle. */
+    /** Erfassen-Blatt der Bauakte mit dieser ID (Knopf „Erfassen“ in der Bauakte). */
     var captureOpenFor by mutableStateOf<String?>(null)
     var captureTask by mutableStateOf<CaptureRequest?>(null)
     var snackbar = SnackbarHostState()
@@ -133,11 +135,23 @@ class Nav(initialTab: Tab) {
     }
 
     fun select(target: Tab) {
-        if (target == Tab.Capture) {
-            captureOpen = true
-            return
-        }
         if (target == tab) root() else tab = target
+    }
+
+    /** Reiter „Chat“ öffnen, optional gleich eine Unterhaltung. */
+    fun openChat(conversationId: String? = null) {
+        tab = Tab.Chat
+        stacks[Tab.Chat] = listOfNotNull(conversationId?.let { Route.Chat(it) })
+    }
+
+    /**
+     * Erfassen aus „Heute“: Bauakte öffnen und dort erfassen (Foto: Kamera der Bauakte, sonst das Formular),
+     * damit Zurück in der Bauakte landet.
+     */
+    fun captureIn(bauakteId: String, task: SiteTask) {
+        tab = Tab.Bauakten
+        stacks[Tab.Bauakten] = listOfNotNull(Route.Bauakte(bauakteId), if (task == SiteTask.Photo) Route.Camera(bauakteId) else null)
+        if (task != SiteTask.Photo) captureTask = task.with(bauakteId)
     }
 
     /** Ziel einer Benachrichtigung bzw. eines Links öffnen. */
@@ -156,7 +170,7 @@ class Nav(initialTab: Tab) {
             is NotificationRoute.Ticket -> { tab = Tab.More; stacks[tab] = listOf(Route.Helpdesk, Route.Ticket(route.id)) }
             is NotificationRoute.Planning -> { tab = Tab.More; stacks[tab] = listOf(Route.Dispatch) }
             NotificationRoute.Tasks -> { tab = Tab.More; stacks[tab] = listOf(Route.Tasks) }
-            is NotificationRoute.Chat -> { tab = Tab.Today; stacks[tab] = listOfNotNull(Route.ChatList, route.conversationId?.let { Route.Chat(it) }) }
+            is NotificationRoute.Chat -> openChat(route.conversationId)
             NotificationRoute.Inbox -> { tab = Tab.Today; stacks[tab] = listOf(Route.Inbox) }
         }
     }
@@ -179,14 +193,16 @@ val TwoPaneWidth = 840.dp
 fun MainScreen(model: AppModel, session: Session, nav: Nav = remember { Nav(Tab.Today) }) {
     val chat by session.chat.collectAsState()
     val unreadTickets by session.unreadTickets.collectAsState()
-    val moreBadge = unreadTickets + (chat?.takeIf { it.isAvailable }?.unreadCount ?: 0)
+    val chatAvailable = chat?.isAvailable == true
+    val chatBadge = chat?.takeIf { it.isAvailable }?.unreadCount ?: 0
+    val moreBadge = unreadTickets
 
     LaunchedEffect(Unit) { model.messages.collect { nav.snackbar.showSnackbar(it) } }
     // Angetippte Mitteilung: Ziel öffnen (Bauakte mit Bereich, Chat, Urlaub, Postfach …).
     val pending by model.pendingRoute.collectAsState()
     LaunchedEffect(pending) {
         pending?.let {
-            nav.captureOpen = false
+            nav.captureOpenFor = null
             nav.open(it)
             model.routeOpened()
         }
@@ -197,14 +213,19 @@ fun MainScreen(model: AppModel, session: Session, nav: Nav = remember { Nav(Tab.
       Box(Modifier.fillMaxSize()) {
         NavigationSuiteScaffold(
             navigationSuiteItems = {
-                Tab.entries.forEach { tab ->
+                Tab.entries.filter { it != Tab.Chat || chatAvailable || nav.tab == Tab.Chat }.forEach { tab ->
+                    val badge = when (tab) {
+                        Tab.Chat -> chatBadge
+                        Tab.More -> moreBadge
+                        else -> 0
+                    }
                     item(
-                        selected = nav.tab == tab && tab != Tab.Capture,
+                        selected = nav.tab == tab,
                         onClick = { nav.select(tab) },
                         icon = {
                             val image = if (nav.tab == tab) tab.selected else tab.icon
-                            if (tab == Tab.More && moreBadge > 0) {
-                                BadgedBox(badge = { CountBadge(moreBadge) }) { Icon(image, null) }
+                            if (badge > 0) {
+                                BadgedBox(badge = { CountBadge(badge) }) { Icon(image, if (tab == Tab.Chat) "$badge ungelesen" else null) }
                             } else {
                                 Icon(image, null)
                             }
@@ -234,9 +255,7 @@ fun MainScreen(model: AppModel, session: Session, nav: Nav = remember { Nav(Tab.
         // Update-Ablauf: Wartungsbildschirm über allem (auch über die Navigation).
         UpdateMaintenanceOverlay(session)
       }
-        if (nav.captureOpen || nav.captureOpenFor != null) {
-            CaptureHub(bauakteId = nav.captureOpenFor, onDismiss = { nav.captureOpen = false; nav.captureOpenFor = null })
-        }
+        nav.captureOpenFor?.let { id -> CaptureHub(bauakteId = id, onDismiss = { nav.captureOpenFor = null }) }
         nav.captureTask?.let { request -> CaptureFlow(request, onDone = { nav.captureTask = null }) }
     }
 }
@@ -272,7 +291,8 @@ private fun TabContent(nav: Nav) {
 @Composable
 private fun RootScreen(tab: Tab, selected: String?) {
     when (tab) {
-        Tab.Today, Tab.Capture -> HomeScreen()
+        Tab.Today -> HomeScreen()
+        Tab.Chat -> ChatListScreen(root = true)
         Tab.Bauakten -> BauaktenScreen(selected)
         Tab.Customers -> CustomersScreen(selected)
         Tab.More -> MoreScreen()

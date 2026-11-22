@@ -92,6 +92,7 @@ object DemoData {
                 "nominalThicknessMm" to 65, "strengthClass" to "C25-F4", "underfloorHeating" to true, "heatingType" to "water", "insulation" to "EPS 035 DEO",
                 "insulationThicknessMm" to 40, "siteAccess" to "Pumpe am Straßenrand, Schlauch über die Terrasse", "waterOnSite" to true, "powerOnSite" to true),
             -2, 3, mapOf("latitude" to 48.5372, "longitude" to 12.1521, "description" to "Heizestrich CT-C25-F4, 65 mm, EG und OG",
+                "siteNotes" to "Zufahrt über die Hofeinfahrt, Schlüssel bei Familie Huber (Tel. 0871 4433221).\nHund im Garten, Tor bitte immer schließen.",
                 "siteContactName" to "Herr Schneider", "siteContactPhone" to "0171 2345678", "updatedAt" to time(-1800)))
         bauakte(HALLE, "2026-042", "Halle Gewerbering", "planned", "Gewerbering 3", "84030", "Ergolding", HUBER_BAU,
             mapOf("objectType" to "industrial", "totalArea" to 600, "screedType" to "ct", "construction" to "bonded", "nominalThicknessMm" to 50,

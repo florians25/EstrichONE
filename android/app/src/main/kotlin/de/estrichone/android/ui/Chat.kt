@@ -123,7 +123,7 @@ private fun chatIcon(type: ChatType) = when (type) {
 
 /** Unterhaltungen (WhatsApp-Ersatz): ungelesene oben fett, Abfrage alle 15 Sekunden (ohne Push). */
 @Composable
-fun ChatListScreen() {
+fun ChatListScreen(root: Boolean = false) {
     val session = LocalSession.current
     val nav = LocalNav.current
     var search by remember { mutableStateOf("") }
@@ -142,7 +142,7 @@ fun ChatListScreen() {
     // Modus „Microsoft Teams“: Chat-Archiv (lesen, kein neuer Chat).
     val status by session.chat.collectAsState()
     val archive = status?.readOnly == true
-    ScreenScaffold(if (archive) "Chat-Archiv" else "Chat", actions = { TeamsAction() }, floating = {
+    ScreenScaffold(if (archive) "Chat-Archiv" else "Chat", root = root, actions = { TeamsAction() }, floating = {
         if (!archive) ExtendedFloatingActionButton(onClick = { starting = true }, icon = { Icon(Icons.Outlined.PersonAdd, null) }, text = { Text("Neuer Chat") })
         // Modus „Microsoft Teams“: neuer Chat direkt in der Teams-App.
         else if (session.teams.collectAsState().value?.canStartChats == true) {
@@ -229,7 +229,10 @@ private fun StartChatSheet(onDismiss: () -> Unit, onStarted: (String) -> Unit) {
     }
 }
 
-/** Verlauf einer Unterhaltung mit Eingabe und Diktat. Keine Anhänge mehr – Hinweis auf Microsoft Teams (`ChatComposerPolicy`). */
+/**
+ * Verlauf einer Unterhaltung mit Eingabe, Diktat und Standort. Keine Dateien und Fotos: Hinweis auf Microsoft Teams mit
+ * „In Teams öffnen“ (`ChatComposerPolicy`); vorhandene Anhänge bleiben sichtbar.
+ */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ConversationScreen(id: String) {
@@ -257,8 +260,11 @@ fun ConversationScreen(id: String) {
 
     val teams by session.teams.collectAsState()
     var teamsLink by remember(id) { mutableStateOf<TeamsLink?>(null) }
+    var detail by remember(id) { mutableStateOf<de.estrichone.core.ChatConversationDetail?>(null) }
     LaunchedEffect(id) {
         conversation = runCatching { withContext(Dispatchers.IO) { session.api.chatConversations().firstOrNull { it.id == id } } }.getOrNull()
+        // Ziel für „In Teams öffnen“ vom Server (Bauakte, Kolonne, sonst allgemein); ältere Server liefern es nicht.
+        detail = runCatching { withContext(Dispatchers.IO) { session.api.chatConversation(id) } }.getOrNull()
         // Teams-Unterhaltung der Bauakte für den Hinweis „Für Datei- und Fotoaustausch …“ (nur mit Teams-Anbindung).
         val bauakteId = conversation?.bauakteId
         if (bauakteId != null && session.teams.value?.available == true) {
@@ -302,7 +308,22 @@ fun ConversationScreen(id: String) {
         }
     }
 
+    /** Standort senden (eigener Standort oder Baustellenadresse); bleibt im EstrichONE-Chat. */
+    fun sendLocation(location: de.estrichone.core.ChatLocation) {
+        val clientId = Ids.v7()
+        val local = ChatMessage(Ids.v7(), id, session.user.id, session.user.displayName, null, de.estrichone.core.ApiDate.format(Instant.now()), mine = true,
+            clientMessageId = clientId, localState = "sending", location = location)
+        messages.add(local)
+        scope.launch {
+            val result = runCatching { withContext(Dispatchers.IO) { session.api.sendChatMessage(id, null, clientId, location = location) } }
+            val index = messages.indexOfFirst { it.clientMessageId == clientId }
+            if (index >= 0) messages[index] = result.getOrNull() ?: local.copy(localState = "failed")
+            if (result.isFailure) model.message("Standort nicht gesendet. Bitte erneut versuchen.")
+        }
+    }
+
     val c = conversation
+    val site = remember(c?.bauakteId) { c?.bauakteId?.let { session.service.bauakte(it) }?.takeIf { it.hasLocation } }
     var info by remember { mutableStateOf(false) }
     ScreenScaffold(c?.title ?: "Chat", actions = {
         IconButton(onClick = { info = true }) { Icon(Icons.Filled.Groups, "Info zur Unterhaltung") }
@@ -316,7 +337,9 @@ fun ConversationScreen(id: String) {
                 modifier = Modifier.fillMaxWidth().background(tones.card).navigationBarsPadding().padding(16.dp))
         } else {
             Composer(text, { text = it }, replyTo ?: editing, editing != null, onCancel = { replyTo = null; editing = null; text = "" },
-                teamsTargets = ChatComposerPolicy.teamsTargets(teamsLink, teams), onSend = { send() })
+                teamsTargets = ChatComposerPolicy.teamsTargets(teamsLink, teams, detail, chatStatus), onSend = { send() },
+                site = site?.let { b -> de.estrichone.core.ChatLocation(b.latitude!!, b.longitude!!, b.addressLine ?: b.title) },
+                onLocation = { sendLocation(it) })
         }
     }) { padding ->
         if (info) ConversationInfo(id) { info = false }
@@ -505,6 +528,7 @@ private fun nameColor(name: String?): Color {
 @Composable
 private fun Composer(
     text: String, onText: (String) -> Unit, context: ChatMessage?, editing: Boolean, onCancel: () -> Unit, teamsTargets: TeamsTargets?, onSend: () -> Unit,
+    site: de.estrichone.core.ChatLocation? = null, onLocation: (de.estrichone.core.ChatLocation) -> Unit = {},
 ) {
     Surface(color = tones.card, tonalElevation = 2.dp) {
         Column(Modifier.navigationBarsPadding().imePadding()) {
@@ -519,7 +543,10 @@ private fun Composer(
                     IconButton(onClick = onCancel) { Icon(Icons.Filled.Close, "Abbrechen") }
                 }
             }
+            // Hinweis über dem Eingabefeld: Dateien und Fotos laufen über Microsoft Teams.
+            if (!editing) FileExchangeHint(teamsTargets)
             Row(Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 6.dp), verticalAlignment = Alignment.Bottom) {
+                if (!editing) LocationButton(site, onLocation)
                 TextField(text, onText, placeholder = { Text("Nachricht") }, maxLines = 5, shape = RoundedCornerShape(22.dp), modifier = Modifier.weight(1f),
                     colors = TextFieldDefaults.colors(focusedContainerColor = tones.fill, unfocusedContainerColor = tones.fill,
                         focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent),
@@ -528,7 +555,40 @@ private fun Composer(
                     Icon(Icons.AutoMirrored.Filled.Send, "Senden", tint = if (text.isNotBlank()) MaterialTheme.colorScheme.primary else tones.textTertiary)
                 }
             }
-            if (!editing) FileExchangeHint(teamsTargets)
+        }
+    }
+}
+
+/** Standort teilen: eigener Standort (nach Freigabe) oder Adresse der Baustelle. Statt des früheren Anhang-Knopfs. */
+@Composable
+private fun LocationButton(site: de.estrichone.core.ChatLocation?, onLocation: (de.estrichone.core.ChatLocation) -> Unit) {
+    val context = LocalContext.current
+    val model = LocalModel.current
+    val scope = rememberCoroutineScope()
+    var menu by remember { mutableStateOf(false) }
+    fun shareOwn() {
+        scope.launch {
+            val position = de.estrichone.android.support.DeviceLocation.current(context)
+            if (position == null) model.message("Standort nicht verfügbar. Bitte Ortung einschalten und erneut versuchen.")
+            else onLocation(de.estrichone.core.ChatLocation(position.latitude, position.longitude, "Mein Standort"))
+        }
+    }
+    val permission = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions(),
+    ) { result -> if (result.values.any { it }) shareOwn() else model.message("Ohne Freigabe der Ortung lässt sich der Standort nicht teilen.") }
+    Box {
+        IconButton(onClick = { menu = true }, modifier = Modifier.testTag("chatLocation")) {
+            Icon(Icons.Filled.Place, "Standort teilen", tint = MaterialTheme.colorScheme.primary)
+        }
+        DropdownMenu(menu, { menu = false }) {
+            DropdownMenuItem(text = { Text("Meinen Standort teilen") }, onClick = {
+                menu = false
+                if (de.estrichone.android.support.DeviceLocation.granted(context)) shareOwn()
+                else permission.launch(de.estrichone.android.support.DeviceLocation.permissions)
+            })
+            site?.let { address ->
+                DropdownMenuItem(text = { Text("Baustellenadresse teilen") }, onClick = { menu = false; onLocation(address) })
+            }
         }
     }
 }
@@ -538,7 +598,7 @@ private fun Composer(
 private fun FileExchangeHint(targets: TeamsTargets?) {
     val context = LocalContext.current
     val model = LocalModel.current
-    Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, bottom = 6.dp).testTag("chatFileExchangeHint"), verticalAlignment = Alignment.CenterVertically) {
+    Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, top = 4.dp).testTag("chatFileExchangeHint"), verticalAlignment = Alignment.CenterVertically) {
         Icon(Icons.Outlined.Info, null, tint = tones.textSecondary, modifier = Modifier.size(16.dp))
         Spacer(Modifier.width(6.dp))
         Text(ChatComposerPolicy.FILE_EXCHANGE_HINT, style = MaterialTheme.typography.bodySmall, color = tones.textSecondary, modifier = Modifier.weight(1f))

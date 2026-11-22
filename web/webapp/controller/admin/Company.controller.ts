@@ -368,7 +368,7 @@ export default class Company extends BaseController {
 		const c = this.model().getProperty("/chat") as ChatSettings | null;
 		if (!c) return;
 		const saved = await saveChatSettings({ enabled: c.enabled, retentionDays: Number(c.retentionDays), showPreview: c.showPreview,
-			workersCanChatEachOther: c.workersCanChatEachOther, version: c.version });
+			workersCanChatEachOther: c.workersCanChatEachOther, attachmentsEnabled: c.attachmentsEnabled === true, version: c.version });
 		this.model().setProperty("/chat", { ...saved, cleanupText: saved.lastCleanupAt ? dateTime(saved.lastCleanupAt) : "" });
 	}
 

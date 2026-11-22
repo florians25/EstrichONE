@@ -144,7 +144,7 @@ fun InboxActions() {
     val chat by session.chat.collectAsState()
     val unread by session.unreadNotifications.collectAsState()
     if (chat?.isAvailable == true) {
-        IconButton(onClick = { nav.push(Route.ChatList) }) {
+        IconButton(onClick = { nav.openChat() }) {
             BadgedBox(badge = { CountBadge(chat?.unreadCount ?: 0) }) { Icon(Icons.Outlined.Forum, "Chat") }
         }
     }

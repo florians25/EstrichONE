@@ -176,6 +176,25 @@ test('Microsoft Teams: Einstellungen, Chat-Modus, Bauakte per Link verknüpfen, 
   await expect(page.getByRole('heading', { level: 1 }).first()).toBeVisible();
   await expect(page.locator('[id$="teamsNotice"]').filter({ visible: true })).toHaveCount(0);
 
+  // Modus „beides“: Baustellen-Chat in EstrichONE mit Hinweis „Dateien und Fotos über Microsoft Teams“ und Link zum verknüpften Kanal.
+  expect((await apiCall(page, 'PUT', '/api/v1/settings/integrations/teams', { chatMode: 'both', rolloutNotice: false })).status).toBe(200);
+  expect((await apiCall(page, 'PUT', '/api/v1/chat/admin/settings', { enabled: true, retentionDays: 90, attachmentsEnabled: false })).status).toBe(200);
+  expect((await apiCall(page, 'PUT', `/api/v1/bauakten/${id}/members`, { userIds: [me.json.id, ...(other ? [other.userId] : [])] })).status).toBe(200);
+  const group = await apiCall<{ id: string }>(page, 'POST', `/api/v1/chat/bauakten/${id}/group`);
+  expect([200, 201]).toContain(group.status);
+  const status = await apiCall<{ filesViaTeams: boolean; teamsAvailable: boolean; teamsWebUrl: string }>(page, 'GET', '/api/v1/chat/status');
+  expect(status.json.filesViaTeams).toBe(true);
+  expect(status.json.teamsAvailable).toBe(true);
+  const detail = await apiCall<{ teamsWebUrl: string; teamsLinked: boolean }>(page, 'GET', `/api/v1/chat/conversations/${group.json.id}`);
+  expect(detail.json.teamsLinked).toBe(true);
+  await page.goto(`/chat/${group.json.id}`);
+  const files = page.locator('.eoChatFilesStrip');
+  await expect(files).toContainText('Dateien und Fotos tauschen Sie über Microsoft Teams aus.');
+  await shot(page, 'chat-dateien');
+  const [filesTab] = await Promise.all([page.waitForEvent('popup'), files.getByText('In Teams öffnen').click()]);
+  expect(filesTab.url()).toContain('/l/channel/');
+  await filesTab.close();
+
   // Verknüpfung lösen und Modus zurück auf den eingebauten Chat (folgende Tests erwarten ihn).
   const unlink = await apiCall(page, 'DELETE', `/api/v1/bauakten/${id}/teams`);
   expect(unlink.status).toBe(204);

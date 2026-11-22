@@ -41,7 +41,8 @@ Legende: ✅ umgesetzt · 🟡 teilweise (siehe Bemerkung) · ❌ fehlt noch
 | Überblick: Meine Aufgaben (davon Mängel), Wer fährt wohin, Meine Woche als Listenzeilen mit Zahl | ✅ | ✅ | ersetzt Kacheln und die Vorschauen „Offene Aufgaben“/„Wer fährt wohin“ |
 | Morgen (iOS) bzw. Diese Woche (Android), Zuletzt geöffnet | ✅ | ✅ | iOS zusätzlich Wischen/langes Drücken für Foto, Tagebuch, Route |
 | Laden: graue Platzhalterzeilen statt Drehkreisel (Listen, Bauakte) | ✅ | ✅ | |
-| Oben rechts nur Glocke mit Zahl; Abgleich, Chat und „In Teams öffnen“ im Menü „…“ bzw. „⋮“ | ✅ | ✅ | |
+| Oben rechts nur Glocke mit Zahl; Abgleich und „In Teams öffnen“ im Menü „…“ bzw. „⋮“ | ✅ | ✅ | Chat als eigener Reiter unten |
+| „Foto“ und „Tagebuch“ im Einsatz öffnen die Bauakte und erfassen dort (Zurück führt in die Bauakte) | ✅ | ✅ | ab 1.0.32 |
 
 ## Mehr
 
@@ -59,8 +60,9 @@ Legende: ✅ umgesetzt · 🟡 teilweise (siehe Bemerkung) · ❌ fehlt noch
 | Schnellanlage mit Art, Adresse, Kunde (vorhanden oder neu) – offline | ✅ | ✅ | |
 | Dublettenprüfung beim neuen Kunden | ✅ | 🟡 | Hinweis auf ähnliche Kunden aus dem Bestand auf dem Gerät (offline); Serverprüfung `contacts/duplicates` nicht genutzt |
 | Basisdaten oben auf einen Blick: Nummer, Status ändern, Titel, Adresse + Route, Kunde/vor Ort/Bauleitung + Anruf, nächster Einsatz | ✅ | ✅ | ohne Kennzahl-Kapseln (stehen unter Basisdaten) |
-| Unten immer „Foto“ und „Video“ (große Schaltflächen) | ✅ | ✅ | Hauptaktionen der Bauakte |
-| Menü „…“/„⋮“: Scannen, Tagebuch, Mangel, Aufgabe, Notiz, Erstbegehung, Abnahme, CM-Messung, PDF, Basisdaten, Teams | ✅ | ✅ | Android: Aufgabe, Notiz und Prüfungen unter „Weitere erfassen …“ |
+| Unten immer „Foto“ und „Erfassen“ (48 dp) | ✅ | ✅ | „Erfassen“: Video, Scan, Datei, Tagebuch, Erstbegehung, CM-Messung, Abnahme, Mangel, Aufgabe, Notiz für diese Bauakte |
+| Menü „…“/„⋮“: Basisdaten, PDF, Teams, Baustellenchat, Austragen, Stornieren | ✅ | ✅ | Erfassen nur noch über den Knopf „Erfassen“ |
+| Freitexte (Hinweise und Behinderungen, Beschreibung, mehrzeilige Schema-Felder) als Textblöcke mit Überschrift, Links/Telefon antippbar, „Mehr anzeigen“ | ✅ | ✅ | `FreeText` im Kern, unit-getestet |
 | Basisdaten: vier Kennwerte direkt (zuerst Estrichart, Dicke, Fläche, Termin), „Alle Basisdaten“ klappt auf | ✅ | ✅ | unit-getestet |
 | Angeheftete Notiz, Hinweise nur bei Bedarf; Offene Punkte und neueste Fotos nur, wenn vorhanden | ✅ | ✅ | |
 | Basisdaten nach Formular-Schema bearbeiten | ✅ | ✅ | |
@@ -84,7 +86,7 @@ Legende: ✅ umgesetzt · 🟡 teilweise (siehe Bemerkung) · ❌ fehlt noch
 
 | Funktion | iOS | Android | Bemerkung |
 |---|---|---|---|
-| Aktionsblatt mit Baustellenwahl (heute zuerst, Suche) | ✅ | ✅ | |
+| Erfassen-Blatt der Bauakte (kein eigener Reiter mehr) | ✅ | ✅ | ab 1.0.32; Baustellenwahl nur noch intern |
 | Kamera mit Serienaufnahme | ✅ | ✅ CameraX | Lautstärketaste löst aus |
 | Galerie | ✅ | ✅ Photo Picker | ohne Speicherberechtigung |
 | Video | ✅ eigene Ansicht | 🟡 | Kamera-App des Geräts |
@@ -116,12 +118,14 @@ Legende: ✅ umgesetzt · 🟡 teilweise (siehe Bemerkung) · ❌ fehlt noch
 | Funktion | iOS | Android | Bemerkung |
 |---|---|---|---|
 | Chat: Unterhaltungen, Verlauf, Senden, Antworten, Reaktionen, Bearbeiten, Löschen | ✅ | ✅ | |
-| Chat: keine Dateien/Fotos mehr senden, Hinweis „Für Datei- und Fotoaustausch bitte Microsoft Teams verwenden.“ (mit „In Teams öffnen“, wenn verknüpft) | ✅ | ✅ | `ChatComposerPolicy` in beiden Kernen |
+| Chat: eigener Reiter unten mit Ungelesen-Zahl | ✅ | ✅ | ab 1.0.32 |
+| Chat: keine Dateien/Fotos mehr senden, Hinweis „Dateien und Fotos tauschen Sie über Microsoft Teams aus.“ über dem Eingabefeld (mit „In Teams öffnen“, wenn Teams im Einsatz) | ✅ | ✅ | `ChatComposerPolicy`; Ziel aus `teamsWebUrl` der Unterhaltung (Server ab 1.0.32) |
+| Chat: Standort senden (eigener Standort nach Freigabe, Baustellenadresse) | ✅ | ✅ | ab 1.0.32 |
 | Chat: Fotos und Dokumente älterer Nachrichten ansehen/öffnen, Standort ansehen | ✅ | ✅ | |
 | Chat: Diktat | ✅ | ✅ Android-Spracheingabe | |
 | Microsoft Teams: „In Teams öffnen“ (Bauakte und Heute im Menü, Mehr), Chat-Archiv im Modus „Microsoft Teams“ | ✅ | ✅ | Teams-App per `msteams:`, sonst Browser |
 | Chat: Einzelchat starten, Info (Mitglieder, Stummschalten) | ✅ | ✅ | |
-| Chat: Gruppen anlegen, Weiterleiten, Anheften, Suche, Medienübersicht, Standort senden | ✅ | ❌ | API im Kern teils vorhanden |
+| Chat: Gruppen anlegen, Weiterleiten, Anheften, Suche, Medienübersicht | ✅ | ❌ | API im Kern teils vorhanden |
 | Chat: Echtzeit | ✅ SSE | 🟡 | Abfrage alle 5 s im Verlauf, 15 s in der Liste |
 | Chat: Ausgang offline (Nachrichten später senden) | ✅ | ❌ | ohne Netz schlägt das Senden sichtbar fehl |
 | Postfach (Benachrichtigungen, gelesen, alle gelesen, Ziel öffnen) | ✅ | ✅ | |
@@ -132,7 +136,7 @@ Legende: ✅ umgesetzt · 🟡 teilweise (siehe Bemerkung) · ❌ fehlt noch
 
 | Thema | Android |
 |---|---|
-| Navigation | NavigationSuiteScaffold: Leiste auf Telefonen, Rail auf Tablets; Liste + Detail nebeneinander ab 840 dp |
+| Navigation | NavigationSuiteScaffold mit Heute, Baustellen, Chat, Kunden, Mehr: Leiste auf Telefonen, Rail auf Tablets; Liste + Detail nebeneinander ab 840 dp |
 | Hell/dunkel | beide, wählbar (System/Hell/Dunkel); optional Systemfarben (Material You) nur für Flächen |
 | Große Schrift | folgt der Systemschriftgröße |
 | Zurück | Predictive Back (enableOnBackInvokedCallback), eigener Stapel je Reiter |

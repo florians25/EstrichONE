@@ -359,6 +359,9 @@
 							<Label text="Mitarbeiter untereinander" labelFor="chatWorkers"/>
 							<Switch id="chatWorkers" state="{view>/chat/workersCanChatEachOther}" customTextOn=" " customTextOff=" "/>
 							<Label text=""/><Text text="Aus: Mitarbeiter ohne Recht „Chat verwalten“ können Einzelchats nur mit dem Büro beginnen." class="eoMuted"/>
+							<Label text="Dateien und Fotos im Chat" labelFor="chatFiles"/>
+							<Switch id="chatFiles" state="{view>/chat/attachmentsEnabled}" customTextOn=" " customTextOff=" "/>
+							<Label text=""/><Text text="Aus (Standard): Dateien und Fotos tauschen alle über Microsoft Teams aus, der Chat zeigt dazu einen Hinweis. Text, Diktat und Standort bleiben im EstrichONE-Chat, vorhandene Anhänge bleiben sichtbar. Ein: nur für Betriebe ohne Teams." class="eoMuted"/>
 							<Label text="Bestand"/>
 							<Text text="{view>/chat/conversations} Unterhaltungen, {view>/chat/messages} Nachrichten (verschlüsselt){= ${view>/chat/lastCleanupAt} ? ', letzte Löschung ' + ${view>/chat/cleanupText} : '' }"/>
 							<Label text="Betroffenenrechte"/>

@@ -286,7 +286,7 @@ public sealed class EndpointAccessTests(PostgresFixture postgres) : IAsyncLifeti
     {
         var admin = await _factory.CreateClientAsAsync("chefin", StandardRoles.AdministratorId);
         var officeUser = await _factory.CreateUserAsync("buero", roleIds: StandardRoles.OfficeId);
-        (await admin.PutAsJsonAsync("/api/v1/chat/admin/settings", new { enabled = true, retentionDays = 90, showPreview = false }, Ct)).EnsureSuccessStatusCode();
+        (await admin.PutAsJsonAsync("/api/v1/chat/admin/settings", new { enabled = true, retentionDays = 90, showPreview = false, attachmentsEnabled = true }, Ct)).EnsureSuccessStatusCode();
 
         using var created = await admin.PostAsJsonAsync("/api/v1/bauakten", new { id = Guid.CreateVersion7(), title = "Fremde Baustelle", city = "Landshut" }, Ct);
         created.EnsureSuccessStatusCode();

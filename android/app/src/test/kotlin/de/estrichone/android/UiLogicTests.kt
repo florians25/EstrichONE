@@ -27,6 +27,23 @@ class UiLogicTests {
     }
 
     @Test
+    fun navigationHasChatTabAndCapturesInsideBauakte() {
+        val tabs = de.estrichone.android.ui.Tab.entries.map { it.label }
+        assertEquals(listOf("Heute", "Baustellen", "Chat", "Kunden", "Mehr"), tabs)
+        val nav = de.estrichone.android.ui.Nav(de.estrichone.android.ui.Tab.Today)
+        nav.open(de.estrichone.core.NotificationRoute.Chat("c1"))
+        assertEquals(de.estrichone.android.ui.Tab.Chat, nav.tab)
+        assertEquals(listOf(de.estrichone.android.ui.Route.Chat("c1")), nav.stack())
+        // Foto aus „Heute“: Kamera über der Bauakte (Zurück führt in die Bauakte).
+        nav.captureIn("b1", de.estrichone.android.ui.SiteTask.Photo)
+        assertEquals(de.estrichone.android.ui.Tab.Bauakten, nav.tab)
+        assertEquals(listOf(de.estrichone.android.ui.Route.Bauakte("b1"), de.estrichone.android.ui.Route.Camera("b1")), nav.stack())
+        nav.captureIn("b1", de.estrichone.android.ui.SiteTask.Diary)
+        assertEquals(listOf(de.estrichone.android.ui.Route.Bauakte("b1")), nav.stack())
+        assertEquals(de.estrichone.android.ui.SiteTask.Diary.with("b1"), nav.captureTask)
+    }
+
+    @Test
     fun crewColorsAreParsed() {
         assertEquals(0xFFE07A1F.toInt(), parseColor("#E07A1F")!!.value.shr(32).toInt())
         assertNull(parseColor("rot"))

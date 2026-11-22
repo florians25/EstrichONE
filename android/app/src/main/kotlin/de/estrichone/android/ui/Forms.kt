@@ -86,7 +86,7 @@ fun FormSheet(
                 } catch (e: IllegalStateException) {
                     error = e.message
                 }
-            }, enabled = canSave, modifier = Modifier.fillMaxWidth().height(52.dp)) { Text(save) }
+            }, enabled = canSave, modifier = Modifier.fillMaxWidth().height(48.dp)) { Text(save) }
         }
     }
 }

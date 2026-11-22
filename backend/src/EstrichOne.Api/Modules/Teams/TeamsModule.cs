@@ -51,6 +51,33 @@ internal sealed class TeamsIntegration(EstrichOneDbContext db, TeamsQueue queue)
     public async Task<TeamsChatMode> ChatModeAsync(CancellationToken cancellationToken) =>
         await db.Set<TeamsSettingsRow>().AsNoTracking().Select(s => (TeamsChatMode?)s.ChatMode).SingleOrDefaultAsync(cancellationToken) ?? TeamsChatMode.EstrichOne;
 
+    public async Task<TeamsChatTarget?> ChatTargetAsync(Guid? bauakteId, Guid? crewId, CancellationToken cancellationToken)
+    {
+        var row = await db.Set<TeamsSettingsRow>().AsNoTracking().SingleOrDefaultAsync(cancellationToken);
+        if (row is null || row.ChatMode == TeamsChatMode.EstrichOne)
+        {
+            return null;
+        }
+
+        if (bauakteId is { } bauakte && await db.Set<TeamsBauakteLink>().AsNoTracking().Where(l => l.BauakteId == bauakte)
+                .Select(l => new { l.WebUrl, l.DisplayName }).FirstOrDefaultAsync(cancellationToken) is { WebUrl.Length: > 0 } link)
+        {
+            return new TeamsChatTarget(link.WebUrl, TeamsService.AppUrl(link.WebUrl), link.DisplayName, Linked: true);
+        }
+
+        if (crewId is { } crew && await db.Set<TeamsCrewChat>().AsNoTracking().Where(c => c.CrewId == crew)
+                .Select(c => new { c.WebUrl, c.DisplayName }).FirstOrDefaultAsync(cancellationToken) is { WebUrl.Length: > 0 } chat)
+        {
+            return new TeamsChatTarget(chat.WebUrl, TeamsService.AppUrl(chat.WebUrl), chat.DisplayName, Linked: true);
+        }
+
+        return row.SiteTeamUrl is { Length: > 0 } site
+            ? new TeamsChatTarget(site, TeamsService.AppUrl(site), row.SiteTeamName)
+            : new TeamsChatTarget(DefaultWebUrl, "msteams:");
+    }
+
+    internal const string DefaultWebUrl = "https://teams.microsoft.com";
+
     public void Publish(TeamsEvent teamsEvent) => queue.Write(teamsEvent);
 
     public void BauakteTeamChanged(Guid bauakteId) => queue.Write(new TeamChanged(bauakteId));

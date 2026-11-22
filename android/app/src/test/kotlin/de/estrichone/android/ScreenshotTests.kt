@@ -196,10 +196,21 @@ abstract class ScreenshotBase(private val device: String, private val appearance
     fun raeume() = main("raeume", Tab.Bauakten, listOf(Route.Bauakte(DemoData.EFH), Route.Area(DemoData.EFH, AreaKind.Rooms)))
 
     @Test
-    fun chat() = main("chat", Tab.Today, listOf(Route.ChatList, Route.Chat(DemoChat.SITE)))
+    fun chat() = main("chat", Tab.Chat, listOf(Route.Chat(DemoChat.SITE)))
 
     @Test
-    fun chatliste() = main("chatliste", Tab.Today, listOf(Route.ChatList))
+    fun chatliste() = main("chatliste", Tab.Chat)
+
+    /** Bauakte: Knopf „Erfassen“ öffnet das Erfassen-Blatt dieser Baustelle (unten gibt es kein „Erfassen“ mehr). */
+    @Test
+    fun bauakteErfassen() {
+        val model = demo()
+        val session = model.session.value!!
+        shot("bauakte-erfassen") {
+            val nav = remember { Nav(Tab.Bauakten).also { it.set(Tab.Bauakten, listOf(Route.Bauakte(DemoData.EFH))); it.captureOpenFor = DemoData.EFH } }
+            MainScreen(model, session, nav)
+        }
+    }
 
     @Test
     fun benachrichtigungen() = inbox("benachrichtigungen")

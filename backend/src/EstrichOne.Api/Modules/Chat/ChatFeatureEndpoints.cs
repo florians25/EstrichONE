@@ -194,6 +194,11 @@ internal static partial class ChatEndpoints
         }
 
         var wanted = attachmentIds.Distinct().ToList();
+        if (wanted.Count > 0 && !(await chat.SettingsAsync(cancellationToken)).AttachmentsEnabled)
+        {
+            return (null, FilesViaTeams());
+        }
+
         if (wanted.Count > ChatLimits.MaxAttachmentsPerMessage)
         {
             return (null, Validation($"Höchstens {ChatLimits.MaxAttachmentsPerMessage} Anhänge je Nachricht."));
@@ -360,6 +365,10 @@ internal static partial class ChatEndpoints
         var text = chat.Unprotect(message.ProtectedText);
         var location = chat.UnprotectLocation(message.ProtectedLocation);
         var sources = await db.Set<ChatAttachment>().AsNoTracking().Where(a => a.MessageId == id).OrderBy(a => a.CreatedAt).ToListAsync(cancellationToken);
+        if (sources.Count > 0 && !(await chat.SettingsAsync(cancellationToken)).AttachmentsEnabled)
+        {
+            return FilesViaTeams();
+        }
         var results = new List<ChatMessage>();
         foreach (var target in targets)
         {
@@ -446,7 +455,7 @@ internal static partial class ChatEndpoints
 
         if (!(await chat.SettingsAsync(cancellationToken)).AttachmentsEnabled)
         {
-            return Validation("Anhänge sind im Chat ausgeschaltet (Einstellungen › Module › Chat).");
+            return FilesViaTeams();
         }
 
         var content = await ReadBodyAsync(http, ChatLimits.MaxAttachmentBytes, cancellationToken);

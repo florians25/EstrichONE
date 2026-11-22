@@ -426,6 +426,80 @@ public sealed class TeamsTests(PostgresFixture postgres) : IAsyncLifetime
     }
 
     [Fact]
+    public async Task FilesViaTeams_DefaultOff_UploadRejectedClearly_TeamsTargetInStatusAndConversation()
+    {
+        var (office, officeId) = await UserAsync("buero", StandardRoles.OfficeId);
+        var (worker, workerId) = await UserAsync("baustelle", StandardRoles.SiteWorkerId);
+        using (var enable = await office.PutAsJsonAsync("/api/v1/chat/admin/settings", new { enabled = true, retentionDays = 90 }, Ct))
+        {
+            enable.EnsureSuccessStatusCode();
+            (await enable.Content.ReadFromJsonAsync<ChatSettingsResponse>(TestJson.Options, Ct))!.AttachmentsEnabled.ShouldBeFalse();
+        }
+
+        // Ohne Teams: Hinweis ja, Link nein.
+        var status = (await worker.GetFromJsonAsync<ChatStatusResponse>("/api/v1/chat/status", TestJson.Options, Ct))!;
+        status.FilesViaTeams.ShouldBeTrue();
+        status.AttachmentsEnabled.ShouldBeFalse();
+        status.TeamsAvailable.ShouldBeFalse();
+        status.TeamsWebUrl.ShouldBeNull();
+
+        using var start = await worker.PostAsJsonAsync("/api/v1/chat/conversations/direct", new { userId = officeId }, Ct);
+        var direct = (await start.Content.ReadFromJsonAsync<ChatConversationSummary>(TestJson.Options, Ct))!;
+        using (var body = new ByteArrayContent([0xFF, 0xD8, 0xFF, 0xE0]))
+        {
+            body.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("image/jpeg");
+            using var upload = await worker.PostAsync(new Uri($"/api/v1/chat/conversations/{direct.Id}/attachments?fileName=a.jpg", UriKind.Relative), body, Ct);
+            upload.StatusCode.ShouldBe(HttpStatusCode.UnprocessableEntity);
+            var problem = await upload.Content.ReadAsStringAsync(Ct);
+            problem.ShouldContain("CHAT_FILES_VIA_TEAMS");
+            problem.ShouldContain("Microsoft Teams");
+        }
+
+        using (var withIds = await worker.PostAsJsonAsync($"/api/v1/chat/conversations/{direct.Id}/messages",
+                   new { text = "Foto", attachmentIds = new[] { Guid.CreateVersion7() } }, Ct))
+        {
+            withIds.StatusCode.ShouldBe(HttpStatusCode.UnprocessableEntity);
+            (await withIds.Content.ReadAsStringAsync(Ct)).ShouldContain("CHAT_FILES_VIA_TEAMS");
+        }
+
+        // Text und Standort bleiben.
+        using (var text = await worker.PostAsJsonAsync($"/api/v1/chat/conversations/{direct.Id}/messages",
+                   new { text = "Bin da", location = new { latitude = 48.1, longitude = 11.5, label = "Baustelle" } }, Ct))
+        {
+            text.StatusCode.ShouldBe(HttpStatusCode.Created);
+        }
+
+        // Mit Teams: allgemeines Ziel im Status, verknüpfter Chat der Bauakte in der Unterhaltung.
+        await SaveAsync(_admin, new { chatMode = "both" });
+        status = (await worker.GetFromJsonAsync<ChatStatusResponse>("/api/v1/chat/status", TestJson.Options, Ct))!;
+        status.TeamsAvailable.ShouldBeTrue();
+        status.TeamsWebUrl.ShouldBe("https://teams.microsoft.com");
+        var plain = (await worker.GetFromJsonAsync<ChatConversationDetail>($"/api/v1/chat/conversations/{direct.Id}", TestJson.Options, Ct))!;
+        plain.TeamsWebUrl.ShouldBe("https://teams.microsoft.com");
+        plain.TeamsLinked.ShouldBeFalse();
+
+        var bauakte = await BauakteAsync("Halle Teams", workerId, officeId);
+        var url = $"https://teams.microsoft.com/l/channel/19%3aabc999%40thread.tacv2/Halle%20Teams?groupId={FakeGraphServer.TeamId}&tenantId={Tenant}";
+        await LinkAsync(bauakte, new { url });
+        using var group = await office.PostAsync(new Uri($"/api/v1/chat/bauakten/{bauakte}/group", UriKind.Relative), null, Ct);
+        group.IsSuccessStatusCode.ShouldBeTrue(await group.Content.ReadAsStringAsync(Ct));
+        var groupId = (await office.GetFromJsonAsync<System.Text.Json.Nodes.JsonObject>($"/api/v1/chat/bauakten/{bauakte}/group", Ct))!["conversationId"]!
+            .GetValue<Guid>();
+        var detail = (await worker.GetFromJsonAsync<ChatConversationDetail>($"/api/v1/chat/conversations/{groupId}", TestJson.Options, Ct))!;
+        detail.TeamsLinked.ShouldBeTrue();
+        detail.TeamsWebUrl.ShouldBe(url);
+        detail.TeamsAppUrl!.ShouldStartWith("msteams:");
+
+        // Betrieb ohne Teams kann Anhänge wieder erlauben.
+        using (var allow = await office.PutAsJsonAsync("/api/v1/chat/admin/settings", new { enabled = true, retentionDays = 90, attachmentsEnabled = true }, Ct))
+        {
+            allow.EnsureSuccessStatusCode();
+        }
+
+        (await worker.GetFromJsonAsync<ChatStatusResponse>("/api/v1/chat/status", TestJson.Options, Ct))!.FilesViaTeams.ShouldBeFalse();
+    }
+
+    [Fact]
     public async Task TeamsMode_ChatBecomesReadOnlyArchive_ExportStillWorks()
     {
         var (office, officeId) = await UserAsync("buero", StandardRoles.OfficeId);

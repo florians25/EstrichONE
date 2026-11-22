@@ -238,8 +238,11 @@ public sealed class ChatSettingsRow : IVersionedEntity
     /// <summary>Eigene Nachrichten lassen sich so viele Minuten nach dem Senden bearbeiten (0 = nie).</summary>
     public int EditWindowMinutes { get; set; } = DefaultEditWindowMinutes;
 
-    /// <summary>Fotos und PDFs im Chat erlaubt.</summary>
-    public bool AttachmentsEnabled { get; set; } = true;
+    /// <summary>
+    /// Fotos und PDFs im EstrichONE-Chat erlaubt. Standard aus (ab 1.0.32): Dateien und Fotos laufen über Microsoft Teams, der
+    /// EstrichONE-Chat bleibt für Text und Standort. Betriebe ohne Teams schalten es unter Einstellungen › Module › Chat wieder ein.
+    /// </summary>
+    public bool AttachmentsEnabled { get; set; }
 
     /// <summary>Einmalige Grundeinrichtung (Rechte für Standardrollen) erledigt.</summary>
     public bool Seeded { get; set; }

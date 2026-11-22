@@ -100,7 +100,7 @@ export function formFields(schema: FormSchema, current?: Pick<BauakteDetail, "pr
 					? { ...base, maxLength: 30, suggestions: options?.map((o) => o.text) }
 					: { ...base, type: "select", options, placeholder: "–" }); break;
 				case "text": out.push({ ...base, maxLength: f.builtin ? 100 : 2000, suggestions: f.list ? (schema.lists[f.list] ?? []).map((o) => o.label) : undefined }); break;
-				case "textarea": out.push({ ...base, type: "textarea", rows: 2, maxLength: f.builtin ? 1000 : 2000 }); break;
+				case "textarea": out.push({ ...base, type: "textarea", rows: 4, maxLength: f.builtin ? 1000 : 2000 }); break;
 				case "number": out.push({ ...base, type: "number", min: 0, max: 1_000_000 }); break;
 				case "integer": out.push({ ...base, type: "integer", min: 0, max: 100_000 }); break;
 				case "boolean": out.push({ ...base, type: "switch" }); break;
@@ -133,8 +133,13 @@ export function displayValue(schema: FormSchema, f: SchemaField, v: unknown): st
 }
 
 /** Gruppen mit lesbaren Werten für die Basisdaten-Anzeige. */
-export function viewGroups(schema: FormSchema, b: Pick<BauakteDetail, "project" | "plannedStart" | "plannedEnd"> | null): { label: string; rows: { label: string; value: string }[] }[] {
-	return schema.groups.map((g) => ({ label: g.label, rows: g.fields.map((f) => ({ label: f.label, value: displayValue(schema, f, readValue(b, f.path)) })) }));
+export function viewGroups(schema: FormSchema, b: Pick<BauakteDetail, "project" | "plannedStart" | "plannedEnd"> | null,
+	options: { skipTextareas?: boolean } = {}): { label: string; rows: { label: string; value: string }[] }[] {
+	// Mehrzeilige Freitexte stehen auf Wunsch als eigene Textblöcke (util/freeText.ts) statt in der Spaltenansicht.
+	return schema.groups
+		.map((g) => ({ label: g.label, rows: g.fields.filter((f) => !(options.skipTextareas && f.type === "textarea"))
+			.map((f) => ({ label: f.label, value: displayValue(schema, f, readValue(b, f.path)) })) }))
+		.filter((g) => g.rows.length > 0);
 }
 
 /** Badges für den Kopf: Felder mit „badge“, nur wenn gesetzt (Ja/Nein nur bei „ja“). */

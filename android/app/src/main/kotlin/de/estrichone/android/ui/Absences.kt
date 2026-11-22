@@ -431,7 +431,7 @@ fun AbsenceRequestScreen(changing: AbsenceRequestItem? = null) {
                             sending = false
                         }
                     }
-                }, enabled = draft.problem == null && !sending && !unchanged, modifier = Modifier.fillMaxWidth().height(56.dp)) {
+                }, enabled = draft.problem == null && !sending && !unchanged, modifier = Modifier.fillMaxWidth().height(52.dp)) {
                     Text(when {
                         sending -> "Wird gesendet …"
                         changing != null -> "Änderung beantragen"

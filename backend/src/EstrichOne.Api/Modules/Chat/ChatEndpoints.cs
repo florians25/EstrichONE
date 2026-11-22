@@ -18,10 +18,17 @@ namespace EstrichOne.Api.Modules.Chat;
 /// <param name="Realtime">Echtzeitkanal: <c>sse</c> = <c>GET /chat/events</c>; Polling bleibt als Rückfall.</param>
 /// <param name="Mode">Chat-Modus (Einstellungen › Integrationen › Microsoft Teams).</param>
 /// <param name="ReadOnly">Modus „Microsoft Teams“: der Chat ist ein Archiv – lesen und exportieren, nicht schreiben.</param>
+/// <param name="AttachmentsEnabled">Fotos und PDFs dürfen im EstrichONE-Chat gesendet werden (ab 1.0.32 Standard aus).</param>
+/// <param name="FilesViaTeams">Dateien und Fotos laufen über Microsoft Teams: Anhang-Knopf ausblenden, Hinweis zeigen. Text, Diktat und Standort
+/// bleiben im EstrichONE-Chat; vorhandene Anhänge bleiben sichtbar.</param>
+/// <param name="TeamsAvailable">Teams ist im Betrieb im Einsatz (Chat-Modus nicht „EstrichONE-Chat“); dann gibt es <paramref name="TeamsWebUrl"/>.</param>
+/// <param name="TeamsWebUrl">Allgemeines Ziel für „In Teams öffnen“ (Team „Baustellen“ bzw. Teams); je Unterhaltung genauer im Detail.</param>
+/// <param name="TeamsAppUrl">Wie <paramref name="TeamsWebUrl"/> für die Teams-App (<c>msteams:</c>).</param>
 public sealed record ChatStatusResponse(bool Enabled, bool CanUse, bool CanAdmin, int UnreadCount, int UnreadConversations, int RetentionDays, bool ShowPreview,
     bool PrivacyAccepted = false, bool Blocked = false, int EditWindowMinutes = ChatSettingsRow.DefaultEditWindowMinutes, bool AttachmentsEnabled = true,
     long MaxAttachmentBytes = ChatLimits.MaxAttachmentBytes, bool ReadReceipts = true, bool PersonalShowPreview = true, string Realtime = "sse",
-    int PrivacyNoticeVersion = ChatLimits.PrivacyNoticeVersion, TeamsChatMode Mode = TeamsChatMode.EstrichOne, bool ReadOnly = false);
+    int PrivacyNoticeVersion = ChatLimits.PrivacyNoticeVersion, TeamsChatMode Mode = TeamsChatMode.EstrichOne, bool ReadOnly = false,
+    bool FilesViaTeams = false, bool TeamsAvailable = false, string? TeamsWebUrl = null, string? TeamsAppUrl = null);
 
 /// <summary>Grenzen für Clients.</summary>
 public static class ChatLimits
@@ -61,8 +68,13 @@ public sealed record ChatConversationSummary(
 /// <param name="FromCrew">Automatisch Mitglied (Kolonne bzw. Team der Bauakte).</param>
 public sealed record ChatMemberState(Guid UserId, string Name, DateTimeOffset? DeliveredUpTo, DateTimeOffset? ReadUpTo, bool FromCrew, bool IsAdmin = false);
 
+/// <param name="TeamsWebUrl">„In Teams öffnen“ für diese Unterhaltung: verknüpfter Teams-Chat der Bauakte bzw. Kolonne, sonst allgemein;
+/// <c>null</c> ohne Teams.</param>
+/// <param name="TeamsAppUrl">Wie <paramref name="TeamsWebUrl"/> für die Teams-App.</param>
+/// <param name="TeamsLinked"><paramref name="TeamsWebUrl"/> ist die mit Bauakte bzw. Kolonne verknüpfte Teams-Unterhaltung.</param>
 public sealed record ChatConversationDetail(ChatConversationSummary Conversation, IReadOnlyList<ChatMemberState> Members, bool CanManage,
-    IReadOnlyList<ChatMessageResponse>? Pinned = null, string? BauakteTitle = null);
+    IReadOnlyList<ChatMessageResponse>? Pinned = null, string? BauakteTitle = null, string? TeamsWebUrl = null, string? TeamsAppUrl = null,
+    bool TeamsLinked = false);
 
 /// <param name="Status">Nur eigene Nachrichten: <c>sent</c> (beim Server), <c>delivered</c> (bei allen abgeholt), <c>read</c> (von allen gelesen).</param>
 /// <param name="ReadBy">Eigene Nachrichten: Anzahl Empfänger, die gelesen haben.</param>
@@ -103,10 +115,11 @@ public sealed record ChatSettingsResponse(
     bool Enabled, int RetentionDays, bool ShowPreview, bool WorkersCanChatEachOther, DateTimeOffset? LastCleanupAt, int Conversations, int Messages, long Version,
     int EditWindowMinutes = ChatSettingsRow.DefaultEditWindowMinutes, bool AttachmentsEnabled = true, int Attachments = 0, long AttachmentBytes = 0);
 
+/// <param name="AttachmentsEnabled">Fotos und PDFs im EstrichONE-Chat erlauben (ohne Microsoft Teams); <c>null</c> = unverändert.</param>
 public sealed record SaveChatSettingsRequest(
     bool Enabled, [property: Range(7, 730)] int RetentionDays = ChatSettingsRow.DefaultRetentionDays, bool ShowPreview = false,
     bool WorkersCanChatEachOther = true, long? Version = null, [property: Range(0, 1440)] int EditWindowMinutes = ChatSettingsRow.DefaultEditWindowMinutes,
-    bool AttachmentsEnabled = true);
+    bool? AttachmentsEnabled = null);
 
 public sealed record ChatExportMessage(Guid Id, Guid ConversationId, string Conversation, string SenderName, bool Mine, DateTimeOffset CreatedAt, string? Text,
     IReadOnlyList<string>? Attachments = null);
@@ -189,6 +202,7 @@ internal static partial class ChatEndpoints
     {
         var settings = await chat.SettingsAsync(cancellationToken);
         var mode = await teams.ChatModeAsync(cancellationToken);
+        var target = mode == TeamsChatMode.EstrichOne ? null : await teams.ChatTargetAsync(null, null, cancellationToken);
         var granted = await permissions.GetAsync(cancellationToken);
         var canUse = granted.Contains(Permissions.ChatUse) || granted.Contains(Permissions.ChatAdmin);
         var (count, conversations) = settings.Enabled && canUse ? await UnreadAsync(db, user.UserId, cancellationToken) : (0, 0);
@@ -196,7 +210,8 @@ internal static partial class ChatEndpoints
         return TypedResults.Ok(new ChatStatusResponse(settings.Enabled, canUse && settings.Enabled, granted.Contains(Permissions.ChatAdmin), count, conversations,
             settings.RetentionDays, settings.ShowPreview, personal?.PrivacyAcceptedAt is not null, personal?.BlockedAt is not null, settings.EditWindowMinutes,
             settings.AttachmentsEnabled, ChatLimits.MaxAttachmentBytes, personal?.ReadReceipts ?? true, personal?.ShowPreview ?? true, Mode: mode,
-            ReadOnly: mode == TeamsChatMode.Teams));
+            ReadOnly: mode == TeamsChatMode.Teams, FilesViaTeams: !settings.AttachmentsEnabled, TeamsAvailable: target is not null,
+            TeamsWebUrl: target?.WebUrl, TeamsAppUrl: target?.AppUrl));
     }
 
     private static async Task<(int Messages, int Conversations)> UnreadAsync(EstrichOneDbContext db, Guid userId, CancellationToken cancellationToken)
@@ -412,7 +427,7 @@ internal static partial class ChatEndpoints
 
     private static async Task<Results<Ok<ChatConversationDetail>, ProblemHttpResult>> ConversationAsync(
         Guid id, ChatService chat, EstrichOneDbContext db, ICurrentUser user, Bauakten.Exports.IBauakteReportSource bauakten, TimeProvider clock,
-        CancellationToken cancellationToken)
+        ITeamsIntegration teams, CancellationToken cancellationToken)
     {
         var (conversation, member) = await FindAsync(db, id, user.UserId, cancellationToken);
         if (conversation is null)
@@ -420,7 +435,10 @@ internal static partial class ChatEndpoints
             return NotFound();
         }
 
-        return TypedResults.Ok(await DetailAsync(chat, db, user.UserId, conversation, member, bauakten, clock, cancellationToken));
+        var detail = await DetailAsync(chat, db, user.UserId, conversation, member, bauakten, clock, cancellationToken);
+        var target = await teams.ChatTargetAsync(conversation.BauakteId, conversation.CrewId, cancellationToken);
+        return TypedResults.Ok(target is null ? detail
+            : detail with { TeamsWebUrl = target.WebUrl, TeamsAppUrl = target.AppUrl, TeamsLinked = target.Linked });
     }
 
     private static async Task<ChatConversationDetail> DetailAsync(ChatService chat, EstrichOneDbContext db, Guid userId, ChatConversation conversation,
@@ -888,7 +906,7 @@ internal static partial class ChatEndpoints
         row.ShowPreview = request.ShowPreview;
         row.WorkersCanChatEachOther = request.WorkersCanChatEachOther;
         row.EditWindowMinutes = Math.Clamp(request.EditWindowMinutes, 0, 1440);
-        row.AttachmentsEnabled = request.AttachmentsEnabled;
+        row.AttachmentsEnabled = request.AttachmentsEnabled ?? row.AttachmentsEnabled;
         audit.Record("chat.settings_saved", user.UserId, "settings", "chat", new Dictionary<string, string?>
         {
             ["enabled"] = row.Enabled.ToString(), ["retentionDays"] = row.RetentionDays.ToString(Invariant), ["showPreview"] = row.ShowPreview.ToString(),
@@ -908,6 +926,13 @@ internal static partial class ChatEndpoints
     private static ProblemHttpResult ReadOnly() => TypedResults.Problem(statusCode: StatusCodes.Status409Conflict, title: "Chat-Archiv",
         detail: "Unterhaltungen finden jetzt in Microsoft Teams statt. Der Chat in EstrichONE ist nur noch zum Lesen und Exportieren da.",
         extensions: new Dictionary<string, object?> { ["code"] = "CHAT_READ_ONLY" });
+
+    /// <summary>Anhang senden, obwohl Dateien und Fotos über Teams laufen: verständliche Ablehnung (auch für ältere Apps, die den Knopf noch zeigen).</summary>
+    internal static ProblemHttpResult FilesViaTeams() => TypedResults.Problem(statusCode: StatusCodes.Status422UnprocessableEntity,
+        title: "Dateien über Microsoft Teams", detail: FilesViaTeamsText, extensions: new Dictionary<string, object?> { ["code"] = "CHAT_FILES_VIA_TEAMS" });
+
+    internal const string FilesViaTeamsText =
+        "Dateien und Fotos tauschen Sie über Microsoft Teams aus. Im EstrichONE-Chat senden Sie Text und Standort; Fotos zur Baustelle erfassen Sie in der Bauakte.";
 
     private static ProblemHttpResult Disabled() => TypedResults.Problem(statusCode: StatusCodes.Status409Conflict, title: "Modul deaktiviert",
         detail: "Der Chat ist deaktiviert (Einstellungen › Module).", extensions: new Dictionary<string, object?> { ["code"] = "MODULE_DISABLED" });

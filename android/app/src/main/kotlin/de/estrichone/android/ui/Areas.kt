@@ -678,6 +678,7 @@ private fun ProjectArea(id: String) {
     var postalCode by remember { mutableStateOf(bauakte.postalCode ?: "") }
     var city by remember { mutableStateOf(bauakte.city ?: "") }
     var description by remember { mutableStateOf(bauakte.description ?: "") }
+    var siteNotes by remember { mutableStateOf(bauakte.siteNotes ?: "") }
     fun key(field: FormField) = field.path.removePrefix("project.")
     fun current(field: FormField) = (bauakte.project[key(field)] as? JsonPrimitive)
 
@@ -700,6 +701,7 @@ private fun ProjectArea(id: String) {
             if (postalCode.trim() != (bauakte.postalCode ?: "")) changes["postalCode"] = postalCode
             if (city.trim() != (bauakte.city ?: "")) changes["city"] = city
             if (description.trim() != (bauakte.description ?: "")) changes["description"] = description
+            if (siteNotes.trim() != (bauakte.siteNotes ?: "")) changes["siteNotes"] = siteNotes
             if (kotlinx.serialization.json.JsonObject(project) != bauakte.project) changes["project"] = kotlinx.serialization.json.JsonObject(project)
             if (changes.isNotEmpty()) {
                 session.service.updateBauakte(id, changes)
@@ -715,7 +717,9 @@ private fun ProjectArea(id: String) {
                 OutlinedTextField(postalCode, { postalCode = it }, label = { Text("PLZ") }, singleLine = true, modifier = Modifier.weight(0.35f))
                 OutlinedTextField(city, { city = it }, label = { Text("Ort") }, singleLine = true, modifier = Modifier.weight(0.65f))
             }
-            DictationField(description, { description = it }, "Beschreibung", minLines = 2)
+            // Freitexte mehrzeilig (wachsen mit dem Text); Zeilenumbrüche bleiben erhalten.
+            DictationField(siteNotes, { siteNotes = it }, "Hinweise und Behinderungen", minLines = 3)
+            DictationField(description, { description = it }, "Beschreibung", minLines = 4)
             schema?.groups?.forEach { group ->
                 Text(group.label, style = SectionTitle, modifier = Modifier.padding(top = 12.dp))
                 group.fields.forEach { field ->
@@ -728,7 +732,7 @@ private fun ProjectArea(id: String) {
                         "select" -> SelectField(field.label, values[k] ?: current(field)?.content, lists.items(field.list ?: "").map { it.key to it.label }) { values[k] = it }
                         else -> OutlinedTextField(values[k] ?: (field.display(current(field), lists)?.removeSuffix(" ${field.unit}") ?: ""), { values[k] = it },
                             label = { Text(field.label) }, supportingText = field.help?.let { { Text(it) } }, suffix = field.unit?.let { { Text(it) } },
-                            minLines = if (field.type == "textarea") 3 else 1, singleLine = field.type != "textarea", modifier = Modifier.fillMaxWidth())
+                            minLines = if (field.type == "textarea") 4 else 1, singleLine = field.type != "textarea", modifier = Modifier.fillMaxWidth())
                     }
                 }
             }

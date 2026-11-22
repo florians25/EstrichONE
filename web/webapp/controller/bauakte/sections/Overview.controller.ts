@@ -19,6 +19,7 @@ import { akteContextOf } from "../../../util/akteHeader";
 import { openForm } from "../../../util/forms";
 import { openMapDialog } from "../../../util/mapDialog";
 import { bauakteSchema, formFields, initialValues, writeValues } from "../../../util/formSchema";
+import type { FreeTextBlock } from "../../../util/freeText";
 
 /** Übersicht: Objektbilder, Standort (im Büro per Klick setzen), Kennzahlen, Notizen, Aufgaben, Stammdaten, Aktivitäten. @namespace estrichone.controller.bauakte.sections */
 export default class Overview extends SectionBase {
@@ -201,6 +202,34 @@ export default class Overview extends SectionBase {
 	onOpenDoc(event: Event): void {
 		const id = (event.getSource() as Control).getBindingContext("ov")?.getProperty("id") as string;
 		navTo(`/bauakten/${this.bauakteId}/datei/${id}?abschnitt=dokumente`);
+	}
+
+	/** „Mehr anzeigen“ bzw. „Weniger anzeigen“ an einem langen Textblock. */
+	onToggleFreeText(event: Event): void {
+		const ctx = (event.getSource() as Control).getBindingContext("akte");
+		if (!ctx) return;
+		(ctx.getModel() as JSONModel).setProperty(`${ctx.getPath()}/expanded`, !ctx.getProperty("expanded"));
+	}
+
+	/** Einen Freitext bearbeiten: mehrzeiliger Editor, der mit dem Text mitwächst. */
+	async onEditFreeText(event: Event): Promise<void> {
+		const block = (event.getSource() as Control).getBindingContext("akte")?.getObject() as FreeTextBlock | undefined;
+		if (!block) return;
+		const schema = block.source === "schema" ? await bauakteSchema() : null;
+		if (block.source === "schema" && !schema) return;
+		const saved = await openForm<BauakteDetail>({
+			title: `${block.label} bearbeiten`, large: true, initial: { value: block.text },
+			fields: [{ key: "value", label: block.label, type: "textarea", rows: 10, maxLength: block.maxLength,
+				help: block.key === "siteNotes" ? "Wird in der Bauakte und in den Apps hervorgehoben (Zufahrt, Schlüssel, Strom …)." : undefined }],
+			submit: (v) => {
+				const current = this.bauakte();
+				const value = typeof v.value === "string" && v.value.trim() ? v.value.trim() : null;
+				return schema
+					? saveBauakte(current, writeValues(schema, { [block.key]: value }, current.project))
+					: saveBauakte(current, block.path === "siteNotes" ? { siteNotes: value } : { description: value });
+			},
+		});
+		if (saved) this.toast("Gespeichert");
 	}
 
 	/** Kennwerte des Bauvorhabens bearbeiten – Felder aus dem Formular-Schema. */

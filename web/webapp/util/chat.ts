@@ -21,6 +21,12 @@ export interface ChatStatus {
 	mode?: "estrichOne" | "teams" | "both";
 	/** Nur lesen und exportieren (Modus „Microsoft Teams“). */
 	readOnly?: boolean;
+	/** Dateien und Fotos über Microsoft Teams: kein Anhang-Upload, Hinweis zeigen (ab 1.0.32). */
+	filesViaTeams?: boolean;
+	/** Teams im Betrieb im Einsatz; dann allgemeines Ziel für „In Teams öffnen“. */
+	teamsAvailable?: boolean;
+	teamsWebUrl?: string | null;
+	teamsAppUrl?: string | null;
 }
 
 export type AttachmentKind = "photo" | "document";
@@ -67,6 +73,8 @@ export interface ChatMemberState {
 
 export interface ChatConversationDetail {
 	conversation: ChatConversation; members: ChatMemberState[]; canManage: boolean; pinned?: ChatMessage[]; bauakteTitle?: string | null;
+	/** „In Teams öffnen“ für diese Unterhaltung (verknüpfter Teams-Chat der Bauakte bzw. Kolonne, sonst allgemein). */
+	teamsWebUrl?: string | null; teamsAppUrl?: string | null; teamsLinked?: boolean;
 }
 
 export interface ChatMessage {

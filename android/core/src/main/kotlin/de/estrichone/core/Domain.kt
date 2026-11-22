@@ -60,6 +60,8 @@ data class Bauakte(val entity: LocalEntity) {
     val templateKey: String? = d.str("templateKey")
     val siteContactName: String? = d.str("siteContactName")
     val siteContactPhone: String? = d.str("siteContactPhone")
+    /** Hinweise und Behinderungen (Zufahrt, Schlüssel, Hund …), in allen Ansichten hervorgehoben. */
+    val siteNotes: String? = d.str("siteNotes")
     val cancellationReason: String? = d.str("cancellationReason")
     val project: JsonObject = d.obj("project") ?: JsonObject(emptyMap())
     val plannedStart: LocalDate? = ApiDate.day(d.str("plannedStart"))

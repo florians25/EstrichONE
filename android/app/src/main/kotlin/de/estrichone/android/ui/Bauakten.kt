@@ -322,7 +322,7 @@ fun NewBauakteSheet(onDismiss: () -> Unit, onCreated: (String) -> Unit) {
                 } catch (e: IllegalArgumentException) {
                     error = e.message
                 }
-            }, enabled = title.isNotBlank(), modifier = Modifier.fillMaxWidth().height(52.dp)) { Text("Anlegen") }
+            }, enabled = title.isNotBlank(), modifier = Modifier.fillMaxWidth().height(48.dp)) { Text("Anlegen") }
         }
     }
 }

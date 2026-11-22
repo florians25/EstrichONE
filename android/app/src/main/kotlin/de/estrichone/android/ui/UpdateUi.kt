@@ -244,7 +244,7 @@ fun UpdateRequiredScreen(updater: AppUpdater, state: UpdateState, pendingChanges
                     is UpdateState.Available, is UpdateState.UpToDate -> {
                         val kind = check?.download?.kind
                         Button(onClick = updater::start, enabled = kind == "package" || kind == "link" || kind == "store",
-                            modifier = Modifier.fillMaxWidth().height(52.dp)) { Text(if (kind == "package") "Jetzt aktualisieren" else "Update öffnen") }
+                            modifier = Modifier.fillMaxWidth().height(48.dp)) { Text(if (kind == "package") "Jetzt aktualisieren" else "Update öffnen") }
                         if (kind == null || kind == "none") Secondary("Der Server bietet noch keinen Download an. Bitte an die IT wenden.")
                         check?.download?.size?.takeIf { kind == "package" }?.let { Secondary("Download ${megabytes(it)} vom eigenen Server.") }
                     }
@@ -311,7 +311,7 @@ fun WhatsNewContent(notes: List<AppReleaseNote>, onDone: () -> Unit) {
             }
         }
         SectionCard(padding = androidx.compose.foundation.layout.PaddingValues(16.dp)) { ReleaseNotesList(notes) }
-        Button(onClick = onDone, modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp)) { Text("Verstanden") }
+        Button(onClick = onDone, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text("Verstanden") }
         Spacer(Modifier.height(16.dp))
     }
 }

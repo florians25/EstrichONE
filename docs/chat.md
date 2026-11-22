@@ -26,6 +26,37 @@ Lesen, gelesen markieren, stumm schalten, Anhang in Bauakte übernehmen und Expo
 Endpunkte antworten mit **409** `CHAT_READ_ONLY`. Kolonnen- und Baustellengruppen werden nicht mehr angepasst. Es wird
 nichts gelöscht. `GET /chat/status` enthält `mode` und `readOnly`; Web und Apps zeigen „Chat-Archiv“ und „In Teams öffnen“.
 
+## Dateien und Fotos über Microsoft Teams (ab 1.0.32)
+
+Dateien und Fotos tauschen alle Clients (Web, iOS, Android) über **Microsoft Teams** aus. Der EstrichONE-Chat bleibt für
+Text, Diktat und Standort. Vorhandene Anhänge bleiben sichtbar, lassen sich öffnen und in die Bauakte übernehmen.
+
+- **Einstellung:** Einstellungen › Module › Chat › „Dateien und Fotos im EstrichONE-Chat erlauben“ (`attachmentsEnabled`).
+  Standard **aus**; die Migration `ChatFilesViaTeams` schaltet sie bei bestehenden Installationen einmalig aus. Betriebe
+  ohne Teams können sie wieder einschalten, dann verhalten sich Web und ältere Apps wie bisher.
+- **Ohne Teams-Anbindung** (Chat-Modus „EstrichONE-Chat“) erscheint der Hinweis trotzdem, nur ohne „In Teams öffnen“.
+  Begründung: Der Betrieb hat entschieden, dass Dateien in allen Systemen über Teams laufen; Fotos zur Baustelle gehören
+  ohnehin in die Bauakte (Erfassen in der Bauakte). Wer kein Teams nutzt, schaltet die Einstellung wieder ein.
+- **Server:** Hochladen (`POST /chat/conversations/{id}/attachments`), Senden mit `attachmentIds` und Weiterleiten einer
+  Nachricht mit Anhängen antworten bei ausgeschalteter Einstellung mit **422** und Problem-Code `CHAT_FILES_VIA_TEAMS`
+  (Titel „Dateien über Microsoft Teams“, Text „Dateien und Fotos tauschen Sie über Microsoft Teams aus. Im
+  EstrichONE-Chat senden Sie Text und Standort; Fotos zur Baustelle erfassen Sie in der Bauakte.“). Ältere Apps blenden
+  den Anhang-Knopf schon bei `attachmentsEnabled = false` aus und zeigen sonst diesen Text.
+- `PUT /chat/admin/settings`: `attachmentsEnabled` ist optional (`null` = unverändert), damit ältere Oberflächen die
+  Einstellung nicht unbemerkt zurücksetzen.
+
+API-Felder (für Web, iOS und Android gleich):
+
+| Wo | Feld | Bedeutung |
+|---|---|---|
+| `GET /chat/status` | `filesViaTeams` | Hinweis zeigen, Anhang-Knopf ausblenden (`= !attachmentsEnabled`; fehlt bei älteren Servern, dann `attachmentsEnabled` auswerten) |
+| `GET /chat/status` | `teamsAvailable` | Teams ist im Betrieb im Einsatz (Chat-Modus „Microsoft Teams“ oder „beides“) |
+| `GET /chat/status` | `teamsWebUrl`, `teamsAppUrl` | allgemeines Ziel für „In Teams öffnen“: Team „Baustellen“, sonst `https://teams.microsoft.com` bzw. `msteams:`; `null` ohne Teams |
+| `GET /chat/conversations/{id}` | `teamsWebUrl`, `teamsAppUrl` | Ziel für diese Unterhaltung: verknüpfter Teams-Chat bzw. Kanal der Bauakte, sonst Teams-Chat der Kolonne, sonst wie im Status; `null` ohne Teams |
+| `GET /chat/conversations/{id}` | `teamsLinked` | `true`, wenn das Ziel die mit Bauakte bzw. Kolonne verknüpfte Unterhaltung ist |
+
+Clients öffnen nur Adressen unter `teams.microsoft.com`, `teams.cloud.microsoft` und `teams.live.com` bzw. `msteams:`.
+
 ## Rechte
 
 | Recht | Bedeutung | Standardrollen |
@@ -78,7 +109,7 @@ Nur Betriebsangehörige (angemeldete, aktive Benutzer mit Recht) können chatten
 ### Status (immer erreichbar)
 `GET /chat/status` → `{ enabled, canUse, canAdmin, unreadCount, unreadConversations, retentionDays, showPreview,
 privacyAccepted, blocked, editWindowMinutes, attachmentsEnabled, maxAttachmentBytes, readReceipts, personalShowPreview,
-realtime: "sse" }`. Clients zeigen den Chat nur bei `canUse = true`; App-Badge = `unreadConversations` (ungelesene Chats).
+realtime: "sse", mode, readOnly, filesViaTeams, teamsAvailable, teamsWebUrl, teamsAppUrl }` (Teams-Felder siehe oben). Clients zeigen den Chat nur bei `canUse = true`; App-Badge = `unreadConversations` (ungelesene Chats).
 
 ### Persönliche Einstellungen
 `GET/PUT /chat/me/settings` – `{ showPreview, readReceipts, privacyAccepted }` (PUT, alles optional) →

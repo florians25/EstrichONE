@@ -144,7 +144,7 @@ enum class SiteTask(val title: String, val icon: ImageVector) {
 
 data class CaptureRequest(val task: SiteTask, val bauakteId: String?)
 
-/** Aktionsblatt „Erfassen“ (wie CaptureHub auf iOS). */
+/** Aktionsblatt „Erfassen“ der Bauakte (Knopf „Erfassen“ unten in der Bauakte); ohne Bauakte wird zuerst die Baustelle gewählt. */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun CaptureHub(bauakteId: String?, onDismiss: () -> Unit) {
@@ -166,11 +166,11 @@ fun CaptureHub(bauakteId: String?, onDismiss: () -> Unit) {
                     tasks.forEach { task ->
                         Column(
                             Modifier.weight(1f).clip(RoundedCornerShape(16.dp)).background(tones.card)
-                                .clickable { onDismiss(); nav.captureTask = task.with(bauakteId) }.padding(vertical = 14.dp, horizontal = 4.dp),
+                                .clickable { onDismiss(); nav.captureTask = task.with(bauakteId) }.padding(vertical = 12.dp, horizontal = 4.dp),
                             horizontalAlignment = Alignment.CenterHorizontally,
                         ) {
-                            IconTile(task.icon, size = 40.dp)
-                            Spacer(Modifier.height(6.dp))
+                            IconTile(task.icon, size = 36.dp)
+                            Spacer(Modifier.height(4.dp))
                             Text(task.title, style = MaterialTheme.typography.labelMedium, textAlign = TextAlign.Center, maxLines = 2)
                         }
                     }
@@ -540,7 +540,7 @@ fun CategorySheet(initialCaption: String, onDismiss: () -> Unit, onSave: (String
                     androidx.compose.material3.FilterChip(selected = category == c, onClick = { category = c }, label = { Text(c.title) })
                 }
             }
-            Button(onClick = { onSave(caption.trim(), category) }, modifier = Modifier.fillMaxWidth().height(52.dp)) { Text("Speichern") }
+            Button(onClick = { onSave(caption.trim(), category) }, modifier = Modifier.fillMaxWidth().height(48.dp)) { Text("Speichern") }
         }
     }
 }

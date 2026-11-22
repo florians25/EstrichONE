@@ -94,7 +94,32 @@ test('Chat: Modul einschalten, Datenschutzhinweis, Einzelchat, Nachricht (Enter)
   expect(external.status).toBe(201);
   await expect(page.locator('.eoChatBubble').filter({ hasText: 'Kommt per Ereignisstrom' })).toBeVisible({ timeout: 8_000 });
 
-  // Foto über „Anhängen → Fotos“ mit Vorschau vor dem Senden.
+  // Standard ab 1.0.32: Dateien und Fotos über Microsoft Teams. Hinweis über dem Eingabefeld, kein Upload, Standort bleibt.
+  const filesStrip = page.locator('.eoChatFilesStrip');
+  await expect(filesStrip).toContainText('Dateien und Fotos tauschen Sie über Microsoft Teams aus.');
+  await expect(filesStrip.getByText('In Teams öffnen')).toHaveCount(0); // Teams ist in diesem Betrieb nicht eingerichtet
+  await page.getByRole('button', { name: /Standort teilen/ }).click();
+  await expect(page.getByRole('button', { name: 'Meinen Standort teilen' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Fotos', exact: true })).toHaveCount(0);
+  await shot(page, 'chat-dateien-ueber-teams');
+  await page.keyboard.press('Escape');
+  // Auch direkt (ältere Apps): verständliche Ablehnung statt Fehler.
+  const blockedUpload = await page.evaluate(async (id) => {
+    const xsrf = decodeURIComponent(document.cookie.split('; ').find((c) => c.startsWith('XSRF-TOKEN='))?.split('=')[1] ?? '');
+    const response = await fetch(`/api/v1/chat/conversations/${id}/attachments?fileName=a.jpg`, {
+      method: 'POST', headers: { 'Content-Type': 'image/jpeg', 'X-XSRF-TOKEN': xsrf }, body: new Uint8Array([255, 216, 255]),
+    });
+    return { status: response.status, body: await response.text() };
+  }, conversationId);
+  expect(blockedUpload.status).toBe(422);
+  expect(blockedUpload.body).toContain('CHAT_FILES_VIA_TEAMS');
+
+  // Betrieb ohne Teams: Anhänge wieder erlauben (Einstellungen › Module › Chat). Dann Foto mit Vorschau vor dem Senden.
+  expect((await apiCall(page, 'PUT', '/api/v1/chat/admin/settings', { enabled: true, retentionDays: 90, showPreview: false, workersCanChatEachOther: true,
+    attachmentsEnabled: true })).status).toBe(200);
+  await page.reload();
+  await expect(page.locator('.eoChatHead')).toContainText(name);
+  await expect(page.locator('.eoChatFilesStrip')).toBeHidden();
   await page.getByRole('button', { name: /Foto, Dokument, Kamera oder Standort/ }).click();
   const chooser = page.waitForEvent('filechooser');
   await page.getByRole('button', { name: 'Fotos' }).click();

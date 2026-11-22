@@ -1,37 +1,48 @@
 # Die App für Android
 
-Für Android-Smartphones gibt es eine erste Version von EstrichONE. Sie arbeitet mit demselben Server und denselben
-Bauakten, kann aber **noch deutlich weniger** als die App für iPhone und iPad. Dieser Anhang beschreibt, was sie heute
-tatsächlich kann.
+Für Android-Smartphones und -Tablets gibt es EstrichONE als eigene App. Sie arbeitet mit demselben Server und denselben
+Bauakten wie die App für iPhone und iPad, ist nach Android-Art gestaltet (Material 3) und kann auch ohne Verbindung
+arbeiten. Dieser Anhang beschreibt Aufbau und Unterschiede.
 
-## Was die Android-App kann
+## Aufbau
+
+Unten (auf Tablets links) stehen fünf Bereiche: **Heute**, **Baustellen**, **Chat**, **Kunden** und **Mehr**. Der Chat ist
+direkt erreichbar, eine Zahl zeigt ungelesene Unterhaltungen. Ohne Chat-Recht oder bei ausgeschaltetem Chat entfällt er.
+
+**Erfassen gibt es nur in der Bauakte.** Unten in jeder Bauakte stehen **Foto** und **Erfassen**. **Erfassen** öffnet
+alle Erfassungen für genau diese Baustelle: Video, Aus Galerie, Dokument scannen, Datei hochladen, Bautagebuch,
+Erstbegehung, CM-Messung, Abnahme, Mangel melden, Aufgabe anlegen und Notiz schreiben. So ist immer klar, zu welcher
+Baustelle ein Foto oder Eintrag gehört. Auf **Heute** öffnen **Foto** und **Tagebuch** am Einsatz die Bauakte und
+erfassen dort; **Zurück** führt in die Bauakte.
 
 | Bereich | Funktionen |
 |---|---|
-| **Einrichtung** | Serveradresse eingeben (**Verbinden**), Anmeldung mit Anmeldename oder E-Mail und Passwort, optional mit **Einrichtungscode** (dann ist das Gerät sofort freigegeben, sonst wartet es auf die Freigabe durch die IT: „Gerät wartet auf Freigabe“, **Erneut prüfen**) |
-| **Anmeldung** | Zwei-Faktor-Anmeldung mit Code aus der Authenticator-App, Wechsel eines Einmalpassworts (**Passwort ändern**, mindestens 12 Zeichen), **Abmelden**, **Anderen Server wählen** |
-| **Heute** | Alle Einsätze von heute (laufender bzw. nächster aufgeklappt) mit „Jetzt“/„in 2 Std.“, offenen Mängeln und Aufgaben, Belegreife und Wetter laut Tagebuch, vier großen Schaltflächen **Route**, **Anrufen**, **Foto**, **Tagebuch**; Abgleich neben dem Datum; die nächsten 7 Tage |
-| **Bauakten** | Suche nach Nummer, Bauvorhaben oder Ort, mit Verbindung auch nicht zugeteilte Bauakten (**Weitere Bauakten (online, nur ansehen)**); **Neue Bauakte** mit Bauvorhaben und Adresse |
-| **Bauakte** | Hinweise, Übersicht, **Notizen** (neue Notiz), **Aufgaben und Mängel** anlegen, Kunde **anrufen**, **Route** starten; nicht zugeteilte Bauakten mit Hinweis **„Nur ansehen“** und **Mich als Beteiligten eintragen**, im Menü **Als Beteiligter austragen** |
-| **Tankbelege** | Beleg mit der Kamera-App fotografieren oder aus der Galerie wählen, Fahrzeug (heutiges Dispo-Fahrzeug vorbelegt), Datum, Kilometerstand, Liter, Betrag, Kraftstoff, Zahlart, Tankstelle; offline gespeichert und später übertragen. Ohne Texterkennung (bräuchte Google ML Kit) |
-| **Support** | **Problem melden** an die IT (mit Kennzeichnung „Ich kann deshalb nicht weiterarbeiten“); mitgeschickt werden nur App- und Android-Version |
+| **Einrichtung** | Serveradresse, Anmeldung mit Anmeldename oder E-Mail und Passwort, optional **Einrichtungscode**, Zwei-Faktor-Anmeldung, persönliches Gerät oder Poolgerät mit PIN |
+| **Heute** | Einsätze von heute mit „Jetzt“ bzw. „in 2 Std.“, vier Schaltflächen **Route**, **Anrufen**, **Foto**, **Tagebuch**, Überblick (Meine Aufgaben, Wer fährt wohin, Meine Woche), Zuletzt geöffnet |
+| **Baustellen** | Suche nach Nummer, Bauvorhaben, Ort und Kunde, Filter, **Neue Bauakte** (auch offline) |
+| **Bauakte** | Basisdaten auf einen Blick mit Route und Anruf, **Freitexte** als Textblöcke, Basisdaten, offene Punkte, neueste Fotos, Bereiche (Notizen, Fotos, Dokumente, Aufgaben und Mängel, Bautagebuch, Erstbegehung, Protokolle, Räume, Kontakte), unten **Foto** und **Erfassen** |
+| **Chat** | Unterhaltungen, Text, Diktat, **Standort teilen** (eigener Standort oder Baustellenadresse), Antworten, Reaktionen; Hinweis „Dateien und Fotos tauschen Sie über Microsoft Teams aus.“ mit **In Teams öffnen** |
+| **Kunden** | Kundenliste mit Suche, Kundenakte mit Anruf, E-Mail und Bauakten |
+| **Mehr** | Benachrichtigungen, Microsoft Teams, Urlaub, Tankbelege, IT-Service/Helpdesk, Problem melden, Synchronisation, Einstellungen |
+
+**Freitexte in der Bauakte.** Hinweise und Behinderungen (farbig markiert), Beschreibung und mehrzeilige Felder wie
+**Zugang / Besonderheiten** stehen als eigene Karten mit Überschrift. Zeilenumbrüche bleiben erhalten, Links,
+E-Mail-Adressen und Telefonnummern lassen sich antippen, lange Texte zeigen zuerst den Anfang (**Mehr anzeigen**). Der
+Stift öffnet die Basisdaten mit mehrzeiligen Feldern.
+
+**Dateien und Fotos im Chat.** Im EstrichONE-Chat senden Sie Text und Standort. Dateien und Fotos tauschen Sie über
+Microsoft Teams aus; **In Teams öffnen** führt in den Teams-Chat der Baustelle (wenn verknüpft) bzw. nach Teams. Ältere
+Fotos und Dokumente im Chat bleiben sichtbar. Fotos zur Baustelle erfassen Sie in der Bauakte.
 
 Die Anmeldung ist wie unter iOS an das Gerät gebunden: Der Geräteschlüssel liegt im Android Keystore (wo vorhanden im
 Sicherheitschip StrongBox), die Anmeldung wird verschlüsselt gespeichert und nicht in ein Cloud-Backup übernommen.
 
-## Was (noch) fehlt
+## Unterschiede zur App für iPhone und iPad
 
-Die Android-App arbeitet **nur mit Verbindung**. Noch nicht enthalten sind insbesondere:
-
-- Offline-Arbeit mit Synchronisation, „Nur Ansicht“ und Wartungsbildschirm,
-- Kamera, Fotos, Videos und Dokumentenscanner,
-- Bautagebuch, Erstbegehung, CM-Messung, Abnahme, Räume, Basisdaten und Kontakte der Bauakte,
-- Kunden, Disposition („Wer fährt wohin“), Meine Aufgaben und Meine Woche,
-- Chat, Benachrichtigungen und Helpdesk-Verlauf,
-- Poolgeräte mit PIN, Entsperren per Fingerabdruck sowie ein Demomodus.
-
-Für die Arbeit auf der Baustelle empfehlen wir daher derzeit iPhone oder iPad; im Büro steht der volle Funktionsumfang
-in der Weboberfläche zur Verfügung.
+- Pushnachrichten kommen noch nicht über Google: Die App fragt das Postfach im Hintergrund ab und zeigt Mitteilungen.
+- Im Chat fehlen Gruppen anlegen, Weiterleiten, Anheften, Suche und der Ausgang ohne Verbindung.
+- Einrichtung per QR-Code, Fotos je Prüfpunkt der Erstbegehung und der Verlauf der Bauakte fehlen noch.
+- Videos nimmt die Kamera-App des Geräts auf, gescannte Seiten werden nicht automatisch zugeschnitten.
 
 ## Installieren und aktualisieren
 

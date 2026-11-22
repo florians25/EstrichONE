@@ -22,6 +22,11 @@ Im Modus „Microsoft Teams“ antworten schreibende Chat-Endpunkte mit **409 `C
 gelöscht**; Löschfrist, Export (`GET /chat/export`, `GET /chat/admin/users/{id}/export`) und Löschung für
 Betroffenenrechte arbeiten weiter. `GET /chat/status` liefert zusätzlich `mode` und `readOnly`.
 
+**Dateien und Fotos** laufen ab 1.0.32 in allen Modi über Teams (Einstellung `attachmentsEnabled` im Chat, Standard aus):
+Web und Apps zeigen über dem Eingabefeld „Dateien und Fotos tauschen Sie über Microsoft Teams aus.“ mit **In Teams
+öffnen**. Ziel ist die verknüpfte Teams-Unterhaltung der Bauakte bzw. Kolonne, sonst das Team „Baustellen“ bzw. Teams
+allgemein (`teamsWebUrl` in `GET /chat/status` und `GET /chat/conversations/{id}`, siehe [Chat](chat.md)).
+
 ## Ohne App-Registrierung
 
 - **Verknüpfen per Link:** In Teams „Link zum Kanal abrufen“ bzw. beim Chat „Link kopieren“ und in der Bauakte unter

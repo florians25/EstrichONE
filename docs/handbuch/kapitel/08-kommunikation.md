@@ -110,8 +110,11 @@ Der **Chat** dient der schnellen Abstimmung zwischen Büro und Baustelle: Einzel
 
 - **Neuer Einzelchat** und **Neue Gruppe** beginnen eine Unterhaltung. Aus einer Bauakte legen Sie mit
   **Baustellen-Chat anlegen** eine Gruppe mit allen Beteiligten an; **Bauakte öffnen** springt zurück.
-- Nachrichten können Fotos, Dokumente, Kamerabilder oder den Standort enthalten. Ein Foto aus dem Chat lässt sich direkt
-  in die Bauakte übernehmen.
+- Nachrichten enthalten Text oder den Standort (**Standort teilen**: eigener Standort oder Baustellenadresse).
+  **Dateien und Fotos tauschen Sie über Microsoft Teams aus**: Ein Hinweis über dem Eingabefeld erinnert daran, mit
+  **In Teams öffnen** gelangen Sie direkt in den Teams-Chat der Baustelle (wenn verknüpft) bzw. nach Teams. Fotos zur
+  Baustelle erfassen Sie in der Bauakte. Ältere Fotos und Dokumente im Chat bleiben sichtbar und lassen sich weiter in die
+  Bauakte übernehmen.
 - **Diktieren** nutzt die Spracherkennung des Browsers; es wird kein Audio gespeichert, prüfen Sie den Text vor dem
   Senden.
 - Nachrichten lassen sich beantworten, mit einer Reaktion versehen, anheften, weiterleiten und innerhalb einer Frist
@@ -121,6 +124,9 @@ Der **Chat** dient der schnellen Abstimmung zwischen Büro und Baustelle: Einzel
 
 Beim ersten Öffnen erklärt ein Hinweis den Datenschutz im Chat: Bitte keine privaten Gesundheitsdaten o. Ä. teilen.
 Nachrichten und Anhänge werden verschlüsselt gespeichert und nach der eingestellten Frist automatisch gelöscht.
+
+Betriebe ohne Microsoft Teams können Dateien und Fotos im EstrichONE-Chat wieder erlauben: **Systemeinstellungen** →
+**Module** → Chat → **Dateien und Fotos im Chat** einschalten. Dann entfällt der Hinweis.
 
 > **Wichtig:** Der Chat ist ab Werk **ausgeschaltet**. Ein Chat unter Beschäftigten ist mit dem Betriebsrat abzustimmen
 > (§ 87 BetrVG) und ins Verzeichnis der Verarbeitungstätigkeiten aufzunehmen. Eingeschaltet wird er unter

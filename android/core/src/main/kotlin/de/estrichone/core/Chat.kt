@@ -14,6 +14,12 @@ data class ChatStatus(
     val editWindowMinutes: Int = 15, val attachmentsEnabled: Boolean = true, val readReceipts: Boolean = true, val privacyNoticeVersion: Int = 0,
     /** Modus „Microsoft Teams“: Chat-Archiv – lesen und exportieren, nicht schreiben. */
     val readOnly: Boolean = false,
+    /** Dateien und Fotos laufen über Microsoft Teams (Server ab 1.0.32); fehlt das Feld, gilt `!attachmentsEnabled`. */
+    val filesViaTeams: Boolean? = null,
+    /** Teams ist im Betrieb im Einsatz; dann allgemeines Ziel für „In Teams öffnen“. */
+    val teamsAvailable: Boolean = false,
+    val teamsWebUrl: String? = null,
+    val teamsAppUrl: String? = null,
 ) {
     val isAvailable: Boolean get() = enabled && canUse
 }
@@ -126,7 +132,14 @@ enum class ChatType(val title: String) {
 data class ChatConversationDetail(
     val conversation: ChatConversation, val members: List<ChatMemberState> = emptyList(), val canManage: Boolean = false,
     val pinned: List<ChatMessage> = emptyList(), val bauakteTitle: String? = null,
+    /** „In Teams öffnen“ für diese Unterhaltung (verknüpfter Teams-Chat der Bauakte bzw. Kolonne, sonst allgemein). */
+    val teamsWebUrl: String? = null, val teamsAppUrl: String? = null, val teamsLinked: Boolean = false,
 )
+
+/** Baustellen-Gruppe einer Bauakte (`GET /chat/bauakten/{id}/group`). */
+@Serializable
+data class ChatBauakteGroup(val conversationId: String? = null, val title: String? = null, val member: Boolean = false, val members: Int = 0,
+    val canCreate: Boolean = false)
 
 @Serializable
 data class ChatPage(val items: List<ChatMessage> = emptyList(), val hasMore: Boolean = false, val members: List<ChatMemberState> = emptyList())
@@ -134,7 +147,7 @@ data class ChatPage(val items: List<ChatMessage> = emptyList(), val hasMore: Boo
 @Serializable
 private data class SendMessageRequest(
     val text: String?, val clientMessageId: String, val replyToId: String? = null, val attachmentFileIds: List<String> = emptyList(),
-    val mentionUserIds: List<String> = emptyList(),
+    val mentionUserIds: List<String> = emptyList(), val location: ChatLocation? = null,
 )
 
 @Serializable
@@ -163,13 +176,19 @@ data class ChatSearchHit(val conversationId: String, val conversationTitle: Stri
  * bleiben ansehbar. (Android hat keine Warteschlange für Anhänge: ein Foto wurde bisher sofort hochgeladen.)
  */
 object ChatComposerPolicy {
+    /** Die Apps senden keine Dateien und Fotos im EstrichONE-Chat (Server lehnt sie mit `CHAT_FILES_VIA_TEAMS` ab). */
     const val ALLOWS_ATTACHMENTS = false
-    const val FILE_EXCHANGE_HINT = "Für Datei- und Fotoaustausch bitte Microsoft Teams verwenden."
+    const val FILE_EXCHANGE_HINT = "Dateien und Fotos tauschen Sie über Microsoft Teams aus."
 
-    /** Ziel für „In Teams öffnen“ am Hinweis: Teams-Unterhaltung der Bauakte, sonst Team „Baustellen“ (nur mit Teams-Anbindung), sonst keins. */
-    fun teamsTargets(link: TeamsLink?, status: TeamsStatus?): TeamsTargets? {
+    /**
+     * Ziel für „In Teams öffnen“ am Hinweis: Teams-Unterhaltung der Bauakte, sonst das Ziel des Servers für diese Unterhaltung
+     * (Kolonne, Team „Baustellen“), sonst Team „Baustellen“ aus dem Teams-Status. Ohne Teams-Anbindung keins.
+     */
+    fun teamsTargets(link: TeamsLink?, status: TeamsStatus?, detail: ChatConversationDetail? = null, chat: ChatStatus? = null): TeamsTargets? {
         link?.targets?.takeIf { it.candidates.isNotEmpty() }?.let { return it }
-        return status?.takeIf { it.available }?.homeTargets?.takeIf { it.candidates.isNotEmpty() }
+        detail?.takeIf { it.teamsWebUrl != null }?.let { d -> TeamsTargets.of(d.teamsAppUrl, d.teamsWebUrl).takeIf { it.candidates.isNotEmpty() }?.let { return it } }
+        status?.takeIf { it.available }?.homeTargets?.takeIf { it.candidates.isNotEmpty() }?.let { return it }
+        return chat?.takeIf { it.teamsAvailable }?.let { TeamsTargets.of(it.teamsAppUrl, it.teamsWebUrl) }?.takeIf { it.candidates.isNotEmpty() }
     }
 }
 
@@ -199,10 +218,14 @@ suspend fun EstrichOneApi.chatMessages(conversationId: String, before: String? =
 
 suspend fun EstrichOneApi.sendChatMessage(
     conversationId: String, text: String?, clientMessageId: String, replyToId: String? = null, attachmentIds: List<String> = emptyList(),
+    location: ChatLocation? = null,
 ): ChatMessage = send(
     "POST", "chat/conversations/$conversationId/messages",
-    SendMessageRequest(text?.trim()?.ifEmpty { null }, clientMessageId, replyToId, attachmentIds),
+    SendMessageRequest(text?.trim()?.ifEmpty { null }, clientMessageId, replyToId, attachmentIds, location = location),
 )
+
+/** Baustellen-Gruppe der Bauakte (Link „Baustellenchat“ in der Bauakte). */
+suspend fun EstrichOneApi.chatBauakteGroup(bauakteId: String): ChatBauakteGroup = send("GET", "chat/bauakten/$bauakteId/group", null)
 
 suspend fun EstrichOneApi.markChatRead(conversationId: String) = send<Unit>("POST", "chat/conversations/$conversationId/read", JsonObject(emptyMap()))
 suspend fun EstrichOneApi.chatContacts(): List<ChatPerson> = send("GET", "chat/contacts", null)

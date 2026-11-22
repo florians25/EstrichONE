@@ -41,7 +41,8 @@ import { openArchiveProof } from "../../util/archiveProof";
 import { akteContextOf } from "../../util/akteHeader";
 import { catalog, textBlocks, type BauakteTemplate, type TextBlock } from "../../util/catalog";
 import { projectBadges, projectView } from "../../util/project";
-import { badges, bauakteSchema, viewGroups } from "../../util/formSchema";
+import { badges, bauakteSchema, viewGroups, type FormSchema } from "../../util/formSchema";
+import { freeTextBlocks, type FreeTextBlock } from "../../util/freeText";
 import { openMapDialog } from "../../util/mapDialog";
 import { dossierStrip } from "../../util/dossier";
 
@@ -169,6 +170,17 @@ export default class ObjectController extends BaseController {
 		void this.activate(key);
 	}
 
+	/** Freitexte als Textblöcke (Übersicht); aufgeklappte Blöcke bleiben beim Aktualisieren offen. */
+	private applyFreeTexts(b: BauakteDetail, schema: FormSchema | null): void {
+		const m = this.m();
+		const previous = (m.getProperty("/freeTexts") as FreeTextBlock[] | undefined) ?? [];
+		const same = m.getProperty("/freeTextsFor") === b.id;
+		m.setProperty("/freeTextsFor", b.id);
+		m.setProperty("/freeTexts", freeTextBlocks(schema, b).map((x) => ({
+			...x, expanded: same && previous.some((p) => p.key === x.key && p.expanded),
+		})));
+	}
+
 	/** Bauakte übernehmen und abgeleitete Kopfangaben berechnen. */
 	private apply(b: BauakteDetail): void {
 		const m = this.m();
@@ -181,10 +193,12 @@ export default class ObjectController extends BaseController {
 		m.setProperty("/placeText", place);
 		m.setProperty("/projectView", projectView(b.project));
 		m.setProperty("/projectBadges", projectBadges(b.project));
+		this.applyFreeTexts(b, null);
 		void bauakteSchema().then((schema) => {
 			if (!schema || this.cur()?.id !== b.id) return;
 			m.setProperty("/projectBadges", badges(schema, b));
-			m.setProperty("/projectGroups", viewGroups(schema, b));
+			m.setProperty("/projectGroups", viewGroups(schema, b, { skipTextareas: true }));
+			this.applyFreeTexts(b, schema);
 		});
 		m.setProperty("/subtitle", "");
 		if (b.templateKey) {
@@ -490,9 +504,9 @@ export default class ObjectController extends BaseController {
 				{ key: "street", label: "Straße", maxLength: 200 },
 				{ key: "postalCode", label: "PLZ", maxLength: 10 },
 				{ key: "city", label: "Ort", maxLength: 100 },
-				{ key: "siteNotes", label: "Hinweise / Behinderungen", type: "textarea", maxLength: 2000,
+				{ key: "siteNotes", label: "Hinweise und Behinderungen", type: "textarea", rows: 5, maxLength: 2000,
 					help: "Wird in der Bauakte und in den Apps hervorgehoben (Zufahrt, Schlüssel, Strom …)." },
-				{ key: "description", label: "Beschreibung", type: "textarea", rows: 5, maxLength: 4000 },
+				{ key: "description", label: "Beschreibung", type: "textarea", rows: 8, maxLength: 4000 },
 			],
 			submit: async (v) => {
 				const text = (key: string) => (v[key] ? String(v[key]) : null);

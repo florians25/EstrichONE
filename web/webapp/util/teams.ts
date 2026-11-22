@@ -290,3 +290,22 @@ export function teamsNoticeKey(text: string): string {
 	for (let i = 0; i < text.length; i++) hash = (hash * 31 + text.charCodeAt(i)) | 0;
 	return `eo.teamsNotice.${(hash >>> 0).toString(36)}`;
 }
+
+/** Hinweis im EstrichONE-Chat, wenn Dateien und Fotos über Teams laufen (docs/chat.md, „Dateien und Fotos über Microsoft Teams“). */
+export const FILES_VIA_TEAMS_TEXT = "Dateien und Fotos tauschen Sie über Microsoft Teams aus.";
+
+/**
+ * Ziel für „In Teams öffnen“ im Chat: verknüpfte Teams-Unterhaltung der Unterhaltung (Bauakte, Kolonne), sonst das allgemeine
+ * Ziel aus dem Chat-Status. Leer ohne Teams oder bei fremden Adressen.
+ */
+export function chatTeamsUrl(status: { teamsAvailable?: boolean; teamsWebUrl?: string | null } | null | undefined,
+	detail?: { teamsWebUrl?: string | null } | null): string {
+	const url = detail?.teamsWebUrl || (status?.teamsAvailable ? status.teamsWebUrl : "") || "";
+	return isTeamsUrl(url) ? url : "";
+}
+
+/** Dateien und Fotos laufen über Teams: ältere Server ohne <c>filesViaTeams</c> leiten es aus <c>attachmentsEnabled</c> ab. */
+export function filesViaTeams(status: { filesViaTeams?: boolean; attachmentsEnabled?: boolean } | null | undefined): boolean {
+	if (!status) return false;
+	return status.filesViaTeams ?? status.attachmentsEnabled === false;
+}

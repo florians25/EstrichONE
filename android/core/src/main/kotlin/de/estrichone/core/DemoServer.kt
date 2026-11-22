@@ -574,7 +574,7 @@ class DemoChat {
         return when {
             path == "status" -> 200 to json("enabled" to true, "canUse" to true, "canAdmin" to false, "unreadCount" to conversations.sumOf { it.unread },
                 "unreadConversations" to conversations.count { it.unread > 0 }, "retentionDays" to 365, "showPreview" to true, "privacyAccepted" to true,
-                "editWindowMinutes" to 15, "attachmentsEnabled" to true, "readReceipts" to true)
+                "editWindowMinutes" to 15, "attachmentsEnabled" to false, "filesViaTeams" to true, "readReceipts" to true)
             path == "contacts" -> 200 to names.filterKeys { it != DemoData.USER_ID }.map { mapOf("id" to it.key, "name" to it.value) }
             path == "conversations" -> 200 to conversations.sortedByDescending { c -> messages.filter { it.conversationId == c.id }.maxOfOrNull { it.created } }.map(::summary)
             path == "conversations/direct" -> {

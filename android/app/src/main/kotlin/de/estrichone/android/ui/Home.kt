@@ -248,7 +248,6 @@ private fun HomeOverflow() {
     val model = LocalModel.current
     val context = LocalContext.current
     val status by session.status.collectAsState()
-    val chat by session.chat.collectAsState()
     val teams by session.teams.collectAsState()
     var open by remember { mutableStateOf(false) }
     Box {
@@ -259,11 +258,7 @@ private fun HomeOverflow() {
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
             DropdownMenuItem(text = { Text("Abgleich: ${status.shortText}") }, leadingIcon = { Icon(Icons.Filled.CloudDone, null) },
                 onClick = { open = false; nav.push(Route.Sync) })
-            if (chat?.isAvailable == true) {
-                val unread = chat?.unreadCount ?: 0
-                DropdownMenuItem(text = { Text(if (unread > 0) "Chat ($unread neu)" else "Chat") }, leadingIcon = { Icon(Icons.Outlined.ChatBubbleOutline, null) },
-                    onClick = { open = false; nav.push(Route.ChatList) })
-            }
+            // Chat steht jetzt unten in der Navigation.
             teams?.takeIf { it.available }?.homeTargets?.let { target ->
                 DropdownMenuItem(text = { Text("In Teams öffnen") }, leadingIcon = { Icon(Icons.Filled.Groups, null) }, onClick = {
                     open = false
@@ -347,7 +342,7 @@ fun TodayJobCard(job: PlannedJob, session: Session, phase: TodayGlance.Phase = T
                 DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                     if (modules.isOn(AppModules.DEFECTS)) {
                         DropdownMenuItem(text = { Text("Mangel melden") }, leadingIcon = { Icon(Icons.Outlined.ReportProblem, null) },
-                            onClick = { menu = false; nav.captureTask = SiteTask.Defect.with(job.bauakteId) })
+                            onClick = { menu = false; nav.captureIn(job.bauakteId, SiteTask.Defect) })
                     }
                     DropdownMenuItem(text = { Text("Bauakte öffnen") }, leadingIcon = { Icon(Icons.Outlined.Folder, null) },
                         onClick = { menu = false; open() })
@@ -390,19 +385,20 @@ fun TodayJobCard(job: PlannedJob, session: Session, phase: TodayGlance.Phase = T
         job.notes?.let { JobLine(Icons.Outlined.ChatBubbleOutline, it, secondary = true) }
         job.warnings.forEach { JobLine(Icons.Filled.Warning, it, color = tones.warning) }
         Spacer(Modifier.height(Space.m))
-        // Vier gleich große Handgriffe (64 dp hoch) – gut mit Handschuhen und einer Hand.
+        // Vier gleich große Handgriffe (56 dp hoch, Trefferfläche über 48 dp), gut mit Handschuhen und einer Hand.
+        // Foto und Tagebuch erfassen in der Bauakte: Zurück führt in die Bauakte, nicht nach „Heute“.
         Row(Modifier.height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             ActionTile(Icons.Filled.Directions, "Route", enabled = route != null, modifier = Modifier.weight(1f)) { route?.invoke() }
             ActionTile(Icons.Filled.Phone, "Anrufen", enabled = call != null, modifier = Modifier.weight(1f)) { call?.invoke() }
-            ActionTile(Icons.Filled.PhotoCamera, "Foto", primary = true, modifier = Modifier.weight(1f)) { nav.push(Route.Camera(job.bauakteId)) }
+            ActionTile(Icons.Filled.PhotoCamera, "Foto", primary = true, modifier = Modifier.weight(1f)) { nav.captureIn(job.bauakteId, SiteTask.Photo) }
             ActionTile(Icons.AutoMirrored.Outlined.MenuBook, "Tagebuch", enabled = modules.isOn(AppModules.DIARY), modifier = Modifier.weight(1f)) {
-                nav.captureTask = SiteTask.Diary.with(job.bauakteId)
+                nav.captureIn(job.bauakteId, SiteTask.Diary)
             }
         }
     }
 }
 
-/** Große Aktionskachel: Symbol über kurzer Beschriftung, 64 dp hoch. */
+/** Aktionskachel: Symbol über kurzer Beschriftung, 56 dp hoch. */
 @Composable
 private fun ActionTile(
     icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, modifier: Modifier = Modifier, primary: Boolean = false,
@@ -411,13 +407,13 @@ private fun ActionTile(
     val background = if (primary) MaterialTheme.colorScheme.primary else tones.fill
     val content = if (primary) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary
     Column(
-        modifier.fillMaxHeight().heightIn(min = 64.dp).clip(RoundedCornerShape(14.dp)).background(background)
+        modifier.fillMaxHeight().heightIn(min = 56.dp).clip(RoundedCornerShape(12.dp)).background(background)
             .clickable(enabled = enabled, role = androidx.compose.ui.semantics.Role.Button, onClick = onClick)
-            .alpha(if (enabled) 1f else 0.4f).padding(vertical = 8.dp, horizontal = 4.dp),
+            .alpha(if (enabled) 1f else 0.4f).padding(vertical = 6.dp, horizontal = 4.dp),
         horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center,
     ) {
-        Icon(icon, null, tint = content, modifier = Modifier.size(24.dp))
-        Spacer(Modifier.height(4.dp))
+        Icon(icon, null, tint = content, modifier = Modifier.size(22.dp))
+        Spacer(Modifier.height(2.dp))
         Text(label, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold,
             color = if (primary) content else MaterialTheme.colorScheme.onSurface, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }

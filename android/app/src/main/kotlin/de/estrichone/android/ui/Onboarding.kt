@@ -139,7 +139,7 @@ private fun WelcomeScreen(model: AppModel) {
                 }
             }
             Spacer(Modifier.weight(1f))
-            Button(onClick = model::beginSetup, modifier = Modifier.fillMaxWidth().height(54.dp),
+            Button(onClick = model::beginSetup, modifier = Modifier.fillMaxWidth().height(50.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Navy)) { Text("Einrichten", fontSize = 17.sp) }
             TextButton(onClick = model::startDemo, modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
                 Text("Demo starten", color = Color.White, fontSize = 16.sp)
@@ -173,7 +173,7 @@ private fun ServerStep(model: AppModel, initial: String) {
     var address by rememberSaveable { mutableStateOf(initial) }
     OutlinedTextField(address, { address = it }, label = { Text("Serveradresse") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Go), keyboardActions = KeyboardActions(onGo = { model.connect(address) }))
-    Button(onClick = { model.connect(address) }, enabled = address.isNotBlank(), modifier = Modifier.fillMaxWidth().height(52.dp)) { Text("Weiter") }
+    Button(onClick = { model.connect(address) }, enabled = address.isNotBlank(), modifier = Modifier.fillMaxWidth().height(48.dp)) { Text("Weiter") }
     TextButton(onClick = model::startDemo, modifier = Modifier.fillMaxWidth()) { Text("Demo ohne Server starten") }
 }
 
@@ -210,7 +210,7 @@ private fun SignInStep(model: AppModel, stage: Stage.SignIn) {
         OutlinedTextField(code, { code = it.uppercase() }, label = { Text("Einrichtungscode (falls vorhanden)") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
             supportingText = { Text("Mit Code ist das Gerät sofort freigegeben, sonst nach Freigabe durch die Verwaltung.") })
     }
-    Button(onClick = submit, enabled = login.isNotBlank() && password.isNotBlank(), modifier = Modifier.fillMaxWidth().height(52.dp)) { Text("Anmelden") }
+    Button(onClick = submit, enabled = login.isNotBlank() && password.isNotBlank(), modifier = Modifier.fillMaxWidth().height(48.dp)) { Text("Anmelden") }
     Row {
         TextButton(onClick = model::changeServer) { Text("Anderer Server") }
         if (stage.isPool) TextButton(onClick = model::cancelSignIn) { Text("Zur Benutzerauswahl") }
@@ -224,7 +224,7 @@ private fun TwoFactorStep(model: AppModel, stage: Stage.TwoFactor) {
     OutlinedTextField(code, { code = it }, label = { Text(if (recovery) "Wiederherstellungscode" else "6-stelliger Code") }, singleLine = true,
         modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = if (recovery) KeyboardType.Ascii else KeyboardType.NumberPassword))
     Button(onClick = { model.signIn(stage.login, stage.password, stage.enrollmentCode, stage.kind, code) },
-        enabled = TwoFactorLogin.isComplete(code, recovery), modifier = Modifier.fillMaxWidth().height(52.dp)) { Text("Bestätigen") }
+        enabled = TwoFactorLogin.isComplete(code, recovery), modifier = Modifier.fillMaxWidth().height(48.dp)) { Text("Bestätigen") }
     TextButton(onClick = { recovery = !recovery; code = "" }) { Text(if (recovery) "Code aus der App eingeben" else "Wiederherstellungscode verwenden") }
     TextButton(onClick = model::cancelSignIn) { Text("Abbrechen") }
 }
@@ -238,7 +238,7 @@ private fun ChangePasswordStep(model: AppModel) {
     PasswordField(new, { new = it }, "Neues Passwort")
     PasswordField(repeated, { repeated = it }, "Neues Passwort wiederholen") { model.changePassword(current, new, repeated) }
     Secondary("Mindestens 12 Zeichen. Nicht dasselbe wie das Einmalpasswort.")
-    Button(onClick = { model.changePassword(current, new, repeated) }, enabled = current.isNotBlank() && new.length >= 8, modifier = Modifier.fillMaxWidth().height(52.dp)) {
+    Button(onClick = { model.changePassword(current, new, repeated) }, enabled = current.isNotBlank() && new.length >= 8, modifier = Modifier.fillMaxWidth().height(48.dp)) {
         Text("Passwort festlegen")
     }
 }
@@ -249,7 +249,7 @@ private fun PendingStep(model: AppModel) {
         RowItem("Freigabe angefragt", icon = Icons.Filled.HourglassTop, iconTint = tones.warning, iconBackground = tones.warningSoft,
             subtitle = "Die Verwaltung sieht das Gerät unter „Geräte“. Danach geht es hier weiter.")
     }
-    Button(onClick = model::checkApproval, modifier = Modifier.fillMaxWidth().height(52.dp)) { Text("Erneut prüfen") }
+    Button(onClick = model::checkApproval, modifier = Modifier.fillMaxWidth().height(48.dp)) { Text("Erneut prüfen") }
     TextButton(onClick = model::cancelSignIn) { Text("Mit anderem Konto anmelden") }
 }
 
@@ -318,7 +318,7 @@ private fun UserPickerScreen(model: AppModel, users: List<PoolUser>) {
                 }
             }
         }
-        OutlinedButton(onClick = model::addPoolUser, modifier = Modifier.fillMaxWidth().height(52.dp)) {
+        OutlinedButton(onClick = model::addPoolUser, modifier = Modifier.fillMaxWidth().height(48.dp)) {
             Icon(Icons.Filled.PersonAdd, null)
             Spacer(Modifier.width(8.dp))
             Text("Andere Person anmelden")
@@ -356,7 +356,7 @@ private fun LockScreen(model: AppModel, unlock: () -> Unit) {
             BrandMark(96.dp, onDark = true)
             Text("EstrichONE ist gesperrt", color = Color.White, style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(top = 20.dp))
             Text("Mit Fingerabdruck, Gesicht oder Gerätecode entsperren.", color = Ice, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 6.dp))
-            Button(onClick = unlock, modifier = Modifier.padding(top = 28.dp).height(52.dp),
+            Button(onClick = unlock, modifier = Modifier.padding(top = 28.dp).height(48.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Navy)) {
                 Icon(Icons.Filled.Fingerprint, null)
                 Spacer(Modifier.width(8.dp))

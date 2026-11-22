@@ -29,11 +29,22 @@ public enum TeamsEventKind
 /// <param name="Link">Relativer Pfad der Weboberfläche (z. B. <c>/bauakten/{id}</c>); wird mit der öffentlichen Adresse ergänzt.</param>
 public sealed record TeamsEvent(Guid BauakteId, TeamsEventKind Kind, string Title, string? Detail = null, string? Link = null);
 
+/// <summary>Wohin „In Teams öffnen“ führt (Browser bzw. Teams-App).</summary>
+/// <param name="Name">Name der Teams-Unterhaltung, falls bekannt.</param>
+/// <param name="Linked">Mit dieser Bauakte bzw. Kolonne verknüpfte Unterhaltung (sonst Team „Baustellen“ bzw. Teams allgemein).</param>
+public sealed record TeamsChatTarget(string WebUrl, string AppUrl, string? Name = null, bool Linked = false);
+
 /// <summary>Microsoft-Teams-Anbindung für andere Module. Ohne Einrichtung wirkungslos.</summary>
 public interface ITeamsIntegration
 {
     /// <summary>Chat-Modus; ohne Einrichtung <see cref="TeamsChatMode.EstrichOne"/>.</summary>
     Task<TeamsChatMode> ChatModeAsync(CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Ziel für „In Teams öffnen“ im EstrichONE-Chat: verknüpfte Unterhaltung der Bauakte bzw. Kolonne, sonst Team „Baustellen“,
+    /// sonst Teams allgemein. <c>null</c>, wenn Teams im Betrieb nicht im Einsatz ist (Chat-Modus „EstrichONE-Chat“).
+    /// </summary>
+    Task<TeamsChatTarget?> ChatTargetAsync(Guid? bauakteId, Guid? crewId, CancellationToken cancellationToken);
 
     /// <summary>Ereignis zum Senden vormerken (im Hintergrund, nie blockierend, wirft nie).</summary>
     void Publish(TeamsEvent teamsEvent);

@@ -293,13 +293,13 @@ fun FuelReceiptNewScreen() {
                         capture = it
                         camera.launch(it.second)
                     }
-                }, modifier = Modifier.weight(1f).height(52.dp)) {
+                }, modifier = Modifier.weight(1f).height(48.dp)) {
                     Icon(Icons.Outlined.PhotoCamera, null)
                     Spacer(Modifier.width(8.dp))
                     Text(if (photo == null) "Beleg fotografieren" else "Neu fotografieren")
                 }
                 OutlinedButton(onClick = { gallery.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
-                    modifier = Modifier.height(52.dp)) {
+                    modifier = Modifier.height(48.dp)) {
                     Icon(Icons.Outlined.PhotoLibrary, "Aus der Galerie wählen")
                 }
             }
@@ -370,7 +370,7 @@ fun FuelReceiptNewScreen() {
                         nav.back()
                     }.onFailure { error = it.message ?: "Der Beleg konnte nicht gespeichert werden." }
                 }
-            }, enabled = draft.validate() == null && !saving, modifier = Modifier.fillMaxWidth().height(56.dp)) {
+            }, enabled = draft.validate() == null && !saving, modifier = Modifier.fillMaxWidth().height(52.dp)) {
                 Text(if (saving) "Wird gespeichert …" else "Speichern")
             }
             if (photo == null) Secondary("Sie können auch ohne Foto speichern. Das Büro sieht dann einen Hinweis.", Modifier.fillMaxWidth())

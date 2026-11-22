@@ -479,7 +479,7 @@ fun ReportProblemScreen() {
                         nav.back()
                     }.onFailure { error = it.message ?: "Die Meldung konnte nicht gespeichert werden." }
                 }
-            }, enabled = title.isNotBlank() && !sending, modifier = Modifier.fillMaxWidth().height(52.dp)) { Text("Meldung senden") }
+            }, enabled = title.isNotBlank() && !sending, modifier = Modifier.fillMaxWidth().height(48.dp)) { Text("Meldung senden") }
         }
     }
 }
@@ -731,7 +731,7 @@ fun RecordTicketScreen() {
                     }
                 }
             }, enabled = title.isNotBlank() && (reporter != null || name.isNotEmpty()) && !sending && !status.offline,
-                modifier = Modifier.fillMaxWidth().height(52.dp)) { Text("Ticket anlegen") }
+                modifier = Modifier.fillMaxWidth().height(48.dp)) { Text("Ticket anlegen") }
         }
     }
 }

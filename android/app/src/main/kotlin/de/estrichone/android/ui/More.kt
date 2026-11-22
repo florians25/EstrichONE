@@ -147,7 +147,7 @@ fun MoreScreen() {
                 SectionCard {
                     if (chat?.isAvailable == true) {
                         RowItem(if (chat?.readOnly == true) "Chat-Archiv" else "Chat", icon = Icons.Outlined.Forum, showChevron = true,
-                            onClick = { nav.push(Route.ChatList) }, trailing = { CountBadge(chat?.unreadCount ?: 0) })
+                            onClick = { nav.openChat() }, trailing = { CountBadge(chat?.unreadCount ?: 0) })
                         RowDivider()
                     }
                     // Microsoft Teams (Modus „Teams“ oder „beides“): öffnet die Teams-App; dazu die Teams-Chats der eigenen Kolonnen.

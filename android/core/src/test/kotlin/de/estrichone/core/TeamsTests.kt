@@ -56,7 +56,7 @@ class TeamsTests {
     @DisplayName("Chat-Eingabe: keine Anhänge mehr, Hinweis auf Teams mit passendem Ziel")
     fun composerPolicy() {
         assertFalse(ChatComposerPolicy.ALLOWS_ATTACHMENTS)
-        assertEquals("Für Datei- und Fotoaustausch bitte Microsoft Teams verwenden.", ChatComposerPolicy.FILE_EXCHANGE_HINT)
+        assertEquals("Dateien und Fotos tauschen Sie über Microsoft Teams aus.", ChatComposerPolicy.FILE_EXCHANGE_HINT)
         val link = TeamsLink("channel", "BV Maier", "https://teams.microsoft.com/l/channel/x", "msteams:/l/channel/x")
         val both = TeamsStatus(chatMode = "both", available = true, siteTeamUrl = "https://teams.microsoft.com/l/team/y")
         assertEquals(link.targets, ChatComposerPolicy.teamsTargets(link, both))
@@ -64,6 +64,24 @@ class TeamsTests {
         assertNull(ChatComposerPolicy.teamsTargets(null, TeamsStatus()))
         assertNull(ChatComposerPolicy.teamsTargets(null, null))
         assertNull(ChatComposerPolicy.teamsTargets(TeamsLink("channel", null, "https://evil.example/x", "https://evil.example/y"), null))
+    }
+
+    @Test
+    @DisplayName("Chat: Dateien über Teams aus dem Status, Ziel der Unterhaltung vom Server")
+    fun filesViaTeams() {
+        val status = EstrichOneApi.json.decodeFromString(ChatStatus.serializer(), """
+            {"enabled":true,"canUse":true,"attachmentsEnabled":false,"filesViaTeams":true,"teamsAvailable":true,
+             "teamsWebUrl":"https://teams.microsoft.com","teamsAppUrl":"msteams:"}
+        """.trimIndent())
+        assertEquals(true, status.filesViaTeams)
+        // Ältere Server ohne Feld: Standard bleibt lesbar.
+        assertNull(EstrichOneApi.json.decodeFromString(ChatStatus.serializer(), """{"enabled":true,"canUse":true}""").filesViaTeams)
+        val detail = EstrichOneApi.json.decodeFromString(ChatConversationDetail.serializer(), """
+            {"conversation":{"id":"c","title":"BV Maier"},"teamsWebUrl":"https://teams.microsoft.com/l/chat/19%3a1/0","teamsLinked":true}
+        """.trimIndent())
+        assertEquals("https://teams.microsoft.com/l/chat/19%3a1/0", ChatComposerPolicy.teamsTargets(null, null, detail)?.web)
+        assertEquals("https://teams.microsoft.com", ChatComposerPolicy.teamsTargets(null, TeamsStatus(), null, status)?.web)
+        assertNull(ChatComposerPolicy.teamsTargets(null, TeamsStatus(), null, status.copy(teamsAvailable = false)))
     }
 
     @Test

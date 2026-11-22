@@ -41,7 +41,7 @@ import { indexOf, type MediaItem } from "../util/media";
 import { openMediaViewer } from "../util/mediaViewer";
 import { get, problemMessage } from "../util/api";
 import MessageBox from "sap/m/MessageBox";
-import { teamsHome } from "../util/teams";
+import { FILES_VIA_TEAMS_TEXT, chatTeamsUrl, filesViaTeams, teamsHome } from "../util/teams";
 import { pickTeamsChat } from "../util/teamsChat";
 import { bauakteInput } from "../util/forms";
 import {
@@ -151,6 +151,7 @@ export default class Chat extends BaseController {
 			list: [] as Row[], filtered: [] as Row[], hits: [] as unknown[], searching: false, query: "", activeId: "", active: null as null | Record<string, unknown>,
 			draft: "", loaded: false, canAdmin: false, retentionDays: 90, retentionHint: "", live: false, typing: "", pinned: [] as ChatMessage[],
 			pinnedPreview: "", compose: { mode: "", title: "", preview: "" }, pending: [] as PendingFile[], attachmentsEnabled: true,
+			filesViaTeams: false, filesText: FILES_VIA_TEAMS_TEXT, teamsUrl: "",
 			canDictate: !!speechRecognition(), listening: false, blocked: false, hint: "",
 		});
 		const html = this.byId("chatMessages") as HTML;
@@ -250,7 +251,11 @@ export default class Chat extends BaseController {
 			m.setProperty("/canAdmin", status.canAdmin);
 			m.setProperty("/retentionDays", status.retentionDays);
 			m.setProperty("/blocked", !!status.blocked);
-			m.setProperty("/attachmentsEnabled", status.attachmentsEnabled !== false);
+			// Dateien und Fotos laufen über Microsoft Teams (Standard ab 1.0.32): Text, Diktat und Standort bleiben hier.
+			const viaTeams = filesViaTeams(status);
+			m.setProperty("/attachmentsEnabled", status.attachmentsEnabled !== false && !viaTeams);
+			m.setProperty("/filesViaTeams", viaTeams);
+			m.setProperty("/teamsUrl", chatTeamsUrl(status));
 			m.setProperty("/retentionHint", `Verschlüsselt gespeichert. Löschung nach ${status.retentionDays} Tagen.`);
 			// Modus „Microsoft Teams“: nur lesen und exportieren.
 			m.setProperty("/archive", status.readOnly === true);
@@ -474,7 +479,8 @@ export default class Chat extends BaseController {
 				? `${row.members.length} Mitglieder${row.bauakteId ? ", Baustelle" : row.crewId ? ", Kolonne" : ""}: ${row.members.map((p) => p.name.split(" ")[0]).join(", ")}`
 				: row.muted ? "Einzelchat, stumm geschaltet" : "Einzelchat",
 		});
-		m.setProperty("/hint", row.canPost === false ? "" : this.status?.attachmentsEnabled === false
+		m.setProperty("/teamsUrl", chatTeamsUrl(this.status));
+		m.setProperty("/hint", row.canPost === false ? "" : m.getProperty("/attachmentsEnabled") === false
 			? "Enter: senden, Umschalt+Enter: neue Zeile, @: Mitglied erwähnen"
 			: "Enter: senden, Umschalt+Enter: neue Zeile, @: Mitglied erwähnen. Fotos und PDF-Dateien können Sie hineinziehen oder einfügen.");
 	}
@@ -542,6 +548,7 @@ export default class Chat extends BaseController {
 			this.model().setProperty("/pinned", pinned);
 			this.model().setProperty("/pinnedPreview", pinned.length ? this.snippet(pinned[0]) : "");
 			this.model().setProperty("/active/bauakteTitle", detail.bauakteTitle ?? "");
+			this.model().setProperty("/teamsUrl", chatTeamsUrl(this.status, detail));
 		} catch {
 			// Kopf bleibt aus der Liste.
 		}
@@ -782,7 +789,10 @@ export default class Chat extends BaseController {
 			buttons.push(new Button({ text, icon, press, type: danger ? "Reject" : "Default" }));
 		if (canPost) add("Antworten", "sap-icon://response", () => this.startReply(item));
 		if (item.text) add("Text kopieren", "sap-icon://copy", () => void navigator.clipboard?.writeText(item.text ?? "").then(() => this.toast("Kopiert")));
-		add("Weiterleiten …", "sap-icon://forward", () => void this.forwardDialog(item));
+		// Anhänge nicht weiterleiten, wenn Dateien über Teams laufen (der Server lehnt es ab).
+		if (!item.attachments?.length || m.getProperty("/attachmentsEnabled") !== false) {
+			add("Weiterleiten …", "sap-icon://forward", () => void this.forwardDialog(item));
+		}
 		if (canPost) add(item.pinnedAt ? "Lösen" : "Anheften", "sap-icon://pushpin-off", () => void this.togglePin(item));
 		if (item.attachments?.length && this.has("files.upload")) add("In Bauakte übernehmen …", "sap-icon://inspection", () => void this.copyToBauakte(item));
 		if (item.mine && item.canEdit && item.text) add("Bearbeiten", "sap-icon://edit", () => this.startEdit(item));
@@ -976,7 +986,7 @@ export default class Chat extends BaseController {
 
 	private canAttach(): boolean {
 		const m = this.model();
-		return !!m.getProperty("/activeId") && m.getProperty("/active/canPost") !== false && m.getProperty("/attachmentsEnabled") !== false && !this.editing;
+		return !!m.getProperty("/activeId") && m.getProperty("/active/canPost") !== false && !this.editing;
 	}
 
 	onAttachMenu(event: Event): void {
@@ -990,10 +1000,13 @@ export default class Chat extends BaseController {
 			input.addEventListener("change", () => this.addFiles([...(input.files ?? [])]));
 			input.click();
 		};
+		const files = this.model().getProperty("/attachmentsEnabled") !== false;
 		const buttons = [
-			new Button({ text: "Fotos", icon: "sap-icon://picture", press: () => pick("image/jpeg,image/png,image/webp,image/heic,image/heif") }),
-			new Button({ text: "Kamera", icon: "sap-icon://camera", press: () => pick("image/*", "environment") }),
-			new Button({ text: "Dokument (PDF)", icon: "sap-icon://pdf-attachment", press: () => pick("application/pdf") }),
+			...(files ? [
+				new Button({ text: "Fotos", icon: "sap-icon://picture", press: () => pick("image/jpeg,image/png,image/webp,image/heic,image/heif") }),
+				new Button({ text: "Kamera", icon: "sap-icon://camera", press: () => pick("image/*", "environment") }),
+				new Button({ text: "Dokument (PDF)", icon: "sap-icon://pdf-attachment", press: () => pick("application/pdf") }),
+			] : []),
 			new Button({ text: "Meinen Standort teilen", icon: "sap-icon://locate-me", press: () => this.shareMyLocation() }),
 		];
 		if (this.model().getProperty("/active/bauakteId")) {
@@ -1007,6 +1020,10 @@ export default class Chat extends BaseController {
 	private addFiles(files: File[]): void {
 		if (!this.canAttach() || !files.length) return;
 		const m = this.model();
+		if (m.getProperty("/attachmentsEnabled") === false) {
+			this.toast(FILES_VIA_TEAMS_TEXT);
+			return;
+		}
 		const pending = [...(m.getProperty("/pending") as PendingFile[])];
 		const max = this.status?.maxAttachmentBytes ?? 25 * 1024 * 1024;
 		const errors: string[] = [];
@@ -1576,6 +1593,12 @@ export default class Chat extends BaseController {
 	/** Chat-Archiv (Modus „Microsoft Teams“): neuer Einzel- bzw. Gruppenchat in Teams. */
 	onNewTeamsChat(): void {
 		void pickTeamsChat();
+	}
+
+	/** Teams-Unterhaltung dieser Unterhaltung (Bauakte, Kolonne) bzw. Teams allgemein: zum Austausch von Dateien und Fotos. */
+	onOpenTeamsForFiles(): void {
+		const url = this.model().getProperty("/teamsUrl") as string;
+		if (url) window.open(url, "_blank", "noopener");
 	}
 
 	/** Microsoft Teams (Team „Baustellen“ bzw. Teams allgemein) in neuem Fenster. */

@@ -7,6 +7,28 @@
 			<ToolbarSpacer/>
 			<Button text="Kennwerte bearbeiten" icon="sap-icon://edit" type="Transparent" press=".onEditProject" visible="{= ${akte>/canEdit} === true }"/>
 		</OverflowToolbar>
+		<!-- Freitexte (Hinweise, Beschreibung, Zugang und Besonderheiten …) als lesbare Textblöcke: Zeilenumbrüche bleiben,
+		     Links, E-Mail-Adressen und Telefonnummern sind anklickbar, lange Texte zuerst gekürzt (util/freeText.ts) -->
+		<grid:CSSGrid id="freeTextGrid" items="{path: 'akte>/freeTexts', templateShareable: false}" gridTemplateColumns="repeat(auto-fit, minmax(22rem, 1fr))"
+			gridGap="0.75rem 1.5rem" class="eoFreeTexts">
+			<VBox class="eoFreeText" renderType="Bare">
+				<customData>
+					<core:CustomData key="important" value="{= ${akte>important} &amp;&amp; !!${akte>text} ? 'yes' : 'no' }" writeToDom="true"/>
+					<core:CustomData key="clamp" value="{= ${akte>long} &amp;&amp; !${akte>expanded} ? 'yes' : 'no' }" writeToDom="true"/>
+				</customData>
+				<HBox alignItems="Center" justifyContent="SpaceBetween" renderType="Bare" class="eoFreeTextHead">
+					<Title text="{akte>label}" level="H3" titleStyle="H6" wrapping="true"/>
+					<Button icon="sap-icon://edit" type="Transparent" tooltip="{akte>label} bearbeiten" press=".onEditFreeText"
+						visible="{= ${akte>/canEdit} === true }"/>
+				</HBox>
+				<!-- Eigenes, bereits escaptes HTML (nur a und br, util/freeText.ts); FormattedText würde tel: und mailto: entfernen -->
+				<core:HTML content="{akte>html}" visible="{= !!${akte>text} }" sanitizeContent="false" preferDOM="false"/>
+				<Text text="Nicht erfasst" visible="{= !${akte>text} }" class="eoMuted"/>
+				<Link text="{= ${akte>expanded} ? 'Weniger anzeigen' : 'Mehr anzeigen' }" press=".onToggleFreeText" visible="{= ${akte>long} === true }"
+					class="eoFreeTextMore"/>
+			</VBox>
+		</grid:CSSGrid>
+
 		<form:SimpleForm editable="false" layout="ResponsiveGridLayout" columnsXL="4" columnsL="3" columnsM="2" labelSpanXL="5" labelSpanL="5" labelSpanM="5" labelSpanS="12" emptySpanXL="0" emptySpanL="0" emptySpanM="0" adjustLabelSpan="false" singleContainerFullSize="false" breakpointXL="1400"
 			class="eoDenseForm">
 			<core:Title text="{i18n>overview.base}"/>
@@ -15,14 +37,12 @@
 			<Label text="Zuständig"/><Text text="{akte>/responsibleName}"/>
 			<Label text="Angelegt"/><Text text="{path: 'akte>/bauakte/createdAt', formatter: 'fmt.dateTime'}"/>
 			<Label text="Geändert"/><Text text="{path: 'akte>/bauakte/updatedAt', formatter: 'fmt.dateTime'}"/>
-			<Label text="Beschreibung"/><Text text="{= ${akte>/bauakte/description} || '–' }" class="eoPre"/>
 			<core:Title text="{i18n>overview.siteData}"/>
 			<Label text="Straße"/><Text text="{= ${akte>/bauakte/street} || '–' }"/>
 			<Label text="PLZ / Ort"/><Text text="{= (${akte>/bauakte/postalCode} || '') + ' ' + (${akte>/bauakte/city} || '') }"/>
 			<Label text="Kontakt"/><Text text="{= ${akte>/bauakte/siteContactName} || '–' }"/>
 			<Label text="Telefon"/><Link text="{akte>/phone}" href="tel:{akte>/phone}" visible="{= !!${akte>/phone} }"/>
 			<Label text="Koordinaten"/><Text text="{= ${ov>/coordinates} || '–' }"/>
-			<Label text="Hinweise"/><Text text="{= ${akte>/bauakte/siteNotes} || '–' }" class="eoPre"/>
 			<core:Title text="Termine"/>
 			<Label text="Beginn"/><Text text="{path: 'akte>/bauakte/plannedStart', formatter: 'fmt.date'}"/>
 			<Label text="Ende"/><Text text="{path: 'akte>/bauakte/plannedEnd', formatter: 'fmt.date'}"/>
