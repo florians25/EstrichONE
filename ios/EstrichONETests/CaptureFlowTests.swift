@@ -11,6 +11,22 @@ struct CaptureFlowTests {
         #expect(NewBauakteView.Next.inspect.followUp == .inspection)
     }
 
+    @Test("Reiter: Chat direkt erreichbar, Erfassen nur noch in der Bauakte")
+    @MainActor
+    func tabsAndCaptureInBauakte() {
+        #expect(ShotRoute.tab(for: "chat") == .chat)
+        #expect(ShotRoute.tab(for: "chat-verlauf") == .chat)
+        #expect(ShotRoute.tab(for: "bauakte-erfassen") == .bauakten)
+        #expect(ShotRoute.tab(for: "heute-unten") == .today)
+        #expect(ShotRoute.tab(for: "mehr") == .more)
+        // Bezeichner der Einträge im Blatt „Erfassen“ (Oberflächentests).
+        #expect(BauakteAction.diary.captureIdentifier == "addDiaryButton")
+        #expect(BauakteAction.scan.captureIdentifier == "scanDocumentButton")
+        #expect(BauakteAction.note.captureIdentifier == "add-note")
+        #expect(BauakteAction.measurement.captureIdentifier == "add-measurement")
+        #expect(!BauakteAction.photo.subtitle.isEmpty)
+    }
+
     @Test("„Fertig“ wartet, bis alle ausgelösten Fotos gespeichert sind, und schließt genau einmal")
     func closeWaitsForPendingShots() {
         var shots = PendingShots()

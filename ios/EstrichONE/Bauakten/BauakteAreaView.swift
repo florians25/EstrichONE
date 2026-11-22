@@ -507,8 +507,8 @@ struct BauakteAreaView: View {
 
     @ViewBuilder
     private var project: some View {
-        if let description = bauakte.description?.compactText {
-            Section("Beschreibung") { Text(description).font(Typo.body) }
+        if let description = FreeText.clean(bauakte.description) {
+            Section { FreeTextBlock(title: "Beschreibung", text: description, symbol: "doc.text") }
         }
         // Der geplante Zeitraum steht als erste Zeile in den Basisdaten.
         ProjectSection(bauakte: bauakte, schema: schema, lists: lists) { action = .project }

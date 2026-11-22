@@ -69,6 +69,8 @@ struct TeamsTests {
     func composerPolicy() {
         #expect(ChatComposerPolicy.allowsAttachments == false)
         #expect(ChatComposerPolicy.fileExchangeHint == "Für Datei- und Fotoaustausch bitte Microsoft Teams verwenden.")
+        #expect(ChatComposerPolicy.scopeHint.contains("Microsoft Teams") && ChatComposerPolicy.scopeHint.contains("Standort"))
+        #expect(!ChatComposerPolicy.scopeHint.contains("–") && !ChatComposerPolicy.scopeHint.contains("·"))
         #expect(!ChatComposerPolicy.shareOptions.contains { ["Kamera", "Fotos", "Dokument"].contains($0) })
 
         let link = TeamsLink(kind: "channel", displayName: "BV Maier", webUrl: "https://teams.microsoft.com/l/channel/x", appUrl: "msteams:/l/channel/x")

@@ -26,6 +26,35 @@ enum BauakteAction: String, Identifiable {
         }
     }
 
+    /// Kurze Erläuterung im Blatt „Erfassen“.
+    var subtitle: String {
+        switch self {
+        case .photo: "Serie mit Beschriftung"
+        case .video: "Kurze Aufnahme"
+        case .scan: "Lieferschein, Plan, Aufmaß"
+        case .diary: "Eintrag für heute"
+        case .defect: "Mit Frist und Foto"
+        case .task: "Für Sie oder andere"
+        case .note: "Für alle in der Bauakte"
+        case .inspection: "Prüfpunkte vor Ort"
+        case .acceptance: "Mit Unterschrift"
+        case .measurement: "Belegreife prüfen"
+        case .project: "Fläche, Estrich, Zugang"
+        }
+    }
+
+    /// Bezeichner für Oberflächentests (ältere Bezeichner bleiben gültig).
+    var captureIdentifier: String {
+        switch self {
+        case .photo: "capturePhoto"
+        case .video: "captureVideo"
+        case .scan: "scanDocumentButton"
+        case .diary: "addDiaryButton"
+        case .defect: "addDefectButton"
+        default: "add-\(rawValue)"
+        }
+    }
+
     var symbol: String {
         switch self {
         case .photo: "camera"
@@ -104,33 +133,87 @@ extension View {
     }
 }
 
-/// Menü „Mehr erfassen“ mit allen Aktionen, die nicht als eigene Kachel erscheinen.
-struct MoreCaptureMenu<MenuLabel: View>: View {
-    let perform: (BauakteAction) -> Void
-    @ViewBuilder let label: () -> MenuLabel
+/// „Erfassen“ in der Bauakte: alles, was auf der Baustelle neu entsteht, in drei Gruppen mit kurzer Erläuterung.
+/// Nur hier wird erfasst; abgeschaltete Module (Systemeinstellungen, Module) erscheinen nicht.
+struct BauakteCaptureSheet: View {
+    let bauakte: Bauakte
+    let pick: (BauakteAction) -> Void
+    let cancel: () -> Void
+
     @Environment(AppModel.self) private var model
 
     var body: some View {
-        // Systemeinstellungen › Module: Einträge abgeschalteter Module entfallen.
         let modules = model.active?.sync?.modules ?? .allOn
-        Menu {
-            Section {
-                if modules.isOn(AppModules.inspections) { item(.inspection) }
-                if modules.isOn(AppModules.acceptance) { item(.acceptance) }
-                if modules.isOn(AppModules.inspections) { item(.measurement) }
+        NavigationStack {
+            List {
+                Section {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(bauakte.title)
+                            .font(Typo.headline)
+                            .foregroundStyle(Theme.textPrimary)
+                            .fixedSize(horizontal: false, vertical: true)
+                        if let line = [bauakte.number, bauakte.addressLine].compactMap({ $0 }).joined(separator: ", ").nonEmpty {
+                            Text(line)
+                                .font(Typo.subhead)
+                                .foregroundStyle(Theme.textSecondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                    .padding(.vertical, Space.xxs)
+                    .accessibilityElement(children: .combine)
+                } footer: {
+                    Text("Alles wird zuerst auf dem Gerät gespeichert und übertragen, sobald eine Verbindung besteht.")
+                }
+                Section("Fotos und Dokumente") {
+                    row(.photo)
+                    row(.video)
+                    row(.scan)
+                }
+                Section("Festhalten") {
+                    if modules.isOn(AppModules.diary) { row(.diary) }
+                    if modules.isOn(AppModules.defects) { row(.defect) }
+                    if modules.isOn(AppModules.tasks) { row(.task) }
+                    row(.note)
+                }
+                if modules.anyOn(AppModules.inspections, AppModules.acceptance) {
+                    Section("Prüfen") {
+                        if modules.isOn(AppModules.inspections) {
+                            row(.inspection)
+                            row(.measurement)
+                        }
+                        if modules.isOn(AppModules.acceptance) { row(.acceptance) }
+                    }
+                }
             }
-            Section {
-                item(.video)
-                if modules.isOn(AppModules.tasks) { item(.task) }
-                item(.note)
-            }
-        } label: {
-            label()
+            .listStyle(.insetGrouped)
+            .listSectionSpacing(.compact)
+            .navigationTitle("Erfassen")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Abbrechen", action: cancel) } }
         }
+        .presentationDetents([.fraction(0.75), .large])
+        .presentationDragIndicator(.visible)
+        .accessibilityIdentifier("bauakteCaptureSheet")
     }
 
-    private func item(_ action: BauakteAction) -> some View {
-        Button(action.title, systemImage: action.symbol) { perform(action) }
-            .accessibilityIdentifier("add-\(action.rawValue)")
+    private func row(_ action: BauakteAction) -> some View {
+        Button { pick(action) } label: {
+            Label {
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(action.title).foregroundStyle(Theme.textPrimary)
+                    Text(action.subtitle).font(Typo.subhead).foregroundStyle(Theme.textSecondary)
+                }
+            } icon: {
+                Image(systemName: action.symbol).foregroundStyle(Theme.accent)
+            }
+            .frame(maxWidth: .infinity, minHeight: Size.minTap, alignment: .leading)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier(action.captureIdentifier)
     }
+}
+
+private extension String {
+    var nonEmpty: String? { isEmpty ? nil : self }
 }

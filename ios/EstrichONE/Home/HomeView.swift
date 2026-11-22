@@ -2,14 +2,15 @@ import CoreLocation
 import EstrichCore
 import SwiftUI
 
-/// „Heute“ – der Arbeitsplatz für den Tag, als ruhige Standardliste: oben Datum und dezent der Abgleich, Hinweise nur bei
-/// Bedarf, dann alle Einsätze des Tages – der laufende bzw. nächste aufgeklappt mit Kennzahlen (Mängel, Aufgaben,
-/// Belegreife, Wetter), Entfernung und vier großen Handgriffen, die übrigen kompakt mit Route und Anruf. Wischen und langes
-/// Drücken bieten dieselben Handgriffe. Darunter „Überblick“ (Meine Aufgaben, Wer fährt wohin, Meine Woche), morgen und
-/// zuletzt geöffnet. Lokale Daten erscheinen sofort, frische Planung kommt im Hintergrund dazu (offline lesbar).
+/// „Heute“, der Arbeitsplatz für den Tag, als ruhige Standardliste: oben Datum und dezent der Abgleich, Hinweise nur bei
+/// Bedarf, dann „Ihr Tag“ (Einsätze, Beginn, Fläche, Kolonne mit Besetzung, Fahrzeuge, Abwesende) und alle Einsätze des
+/// Tages. Der laufende bzw. nächste ist aufgeklappt mit Kennzahlen (Mängel, Aufgaben, Belegreife, Wetter), Leistung laut
+/// Basisdaten, Zugang und angehefteten Notizen, letzter Nachricht im Chat der Baustelle, Entfernung und vier Handgriffen;
+/// die übrigen kompakt mit Route und Anruf. Darunter „Überblick“ (Meine Aufgaben, offene Anträge, Wer fährt wohin, Meine
+/// Woche), morgen und zuletzt geöffnet. Lokale Daten erscheinen sofort, frische Planung kommt im Hintergrund dazu.
 struct HomeView: View {
-    /// Öffnet das Blatt „Erfassen“.
-    var openCapture: () -> Void = {}
+    /// Öffnet den Reiter „Chat“ (mit Unterhaltung bzw. der Liste).
+    var openChat: (UUID?) -> Void = { _ in }
 
     @Environment(AppModel.self) private var model
     @Environment(\.horizontalSizeClass) private var sizeClass
@@ -29,6 +30,10 @@ struct HomeView: View {
     @State private var push = PushCenter.shared
     /// Kennzahlen der heutigen Baustellen (lokal).
     @State private var glances: [UUID: SiteGlance] = [:]
+    /// Leistung, Zugang, angeheftete Notizen und Chat der heutigen Baustellen.
+    @State private var extras: [UUID: TodaySiteExtras] = [:]
+    /// Offene Urlaubsanträge, über die man entscheiden darf (online).
+    @State private var pendingApprovals = 0
     /// Vom Nutzer aufgeklappter Einsatz; sonst der laufende bzw. nächste.
     @State private var expandedJob: UUID?
     /// Uhr für „Jetzt“/„in 2 Std.“ (minütlich; im Screenshot-Modus fest 9:41).
@@ -44,6 +49,16 @@ struct HomeView: View {
 
     private var jobs: [TodayJob] {
         TodayJob.make(assignments: planning?.assignments(on: CalendarDay.string(.now)) ?? [], board: dispatch?.board, bauakten: bauakten)
+    }
+
+    /// „Ihr Tag“ aus den Einsätzen, der Disposition und den Flächen der Baustellen.
+    private var overview: TodayOverview {
+        let list = jobs
+        let areas = Dictionary(list.compactMap { job in bauakten[job.bauakteId]?.project.totalArea.map { (job.bauakteId, $0) } },
+                               uniquingKeysWith: { first, _ in first })
+        return TodayOverview.make(jobs: list.map { TodayOverview.Job(bauakteId: $0.bauakteId, start: $0.startText, crewName: $0.crewName,
+                                                                     people: $0.people, resources: $0.resources) },
+                                  board: dispatch?.board, areas: areas)
     }
 
     private func phase(of job: TodayJob) -> TodayGlance.Phase {
@@ -117,6 +132,7 @@ struct HomeView: View {
                 case .dispatch: DispatchView()
                 case .inbox: NotificationInboxView()
                 case .chat: ChatListView()
+                case .approvals: AbsenceOverviewView(opensApprovals: true)
                 }
             }
             .task(id: model.active?.sync?.revision) { await reload() }
@@ -179,7 +195,7 @@ struct HomeView: View {
             .listRowSeparator(.hidden)
     }
 
-    /// „…“ oben rechts: Abgleich (mit Stand), Chat bzw. Microsoft Teams.
+    /// „…“ oben rechts: Abgleich (mit Stand) und Microsoft Teams.
     private var moreMenu: some View {
         let state = syncState
         return Menu {
@@ -187,13 +203,7 @@ struct HomeView: View {
                 Label("Abgleich: \(state.text)", systemImage: state.symbol)
             }
             .accessibilityIdentifier("syncStatusIcon")
-            // Modus „Microsoft Teams“: statt Chat „In Teams öffnen“ (das Archiv bleibt unter Mehr erreichbar).
-            if let chat = model.active?.sync?.chat, chat.isAvailable, !chat.readOnly {
-                Button { path.append(.chat) } label: {
-                    Label(chat.unreadCount > 0 ? "Chat (\(chat.unreadCount) neu)" : "Chat", systemImage: "bubble.left.and.bubble.right")
-                }
-                .accessibilityIdentifier("chatButton")
-            }
+            // Der Chat hat einen eigenen Reiter; Microsoft Teams öffnet die Teams-App.
             if let teams = model.active?.sync?.teams, teams.available {
                 OpenInTeamsButton(targets: teams.homeTargets)
             }
@@ -236,6 +246,15 @@ struct HomeView: View {
                 .padding(.vertical, Space.xs)
             } else {
                 let list = jobs
+                let day = overview
+                // Mehrere Einsätze: „Ihr Tag“ zuerst. Bei einem Einsatz stehen Kolonne und Fahrzeuge schon auf der Karte;
+                // dann nur, wer heute fehlt.
+                if list.count > 1 || !day.absent.isEmpty {
+                    TodaySummaryCard(overview: day, showsCrew: list.count > 1)
+                        .listRowInsets(EdgeInsets(top: Space.xs, leading: 0, bottom: Space.xs, trailing: 0))
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                }
                 ForEach(list) { job in
                     jobRow(job, in: list)
                 }
@@ -256,7 +275,7 @@ struct HomeView: View {
     /// Ein Einsatz als Karte; Wischen nach rechts: Foto, Mangel – nach links: Route, Anrufen.
     private func jobRow(_ job: TodayJob, in list: [TodayJob]) -> some View {
         let canCapture = bauakten[job.bauakteId] != nil
-        return TodayJobCard(job: job, glance: glances[job.bauakteId], distance: distance(to: job), phase: phase(of: job),
+        return TodayJobCard(job: job, glance: glances[job.bauakteId], extras: extras[job.bauakteId], distance: distance(to: job), phase: phase(of: job),
                             expanded: isExpanded(job, in: list), canCapture: canCapture,
                             onExpand: { withAnimation(.snappy) { expandedJob = job.id } }) { action in
             perform(action, for: job)
@@ -294,6 +313,7 @@ struct HomeView: View {
         case .defect: defectFor = bauakte
         case .route: if let url = job.route { openURL(url) }
         case .call: if let url = job.phone { openURL(url) }
+        case .chat: openChat(extras[job.bauakteId]?.chat?.id)
         }
     }
 
@@ -331,7 +351,7 @@ struct HomeView: View {
         let defects = items.filter { $0.kind == .defect }.count
         let showsTasks = modules.anyOn(AppModules.tasks, AppModules.defects)
         let showsPlanning = modules.isOn(AppModules.planning)
-        if showsTasks || showsPlanning {
+        if showsTasks || showsPlanning || pendingApprovals > 0 {
             Section("Überblick") {
                 // Systemeinstellungen › Module: Zeilen abgeschalteter Module entfallen.
                 if showsTasks {
@@ -340,6 +360,13 @@ struct HomeView: View {
                                     detail: defects > 0 ? (defects == 1 ? "davon 1 Mangel" : "davon \(defects) Mängel") : nil)
                     }
                     .accessibilityIdentifier("myTasksTile")
+                }
+                if pendingApprovals > 0 {
+                    NavigationLink(value: HomeRoute.approvals) {
+                        overviewRow("Anträge genehmigen", symbol: "checkmark.seal", value: "\(pendingApprovals)",
+                                    detail: pendingApprovals == 1 ? "1 Antrag wartet auf Sie" : "\(pendingApprovals) Anträge warten auf Sie")
+                    }
+                    .accessibilityIdentifier("approvalsTile")
                 }
                 if showsPlanning {
                     NavigationLink(value: HomeRoute.dispatch) {
@@ -395,6 +422,11 @@ struct HomeView: View {
                                 Text(item.bauakteTitle)
                                 Text([item.activity, item.crewName].compactMap { $0 }.joined(separator: ", "))
                                     .font(Typo.subhead).foregroundStyle(Theme.textSecondary)
+                                if let address = item.bauakteAddress {
+                                    Text(address)
+                                        .font(Typo.subhead).foregroundStyle(Theme.textSecondary)
+                                        .lineLimit(1)
+                                }
                             }
                         }
                         .padding(.vertical, Space.xxs)
@@ -446,6 +478,28 @@ struct HomeView: View {
         planning = await MyPlanning(store: store).load(using: model.active?.client) ?? planning
         dispatch = await DispatchData.load(day: day, model: model) ?? dispatch
         await loadLocal(service)
+        await loadOnline()
+    }
+
+    /// Mit Verbindung: frische Chat-Liste (letzte Nachricht je Baustelle) und offene Anträge zur Genehmigung.
+    private func loadOnline() async {
+        guard let active = model.active else { return }
+        if active.sync?.chat?.isAvailable == true, let fresh = try? await active.client.chatConversationsWithData() {
+            try? await active.sync?.store.setMeta(ChatListView.cacheKey, String(decoding: fresh.data, as: UTF8.self))
+            applyChats(fresh.items)
+        }
+        if modules.isOn(AppModules.absence) {
+            pendingApprovals = ((try? await active.client.pendingAbsenceRequests()) ?? []).count
+        }
+    }
+
+    /// Letzte Nachricht je Baustelle aus der Chat-Liste übernehmen.
+    private func applyChats(_ list: [ChatConversation]) {
+        let bySite = Dictionary(list.compactMap { conversation in conversation.bauakteId.map { ($0, conversation) } },
+                                uniquingKeysWith: { lhs, rhs in (lhs.lastMessageAt ?? .distantPast) >= (rhs.lastMessageAt ?? .distantPast) ? lhs : rhs })
+        for (id, conversation) in bySite where extras[id] != nil || jobs.contains(where: { $0.bauakteId == id }) {
+            extras[id, default: TodaySiteExtras()].chat = conversation.lastMessageText == nil ? nil : conversation
+        }
     }
 
     private func loadLocal(_ service: BauakteService) async {
@@ -474,6 +528,20 @@ struct HomeView: View {
                                    today: today)
         }
         glances = sites
+
+        // Leistung, Zugang und angeheftete Notizen der heutigen Baustellen; Chat aus der zuletzt geladenen Liste.
+        var siteExtras: [UUID: TodaySiteExtras] = [:]
+        for id in Set(jobs.map(\.bauakteId)) {
+            guard let bauakte = bauakten[id] else { continue }
+            let pinned = ((try? await service.notes(of: id)) ?? []).filter(\.isPinned).compactMap { FreeText.clean($0.text) }
+            siteExtras[id] = TodaySiteExtras(facts: bauakte.project.keyFactsText, access: FreeText.clean(bauakte.project.siteAccess),
+                                         pinned: pinned, chat: extras[id]?.chat)
+        }
+        extras = siteExtras
+        if let store = model.active?.sync?.store, model.active?.sync?.chat?.isAvailable != false,
+           let text = try? await store.meta(ChatListView.cacheKey), let cached = ChatConversation.decodeList(Data(text.utf8)) {
+            applyChats(cached)
+        }
     }
 
     static func firstName(_ name: String) -> String {

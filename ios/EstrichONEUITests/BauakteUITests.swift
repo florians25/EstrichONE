@@ -20,15 +20,29 @@ final class BauakteUITests: XCTestCase {
         app.type("Richtig-2026", into: "passwordField")
         app.tap("signInButton")
         app.dismissSavePasswordPrompt()
-        XCTAssertTrue(app.element("newBauakteTile").waitForExistence(timeout: 20))
+        XCTAssertTrue(app.element("todayDate").waitForExistence(timeout: 20))
         // Neu starten (Anmeldung bleibt erhalten): Beim ersten Start nach der Installation bleibt sonst teils ein
         // Systemblatt („Passwort sichern?“) über der App liegen und verdeckt Schaltflächen und Tab-Leiste.
         app.terminate()
         app.launchEnvironment["ESTRICHONE_UITEST_KEEP"] = "1"
         app.launch()
-        XCTAssertTrue(app.element("newBauakteTile").waitForExistence(timeout: 20))
-        XCTAssertTrue(app.waitUntilHittable(app.element("newBauakteTile"), timeout: 10), app.debugDescription)
+        XCTAssertTrue(app.element("todayDate").waitForExistence(timeout: 20))
+        XCTAssertTrue(app.waitUntilHittable(app.tabBars.buttons["Baustellen"].firstMatch, timeout: 10), app.debugDescription)
         return app
+    }
+
+    /// Anlageblatt öffnen: Reiter „Baustellen“, dann „Neue Bauakte“ (Erfasst wird nur noch in der Bauakte).
+    @MainActor
+    private func openNewBauakte(in app: XCUIApplication) {
+        app.tapElement(app.tabBars.buttons["Baustellen"].firstMatch, "Reiter Baustellen")
+        app.tap("newBauakteButton")
+    }
+
+    /// In der Bauakte „Erfassen“ öffnen und einen Eintrag wählen.
+    @MainActor
+    private func capture(_ identifier: String, in app: XCUIApplication) {
+        app.tap("captureMenuButton")
+        app.tapElement(app.reveal(identifier), identifier)
     }
 
     /// Neue Bauakte im Formular ausfüllen (Kunde ist Pflicht: hier neu erfasst) und anlegen.
@@ -50,7 +64,7 @@ final class BauakteUITests: XCTestCase {
     /// Bauakte über die Startseite anlegen; danach ist ihre Ansicht offen.
     @MainActor
     private func createBauakte(_ title: String, in app: XCUIApplication) {
-        app.tap("newBauakteTile")
+        openNewBauakte(in: app)
         fillQuickForm(title, in: app)
         let header = app.element("bauakteTitle")
         XCTAssertTrue(header.waitForExistence(timeout: 15), app.debugDescription)
@@ -61,7 +75,7 @@ final class BauakteUITests: XCTestCase {
     func testQuickCreateWithPhotosGetsNumberFromServer() {
         let app = launchSignedIn()
 
-        app.tap("newBauakteTile")
+        openNewBauakte(in: app)
         fillQuickForm("EFH Müller, Neubau", in: app, photograph: true)
 
         // Kamera (im Simulator mit Testfoto-Auslöser): Beschriftung für die Serie, drei Fotos, dann „Fertig (3)“.
@@ -91,7 +105,7 @@ final class BauakteUITests: XCTestCase {
     @MainActor
     func testWizardWithMandatoryCustomerAndDuplicateCheck() {
         let app = launchSignedIn()
-        app.tap("newBauakteTile")
+        openNewBauakte(in: app)
         app.chooseSegment("Assistent")
 
         // Schritt 1 – Kunde ist Pflicht: ohne Kunde geht es nicht weiter.
@@ -129,8 +143,7 @@ final class BauakteUITests: XCTestCase {
         createBauakte("Halle Gewerbering", in: app)
 
         // Scan (im Simulator mit zwei erzeugten Seiten): Seiten prüfen, Art wählen, als PDF ablegen.
-        app.tap("bauakteMoreMenu")
-        app.tap("scanDocumentButton")
+        capture("scanDocumentButton", in: app)
         XCTAssertTrue(app.element("scanTitleField").waitForExistence(timeout: 20), app.debugDescription)
         let pages = app.descendants(matching: .any).matching(identifier: "scanPage")
         XCTAssertTrue(app.wait(for: pages.element(boundBy: 1), "exists == true", timeout: 15), app.debugDescription)
@@ -142,8 +155,7 @@ final class BauakteUITests: XCTestCase {
         XCTAssertTrue(document.waitForExistence(timeout: 30) || app.reveal(document), app.debugDescription)
 
         // Bautagebuch mit Textbaustein.
-        app.tap("bauakteMoreMenu")
-        app.tap("addDiaryButton")
+        capture("addDiaryButton", in: app)
         XCTAssertTrue(app.element("diaryTextField").waitForExistence(timeout: 10))
         app.tapElement(app.buttons["Estrich eingebracht"].firstMatch, "Textbaustein")
         app.tap("saveDiaryButton")
@@ -154,13 +166,12 @@ final class BauakteUITests: XCTestCase {
     @MainActor
     func testCreatedBauakteIsFoundBySearch() {
         let app = launchSignedIn()
-        // Anlegen über die schwebende Schaltfläche der Bauaktenliste (zweiter Weg neben der Startseite).
-        app.tapElement(app.tabBars.buttons["Bauakten"].firstMatch, "Reiter Bauakten")
-        app.tap("newBauakteButton")
+        // Anlegen über die Schaltfläche der Bauaktenliste.
+        openNewBauakte(in: app)
         fillQuickForm("Halle Huber", in: app)
         XCTAssertTrue(app.element("bauakteTitle").waitForExistence(timeout: 15))
 
-        app.tapElement(app.tabBars.buttons["Bauakten"].firstMatch, "Reiter Bauakten")
+        app.tapElement(app.tabBars.buttons["Baustellen"].firstMatch, "Reiter Baustellen")
         let search = app.searchFields.firstMatch
         XCTAssertTrue(search.waitForExistence(timeout: 10))
         app.tapElement(search, "Suchfeld")
@@ -174,15 +185,14 @@ final class BauakteUITests: XCTestCase {
         createBauakte("Reihenhaus Mitte", in: app)
 
         // Notiz: sofort sichtbar.
-        app.tap("addNoteButton")
+        capture("add-note", in: app)
         app.type("Schlüssel liegt beim Nachbarn", into: "noteTextField")
         app.tap("saveNoteButton")
         let note = app.staticTexts["Schlüssel liegt beim Nachbarn"]
         XCTAssertTrue(note.waitForExistence(timeout: 5) || app.reveal(note), app.debugDescription)
 
         // Mangel erfassen, dann abhaken.
-        app.tap("bauakteMoreMenu")
-        app.tapElement(app.buttons["Mangel melden"].firstMatch, "Menüpunkt Mangel melden")
+        capture("addDefectButton", in: app)
         app.type("Riss im Flur", into: "workItemTitleField")
         app.tap("saveWorkItemButton")
         let toggle = app.element("toggleWorkItem-Riss im Flur")
@@ -192,8 +202,7 @@ final class BauakteUITests: XCTestCase {
         XCTAssertTrue(app.wait(for: toggle, "label CONTAINS %@", "Wieder öffnen", timeout: 10), toggle.label)
 
         // CM-Messung: Belegreife sofort sichtbar.
-        app.tap("bauakteMoreMenu")
-        app.tapElement(app.buttons["CM-Messung"].firstMatch, "Menüpunkt CM-Messung")
+        capture("add-measurement", in: app)
         app.type("Bad OG", into: "cmLocationField")
         app.type("1,6", into: "cmValueField")
         XCTAssertTrue(app.wait(for: app.element("readinessLabel"), "label == %@", "Belegreif", timeout: 5))
@@ -226,7 +235,7 @@ final class BauakteUITests: XCTestCase {
     @MainActor
     func testInitialInspectionRightAfterCreationAndProtocol() {
         let app = launchSignedIn()
-        app.tap("newBauakteTile")
+        openNewBauakte(in: app)
         app.chooseSegment("Assistent")
         app.tap("newCustomerButton")
         app.type("Familie Berger", into: "customerNameField")
@@ -301,7 +310,7 @@ final class BauakteUITests: XCTestCase {
 
         // Ohne Eingaben angemeldet, deutlich als Demo gekennzeichnet, mit Beispieldaten.
         XCTAssertTrue(app.element("demoBanner").waitForExistence(timeout: 30), app.debugDescription)
-        XCTAssertTrue(app.element("newBauakteTile").waitForExistence(timeout: 20))
+        XCTAssertTrue(app.element("todayDate").waitForExistence(timeout: 20))
 
         // Startseite: heutiger Einsatz als Karte mit Anruf und Route, Vorschau auf morgen.
         let job = app.element("todayJob-EFH Schneider, Neubau")
@@ -316,7 +325,7 @@ final class BauakteUITests: XCTestCase {
         XCTAssertTrue(app.text(containing: "fehlt: Tobias Lang").waitForExistence(timeout: 5), app.debugDescription)
         app.navigationBars.buttons.element(boundBy: 0).tap()
 
-        app.tapElement(app.tabBars.buttons["Bauakten"].firstMatch, "Reiter Bauakten")
+        app.tapElement(app.tabBars.buttons["Baustellen"].firstMatch, "Reiter Baustellen")
         let efh = app.staticTexts["EFH Schneider, Neubau"].firstMatch
         XCTAssertTrue(efh.waitForExistence(timeout: 20), app.debugDescription)
         app.tapElement(efh, "EFH Schneider")

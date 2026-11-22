@@ -37,14 +37,14 @@ Unten auf dem iPhone (auf dem iPad oben) sitzt die **Tab-Leiste** mit fünf Bere
 
 | Tab | Inhalt |
 |---|---|
-| **Heute** | Alle Einsätze von heute mit Adresse, Route und Ansprechpartner, offenen Mängeln, Belegreife und Wetter, Kennzahlen zu Aufgaben, „Wer fährt wohin“ und Woche, offene Aufgaben, morgen, zuletzt geöffnete Bauakten |
-| **Baustellen** | alle Bauakten, die Sie sehen dürfen (laufende sowie abgeschlossene und stornierte), Suche, neue Bauakte |
-| **Erfassen** | Schnellzugriff: Baustelle wählen, dann Foto, Dokument, Bautagebuch, Mangel, Erstbegehung, Abnahme, Aufgabe, CM-Messung, Video oder Notiz |
+| **Heute** | „Ihr Tag“ (Einsätze, Beginn, Fläche, Kolonne mit Besetzung, Fahrzeuge, Abwesende), alle Einsätze von heute mit Adresse, Route, Ansprechpartner, Leistung, Zugang, angehefteten Notizen und letzter Chatnachricht der Baustelle, offene Mängel, Belegreife und Wetter, Überblick, morgen, zuletzt geöffnete Bauakten |
+| **Baustellen** | alle Bauakten, die Sie sehen dürfen (laufende sowie abgeschlossene und stornierte), Suche, neue Bauakte; erfasst wird in der Bauakte über **Foto** und **Erfassen** |
+| **Chat** | alle Unterhaltungen mit Zahl ungelesener Nachrichten am Tab; Dateien und Fotos tauschen Sie über Microsoft Teams aus |
 | **Kunden** | Kundenstamm mit Anrufen, Nachricht, E-Mail und Route |
-| **Mehr** | Synchronisation, Benachrichtigungen, Chat, Urlaub, Helpdesk, Sperre und Face ID, Gerät, Server und App, Abmelden |
+| **Mehr** | Synchronisation, Benachrichtigungen, Microsoft Teams, Urlaub, Helpdesk, Sperre und Face ID, Gerät, Server und App, Abmelden |
 
-Oben rechts auf der Heute-Seite zeigen kleine Symbole den Stand der **Synchronisation** (Wolke), den **Chat** mit der
-Zahl ungelesener Nachrichten und die **Glocke** mit neuen Benachrichtigungen.
+Oben rechts auf der Heute-Seite zeigen kleine Symbole den Stand der **Synchronisation** (Wolke) und die **Glocke** mit
+neuen Benachrichtigungen.
 
 ## Statusanzeigen auf einen Blick
 

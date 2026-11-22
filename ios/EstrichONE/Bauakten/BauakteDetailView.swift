@@ -2,9 +2,10 @@ import EstrichCore
 import QuickLook
 import SwiftUI
 
-/// Bauakte – das Herzstück. Auf einen Blick: Status, Adresse mit Route, Kunde und Ansprechpartner mit Anruf, nächster
-/// Einsatz mit Kolonne, Estrich-Kenndaten, offene Mängel und Aufgaben, die neuesten Fotos und die letzte Aktivität.
-/// Darunter alle Bereiche (Fotos und Dokumente, Aufgaben, Bautagebuch, Protokolle, Basisdaten, Kontakte, Notizen).
+/// Bauakte, das Herzstück. Oben ein klarer Kopf (Nummer, Status, Bauvorhaben, Leistung), Kennzahlen mit Sprung in den
+/// Bereich und eine Abschnittsnavigation; darunter Adresse mit Route, Kunde und Ansprechpartner mit Anruf, Zuständige,
+/// nächster Einsatz, Hinweise zur Baustelle als gut lesbare Textblöcke, Basisdaten, offene Punkte, neueste Fotos und alle
+/// Bereiche. Erfasst wird unten über „Foto“ und „Erfassen“ (alle Erfassungen an einer Stelle).
 /// Breite Darstellung (iPad quer): Übersicht links, gewählter Bereich rechts. Alles offline aus der lokalen Ablage.
 struct BauakteDetailView: View {
     let bauakteId: UUID
@@ -47,6 +48,11 @@ struct BauakteDetailView: View {
     /// Selbst als Beteiligter eingetragen (online geladen) – dann „Austragen“ im Menü.
     @State private var isMember = false
     @State private var joining = false
+    /// Blatt „Erfassen“.
+    @State private var capturing = false
+    /// Zuständige Person und weitere Beteiligte (online geladen).
+    @State private var responsibleName: String?
+    @State private var memberNames: [String] = []
 
     var body: some View {
         Group {
@@ -80,6 +86,9 @@ struct BauakteDetailView: View {
                 .toolbar {
                     // Alles außer Foto und Video (unten) steckt im Menü „…“ – auch „In Teams öffnen“.
                     ToolbarItem(placement: .primaryAction) { moreMenu(content.bauakte) }
+                }
+                .sheet(isPresented: $capturing) {
+                    BauakteCaptureSheet(bauakte: content.bauakte, pick: { startCapture($0) }) { capturing = false }
                 }
                 .task(id: bauakteId) {
                     await loadTeams()
@@ -152,9 +161,17 @@ struct BauakteDetailView: View {
                     header(content)
                     ForEach(factList(content)) { fact in factRow(fact) }
                 }
+                Section {
+                    metrics(content, wide: wide)
+                    sectionNavigation(content, proxy: proxy)
+                }
+                .listRowBackground(Color.clear)
+                .listRowInsets(EdgeInsets(top: Space.xs, leading: 0, bottom: Space.xs, trailing: 0))
+                .listRowSeparator(.hidden)
                 highlights(content)
+                siteNotes(content)
                 keyData(content)
-                openPoints(content)
+                openPoints(content, wide: wide)
                 photoStrip(content)
                 areas(content, wide: wide)
             }
@@ -164,31 +181,31 @@ struct BauakteDetailView: View {
             .safeAreaInset(edge: .bottom) { if !content.viewOnly { captureBar } }
             .task(id: loaded) {
                 // Screenshot-Modus: Mitte (Kennwerte, offene Punkte, Fotos) bzw. unten (alle Bereiche).
-                guard loaded, let target = shotScene == "bauakte-unten" ? "areas" : shotScene == "bauakte-mitte" ? "keyData" : nil else { return }
+                guard loaded, let target = shotScene == "bauakte-unten" ? "areas" : shotScene == "bauakte-mitte" ? "navigation" : nil else { return }
                 try? await Task.sleep(for: .milliseconds(300))
                 proxy.scrollTo(target, anchor: .top)
             }
         }
     }
 
-    /// Die zwei Hauptaktionen der Baustelle – groß, mit Handschuhen bedienbar, Kamera öffnet sofort.
+    /// Unten immer erreichbar: „Foto“ (Kamera öffnet sofort) und „Erfassen“ mit allem Weiteren (Video, Scan, Bautagebuch,
+    /// Mangel, Aufgabe, Notiz, Prüfungen). Mit Handschuhen bedienbar, aber nicht wuchtig.
     private var captureBar: some View {
         HStack(spacing: Space.s) {
             Button { action = .photo } label: {
-                Label("Foto", systemImage: "camera")
+                Label("Foto", systemImage: "camera.fill")
                     .frame(maxWidth: .infinity)
             }
-            .buttonStyle(.borderedProminent)
+            .estrichButton(.primary, size: .regular)
             .accessibilityIdentifier("addPhotoButton")
-            Button { action = .video } label: {
-                Label("Video", systemImage: "video")
+            Button { capturing = true } label: {
+                Label("Erfassen", systemImage: "plus")
                     .frame(maxWidth: .infinity)
             }
-            .buttonStyle(.bordered)
-            .accessibilityIdentifier("addVideoButton")
+            .estrichButton(.secondary, size: .regular)
+            .accessibilityHint("Video, Dokument, Bautagebuch, Mangel, Aufgabe, Notiz und Prüfungen")
+            .accessibilityIdentifier("captureMenuButton")
         }
-        .controlSize(.large)
-        .font(.body.weight(.semibold))
         .padding(.horizontal, Space.l)
         .padding(.vertical, Space.s)
         .background(.bar)
@@ -213,8 +230,179 @@ struct BauakteDetailView: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .accessibilityAddTraits(.isHeader)
                 .accessibilityIdentifier("bauakteTitle")
+            // Leistung und Tagesbezug als ruhige Kennzeichnung unter dem Titel.
+            let today = !content.todayAssignments.isEmpty
+            let facts = bauakte.project.keyFactsText
+            let priority = bauakte.project.priority.flatMap { $0 == .high || $0 == .urgent ? $0 : nil }
+            if today || facts != nil || priority != nil {
+                ChipFlow(spacing: 6) {
+                    if today { headerChip("Heute im Einsatz", symbol: "sun.max.fill", tint: Theme.accent, background: Theme.accentSoft) }
+                    if let priority {
+                        headerChip("Priorität \(priority.title.lowercased())", symbol: "flag.fill", tint: Theme.warning, background: Theme.warningSoft)
+                    }
+                    if let facts { headerChip(facts, symbol: "square.stack.3d.up", tint: Theme.textSecondary, background: Theme.fill) }
+                }
+                .padding(.top, Space.xxs)
+                .accessibilityIdentifier("bauakteHeaderChips")
+            }
         }
         .padding(.vertical, Space.xs)
+    }
+
+    private func headerChip(_ text: String, symbol: String, tint: Color, background: Color) -> some View {
+        HStack(spacing: 5) {
+            Image(systemName: symbol).imageScale(.small).accessibilityHidden(true)
+            Text(text).lineLimit(2).fixedSize(horizontal: false, vertical: true)
+        }
+        .font(Typo.labelStrong)
+        .foregroundStyle(tint)
+        .padding(.horizontal, 9)
+        .padding(.vertical, 3)
+        .frame(minHeight: 26)
+        .background(background, in: Capsule())
+    }
+
+    // MARK: Kennzahlen und Abschnittsnavigation
+
+    /// Vier Kennzahlen, Tipp öffnet den Bereich: Fotos, offene Mängel, offene Aufgaben, Bautagebuch.
+    private func metrics(_ content: BauakteContent, wide: Bool) -> some View {
+        let defects = content.openDefects
+        let tasks = content.openItems.count - defects
+        let columns = Array(repeating: GridItem(.flexible(), spacing: Space.s), count: typeSize.isAccessibilitySize ? 2 : 4)
+        return LazyVGrid(columns: columns, spacing: Space.s) {
+            metric("\(content.photos.count)", label: content.photos.count == 1 ? "Foto" : "Fotos", tint: Theme.textPrimary) { select(.media, wide: wide) }
+                .accessibilityIdentifier("metric-media")
+            if modules.isOn(AppModules.defects) {
+                metric("\(defects)", label: defects == 1 ? "Mangel" : "Mängel", tint: defects > 0 ? Theme.danger : Theme.textPrimary) { select(.work, wide: wide) }
+                    .accessibilityIdentifier("metric-defects")
+            }
+            if modules.isOn(AppModules.tasks) {
+                metric("\(tasks)", label: tasks == 1 ? "Aufgabe" : "Aufgaben", tint: Theme.textPrimary) { select(.work, wide: wide) }
+                    .accessibilityIdentifier("metric-tasks")
+            }
+            if modules.isOn(AppModules.diary) {
+                metric("\(content.diary.count)", label: "Tagebuch", tint: Theme.textPrimary) { select(.diary, wide: wide) }
+                    .accessibilityIdentifier("metric-diary")
+            }
+        }
+        .padding(.horizontal, Space.l)
+    }
+
+    private func metric(_ value: String, label: String, tint: Color, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            VStack(spacing: 1) {
+                Text(value)
+                    .font(.title3.weight(.semibold).monospacedDigit())
+                    .foregroundStyle(tint)
+                Text(label)
+                    .font(Typo.label)
+                    .foregroundStyle(Theme.textSecondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+            .frame(maxWidth: .infinity, minHeight: 52)
+            .background(Theme.surface, in: RoundedRectangle(cornerRadius: Radius.m, style: .continuous))
+            .contentShape(RoundedRectangle(cornerRadius: Radius.m, style: .continuous))
+        }
+        .buttonStyle(TileButtonStyle())
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(value) \(label)")
+        .accessibilityHint("Öffnet den Bereich")
+    }
+
+    /// Sprung zu den Abschnitten der langen Seite (nur, was es gibt).
+    private func sectionNavigation(_ content: BauakteContent, proxy: ScrollViewProxy) -> some View {
+        var targets: [JumpTarget] = []
+        if !siteNoteItems(content).isEmpty { targets.append(JumpTarget(id: "siteNotes", title: "Hinweise")) }
+        targets.append(JumpTarget(id: "keyData", title: "Basisdaten"))
+        if !content.openItems.isEmpty, modules.anyOn(AppModules.tasks, AppModules.defects) {
+            targets.append(JumpTarget(id: "openPoints", title: "Offene Punkte"))
+        }
+        if !content.photos.isEmpty { targets.append(JumpTarget(id: "photos", title: "Fotos")) }
+        targets.append(JumpTarget(id: "areas", title: "Alle Bereiche"))
+        return ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: Space.s) {
+                ForEach(targets) { target in
+                    Button(target.title) {
+                        withAnimation(.snappy) { proxy.scrollTo(target.id, anchor: .top) }
+                    }
+                    .font(Typo.subheadStrong)
+                    .foregroundStyle(Theme.accent)
+                    .padding(.horizontal, Space.m)
+                    .frame(minHeight: 36)
+                    .background(Theme.accentSoft, in: Capsule())
+                    .contentShape(Capsule())
+                    .frame(minHeight: Size.minTap)
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("jump-\(target.id)")
+                }
+            }
+            .padding(.horizontal, Space.l)
+        }
+        .id("navigation")
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Abschnitte")
+    }
+
+    private struct JumpTarget: Identifiable {
+        let id: String
+        let title: String
+    }
+
+    // MARK: Hinweise zur Baustelle (Freitexte)
+
+    private struct SiteNote: Identifiable {
+        let id: String
+        let title: String
+        let text: String
+        let symbol: String
+        var tint: Color = Theme.accent
+    }
+
+    /// Was oft per Freitext erfasst wird: angeheftete Notizen, Zugang und Besonderheiten (und weitere mehrzeilige Felder
+    /// des Büros), Hinweise der Disposition für heute, Beschreibung.
+    private func siteNoteItems(_ content: BauakteContent) -> [SiteNote] {
+        var list: [SiteNote] = content.pinnedNotes.compactMap { note in
+            FreeText.clean(note.text).map { SiteNote(id: "pin-\(note.id)", title: "Angeheftete Notiz", text: $0, symbol: "pin.fill") }
+        }
+        list += ProjectSection.freeTexts(content.bauakte, schema: schema).map {
+            SiteNote(id: "field-\($0.id)", title: $0.title, text: $0.text, symbol: $0.symbol)
+        }
+        var seen = Set<String>()
+        for assignment in content.todayAssignments {
+            if let notes = FreeText.clean(assignment.notes), seen.insert(notes).inserted {
+                list.append(SiteNote(id: "dispo-\(assignment.id)", title: "Hinweis der Disposition für heute", text: notes, symbol: "text.bubble"))
+            }
+        }
+        if let description = FreeText.clean(content.bauakte.description) {
+            list.append(SiteNote(id: "description", title: "Beschreibung", text: description, symbol: "doc.text", tint: Theme.textSecondary))
+        }
+        return list
+    }
+
+    @ViewBuilder
+    private func siteNotes(_ content: BauakteContent) -> some View {
+        let notes = siteNoteItems(content)
+        if !notes.isEmpty {
+            Section {
+                ForEach(Array(notes.enumerated()), id: \.element.id) { index, note in
+                    FreeTextBlock(title: note.title, text: note.text, symbol: note.symbol, tint: note.tint)
+                        .id(index == 0 ? "siteNotes" : note.id)
+                }
+            } header: {
+                HStack {
+                    Text("Hinweise zur Baustelle")
+                    Spacer()
+                    if !content.viewOnly {
+                        Button("Bearbeiten") { action = .project }
+                            .font(Typo.subhead)
+                            .textCase(nil)
+                            .accessibilityIdentifier("editSiteNotesButton")
+                    }
+                }
+            }
+            .accessibilityIdentifier("siteNotesSection")
+        }
     }
 
     @ViewBuilder
@@ -223,7 +411,7 @@ struct BauakteDetailView: View {
         let warnings = Array(Set(content.todayAssignments.flatMap(\.warnings))).sorted()
         let inspectionMissing = InitialInspectionState.showsMissingHint(bauakte: bauakte, inspections: content.inspections,
                                                                         enabled: content.warnMissingInspection)
-        if content.viewOnly || bauakte.status == .cancelled || statusError != nil || !content.pinnedNotes.isEmpty || !warnings.isEmpty || inspectionMissing {
+        if content.viewOnly || bauakte.status == .cancelled || statusError != nil || !warnings.isEmpty || inspectionMissing {
             Section {
                 Group {
                     if content.viewOnly {
@@ -240,9 +428,6 @@ struct BauakteDetailView: View {
                     }
                     ForEach(warnings, id: \.self) { warning in
                         Callout(tone: .warning, message: warning)
-                    }
-                    ForEach(content.pinnedNotes) { note in
-                        Callout(tone: .info, title: "Angeheftet", message: note.text.compactText ?? "", symbol: "pin.fill")
                     }
                     if inspectionMissing {
                         // Hinweiskarte wie im Büro: am Hinweis direkt als nicht erforderlich vermerken.
@@ -301,6 +486,14 @@ struct BauakteDetailView: View {
             list.append(Fact(id: "manager", symbol: "person.badge.key", title: manager.name,
                              subtitle: [manager.role.title, manager.company].compactMap { $0 }.joined(separator: ", "),
                              link: ContactLink.phone(manager.phone), linkTitle: "\(manager.role.title) anrufen", linkSymbol: "phone.fill"))
+        }
+        // Zuständige Person und Beteiligte (online geladen; ohne Verbindung entfällt die Zeile).
+        if let responsibleName {
+            let others = memberNames.filter { $0 != responsibleName }
+            list.append(Fact(id: "responsible", symbol: "person.crop.circle.badge.checkmark", title: responsibleName,
+                             subtitle: others.isEmpty ? "Zuständig" : "Zuständig, beteiligt: \(others.joined(separator: ", "))"))
+        } else if !memberNames.isEmpty {
+            list.append(Fact(id: "members", symbol: "person.2", title: memberNames.joined(separator: ", "), subtitle: "Beteiligt"))
         }
         if let next = content.nextAssignmentText {
             list.append(Fact(id: "next", symbol: "calendar.badge.clock", title: next.title, subtitle: next.subtitle))
@@ -413,7 +606,7 @@ struct BauakteDetailView: View {
     }
 
     @ViewBuilder
-    private func openPoints(_ content: BauakteContent) -> some View {
+    private func openPoints(_ content: BauakteContent, wide: Bool) -> some View {
         let open = content.openItems.sorted { lhs, rhs in
             if (lhs.kind == .defect) != (rhs.kind == .defect) { return lhs.kind == .defect }
             return (lhs.dueDate ?? "9999") < (rhs.dueDate ?? "9999")
@@ -428,7 +621,7 @@ struct BauakteDetailView: View {
                     .id(index == 0 ? "openPoints" : item.id.uuidString)
                 }
                 if open.count > 3 {
-                    Button("Alle \(open.count) anzeigen") { show(.work) }
+                    Button("Alle \(open.count) anzeigen") { select(.work, wide: wide) }
                         .frame(minHeight: Size.minTap)
                 }
             }
@@ -457,6 +650,7 @@ struct BauakteDetailView: View {
                     .padding(.vertical, Space.s)
                 }
                 .listRowInsets(EdgeInsets())
+                .id("photos")
             }
         }
     }
@@ -550,18 +744,9 @@ struct BauakteDetailView: View {
                 Button(BauakteViewOnly.join, systemImage: "person.badge.plus") { Task { await join() } }
                     .accessibilityIdentifier("joinBauakteButton")
             } else {
-            // Erfassen (Foto und Video stehen unten als Hauptaktionen).
             Section {
-                captureItem(.scan, id: "scanDocumentButton")
-                if modules.isOn(AppModules.diary) { captureItem(.diary, id: "addDiaryButton") }
-                if modules.isOn(AppModules.defects) { captureItem(.defect, id: "addDefectButton") }
-                if modules.isOn(AppModules.tasks) { captureItem(.task, id: "add-task") }
-                captureItem(.note, id: "add-note")
-            }
-            Section {
-                if modules.isOn(AppModules.inspections) { captureItem(.inspection, id: "add-inspection") }
-                if modules.isOn(AppModules.acceptance) { captureItem(.acceptance, id: "add-acceptance") }
-                if modules.isOn(AppModules.inspections) { captureItem(.measurement, id: "add-measurement") }
+                Button("Erfassen", systemImage: "plus.circle") { capturing = true }
+                    .accessibilityIdentifier("captureMenuItem")
             }
             Section {
                 Button("Bauakte als PDF", systemImage: "doc.richtext") { Task { await openPDF(bauakte) } }
@@ -599,9 +784,13 @@ struct BauakteDetailView: View {
         .accessibilityIdentifier("bauakteMoreMenu")
     }
 
-    private func captureItem(_ item: BauakteAction, id: String) -> some View {
-        Button(item.title, systemImage: item.symbol) { action = item }
-            .accessibilityIdentifier(id)
+    /// Aus dem Blatt „Erfassen“: erst schließen, dann Kamera bzw. Formular öffnen.
+    private func startCapture(_ item: BauakteAction) {
+        capturing = false
+        Task {
+            try? await Task.sleep(for: .milliseconds(450))
+            action = item
+        }
     }
 
     /// „2.–6. Nov.“ bzw. „ab 2. Nov.“
@@ -619,6 +808,10 @@ struct BauakteDetailView: View {
     private func show(_ target: BauakteArea) {
         area = target
         wideArea = target
+    }
+
+    private func select(_ target: BauakteArea, wide: Bool) {
+        if wide { wideArea = target } else { area = target }
     }
 
     /// Microsoft Teams: Verknüpfung laden (ohne Verbindung oder Teams-Anbindung bleibt der Knopf weg).
@@ -656,6 +849,7 @@ struct BauakteDetailView: View {
             case "mangel-neu": action = .defect
             case "basisdaten-neu": action = .project
             case "kamera": action = .photo
+            case "bauakte-erfassen": capturing = true
             case "foto-vorschau":
                 if viewing == nil, let photo = content?.photos.first(where: \.isPhoto) { viewing = photo }
             default: break
@@ -686,6 +880,9 @@ struct BauakteDetailView: View {
         guard let active = model.active else { return }
         let rows: [JSONValue]? = try? await active.client.get("bauakten/\(bauakteId.uuidString.lowercased())/members")
         isMember = (rows ?? []).contains { $0["userId"]?.string?.lowercased() == active.user.id.uuidString.lowercased() && $0["role"]?.string == "member" }
+        let current = (rows ?? []).filter { $0["isActive"]?.bool != false }
+        responsibleName = current.first { $0["role"]?.string?.lowercased() == "responsible" }?["displayName"]?.string
+        memberNames = current.compactMap { $0["displayName"]?.string }
     }
 
     /// „Mich als Beteiligten eintragen“: danach darf man die Bauakte bearbeiten (wird protokolliert, die Leitung erfährt es).

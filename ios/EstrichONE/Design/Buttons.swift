@@ -15,7 +15,7 @@ enum ButtonRank {
 }
 
 enum ButtonSize {
-    /// 52 pt – gut mit Handschuhen.
+    /// 48 pt, gut mit Handschuhen.
     case regular
     /// 44 pt (Mindest-Tippfläche), in Zeilen und Leisten.
     case compact
@@ -50,7 +50,7 @@ private struct EstrichButtonBody: View {
             .lineLimit(2)
             .foregroundStyle(foreground)
             .tint(foreground)
-            .padding(.horizontal, size == .regular ? 20 : 14)
+            .padding(.horizontal, size == .regular ? 18 : 14)
             .padding(.vertical, 6)
             .frame(maxWidth: fullWidth ? .infinity : nil, minHeight: size == .regular ? Size.button : Size.minTap)
             .background { Capsule().fill(fill(pressed: pressed)) }
@@ -94,8 +94,8 @@ struct TightLabelStyle: LabelStyle {
     }
 }
 
-/// Aktion als Kachel: Symbol über kurzer Beschriftung. Für Leisten mit 3–5 gleichrangigen Aktionen (Foto, Tagebuch …);
-/// 64 pt hoch, auf Karten wie auf dem Seitenhintergrund lesbar.
+/// Aktion als Kachel: Symbol über kurzer Beschriftung. Für Leisten mit drei bis fünf gleichrangigen Aktionen (Foto,
+/// Tagebuch); 54 pt hoch, auf Karten wie auf dem Seitenhintergrund lesbar.
 struct ActionTileStyle: ButtonStyle {
     var rank: ButtonRank = .secondary
 
@@ -116,7 +116,7 @@ private struct ActionTileBody: View {
         configuration.label
             .labelStyle(VerticalLabelStyle(iconTint: prominent ? Theme.onAccent : Theme.accent))
             .foregroundStyle(prominent ? Theme.onAccent : Theme.textPrimary)
-            .frame(maxWidth: .infinity, minHeight: 64)
+            .frame(maxWidth: .infinity, minHeight: 54)
             .background {
                 shape.fill(prominent ? (pressed ? Theme.accentPressed : Theme.accentFill) : (pressed ? Theme.fillStrong : Theme.fill))
             }
@@ -133,11 +133,11 @@ private struct VerticalLabelStyle: LabelStyle {
     let iconTint: Color
 
     func makeBody(configuration: Configuration) -> some View {
-        VStack(spacing: 5) {
+        VStack(spacing: 3) {
             configuration.icon
-                .font(.title3.weight(SymbolWeight.control))
+                .font(.body.weight(SymbolWeight.control))
                 .foregroundStyle(iconTint)
-                .frame(height: 24)
+                .frame(height: 22)
                 .accessibilityHidden(true)
             configuration.title
                 .font(.footnote.weight(.semibold))
@@ -145,7 +145,7 @@ private struct VerticalLabelStyle: LabelStyle {
                 .minimumScaleFactor(0.75)
         }
         .padding(.horizontal, 6)
-        .padding(.vertical, 8)
+        .padding(.vertical, 6)
     }
 }
 
@@ -235,7 +235,7 @@ struct ChoiceButton: View {
                     .minimumScaleFactor(0.75)
             }
             .padding(.horizontal, 4)
-            .frame(maxWidth: .infinity, minHeight: 58)
+            .frame(maxWidth: .infinity, minHeight: 52)
             .foregroundStyle(isSelected ? foreground : Theme.textSecondary)
             .background(isSelected ? background : Theme.fill, in: shape)
             .overlay(shape.strokeBorder(isSelected ? foreground.opacity(0.55) : .clear, lineWidth: 1.5))

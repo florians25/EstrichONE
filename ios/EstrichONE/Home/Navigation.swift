@@ -10,6 +10,8 @@ enum HomeRoute: Hashable {
     case dispatch
     case inbox
     case chat
+    /// Offene Urlaubsanträge zur Genehmigung.
+    case approvals
 }
 
 extension NewBauakteView.Next {

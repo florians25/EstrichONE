@@ -92,17 +92,19 @@ struct TodayJob: Identifiable {
     }
 }
 
-/// Karte eines Einsatzes – alles für die Baustelle auf einen Blick: Uhrzeit mit „Jetzt“/„in 2 Std.“, Baustelle mit Status,
-/// Kennzahlen (offene Mängel und Aufgaben, Belegreife, Wetter laut Tagebuch), Adresse mit Entfernung, Ansprechpartner,
-/// Leistung, Kolonne, Fahrzeuge und Geräte, Hinweise. Unten vier große Handgriffe (Route, Anrufen, Foto, Tagebuch) –
-/// gut mit Handschuhen und einer Hand. Weitere Einsätze des Tages stehen zugeklappt darunter (Tipp klappt auf).
+/// Karte eines Einsatzes, alles für die Baustelle auf einen Blick: Uhrzeit mit „Jetzt“ bzw. „in 2 Std.“, Baustelle mit
+/// Status, Kennzahlen (offene Mängel und Aufgaben, Belegreife, Wetter laut Tagebuch), Adresse mit Entfernung,
+/// Ansprechpartner, Tätigkeit und Leistung laut Basisdaten, Kolonne, Fahrzeuge und Geräte, Zugang und angeheftete Notizen,
+/// Hinweise der Disposition und die letzte Nachricht im Chat der Baustelle. Unten vier Handgriffe (Route, Anrufen, Foto,
+/// Tagebuch), gut mit Handschuhen und einer Hand. Weitere Einsätze des Tages stehen zugeklappt darunter (Tipp klappt auf).
 struct TodayJobCard: View {
     enum Action {
-        case open, photo, diary, defect, route, call
+        case open, photo, diary, defect, route, call, chat
     }
 
     let job: TodayJob
     var glance: SiteGlance?
+    var extras: TodaySiteExtras?
     /// „1,8 km“ (Luftlinie), falls Standort und Koordinaten bekannt.
     var distance: String?
     var phase: TodayGlance.Phase = .unknown
@@ -176,7 +178,7 @@ struct TodayJobCard: View {
                 } else if let phone = job.phoneText {
                     line(symbol: "phone", text: "Ansprechpartner vor Ort", detail: phone)
                 }
-                line(symbol: "hammer", text: job.activity, strong: true)
+                line(symbol: "hammer", text: job.activity, detail: extras?.facts, strong: true)
                 if job.crewName != nil || !job.people.isEmpty {
                     crewLine
                 }
@@ -184,7 +186,16 @@ struct TodayJobCard: View {
                     line(symbol: "truck.box", text: job.resources.joined(separator: ", "))
                 }
                 if let notes = job.notes?.compactText {
-                    line(symbol: "text.bubble", text: notes)
+                    line(symbol: "text.bubble", text: notes, caption: "Hinweis der Disposition")
+                }
+                if let access = extras?.access {
+                    line(symbol: "key", text: access, caption: "Zugang und Besonderheiten", limit: 4)
+                }
+                ForEach(Array((extras?.pinned ?? []).prefix(2).enumerated()), id: \.offset) { _, note in
+                    line(symbol: "pin", text: note, caption: "Angeheftete Notiz", limit: 4)
+                }
+                if let chat = extras?.chat {
+                    chatLine(chat)
                 }
                 ForEach(job.warnings, id: \.self) { warning in
                     Callout(tone: .warning, message: warning)
@@ -236,7 +247,7 @@ struct TodayJobCard: View {
         .contentShape(Rectangle())
     }
 
-    /// Vier gleich große Handgriffe (64 pt hoch); bei sehr großer Schrift zwei je Zeile.
+    /// Vier gleich große Handgriffe (54 pt hoch); bei sehr großer Schrift zwei je Zeile.
     private var actionBar: some View {
         let columns = Array(repeating: GridItem(.flexible(), spacing: Space.s), count: typeSize.isAccessibilitySize ? 2 : 4)
         return LazyVGrid(columns: columns, spacing: Space.s) {
@@ -278,7 +289,7 @@ struct TodayJobCard: View {
                         .foregroundStyle(Theme.textPrimary)
                         .multilineTextAlignment(.leading)
                         .fixedSize(horizontal: false, vertical: true)
-                    Text([job.activity, job.crewName].compactMap { $0 }.joined(separator: ", "))
+                    Text([job.activity, job.crewName, extras?.facts].compactMap { $0 }.joined(separator: ", "))
                         .font(Typo.subhead)
                         .foregroundStyle(Theme.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -327,6 +338,9 @@ struct TodayJobCard: View {
             Button("Bautagebuch-Eintrag", systemImage: "book") { perform(.diary) }
             Button("Mangel melden", systemImage: "exclamationmark.triangle") { perform(.defect) }
         }
+        if extras?.chat != nil {
+            Button("Chat der Baustelle", systemImage: "bubble.left.and.bubble.right") { perform(.chat) }
+        }
         Button("Bauakte öffnen", systemImage: "folder") { perform(.open) }
             .accessibilityIdentifier("todayJobOpen")
     }
@@ -356,7 +370,44 @@ struct TodayJobCard: View {
         .accessibilityElement(children: .combine)
     }
 
-    private func line(symbol: String, text: String, detail: String? = nil, strong: Bool = false) -> some View {
+    /// Letzte Nachricht im Chat der Baustelle; Tipp öffnet die Unterhaltung im Reiter „Chat“.
+    private func chatLine(_ chat: ChatConversation) -> some View {
+        Button { perform(.chat) } label: {
+            HStack(alignment: .firstTextBaseline, spacing: Space.m) {
+                Image(systemName: chat.unreadCount > 0 ? "bubble.left.fill" : "bubble.left")
+                    .font(.subheadline.weight(SymbolWeight.content))
+                    .foregroundStyle(chat.unreadCount > 0 ? Theme.accent : Theme.textSecondary)
+                    .frame(width: 22)
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: Space.xs) {
+                        Text(chat.unreadCount > 0 ? "Chat, \(chat.unreadCount) neu" : "Chat der Baustelle")
+                            .font(Typo.labelStrong)
+                            .foregroundStyle(chat.unreadCount > 0 ? Theme.accent : Theme.textSecondary)
+                        if let at = chat.lastMessageAt {
+                            Text(at.shortStamp).font(Typo.label).foregroundStyle(Theme.textSecondary)
+                        }
+                    }
+                    Text([chat.lastMessageSender.map { "\($0):" }, chat.lastMessageText].compactMap { $0 }.joined(separator: " "))
+                        .font(Typo.subhead)
+                        .foregroundStyle(Theme.textPrimary)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.leading)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer(minLength: 0)
+                Chevron()
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityElement(children: .combine)
+        .accessibilityHint("Öffnet den Chat der Baustelle")
+        .accessibilityIdentifier("todayJobChat")
+    }
+
+    private func line(symbol: String, text: String, detail: String? = nil, caption: String? = nil, limit: Int? = nil,
+                      strong: Bool = false) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: Space.m) {
             Image(systemName: symbol)
                 .font(.subheadline.weight(SymbolWeight.content))
@@ -364,9 +415,15 @@ struct TodayJobCard: View {
                 .frame(width: 22)
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 2) {
+                if let caption {
+                    Text(caption)
+                        .font(Typo.labelStrong)
+                        .foregroundStyle(Theme.textSecondary)
+                }
                 Text(text)
                     .font(strong ? Typo.subheadStrong : Typo.subhead)
                     .foregroundStyle(Theme.textPrimary)
+                    .lineLimit(limit)
                     .fixedSize(horizontal: false, vertical: true)
                 if let detail {
                     Text(detail)
@@ -389,7 +446,7 @@ struct TodayJobCard: View {
             SkeletonBar(height: 14)
             SkeletonBar(width: 200, height: 14)
             SkeletonBar(width: 160, height: 14)
-            RoundedRectangle(cornerRadius: Radius.l, style: .continuous).fill(Theme.fill).frame(height: 64)
+            RoundedRectangle(cornerRadius: Radius.l, style: .continuous).fill(Theme.fill).frame(height: 54)
         }
         .padding(Space.l)
         .card()

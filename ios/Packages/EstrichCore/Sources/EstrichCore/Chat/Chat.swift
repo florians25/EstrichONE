@@ -798,6 +798,8 @@ public enum ChatComposerPolicy {
     public static let allowsAttachments = false
     /// Hinweis an der Stelle des früheren Anhang-Knopfs.
     public static let fileExchangeHint = "Für Datei- und Fotoaustausch bitte Microsoft Teams verwenden."
+    /// Was wo läuft (Hinweis oben in der Chat-Liste).
+    public static let scopeHint = "Dateien und Fotos tauschen Sie über Microsoft Teams aus. Nachrichten, Diktat und Standort teilen laufen weiter über EstrichONE. Baustellenfotos gehören in die Bauakte."
     /// Was die Eingabezeile neben Text und Diktat anbietet (nur Standort bzw. Baustellenadresse, keine Dateien).
     public static let shareOptions = ["Mein Standort", "Baustellenadresse"]
 

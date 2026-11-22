@@ -7,7 +7,7 @@ Planung zeigt alle Kolonnen auf einmal. Das iPad eignet sich besonders als **Poo
 
 ## Navigation
 
-Die Tabs **Heute**, **Baustellen**, **Erfassen**, **Kunden** und **Mehr** stehen auf aktuellen iPadOS-Versionen oben als
+Die Tabs **Heute**, **Baustellen**, **Chat**, **Kunden** und **Mehr** stehen auf aktuellen iPadOS-Versionen oben als
 Leiste; über das Seitenleisten-Symbol links daneben lässt sich stattdessen eine **Seitenleiste** einblenden.
 
 ![iPad quer mit Seitenleiste](bilder/ipad-heute-quer.jpg "iPad quer: Heute mit eingeblendeter Seitenleiste"){ipad}
