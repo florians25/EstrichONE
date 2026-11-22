@@ -23,7 +23,7 @@ den nächsten Einsatz.
 ## Neue Bauakte anlegen
 
 Eine neue Baustelle legen Sie in wenigen Schritten an, auch ohne Verbindung. Tippen Sie in **Baustellen** auf **„+“**
-oder in **Erfassen** auf **Neue Bauakte anlegen**. Der Assistent führt in vier Schritten:
+(bzw. in der Kundenkarte auf **Neue Bauakte für …**). Der Assistent führt in vier Schritten:
 
 ![Schritt 1](bilder/iphone-neu-1.jpg "Schritt 1: Für wen bauen wir?")
 ![Schritt 2](bilder/iphone-neu-2.jpg "Schritt 2: Wo ist die Baustelle?")
@@ -49,15 +49,23 @@ es an derselben Adresse schon eine Bauakte, weist die App darauf hin und bietet 
 
 ## Die Bauakte im Überblick
 
-![Bauakte oben](bilder/iphone-bauakte.jpg "Basisdaten auf einen Blick, unten Foto und Video")
-![Bauakte Mitte](bilder/iphone-bauakte-mitte.jpg "Basisdaten, offene Punkte und neueste Fotos")
+![Bauakte oben](bilder/iphone-bauakte.jpg "Kopf mit Stand und Leistung, Kennzahlen, unten Foto und Erfassen")
+![Bauakte Mitte](bilder/iphone-bauakte-mitte.jpg "Abschnitte, Hinweise zur Baustelle und Basisdaten")
 ![Bauakte unten](bilder/iphone-bauakte-unten.jpg "Die Bereiche der Bauakte")
 
 Die Bauakte zeigt von oben nach unten:
 
-- **Basisdaten auf einen Blick**: Nummer, **Stand** (antippen zum Ändern, Abschnitt 4.16), Bauvorhaben, **Adresse** mit
-  **Route starten**, **Kunde** und **Ansprechpartner vor Ort** mit **Anrufen**, Bauleiter, nächster Einsatz mit Kolonne.
-- Hinweise nur bei Bedarf: angeheftete Notizen, Erstbegehung fehlt, Warnungen aus der Planung, storniert.
+- **Kopf**: Nummer, **Stand** (antippen zum Ändern, Abschnitt 4.16), Bauvorhaben, darunter **Heute im Einsatz**, eine
+  hohe Priorität und die **Leistung** (z. B. „142,5 m², Zementestrich CT, 65 mm, Fußbodenheizung“). Darunter **Adresse**
+  mit **Route starten**, **Kunde** und **Ansprechpartner vor Ort** mit **Anrufen**, Bauleiter, **Zuständig** und
+  Beteiligte (mit Verbindung), nächster Einsatz mit Kolonne.
+- **Kennzahlen**: Fotos, offene Mängel, offene Aufgaben und Einträge im Bautagebuch. Ein Tipp öffnet den Bereich.
+- **Abschnitte**: Sprungmarken zu **Hinweise**, **Basisdaten**, **Offene Punkte**, **Fotos** und **Alle Bereiche**.
+- Hinweise nur bei Bedarf: Erstbegehung fehlt, Warnungen aus der Planung, storniert.
+- **Hinweise zur Baustelle**: was oft als Freitext erfasst wird, als gut lesbare Textblöcke mit Überschrift:
+  angeheftete Notizen, **Zugang und Besonderheiten** (und weitere mehrzeilige Felder Ihres Betriebs), der Hinweis der
+  Disposition für heute und die **Beschreibung**. Zeilenumbrüche bleiben erhalten, Telefonnummern, E-Mail-Adressen und
+  Links lassen sich antippen, lange Texte öffnet **Mehr anzeigen**. **Bearbeiten** ändert die Basisdaten.
 - **Basisdaten**: die vier wichtigsten Kennwerte, zuerst **Estrichart**, **Dicke**, **Fläche** und **Termin** (soweit
   erfasst), danach in der Reihenfolge des Formulars; **Alle Basisdaten**
   klappt alle weiteren auf, **Bearbeiten** ändert sie.
@@ -66,11 +74,10 @@ Die Bauakte zeigt von oben nach unten:
   **Abnahme & Messungen**, **Basisdaten**, **Kontakte** und **Notizen & Verlauf**, jeweils mit Kurzinfo. Die letzte
   Aktivität steht unter **Notizen & Verlauf**.
 
-Unten stehen immer die zwei großen Schaltflächen **Foto** und **Video**, die Kamera öffnet sofort, die Aufnahme landet
-in dieser Bauakte. Alles Weitere steht oben rechts unter **Weitere Aktionen** (**…** bzw. **⋮**): **Dokument scannen**,
-**Bautagebuch-Eintrag**, **Mangel melden**, **Aufgabe**, **Notiz**, **Erstbegehung**, **Abnahme**, **CM-Messung**
-(Android: unter **Weitere erfassen …**), **Bauakte als PDF**, **Route starten**, **Basisdaten bearbeiten**, **Verlauf**
-und **In Teams öffnen**. **Stornieren …** steht im Menü des Stands.
+Unten stehen immer die zwei Schaltflächen **Foto** und **Erfassen**. **Foto** öffnet sofort die Kamera, die Aufnahme
+landet in dieser Bauakte. **Erfassen** öffnet die Auswahl aller Erfassungen (Abschnitt „Erfassen in der Bauakte“).
+Oben rechts unter **Weitere Aktionen** (**…** bzw. **⋮**) stehen **Erfassen**, **Bauakte als PDF**, **Route starten**,
+**Basisdaten bearbeiten**, **Verlauf** und **In Teams öffnen**. **Stornieren …** steht im Menü des Stands.
 
 Jeder Eintrag zeigt seinen Übertragungsstand: „Auf dem Gerät gespeichert, wird übertragen“ oder „Auf dem Gerät
 gespeichert und übertragen“.
@@ -79,7 +86,7 @@ gespeichert und übertragen“.
 
 ![Fotos und Dokumente](bilder/iphone-bereich-fotos.jpg "Fotos & Dokumente: Fotos, Videos und Dokumente der Bauakte"){rechts}
 
-1. Tippen Sie in der Bauakte (oder auf der Heute-Seite, oder in **Erfassen**) auf **Foto**.
+1. Tippen Sie in der Bauakte (oder auf der Heute-Seite in der Karte des Einsatzes) auf **Foto**.
 2. Geben Sie optional eine **Beschriftung** ein, z. B. „Randdämmung Bad OG“. Sie gilt für alle folgenden Fotos dieser
    Serie.
 3. Fotografieren Sie beliebig viele Bilder hintereinander, die Kamera bleibt offen, der Zähler unten rechts zählt mit.
@@ -94,14 +101,14 @@ sind. In der Fotomediathek landet nichts.
 **Schneller zur Kamera:** App-Symbol lange drücken → **Foto zur Baustelle** (bzw. **Bautagebuch**, **Baustelle
 suchen**). Dasselbe gibt es als Kurzbefehl, per Siri („Foto mit EstrichONE“) und (auf iPhones mit Aktionstaste) über
 **Einstellungen** → **Aktionstaste** → **Kurzbefehl**. Gemeint ist immer der heutige Einsatz, sonst die zuletzt geöffnete
-Bauakte; oben in der Kamera lässt sie sich wechseln.
+Bauakte, sonst wählen Sie die Baustelle; oben in der Kamera lässt sie sich wechseln.
 In **Fotos & Dokumente** tippen Sie ein Foto an, um es groß zu sehen (Doppeltippen vergrößert). Dort können Sie es
 **beschriften** oder **löschen**, ein bereits übertragenes Foto wird dann auch im Büro gelöscht, ein noch nicht
 übertragenes nur auf diesem Gerät.
 
 ## Videos aufnehmen
 
-Über **Video** unten in der Bauakte (oder **Erfassen** → **Video**) nehmen Sie ein kurzes Video auf,
+Über **Erfassen** → **Video** unten in der Bauakte nehmen Sie ein kurzes Video auf,
 **bis 2 Minuten** lang, z. B. „Estrich wird eingebracht“. Alternativ wählen Sie ein Video aus der Mediathek; längere
 Videos werden auf die ersten 2 Minuten gekürzt. Die App verkleinert das Video vor der Übertragung (720p, H.264, rund
 15 MB je Minute, im Browser überall abspielbar) und zeigt die Größe an.
@@ -154,7 +161,8 @@ zusätzlich unter **Meine Aufgaben** (Kapitel 3).
 ## Notizen und Verlauf
 
 **Notiz schreiben** legt eine kurze Notiz an, die alle in der Bauakte sehen, z. B. „Schlüssel beim Nachbarn
-(Nr. 5)“. Notizen, die im Büro **angeheftet** wurden, stehen oben im Kopf der Bauakte. Der **Änderungsverlauf**
+(Nr. 5)“. Das Feld ist mehrzeilig, Zeilenumbrüche bleiben erhalten. Notizen, die im Büro **angeheftet** wurden,
+stehen in der Übersicht unter **Hinweise zur Baustelle** und auf der Heute-Seite in der Karte des Einsatzes. Der **Änderungsverlauf**
 in **Notizen & Verlauf** zeigt, wer was wann geändert hat; er ist nur mit Verbindung zum Server verfügbar.
 
 ## Erstbegehung
@@ -171,7 +179,7 @@ und Uhrzeit), alle **Protokolle** sowie die **Fotos und Dokumente** der Erstbege
 Protokoll-PDF). Von dort führen Sie die Erstbegehung durch oder vermerken **Erstbegehung nicht erforderlich**. Ist das
 Modul „Erstbegehung und Protokolle“ ausgeschaltet, entfällt der Bereich.
 
-1. Öffnen Sie **Erstbegehung** (in der Bauakte unter **Mehr**, im Bereich **Erstbegehung** oder in **Erfassen**).
+1. Öffnen Sie **Erstbegehung** (in der Bauakte unter **Erfassen** oder im Bereich **Erstbegehung**).
 2. Setzen Sie bei jedem Prüfpunkt **In Ordnung**, **Mangel** oder **Entfällt**. Mit **Foto zu diesem Punkt**
    dokumentieren Sie den Befund direkt am Punkt; bei einem Mangel beschreiben Sie ihn kurz.
 3. Tragen Sie **Messwerte und Angaben** (z. B. gemessene Fläche, Estrichdicke) und freie **Notizen** ein.
@@ -186,7 +194,7 @@ Protokoll öffnen Sie mit **Als PDF ansehen**, das PDF erstellt der Server, daf�
 
 Mit der **CM-Messung** halten Sie die Restfeuchte des Estrichs fest und sehen sofort, ob er **belegreif** ist:
 
-1. Öffnen Sie **CM-Messung** (Bauakte → **Mehr**, **Abnahme & Messungen** oder **Erfassen**).
+1. Öffnen Sie **CM-Messung** (Bauakte → **Erfassen** oder **Abnahme & Messungen**).
 2. Wählen Sie die **Estrichart** (**Zementestrich (CT)** oder **Calciumsulfatestrich (CA)**) und ob er **beheizt**
    ist (Fußbodenheizung).
 3. Tragen Sie den **Messort** (z. B. „Bad OG“) und den **Messwert** in CM-% ein, optional eine Bemerkung und Fotos
@@ -210,7 +218,7 @@ Die App vergleicht den Wert mit dem Grenzwert und zeigt **Belegreif** oder **Noc
 Das **Abnahmeprotokoll** erfassen Sie vollständig in der App, mit Mängeln, Fotos und Unterschriften, auch ohne
 Verbindung:
 
-1. Öffnen Sie **Abnahme** (Bauakte → **Mehr**, **Abnahme & Messungen** → **Abnahme erfassen** oder **Erfassen**).
+1. Öffnen Sie **Abnahme** (Bauakte → **Erfassen** oder **Abnahme & Messungen** → **Abnahme erfassen**).
 2. Wählen Sie das **Ergebnis**: **Abgenommen**, **Mit Vorbehalt** oder **Verweigert**.
 3. Tragen Sie **Teilnehmer und Ort** (Auftraggeber, Auftragnehmer, Adresse der Baustelle) und die **abgenommene
    Leistung** ein (z. B. „Zementestrich CT-C25-F4, 65 mm, EG und OG“).
@@ -292,19 +300,19 @@ dem iPhone klein und die Daten für unterwegs vollständig.
 - Haben Sie das Recht, alle Bauakten offline zu speichern (Büro), liegen auch nicht zugeteilte Bauakten auf dem Gerät;
   dann zeigt die Bauakte oben den Hinweis „Nur ansehen“, sofern Sie nicht alle Bauakten bearbeiten dürfen.
 
-## Der Tab „Erfassen“
+## Erfassen in der Bauakte
 
-![Erfassen](bilder/iphone-erfassen.jpg "Erfassen: erst die Baustelle, dann was erfasst werden soll"){rechts}
+![Erfassen](bilder/iphone-bauakte-erfassen.jpg "Erfassen in der Bauakte: alle Erfassungen an einer Stelle"){rechts}
 
-Der Tab **Erfassen** ist der schnellste Weg, etwas zu einer Baustelle festzuhalten, ohne die Bauakte zu suchen:
+Erfasst wird immer in der Bauakte, so landet nichts in der falschen Baustelle. Tippen Sie unten in der Bauakte auf
+**Erfassen** (oder oben rechts **Weitere Aktionen** → **Erfassen**) und wählen Sie einen Eintrag:
 
-1. Oben steht die **Baustelle**, vorausgewählt ist die Bauakte Ihres heutigen Einsatzes („Heutiger Einsatz“), sonst
-   die zuletzt geöffnete. Mit **Ändern** wählen Sie eine andere.
-2. Tippen Sie auf einen Eintrag der Liste: unter **Fotos und Dokumente** **Foto** (Serie mit Beschriftung), **Video**
-   (kurze Aufnahme) und **Dokument scannen** (Lieferschein, Plan); unter **Festhalten** **Bautagebuch** (Eintrag für
-   heute), **Mangel melden** (mit Frist), **Aufgabe** (für mich oder andere) und **Notiz** (für alle in der Akte); unter
-   **Prüfen** **Erstbegehung** (Prüfpunkte vor Ort), **CM-Messung** (Belegreife prüfen) und **Abnahme** (mit
-   Unterschrift).
+- unter **Fotos und Dokumente**: **Foto aufnehmen** (Serie mit Beschriftung), **Video aufnehmen** (kurze Aufnahme) und
+  **Dokument scannen** (Lieferschein, Plan, Aufmaß),
+- unter **Festhalten**: **Bautagebuch-Eintrag** (für heute), **Mangel melden** (mit Frist und Foto), **Aufgabe anlegen**
+  (für Sie oder andere) und **Notiz schreiben** (für alle in der Bauakte),
+- unter **Prüfen**: **Erstbegehung** (Prüfpunkte vor Ort), **CM-Messung** (Belegreife prüfen) und **Abnahme** (mit
+  Unterschrift).
 
-Darunter legt **Neue Bauakte anlegen** eine neue Baustelle an. Nach dem Speichern bestätigt die App kurz, z. B.
-„Foto gespeichert“.
+Einträge abgeschalteter Module erscheinen nicht. Nach dem Speichern bestätigt die App kurz, z. B. „Foto gespeichert“.
+Für den heutigen Einsatz geht es schneller: **Foto** und **Tagebuch** stehen auf der Heute-Seite direkt in der Karte.

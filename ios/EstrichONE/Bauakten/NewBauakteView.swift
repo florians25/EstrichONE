@@ -269,8 +269,9 @@ struct NewBauakteView: View {
             }
             .pickerStyle(.segmented)
             DisclosureGroup("Beschreibung hinzufügen", isExpanded: $showsDescription) {
-                TextField("Beschreibung", text: binding(\.description), axis: .vertical)
-                    .lineLimit(2...6)
+                TextField("Bauvorhaben, Besonderheiten, Absprachen", text: binding(\.description), axis: .vertical)
+                    .lineLimit(4...12)
+                    .accessibilityLabel("Beschreibung")
             }
         } header: {
             Text("Art")

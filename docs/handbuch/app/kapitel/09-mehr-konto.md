@@ -2,7 +2,7 @@
 
 Der Tab **Mehr** bündelt alles rund um Ihr Konto und das Gerät.
 
-![Mehr](bilder/iphone-mehr.jpg "Tab Mehr: Konto, Synchronisation, Benachrichtigungen, Chat, Service")
+![Mehr](bilder/iphone-mehr.jpg "Tab Mehr: Konto, Synchronisation, Benachrichtigungen, Service")
 ![App zurücksetzen](bilder/iphone-mehr-zuruecksetzen.jpg "App zurücksetzen: Rückfrage vor dem Löschen")
 
 ## Was unter „Mehr“ steht
@@ -10,7 +10,7 @@ Der Tab **Mehr** bündelt alles rund um Ihr Konto und das Gerät.
 | Bereich | Inhalt |
 |---|---|
 | Kopf | Ihr Name und Anmeldename, **Synchronisation** mit Stand (Kapitel 8) |
-| **Benachrichtigungen**, **Chat** | Postfach und Chat mit Zahl neuer Einträge, Push an/aus (Kapitel 7) |
+| **Benachrichtigungen**, **Microsoft Teams** | Postfach mit Zahl neuer Einträge, Push an/aus; mit Teams-Anbindung **Microsoft Teams** und die Teams-Chats Ihrer Kolonnen (Kapitel 7). Der Chat hat einen eigenen Tab. |
 | **Service** | **Urlaub und Abwesenheit**, **Tankbelege** (unten), **IT-Service/Helpdesk** und **Problem melden** (Kapitel 6 und 7) |
 | Sperre und Gerät | auf persönlichen Geräten **Sperre und Face ID** (Kapitel 2); **Gerät, Server und App**: Gerätename, Nutzung (**Persönliches Gerät** oder **Poolgerät**), Status der Freigabe, **Speicher**, Server, **App-Update**, **Konto löschen beantragen**, **App zurücksetzen** und App-Version |
 | unten | **Sperren** bzw. **Benutzer wechseln** und **Abmelden** |

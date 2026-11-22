@@ -14,10 +14,16 @@ struct NewNoteView: View {
     var body: some View {
         NavigationStack {
             Form {
-                TextField("Notiz", text: $text, axis: .vertical)
-                    .lineLimit(4...12)
-                    .focused($focused)
-                    .accessibilityIdentifier("noteTextField")
+                Section {
+                    TextField("Zum Beispiel: Schlüssel liegt beim Nachbarn, Haus Nr. 3", text: $text, axis: .vertical)
+                        .lineLimit(6...16)
+                        .font(Typo.body)
+                        .focused($focused)
+                        .accessibilityLabel("Notiz")
+                        .accessibilityIdentifier("noteTextField")
+                } footer: {
+                    Text("Für alle Beteiligten der Bauakte sichtbar. Zeilenumbrüche bleiben erhalten, Telefonnummern und Links sind antippbar.")
+                }
                 if let error {
                     Text(error).foregroundStyle(Theme.danger)
                 }
@@ -52,6 +58,8 @@ struct NoteRow: View {
     let note: Note
     var authorName: String?
 
+    @State private var expanded = false
+
     var body: some View {
         VStack(alignment: .leading, spacing: Space.xs) {
             if note.isPinned {
@@ -60,10 +68,23 @@ struct NoteRow: View {
                     .font(Typo.labelStrong)
                     .foregroundStyle(Theme.accent)
             }
-            Text(note.text.trimmingCharacters(in: .whitespacesAndNewlines))
+            // Freitext gut lesbar: Zeilenumbrüche bleiben, Links und Telefonnummern antippbar, lange Notizen gekürzt.
+            let text = FreeText.clean(note.text) ?? ""
+            let long = FreeText.isLong(text)
+            Text(FreeTextLinks.attributed(text))
                 .font(Typo.body)
                 .foregroundStyle(Theme.textPrimary)
+                .lineSpacing(2)
+                .lineLimit(long && !expanded ? 6 : nil)
                 .fixedSize(horizontal: false, vertical: true)
+                .textSelection(.enabled)
+                .tint(Theme.accent)
+            if long {
+                Button(expanded ? "Weniger anzeigen" : "Mehr anzeigen") { withAnimation(.snappy) { expanded.toggle() } }
+                    .font(Typo.subheadStrong)
+                    .buttonStyle(.borderless)
+                    .foregroundStyle(Theme.accent)
+            }
             HStack(spacing: Space.s) {
                 Text([authorName, note.createdAt?.shortStamp].compactMap { $0 }
                     .joined(separator: ", "))
@@ -74,7 +95,7 @@ struct NoteRow: View {
             }
         }
         .padding(.vertical, Space.xs)
-        .accessibilityElement(children: .combine)
+        .accessibilityElement(children: .contain)
     }
 }
 

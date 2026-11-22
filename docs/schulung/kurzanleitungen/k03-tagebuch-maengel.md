@@ -9,7 +9,7 @@
 
 ## Bautagebuch-Eintrag
 
-1. Auf der Heute-Seite (oder in der Bauakte) auf **Tagebuch** tippen.
+1. Auf der Heute-Seite auf **Tagebuch** tippen (oder in der Bauakte **Erfassen** → **Bautagebuch-Eintrag**).
 2. **Tag** prüfen (vorbelegt mit heute).
 3. Unter **Was ist passiert?** schreiben oder diktieren, oder **Textbausteine** antippen, z. B. „Estrich eingebracht“,
    „Baustelle nicht frei“, „Wartezeit wegen Vorgewerk“.
@@ -18,7 +18,7 @@
 
 ## Mangel melden
 
-1. Auf **Mangel** tippen (Heute-Seite, Bauakte oder **Erfassen** → **Mangel melden**).
+1. Auf **Mangel** tippen (Heute-Seite in der Karte des Einsatzes oder Bauakte → **Erfassen** → **Mangel melden**).
 2. **Was ist mangelhaft?** kurz beschreiben, bei Bedarf **Details**.
 3. **Frist** wählen: Heute, Morgen, In 3 Tagen, In 1 Woche oder ein Datum.
 4. **Zuständig** wählen, eine Person oder **Niemand**.
@@ -29,5 +29,5 @@
 1. **Meine Aufgaben** öffnen (Kachel auf der Heute-Seite).
 2. Auf den **Kreis** vor dem Punkt tippen. Er ist **erledigt**. Versehen? **Wieder öffnen**.
 
-> **Hinweis:** Aufgaben funktionieren genauso wie Mängel: in der Bauakte **Mehr** → **Aufgabe** bzw. **Erfassen** →
-> **Aufgabe**. Im Web stehen alle Punkte in der Bauakte unter **Aufgaben & Mängel**.
+> **Hinweis:** Aufgaben funktionieren genauso wie Mängel: in der Bauakte **Erfassen** →
+> **Aufgabe anlegen**. Im Web stehen alle Punkte in der Bauakte unter **Aufgaben & Mängel**.

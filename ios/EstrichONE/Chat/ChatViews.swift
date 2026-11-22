@@ -6,6 +6,9 @@ import UIKit
 /// letzter Nachricht, Entwurf, Stummschaltung und Erwähnungen; Suche über alle Chats; neue Einzelchats und Gruppen.
 /// Der Verlauf kommt direkt vom Server und bleibt nur im Arbeitsspeicher.
 struct ChatListView: View {
+    /// Startseite des Reiters „Chat“ (großer Titel, öffnet Unterhaltungen aus „Heute“ und Mitteilungen).
+    var isTab = false
+
     @Environment(AppModel.self) private var model
     @Environment(\.shotScene) private var shotScene
     @State private var conversations: [ChatConversation] = []
@@ -20,6 +23,10 @@ struct ChatListView: View {
     @State private var showsPrivacy = false
     @State private var startsTeamsChat = false
     @State private var openHit: ChatSearchHit?
+    /// Aus „Heute“ oder einer Mitteilung angefordert.
+    @State private var openById: UUID?
+    @State private var navigation = ChatNavigation.shared
+    @State private var handledRequest = 0
 
     private var chat: ChatCenter? { model.active?.chat }
     private var status: ChatStatus? { model.active?.sync?.chat }
@@ -32,7 +39,7 @@ struct ChatListView: View {
         .listStyle(.insetGrouped)
         .overlay { if !loaded { ListSkeleton() } }
         .navigationTitle(archive ? "Chat-Archiv" : "Chat")
-        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarTitleDisplayMode(isTab ? .large : .inline)
         .searchable(text: $search, placement: .navigationBarDrawer(displayMode: .automatic), prompt: "In allen Chats suchen")
         .task(id: search) { await runSearch() }
         .navigationDestination(item: $open) { conversation in
@@ -40,6 +47,22 @@ struct ChatListView: View {
         }
         .navigationDestination(item: $openHit) { hit in
             ChatConversationView(conversationId: hit.conversationId, title: hit.conversationTitle, focusMessage: hit.message.id)
+        }
+        .navigationDestination(item: $openById) { id in
+            ChatConversationView(conversationId: id)
+        }
+        .task(id: isTab ? navigation.request : 0) {
+            guard isTab, navigation.request > handledRequest else { return }
+            handledRequest = navigation.request
+            let requested = navigation.pendingConversation
+            navigation.pendingConversation = nil
+            open = nil
+            openHit = nil
+            openById = nil
+            guard let requested else { return }
+            // Erst nach dem Zurücksetzen öffnen, damit die Navigation sicher wechselt.
+            try? await Task.sleep(for: .milliseconds(250))
+            openById = requested
         }
         .toolbar {
             if let teams, teams.available {
@@ -125,6 +148,12 @@ struct ChatListView: View {
                                        message: "Sobald das Büro oder Ihre Kolonne schreibt, erscheint die Unterhaltung hier.")
                     }
                 }
+                if !archive {
+                    // Dateien und Fotos laufen über Microsoft Teams; Nachrichten, Diktat und Standort bleiben hier.
+                    Section {
+                        ChatTeamsInfo(targets: ChatComposerPolicy.teamsTargets(link: nil, status: teams))
+                    }
+                }
                 Section {
                     ForEach(conversations) { conversation in
                         Button { open = conversation } label: {
@@ -154,7 +183,7 @@ struct ChatListView: View {
     }
 
     private var footer: String {
-        var text = "Nachrichten und Anhänge werden verschlüsselt auf dem Server Ihres Betriebs gespeichert"
+        var text = "Nachrichten werden verschlüsselt auf dem Server Ihres Betriebs gespeichert"
         if let days = status?.retentionDays { text += " und nach \(days) Tagen gelöscht" }
         return text + ". Sprachnachrichten werden nicht unterstützt; zum Diktieren auf das Mikrofon tippen."
     }
@@ -271,7 +300,8 @@ struct ChatListView: View {
         searching = false
     }
 
-    private static let cacheKey = "chat_conversations"
+    /// Zuletzt geladene Liste (verschlüsselt auf dem Gerät); „Heute“ liest daraus die letzte Nachricht je Baustelle.
+    static let cacheKey = "chat_conversations"
 
     private static func sorted(_ list: [ChatConversation]) -> [ChatConversation] {
         list.sorted { lhs, rhs in

@@ -21,7 +21,7 @@ iphone=(start start-adresse anmelden anmelden-code warten gesperrt sicherheit si
   zuruecksetzen heute-unten heute-zweiter heute-gross heute-chat aufgaben woche disposition dispo-zuweisen dispo-verschieben dispo-tauschen
   dispo-fahrzeug dispo-kolonnen dispo-freigabe baustellen bauakte bauakte-mitte bauakte-unten bereich-fotos bereich-aufgaben
   bereich-protokolle bereich-tagebuch bereich-raeume bereich-basisdaten bereich-kontakte bereich-notizen raum protokoll
-  erstbegehung abnahme tagebuch-neu mangel-neu kontakt-neu basisdaten-neu erfassen neu-1 neu-2 neu-3 neu-4 kunden kundenkarte
+  erstbegehung abnahme tagebuch-neu mangel-neu kontakt-neu basisdaten-neu bauakte-erfassen neu-1 neu-2 neu-3 neu-4 kunden kundenkarte
   chat chat-verlauf chat-gruppe chat-anhang chat-diktat meldung meldung-detail meldung-bearbeitung postfach sync stoerung wartung)
 ipad=(heute-quer bauakte-quer kunden-quer disposition-quer)
 

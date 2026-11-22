@@ -4,13 +4,15 @@ import SwiftUI
 import UIKit
 
 /// Schnellzugriffe von außen: App-Symbol lange drücken (Schnellaktionen), Kurzbefehle, Siri und die Aktionstaste.
-/// „Foto“ und „Bautagebuch“ gelten der aktuellen Baustelle – dem heutigen Einsatz, sonst der zuletzt geöffneten
-/// Bauakte; die Kamera zeigt sie oben an und lässt sie dort wechseln. Gesperrt oder abgemeldet wartet die Aktion,
-/// bis die App wieder offen ist.
-enum QuickAction: String, CaseIterable, Sendable {
+/// „Foto“ und „Bautagebuch“ gelten der aktuellen Bauakte: dem heutigen Einsatz, sonst der zuletzt geöffneten Bauakte,
+/// sonst wird die Baustelle gewählt. Die Kamera zeigt die Bauakte oben an und lässt sie dort wechseln. Gesperrt oder
+/// abgemeldet wartet die Aktion, bis die App wieder offen ist.
+enum QuickAction: String, CaseIterable, Identifiable, Sendable {
     case photo = "de.estrichone.quick.photo"
     case diary = "de.estrichone.quick.diary"
     case search = "de.estrichone.quick.search"
+
+    var id: String { rawValue }
 
     var title: String {
         switch self {

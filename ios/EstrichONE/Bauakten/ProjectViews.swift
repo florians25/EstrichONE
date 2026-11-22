@@ -54,7 +54,8 @@ struct ProjectFields: View {
         Section("Vor Ort") {
             Toggle("Wasser vorhanden", isOn: flag(\.waterOnSite))
             Toggle("Strom vorhanden", isOn: flag(\.powerOnSite))
-            TextField("Zufahrt, z. B. nur bis 7,5 t", text: text(\.siteAccess), axis: .vertical).lineLimit(1...4)
+            FreeTextEditor(title: "Zugang und Besonderheiten", prompt: "Pumpenstandort, Zufahrt, Etage, Schlüssel",
+                           text: text(\.siteAccess), identifier: "projectSiteAccessField")
         }
         if let plannedStart, let plannedEnd {
             PlannedPeriodSection(plannedStart: plannedStart, plannedEnd: plannedEnd)
@@ -136,7 +137,8 @@ private struct UnitField<Field: View>: View {
 }
 
 /// Abschnitt „Basisdaten“ in der Bauakte: alle Werte des Bauvorhabens und der geplante Zeitraum als Zeilen
-/// (Bezeichnung links, Wert rechts) mit Symbolen, sonst ein Leerzustand mit „Basisdaten erfassen“.
+/// (Bezeichnung links, Wert rechts) mit Symbolen; Freitexte (z. B. Zugang und Besonderheiten) als eigene, gut lesbare
+/// Textblöcke darunter. Ohne Werte ein Leerzustand mit „Basisdaten erfassen“.
 struct ProjectSection: View {
     let bauakte: Bauakte
     var schema: FormSchema?
@@ -145,13 +147,14 @@ struct ProjectSection: View {
 
     var body: some View {
         let items = schema.map { Self.items(bauakte, schema: $0, lists: lists) } ?? Self.items(bauakte)
+        let texts = Self.freeTexts(bauakte, schema: schema)
         Section {
-            if items.isEmpty {
+            if items.isEmpty, texts.isEmpty {
                 EmptyStateView(symbol: "list.bullet.rectangle", title: "Noch keine Basisdaten",
                                message: "Fläche, Estrichart, Dicke und Heizung der Baustelle für Kolonne und Büro.",
                                actionTitle: "Basisdaten erfassen", actionSymbol: "square.and.pencil", action: edit)
             } else {
-                // Wie in den Einstellungen: Bezeichnung links, Wert rechts – schnell zu überfliegen, auch mit großer Schrift.
+                // Wie in den Einstellungen: Bezeichnung links, Wert rechts, schnell zu überfliegen, auch mit großer Schrift.
                 ForEach(items, id: \.title) { item in
                     LabeledContent {
                         Text(item.value)
@@ -168,15 +171,42 @@ struct ProjectSection: View {
                     .font(Typo.body)
                     .accessibilityElement(children: .combine)
                 }
+                ForEach(texts) { item in
+                    FreeTextBlock(title: item.title, text: item.text, symbol: item.symbol)
+                }
             }
         }
         .accessibilityIdentifier("projectSection")
     }
 
+    /// Freitext der Basisdaten (Zugang und Besonderheiten, eigene mehrzeilige Felder des Büros).
+    struct FreeTextItem: Identifiable, Equatable {
+        let id: String
+        let title: String
+        let text: String
+        let symbol: String
+    }
+
+    /// Mehrzeilige Felder: nach dem Schema alle Felder vom Typ „Textbereich“, ohne Schema „Zugang und Besonderheiten“.
+    static func freeTexts(_ bauakte: Bauakte, schema: FormSchema?) -> [FreeTextItem] {
+        guard let schema else {
+            return FreeText.clean(bauakte.project.siteAccess).map {
+                [FreeTextItem(id: "siteAccess", title: "Zugang und Besonderheiten", text: $0, symbol: "key")]
+            } ?? []
+        }
+        return schema.fields.filter { $0.type == .textarea }.compactMap { field in
+            FreeText.clean(FormSchema.value(field, in: bauakte.projectData).string).map {
+                FreeTextItem(id: field.key, title: field.label.replacingOccurrences(of: " / ", with: " und "), text: $0,
+                             symbol: field.key == "siteAccess" ? "key" : "text.alignleft")
+            }
+        }
+    }
+
     /// Werte nach dem Schema des Büros (eigene Felder eingeschlossen), Zeitraum zuerst.
     static func items(_ bauakte: Bauakte, schema: FormSchema, lists: ValueLists) -> [(title: String, value: String, symbol: String)] {
         let period: [(title: String, value: String, symbol: String)] = BauakteDetailView.period(bauakte).map { [(title: "Geplant", value: $0, symbol: "calendar")] } ?? []
-        return period + schema.fields.compactMap { field in
+        // Mehrzeilige Freitexte erscheinen als eigene Textblöcke (`freeTexts`).
+        return period + schema.fields.filter { $0.type != .textarea }.compactMap { field in
             FormSchema.display(field, FormSchema.value(field, in: bauakte.projectData), lists: lists)
                 .map { (title: field.label, value: $0, symbol: field.builtinSymbol) }
         }
@@ -199,7 +229,6 @@ struct ProjectSection: View {
             ("Wasser", yesNo(project.waterOnSite), "drop"),
             ("Strom", yesNo(project.powerOnSite), "bolt"),
             ("Priorität", project.priority?.title, "flag"),
-            ("Zufahrt", project.siteAccess, "car"),
         ]
         return rows.compactMap { title, value, symbol in
             guard let value, !value.isEmpty else { return nil }
@@ -313,11 +342,8 @@ struct SchemaProjectFields: View {
             LabeledTextField(title: title(field), prompt: field.help ?? "–", text: text(field))
                 .accessibilityIdentifier("schemaField-\(field.key)")
         case .textarea:
-            VStack(alignment: .leading, spacing: 4) {
-                Text(title(field)).font(Typo.meta).foregroundStyle(Theme.textSecondary)
-                TextField(field.help ?? title(field), text: text(field), axis: .vertical).lineLimit(2...6)
-                    .accessibilityLabel(field.label)
-            }
+            // Freitext: mehrzeilig und ausreichend hoch, Zeilenumbrüche bleiben erhalten.
+            FreeTextEditor(title: title(field), prompt: field.help ?? "", text: text(field), identifier: "schemaField-\(field.key)")
         case .number, .integer:
             LabeledContent(title(field)) {
                 HStack(spacing: 4) {

@@ -5,9 +5,14 @@ Freigaben, Planänderungen und Antworten, und der **Helpdesk** für Probleme mit
 
 ## Chat
 
-Der Chat ist ein Modul von EstrichONE; Ihr Betrieb schaltet es im Web ein. Ist es aktiv, erscheint auf der Heute-Seite
-oben rechts unter **Weitere Aktionen** der Eintrag **Chat** (mit Zahl ungelesener Nachrichten) und unter **Mehr** der
-Eintrag **Chat**; die Zahl steht auch am Reiter **Mehr**.
+Der Chat ist ein Modul von EstrichONE; Ihr Betrieb schaltet es im Web ein. Ist es aktiv, erreichen Sie ihn direkt über
+den Tab **Chat** in der Tab-Leiste; die Zahl ungelesener Nachrichten steht am Tab. Auf der Heute-Seite zeigt die Karte
+des Einsatzes die letzte Nachricht im Chat der Baustelle, ein Tipp öffnet die Unterhaltung.
+
+**Was wo läuft:** Nachrichten, Diktat und das Teilen des Standorts laufen über EstrichONE. **Dateien und Fotos tauschen
+Sie über Microsoft Teams aus**, in allen Systemen (iPhone, iPad, Android und Web). Ein Hinweis oben in der Chatliste und
+unter dem Eingabefeld erinnert daran; nutzt Ihr Betrieb Teams, öffnet **In Teams öffnen** direkt die Teams-App.
+Baustellenfotos gehören weiterhin in die Bauakte.
 
 ![Chats](bilder/iphone-chat.jpg "Chatliste mit Einzel-, Kolonnen- und Baustellenchats")
 ![Unterhaltung](bilder/iphone-chat-verlauf.jpg "Unterhaltung mit Fotos, Standort, Reaktionen und Erwähnung")
@@ -44,7 +49,7 @@ Dokumente**, **In diesem Chat suchen**, **Stummschalten** und **Gruppe verlassen
   Betrieb nutzt Teams), öffnet **In Teams öffnen** daneben direkt Teams. Das gilt in jedem Chat-Modus.
 - Das **Standort-Symbol** links neben dem Eingabefeld teilt **Mein Standort** oder die **Baustellenadresse** der
   verknüpften Bauakte (nur iPhone/iPad).
-- **Langes Drücken** auf eine Nachricht: **Antworten**, Reaktion (z. B. 👍), **Kopieren**, **Weiterleiten**,
+- **Langes Drücken** auf eine Nachricht: **Antworten**, Reaktion (z. B. Daumen hoch), **Kopieren**, **Weiterleiten**,
   **Anheften**, **Bearbeiten** und **Für alle löschen** (eigene Nachrichten, für kurze Zeit nach dem Senden), **Gelesen
   von …** sowie bei Fotos und Dokumenten aus älteren Nachrichten **In Bauakte übernehmen**.
 - **Entwürfe** bleiben je Unterhaltung erhalten, auch wenn Sie die App verlassen.

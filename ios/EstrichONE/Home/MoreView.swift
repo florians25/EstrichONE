@@ -55,13 +55,7 @@ struct MoreView: View {
                             detailTint: push.unreadCount > 0 ? Theme.accent : Theme.textSecondary)
                     }
                     .accessibilityIdentifier("inboxRow")
-                    if let chat = model.active?.sync?.chat, chat.isAvailable {
-                        Button { route = .chat } label: {
-                            row(chat.readOnly ? "Chat-Archiv" : "Chat", symbol: chat.readOnly ? "archivebox" : "bubble.left.and.bubble.right",
-                                detail: chat.unreadCount > 0 ? "\(chat.unreadCount) neu" : nil, detailTint: Theme.accent)
-                        }
-                        .accessibilityIdentifier("chatRow")
-                    }
+                    // Der Chat hat einen eigenen Reiter und steht hier nicht noch einmal.
                     // Microsoft Teams (Modus „Teams“ oder „beides“): öffnet die Teams-App; dazu die Teams-Chats der eigenen Kolonnen.
                     if let teams = model.active?.sync?.teams, teams.available {
                         Button { Task { await TeamsOpener.open(teams.homeTargets) } } label: {
@@ -162,6 +156,7 @@ struct MoreView: View {
                 case .dispatch: DispatchView()
                 case .inbox: NotificationInboxView()
                 case .chat: ChatListView()
+                case .approvals: AbsenceOverviewView(opensApprovals: true)
                 }
             }
             .confirmationDialog("Abmelden?", isPresented: $confirmSignOut, titleVisibility: .visible) {
@@ -226,7 +221,6 @@ struct MoreView: View {
         case "sicherheit": route = .security
         case "mehr-zuruecksetzen", "mehr-speicher": route = .device
         case let scene? where scene.hasPrefix("postfach"): route = .inbox
-        case "chat", "chat-verlauf", "chat-gruppe", "chat-anhang", "chat-diktat": route = .chat
         case "disposition": route = .dispatch
         case "tankbelege", "tankbeleg-neu": route = .fuel
         case "aufgaben": route = .tasks

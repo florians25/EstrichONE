@@ -84,7 +84,7 @@ enum Radius {
 /// Feste Größen: Tippflächen nie unter 44 pt, Hauptschaltflächen 52 pt (Handschuhe).
 enum Size {
     static let minTap: CGFloat = 44
-    static let button: CGFloat = 52
+    static let button: CGFloat = 48
     static let row: CGFloat = 56
     static let iconBadge: CGFloat = 32
     /// Breite des Inhalts auf großen Bildschirmen.

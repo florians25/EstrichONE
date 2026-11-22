@@ -1,13 +1,14 @@
 import EstrichCore
 import SwiftUI
 
-/// Hauptnavigation: Heute · Baustellen · Erfassen · Kunden · Mehr. „Erfassen“ öffnet ein Aktionsblatt und bleibt auf dem
-/// bisherigen Reiter. Ab iOS 26 erscheint die Leiste in Liquid Glass; auf dem iPad als einblendbare Seitenleiste.
+/// Hauptnavigation: Heute, Baustellen, Chat, Kunden, Mehr. Erfasst wird ausschließlich in der Bauakte (Knopf „Erfassen“
+/// unten in der Akte); „Heute“ bietet für den Einsatz Foto und Bautagebuch direkt an. Der Chat ist ein eigener Reiter mit
+/// Zähler der ungelesenen Nachrichten. Ab iOS 26 erscheint die Leiste in Liquid Glass; auf dem iPad als einblendbare Seitenleiste.
 struct MainTabView: View {
     enum Tab: Hashable {
         case today
         case bauakten
-        case capture
+        case chat
         case customers
         case more
     }
@@ -15,56 +16,63 @@ struct MainTabView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.shotScene) private var shotScene
     @State private var selection: Tab = .today
-    @State private var showsCaptureHub = false
     /// Meldungen mit neuer Antwort der IT (Abzeichen am Reiter „Mehr“).
     @State private var unreadTickets = 0
     @State private var push = PushCenter.shared
+    @State private var chatNavigation = ChatNavigation.shared
     /// Erfassen im Modus „Nur Ansicht“: erst bestätigen lassen.
     @State private var confirmsOverride = false
     /// Schnellaktion vom App-Symbol, aus Kurzbefehlen oder per Siri.
     @State private var quick = QuickActionCenter.shared
     @State private var quickCamera: Bauakte?
     @State private var quickDiary: Bauakte?
+    /// Schnellaktion ohne heutigen Einsatz und ohne zuletzt geöffnete Bauakte: erst die Baustelle wählen.
+    @State private var quickPick: QuickAction?
+    @State private var quickTodayIds: [UUID] = []
     @State private var toast: String?
+
+    /// Reiter „Chat“: solange der Chat nicht abgeschaltet ist (vor dem ersten Abgleich angenommen).
+    private var showsChat: Bool { model.active?.sync?.chat?.isAvailable ?? true }
+
+    private var chatUnread: Int {
+        guard let chat = model.active?.sync?.chat, chat.isAvailable, !chat.readOnly else { return 0 }
+        return chat.unreadCount
+    }
 
     var body: some View {
         // Backup-/Archiv-Störung und „Nur Ansicht“ über allen Reitern (Navigationsleisten darunter).
         VStack(spacing: 0) {
         if let sync = model.active?.sync { UpdateAnnounceBanner(sync: sync) }
         if let sync = model.active?.sync { SystemStatusStrip(sync: sync, showsNotices: selection != .today) }
-        TabView(selection: Binding(get: { selection }, set: { tab in
-            if tab == .capture {
-                if model.active?.sync?.isReadOnly == true { confirmsOverride = true } else { showsCaptureHub = true }
-            } else {
-                selection = tab
-            }
-        })) {
-            HomeView { if model.active?.sync?.isReadOnly == true { confirmsOverride = true } else { showsCaptureHub = true } }
+        TabView(selection: $selection) {
+            HomeView { conversation in openChat(conversation) }
                 .tabItem { Label("Heute", systemImage: "sun.max") }
                 .tag(Tab.today)
             BauaktenListView()
                 .tabItem { Label("Baustellen", systemImage: "building.2") }
                 .tag(Tab.bauakten)
-            Color.clear
-                .tabItem { Label("Erfassen", systemImage: "plus.circle") }
-                .tag(Tab.capture)
-                .accessibilityIdentifier("captureTab")
+            if showsChat {
+                ChatTabView()
+                    .tabItem { Label("Chat", systemImage: "bubble.left.and.bubble.right") }
+                    .tag(Tab.chat)
+                    .badge(chatUnread)
+                    .accessibilityIdentifier("chatTab")
+            }
             CustomerDirectoryView()
                 .tabItem { Label("Kunden", systemImage: "person.2") }
                 .tag(Tab.customers)
             MoreView()
                 .tabItem { Label("Mehr", systemImage: "ellipsis.circle") }
                 .tag(Tab.more)
-                .badge(unreadTickets + (model.active?.sync?.chat?.isAvailable == true ? model.active?.sync?.chat?.unreadCount ?? 0 : 0))
+                .badge(unreadTickets)
         }
         .modifier(SidebarAdaptable())
         }
         // Update-Ablauf: Wartungsbildschirm über allem, solange das Update läuft (ohne Fehlermeldungen oder Abmelde-Schleifen).
         .overlay { if let sync = model.active?.sync { UpdateMaintenanceScreen(sync: sync) } }
         .readOnlyOverrideDialog(isPresented: $confirmsOverride, sync: model.active?.sync)
-        .sheet(isPresented: $showsCaptureHub) {
-            CaptureHub { showsCaptureHub = false }
-                .presentationDragIndicator(.visible)
+        .onChange(of: showsChat) { _, visible in
+            if !visible, selection == .chat { selection = .today }
         }
         .task { applyShotScene() }
         .task(id: quick.pending) { await runQuickAction() }
@@ -76,6 +84,17 @@ struct MainTabView: View {
         }
         .sheet(item: $quickDiary) { bauakte in
             NewDiaryEntryView(bauakteId: bauakte.id) { quickDiary = nil }
+        }
+        .sheet(item: $quickPick) { action in
+            BauakteQuickPicker(title: action == .photo ? "Foto: Baustelle wählen" : "Bautagebuch: Baustelle wählen", todayIds: quickTodayIds) { bauakte in
+                quickPick = nil
+                guard let bauakte else { return }
+                Task {
+                    // Erst wenn die Auswahl geschlossen ist, Kamera bzw. Formular öffnen.
+                    try? await Task.sleep(for: .milliseconds(450))
+                    if action == .photo { quickCamera = bauakte } else { quickDiary = bauakte }
+                }
+            }
         }
         .toast($toast)
         .task(id: model.active?.sync?.revision) {
@@ -92,8 +111,14 @@ struct MainTabView: View {
             push.pendingReadId = nil
             if let inbox = try? await client.notifications() { push.setUnread(inbox: inbox) }
         }
-        // Angetippte Benachrichtigung: Objekt als Blatt über dem aktuellen Reiter öffnen.
-        .sheet(item: $push.pendingRoute) { route in
+        // Chat-Mitteilung angetippt: im Reiter „Chat“ öffnen (nicht als Blatt über einem anderen Reiter).
+        .task(id: push.pendingRoute) {
+            guard showsChat, case let .chat(conversation) = push.pendingRoute else { return }
+            push.pendingRoute = nil
+            openChat(conversation)
+        }
+        // Übrige Benachrichtigungen: Objekt als Blatt über dem aktuellen Reiter öffnen.
+        .sheet(item: Binding(get: { sheetRoute }, set: { push.pendingRoute = $0 })) { route in
             NavigationStack {
                 NotificationTargetView(route: route)
                     .toolbar {
@@ -103,8 +128,21 @@ struct MainTabView: View {
         }
     }
 
+    /// Benachrichtigung als Blatt; Chats öffnet der Reiter „Chat“.
+    private var sheetRoute: NotificationRoute? {
+        if showsChat, case .chat = push.pendingRoute { return nil }
+        return push.pendingRoute
+    }
+
+    /// Reiter „Chat“ zeigen und dort die Unterhaltung öffnen (`nil` = Liste).
+    private func openChat(_ conversation: UUID?) {
+        guard showsChat else { return }
+        selection = .chat
+        chatNavigation.open(conversation)
+    }
+
     /// Schnellaktion ausführen: Foto bzw. Bautagebuch für den heutigen Einsatz, sonst die zuletzt geöffnete Bauakte;
-    /// ohne beides (oder bei abgeschaltetem Modul) öffnet „Erfassen“ mit der Auswahl der Baustelle.
+    /// ohne beides wird die Baustelle gewählt. Erfasst wird immer zu einer Bauakte.
     private func runQuickAction() async {
         guard let action = quick.pending, let service = model.active?.service else { return }
         quick.pending = nil
@@ -117,31 +155,56 @@ struct MainTabView: View {
             return
         }
         if action == .diary, model.active?.sync?.modules.isOn(AppModules.diary) == false {
-            showsCaptureHub = true
+            toast = "Das Bautagebuch ist in Ihrem Betrieb nicht eingeschaltet."
             return
         }
+        quickTodayIds = await TodayContext.bauakteIds(model: model)
         var target: Bauakte?
-        if let id = await TodayContext.bauakteIds(model: model).first {
+        if let id = quickTodayIds.first {
             target = try? await service.bauakte(id)
         }
         if target == nil {
             target = try? await service.recentBauakten(limit: 1).first
         }
         guard let target else {
-            showsCaptureHub = true
+            quickPick = action
             return
         }
-        showsCaptureHub = false
         if action == .photo { quickCamera = target } else { quickDiary = target }
     }
 
-    /// Screenshot-Modus: passenden Reiter wählen bzw. „Erfassen“ öffnen.
+    /// Screenshot-Modus: passenden Reiter wählen.
     private func applyShotScene() {
         guard let scene = shotScene else { return }
-        switch ShotRoute.tab(for: scene) {
-        case .capture: showsCaptureHub = true
-        case let tab: selection = tab
+        let tab = ShotRoute.tab(for: scene)
+        selection = tab == .chat && !showsChat ? .more : tab
+    }
+}
+
+/// Reiter „Chat“: Unterhaltungen als Startseite des Reiters (mit „Neuer Chat“ und Microsoft Teams in der Leiste).
+private struct ChatTabView: View {
+    var body: some View {
+        NavigationStack {
+            ChatListView(isTab: true)
+                .rootToolbar()
         }
+    }
+}
+
+/// Öffnet eine Unterhaltung im Reiter „Chat“ (aus „Heute“ oder einer Mitteilung).
+@MainActor
+@Observable
+final class ChatNavigation {
+    static let shared = ChatNavigation()
+
+    /// Unterhaltung, die der Reiter als Nächstes öffnet.
+    var pendingConversation: UUID?
+    /// Zähler, damit dieselbe Unterhaltung auch ein zweites Mal geöffnet wird.
+    private(set) var request = 0
+
+    func open(_ conversation: UUID?) {
+        pendingConversation = conversation
+        request += 1
     }
 }
 
@@ -152,8 +215,8 @@ enum ShotRoute {
         switch prefix {
         case "baustellen", "bauakte", "bereich", "neu", "erstbegehung", "abnahme", "foto", "kamera", "raum", "tagebuch", "mangel", "basisdaten", "protokoll", "kontakt": return .bauakten
         case "kunden", "kundenkarte": return .customers
-        case "mehr", "sicherheit", "sync", "meldung", "aufgaben", "woche", "abwesenheit", "disposition", "dispo", "postfach", "chat", "tankbelege", "tankbeleg": return .more
-        case "erfassen": return .capture
+        case "chat": return .chat
+        case "mehr", "sicherheit", "sync", "meldung", "aufgaben", "woche", "abwesenheit", "disposition", "dispo", "postfach", "tankbelege", "tankbeleg": return .more
         default: return .today
         }
     }

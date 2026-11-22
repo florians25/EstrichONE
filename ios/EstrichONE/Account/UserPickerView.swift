@@ -37,7 +37,7 @@ struct UserPickerView: View {
                                 Image(systemName: "chevron.right").foregroundStyle(Theme.textSecondary).accessibilityHidden(true)
                             }
                             .padding(14)
-                            .frame(minHeight: 64)
+                            .frame(minHeight: 56)
                             .background(Color(uiColor: .secondarySystemBackground), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                         }
                         .buttonStyle(.plain)

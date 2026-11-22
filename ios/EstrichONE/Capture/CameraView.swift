@@ -151,7 +151,7 @@ struct CameraView: View {
                 PhotosPicker(selection: $pickerItems, maxSelectionCount: 20, matching: .images) {
                     Image(systemName: "photo.on.rectangle")
                         .font(.title3)
-                        .frame(width: 52, height: 52)
+                        .frame(width: 48, height: 48)
                 }
                 .overlayControlStyle()
                 .tint(.white)
@@ -165,7 +165,7 @@ struct CameraView: View {
                     Circle()
                         .strokeBorder(.white, lineWidth: 4)
                         .background(Circle().fill(.white.opacity(cameraState == .running ? 0.92 : 0.3)).padding(7))
-                        .frame(width: 76, height: 76)
+                        .frame(width: 70, height: 70)
                 }
                 .buttonStyle(ShutterButtonStyle())
                 .disabled(cameraState != .running || pending.isClosing)
@@ -182,7 +182,7 @@ struct CameraView: View {
                             Color.black.opacity(0.5)
                         }
                     }
-                    .frame(width: 52, height: 52)
+                    .frame(width: 48, height: 48)
                     .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                     .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(.white.opacity(0.8), lineWidth: 1.5))
                     Text("\(count)")

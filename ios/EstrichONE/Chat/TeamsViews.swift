@@ -201,3 +201,40 @@ struct ChatFileExchangeHint: View {
         .accessibilityIdentifier("chatFileExchangeHint")
     }
 }
+
+/// Hinweis oben in der Chat-Liste: Dateien und Fotos über Microsoft Teams, Nachrichten, Diktat und Standort in EstrichONE.
+/// Mit Teams-Anbindung mit „In Teams öffnen“.
+struct ChatTeamsInfo: View {
+    let targets: TeamsOpenTargets?
+
+    var body: some View {
+        HStack(alignment: .top, spacing: Space.m) {
+            Image(systemName: "doc.on.doc")
+                .font(.body.weight(SymbolWeight.content))
+                .foregroundStyle(Theme.accent)
+                .frame(width: 28)
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: Space.xs) {
+                Text("Dateien und Fotos über Microsoft Teams")
+                    .font(Typo.subheadStrong)
+                    .foregroundStyle(Theme.textPrimary)
+                Text(ChatComposerPolicy.scopeHint)
+                    .font(Typo.subhead)
+                    .foregroundStyle(Theme.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                if let targets, !targets.candidates.isEmpty {
+                    Button("In Teams öffnen", systemImage: "arrow.up.forward.app") { Task { await TeamsOpener.open(targets) } }
+                        .font(Typo.subheadStrong)
+                        .buttonStyle(.borderless)
+                        .foregroundStyle(Theme.accent)
+                        .frame(minHeight: Size.minTap, alignment: .leading)
+                        .accessibilityIdentifier("chatTeamsInfoOpen")
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(.vertical, Space.xs)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("chatTeamsInfo")
+    }
+}
