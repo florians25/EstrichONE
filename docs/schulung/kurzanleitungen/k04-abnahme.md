@@ -9,7 +9,7 @@
 
 ## In der App: auch ohne Netz
 
-1. Bauakte öffnen → **Mehr** → **Abnahme** (oder **Erfassen** → **Abnahme**).
+1. Bauakte öffnen → **Erfassen** → **Abnahme** (oder Bereich **Abnahme & Messungen**).
 2. **Ergebnis** wählen: **Abgenommen**, **Mit Vorbehalt** oder **Verweigert**.
 3. **Teilnehmer und Ort** prüfen (Auftraggeber, Auftragnehmer, Adresse) und die **abgenommene Leistung** eintragen,
    z. B. „Zementestrich CT-C25-F4, 65 mm, EG und OG“.

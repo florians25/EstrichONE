@@ -9,7 +9,7 @@
 
 ## Erstbegehung
 
-1. Bauakte → **Mehr** → **Erstbegehung** (oder **Protokolle** bzw. **Erfassen** → **Erstbegehung**).
+1. Bauakte → **Erfassen** → **Erstbegehung** (oder Bereich **Erstbegehung**).
 2. Je Prüfpunkt **In Ordnung**, **Mangel** oder **Entfällt**, mit **Foto zu diesem Punkt**, bei Mangel kurz beschreiben.
 3. **Messwerte und Angaben** (z. B. Fläche, Estrichdicke) und **Notizen** eintragen.
 4. Unter **Fotos und Unterschrift** weitere Fotos aufnehmen, Kunde **unterschreiben** lassen.
@@ -20,7 +20,7 @@ nicht überschrieben, sondern **korrigiert**. PDF: **Als PDF ansehen** (Verbindu
 
 ## CM-Messung (Belegreife)
 
-1. Bauakte → **Mehr** → **CM-Messung** (oder **Protokolle** bzw. **Erfassen**).
+1. Bauakte → **Erfassen** → **CM-Messung** (oder Bereich **Abnahme & Messungen**).
 2. **Estrichart** wählen (**Zementestrich (CT)** oder **Calciumsulfatestrich (CA)**) und ob **beheizt**.
 3. **Messort** (z. B. „Bad OG“) und **Messwert** in CM-% eintragen, optional Foto vom Messgerät.
 4. Die App zeigt sofort **Belegreif** oder **Noch nicht belegreif**.

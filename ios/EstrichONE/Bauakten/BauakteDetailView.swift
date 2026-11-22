@@ -181,7 +181,7 @@ struct BauakteDetailView: View {
             .safeAreaInset(edge: .bottom) { if !content.viewOnly { captureBar } }
             .task(id: loaded) {
                 // Screenshot-Modus: Mitte (Kennwerte, offene Punkte, Fotos) bzw. unten (alle Bereiche).
-                guard loaded, let target = shotScene == "bauakte-unten" ? "areas" : shotScene == "bauakte-mitte" ? "navigation" : nil else { return }
+                guard loaded, let target = shotScene == "bauakte-unten" ? "areas" : shotScene == "bauakte-mitte" ? "metrics" : nil else { return }
                 try? await Task.sleep(for: .milliseconds(300))
                 proxy.scrollTo(target, anchor: .top)
             }
@@ -286,6 +286,7 @@ struct BauakteDetailView: View {
             }
         }
         .padding(.horizontal, Space.l)
+        .id("metrics")
     }
 
     private func metric(_ value: String, label: String, tint: Color, action: @escaping () -> Void) -> some View {
