@@ -30769,6 +30769,22 @@
               "null",
               "string"
             ]
+          },
+          "teamsWebUrl": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "teamsAppUrl": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "teamsLinked": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -31636,6 +31652,26 @@
           "readOnly": {
             "type": "boolean",
             "default": false
+          },
+          "filesViaTeams": {
+            "type": "boolean",
+            "default": false
+          },
+          "teamsAvailable": {
+            "type": "boolean",
+            "default": false
+          },
+          "teamsWebUrl": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "teamsAppUrl": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -43543,8 +43579,10 @@
             "default": 15
           },
           "attachmentsEnabled": {
-            "type": "boolean",
-            "default": true
+            "type": [
+              "null",
+              "boolean"
+            ]
           }
         }
       },
