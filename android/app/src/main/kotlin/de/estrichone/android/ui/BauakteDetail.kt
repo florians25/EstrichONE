@@ -310,7 +310,7 @@ private fun Header(b: Bauakte, session: Session, viewOnly: Boolean = false) {
             Box {
                 StatusChip(b.status, short = false, modifier = Modifier.clip(RoundedCornerShape(8.dp))
                     .clickable(enabled = !viewOnly, onClickLabel = "Status ändern") { statusMenu = true },
-                    trailing = if (viewOnly) null else ({ Icon(Icons.Filled.ArrowDropDown, null, tint = statusColor(b.status), modifier = Modifier.size(18.dp)) }))
+                    dropDown = !viewOnly)
                 DropdownMenu(statusMenu, { statusMenu = false }) {
                     BauakteStatus.entries.filter { it != BauakteStatus.Cancelled }.forEach { status ->
                         DropdownMenuItem(text = { StatusLabel(status, short = false) }, onClick = {
@@ -643,7 +643,7 @@ private fun Workflow(session: Session, b: Bauakte, viewOnly: Boolean) {
 private fun OpenPoints(session: Session, id: String) {
     val nav = LocalNav.current
     val tasks by session.local(id) { session.service.tasks(id) }
-    val open = tasks.filter { it.isOpen }.sortedWith(compareBy({ it.kind != WorkItemKind.Defect }, { it.dueDate ?: LocalDate.MAX }))
+    val open = tasks.filter { it.isOpen }.sortedWith(compareBy<Task>({ it.kind != WorkItemKind.Defect }, { it.dueDate ?: LocalDate.MAX }))
     SectionHeader("Offene Aufgaben und Mängel", action = if (open.isEmpty()) null else "Alle (${open.size})", onAction = { nav.push(Route.Area(id, AreaKind.Tasks)) })
     SectionCard {
         if (open.isEmpty()) RowItem("Keine offenen Punkte", icon = Icons.Filled.CheckCircle, iconTint = tones.success)

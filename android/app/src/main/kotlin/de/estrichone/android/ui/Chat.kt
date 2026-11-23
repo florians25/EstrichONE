@@ -123,6 +123,7 @@ private fun chatIcon(type: ChatType) = when (type) {
 }
 
 /** Unterhaltungen (WhatsApp-Ersatz): ungelesene oben fett, Abfrage alle 15 Sekunden (ohne Push). */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatListScreen(root: Boolean = false) {
     val session = LocalSession.current

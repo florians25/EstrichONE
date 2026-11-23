@@ -232,7 +232,7 @@ fun HomeScreen() {
                         if (showsTasks && tasks.isEmpty()) {
                             RowItem("Keine offenen Aufgaben", icon = Icons.Filled.CheckCircle, iconTint = tones.success)
                         }
-                        tasks.sortedWith(compareBy({ it.dueDate ?: LocalDate.MAX }, { it.kind != WorkItemKind.Defect })).take(3).forEachIndexed { index, task ->
+                        tasks.sortedWith(compareBy<de.estrichone.core.Task>({ it.dueDate ?: LocalDate.MAX }, { it.kind != WorkItemKind.Defect })).take(3).forEachIndexed { index, task ->
                             if (index > 0) RowDivider(60.dp)
                             val site = task.bauakteId?.let { session.service.bauakte(it) }
                             TaskRow(task, session, subtitle = site?.let { listOfNotNull(it.number, it.title).joinToString(", ") })

@@ -28,6 +28,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.ErrorOutline
@@ -283,15 +284,15 @@ fun StatusLabel(status: BauakteStatus, short: Boolean = true, modifier: Modifier
 
 /** Status als Kennzeichen mit heller Fläche (Listen, Kopf der Bauakte). */
 @Composable
-fun StatusChip(status: BauakteStatus, modifier: Modifier = Modifier, short: Boolean = true, trailing: (@Composable () -> Unit)? = null) {
+fun StatusChip(status: BauakteStatus, modifier: Modifier = Modifier, short: Boolean = true, dropDown: Boolean = false) {
     val color = statusColor(status)
-    Row(modifier.clip(RoundedCornerShape(8.dp)).background(statusSoft(status)).padding(start = 8.dp, end = if (trailing != null) 2.dp else 8.dp, top = 3.dp, bottom = 3.dp),
+    Row(modifier.clip(RoundedCornerShape(8.dp)).background(statusSoft(status)).padding(start = 8.dp, end = if (dropDown) 2.dp else 8.dp, top = 3.dp, bottom = 3.dp),
         verticalAlignment = Alignment.CenterVertically) {
         Box(Modifier.size(6.dp).clip(CircleShape).background(color))
         Spacer(Modifier.width(6.dp))
         Text(if (short && status == BauakteStatus.Drying) "Trocknung" else status.label, style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.SemiBold, color = color, maxLines = 1)
-        trailing?.invoke()
+        if (dropDown) Icon(Icons.Filled.ArrowDropDown, "Status ändern", tint = color, modifier = Modifier.size(18.dp))
     }
 }
 
