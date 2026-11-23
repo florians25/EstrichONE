@@ -140,7 +140,8 @@ struct BauakteRow: View {
 
     /// „2026-041, Landshut, Familie Schneider“
     private var meta: String {
-        let place = bauakte.city?.trimmingCharacters(in: .whitespaces).nonEmpty ?? bauakte.addressLine
+        let city = bauakte.city?.trimmingCharacters(in: .whitespaces) ?? ""
+        let place = city.isEmpty ? bauakte.addressLine : city
         return [bauakte.number ?? "Neu", place, customerName].compactMap { $0 }.joined(separator: ", ")
     }
 
