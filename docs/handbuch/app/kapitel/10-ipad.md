@@ -15,7 +15,7 @@ Leiste; über das Seitenleisten-Symbol links daneben lässt sich stattdessen ein
 ## Heute
 
 Die Heute-Seite ordnet sich in zwei Spalten: links **Mein Einsatz** mit den Schnellaktionen und **Wer fährt wohin**,
-rechts **Offene Aufgaben** und **Morgen**. Die Kennzahlen stehen darüber in einer Reihe.
+rechts **Offene Aufgaben** und **Morgen**.
 
 ![Heute auf dem iPad](bilder/ipad-heute.jpg "Heute auf dem iPad (hochkant): zwei Spalten"){ipadhoch}
 

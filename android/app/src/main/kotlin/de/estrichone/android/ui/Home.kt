@@ -169,27 +169,6 @@ fun HomeScreen() {
                 OfflineBanner(session)
                 TeamsRolloutCard()
             }
-            // Mein Tag: drei Kennzahlen, jede führt zur passenden Liste.
-            item(key = "day") {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Space.s)) {
-                    if (planning) {
-                        val tile = TodayOverview.jobsTile(todays)
-                        StatTile(tile.value, tile.label, Modifier.weight(1f), onClick = { nav.push(Route.Week) })
-                    }
-                    if (showsTasks) {
-                        val tile = TodayOverview.tasksTile(tasks.size, tasks.count { it.kind == WorkItemKind.Defect })
-                        StatTile(tile.value, tile.label, Modifier.weight(1f), accent = if (tasks.any { it.kind == WorkItemKind.Defect }) tones.danger
-                            else MaterialTheme.colorScheme.onSurface, onClick = { nav.push(Route.Tasks) })
-                    }
-                    if (approvals > 0) {
-                        StatTile(approvals.toString(), if (approvals == 1) "Freigabe offen" else "Freigaben offen", Modifier.weight(1f), accent = tones.warning,
-                            onClick = { nav.open(de.estrichone.core.NotificationRoute.Absences(approvals = true)) })
-                    } else if (planning) {
-                        StatTile(plan?.assignments?.count { it.day > today.toString() }?.toString() ?: "0", "weitere diese Woche", Modifier.weight(1f),
-                            onClick = { nav.push(Route.Week) })
-                    }
-                }
-            }
             item(key = "notices") { NoticeSummary(session) }
             if (planning) {
                 when {

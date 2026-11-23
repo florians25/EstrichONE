@@ -20,7 +20,7 @@ Die Einrichtung des Servers, Benutzer, Rollen und Geräte im **IT Center** besch
 
 ## Was Sie brauchen
 
-![Die Heute-Seite auf dem iPhone](bilder/iphone-heute.jpg "Die Heute-Seite: alle Einsätze, Kennzahlen und große Handgriffe"){rechts}
+![Die Heute-Seite auf dem iPhone](bilder/iphone-heute.jpg "Die Heute-Seite: alle Einsätze und große Handgriffe"){rechts}
 
 - Ein **iPhone oder iPad mit iOS bzw. iPadOS 17** oder neuer.
 - Die App **EstrichONE** aus dem App Store (kostenlos).

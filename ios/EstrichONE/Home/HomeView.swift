@@ -3,7 +3,7 @@ import EstrichCore
 import SwiftUI
 
 /// „Heute“, der Arbeitsplatz für den Tag, nach dem Arbeitsablauf aufgebaut: oben das Datum mit dem Abgleich, eine
-/// Zeile „Mein Tag“ (Einsätze, Beginn, Fläche) und alle Mitteilungen als eine kompakte Zeile (Störungen rot). Dann die
+/// Abwesende des Tages und alle Mitteilungen als eine kompakte Zeile (Störungen rot). Dann die
 /// Arbeit: der laufende bzw. nächste Einsatz als Hauptkarte mit Schnellaktionen (Route, Anrufen, Chat, Bauakte), weitere
 /// Einsätze als ruhige Zeilen. Darunter offene Aufgaben und Freigaben, Planung, morgen und zuletzt geöffnet.
 /// Lokale Daten erscheinen sofort, frische Planung kommt im Hintergrund dazu.
@@ -212,46 +212,18 @@ struct HomeView: View {
         }
     }
 
-    /// „Mein Tag“: Einsätze, Beginn und Fläche nebeneinander; wer heute fehlt, darunter.
+    /// Wer aus der Kolonne heute fehlt, als eine Zeile unter dem Datum (keine Zählerkarten).
+    @ViewBuilder
     private var dayStrip: some View {
         let day = overview
-        let figures: [(String, String)] = [
-            ("\(day.jobCount)", day.jobCount == 1 ? "Einsatz" : "Einsätze"),
-            (day.firstStart ?? "offen", "Beginn"),
-            day.areaText.map { ($0, "Fläche") } ?? ("\(day.siteCount)", day.siteCount == 1 ? "Baustelle" : "Baustellen"),
-        ]
-        return VStack(alignment: .leading, spacing: Space.s) {
-            let layout = typeSize.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading, spacing: Space.s))
-                                                      : AnyLayout(HStackLayout(alignment: .top, spacing: Space.s))
-            layout {
-                ForEach(Array(figures.enumerated()), id: \.offset) { _, figure in
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(figure.0)
-                            .font(.headline.monospacedDigit())
-                            .foregroundStyle(Theme.textPrimary)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.8)
-                        Text(figure.1)
-                            .font(Typo.label)
-                            .foregroundStyle(Theme.textSecondary)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .accessibilityElement(children: .combine)
-                }
-            }
-            if !day.absent.isEmpty {
-                Label("Heute abwesend: \(day.absent.joined(separator: "; "))", systemImage: "person.crop.circle.badge.xmark")
-                    .labelStyle(TightLabelStyle())
-                    .font(Typo.meta)
-                    .foregroundStyle(Theme.warning)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .accessibilityIdentifier("todaySummaryAbsent")
-            }
+        if !day.absent.isEmpty {
+            Label("Heute abwesend: \(day.absent.joined(separator: "; "))", systemImage: "person.crop.circle.badge.xmark")
+                .labelStyle(TightLabelStyle())
+                .font(Typo.meta)
+                .foregroundStyle(Theme.warning)
+                .fixedSize(horizontal: false, vertical: true)
+                .accessibilityIdentifier("todaySummaryAbsent")
         }
-        .padding(.vertical, Space.xxs)
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel("Mein Tag")
-        .accessibilityIdentifier("todaySummary")
     }
 
     /// „…“ oben rechts: Abgleich (mit Stand) und Microsoft Teams.

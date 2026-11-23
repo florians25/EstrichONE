@@ -3,7 +3,7 @@
 Die Heute-Seite ist der Startpunkt für jeden Arbeitstag. Sie zeigt, wo Sie heute eingeteilt sind, was zu tun ist und
 wer wohin fährt, und bietet die wichtigsten Handgriffe für die Baustelle mit einem Tipp.
 
-![Heute](bilder/iphone-heute.jpg "Oben: Datum mit Abgleich, Mein Tag, Mitteilungen in einer Zeile, darunter der nächste Einsatz")
+![Heute](bilder/iphone-heute.jpg "Oben: Datum mit Abgleich, Mitteilungen in einer Zeile, darunter der nächste Einsatz")
 ![Heute weiter unten](bilder/iphone-heute-unten.jpg "Weiter unten: Aufgaben und Freigaben, Planung, Morgen und Zuletzt geöffnet")
 
 ## Aufbau der Seite
@@ -13,8 +13,7 @@ Die Seite folgt dem Arbeitstag: oben kurz der Stand, dann die Arbeit, danach all
 1. **Datum** und rechts daneben, klein, der **Abgleich** („Alles übertragen“, „Offline“, „Bitte prüfen“, ein Tipp
    öffnet die Synchronisation). Oben rechts stehen die **Glocke** (Benachrichtigungen) und **Weitere Aktionen**
    (**…** bzw. **⋮**) mit **Abgleich** und **In Teams öffnen**. Den Chat erreichen Sie direkt über den Tab **Chat**.
-2. **Mein Tag** in einer Zeile: Zahl der **Einsätze**, **Beginn** der ersten Baustelle und **Fläche** der heutigen
-   Baustellen. Fehlt heute jemand aus Ihrer Kolonne, steht das darunter.
+2. Fehlt heute jemand aus Ihrer Kolonne, steht das als eine Zeile unter dem Datum.
 3. **Mitteilungen** in einer Zeile: bei einer Mitteilung deren Titel, bei mehreren „3 Mitteilungen“ mit der
    wichtigsten. Eine **Störung** ist rot hinterlegt. Ein Tipp öffnet die Liste aller Mitteilungen mit **Details**;
    Mitteilungen mit **x** lassen sich dort ausblenden, Störungen und laufende Wartung nicht. Ebenfalls je eine Zeile:
