@@ -92,11 +92,11 @@ struct TodayJob: Identifiable {
     }
 }
 
-/// Karte eines Einsatzes, alles für die Baustelle auf einen Blick: Uhrzeit mit „Jetzt“ bzw. „in 2 Std.“, Baustelle mit
-/// Status, Kennzahlen (offene Mängel und Aufgaben, Belegreife, Wetter laut Tagebuch), Adresse mit Entfernung,
-/// Ansprechpartner, Tätigkeit und Leistung laut Basisdaten, Kolonne, Fahrzeuge und Geräte, Zugang und angeheftete Notizen,
-/// Hinweise der Disposition und die letzte Nachricht im Chat der Baustelle. Unten vier Handgriffe (Route, Anrufen, Foto,
-/// Tagebuch), gut mit Handschuhen und einer Hand. Weitere Einsätze des Tages stehen zugeklappt darunter (Tipp klappt auf).
+/// Hauptkarte „Nächster Einsatz“ auf „Heute“: oben Uhrzeit mit „Jetzt“ bzw. „in 2 Std.“, dann Bauvorhaben mit Nummer
+/// und Status (Tipp öffnet die Bauakte), darunter in ruhigen Zeilen Adresse mit Entfernung, Leistung und Fläche, Kolonne
+/// und Fahrzeuge, Ansprechpartner, Zugang und Hinweise. Kennzahlen (Mängel, Aufgaben, Belegreife) als kleine Kapseln,
+/// die letzte Nachricht im Chat der Baustelle, unten vier gleich große Schnellaktionen: Route, Anrufen, Chat, Bauakte.
+/// Foto, Bautagebuch und Mangel stehen im Menü „…“, im Kontextmenü und beim Wischen.
 struct TodayJobCard: View {
     enum Action {
         case open, photo, diary, defect, route, call, chat
@@ -108,98 +108,87 @@ struct TodayJobCard: View {
     /// „1,8 km“ (Luftlinie), falls Standort und Koordinaten bekannt.
     var distance: String?
     var phase: TodayGlance.Phase = .unknown
-    /// Aufgeklappt (alle Angaben und Handgriffe) oder kompakt (eine Zeile mit Route und Anruf).
-    var expanded = true
     /// Bauakte liegt auf dem Gerät (sonst nur Öffnen, das lädt sie nach).
     var canCapture = true
-    var onExpand: () -> Void = {}
+    /// Chat ist eingeschaltet (sonst ist „Chat“ ausgegraut).
+    var chatAvailable = true
     let perform: (Action) -> Void
     @Environment(\.dynamicTypeSize) private var typeSize
 
     var body: some View {
-        Group {
-            if expanded { full } else { compact }
-        }
-        .padding(Space.l)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .card()
-        .overlay {
-            // Der laufende Einsatz ist dezent umrandet.
-            if phase == .running {
-                RoundedRectangle(cornerRadius: Radius.xl, style: .continuous)
-                    .strokeBorder(Theme.accent.opacity(0.55), lineWidth: 1.5)
+        full
+            .padding(Space.l)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .card()
+            .overlay {
+                // Der laufende Einsatz ist dezent umrandet.
+                if phase == .running {
+                    RoundedRectangle(cornerRadius: Radius.xl, style: .continuous)
+                        .strokeBorder(Theme.accent.opacity(0.45), lineWidth: 1.5)
+                }
             }
-        }
-        .contentShape(.contextMenuPreview, RoundedRectangle(cornerRadius: Radius.xl, style: .continuous))
-        .contextMenu { menuItems }
+            .contentShape(.contextMenuPreview, RoundedRectangle(cornerRadius: Radius.xl, style: .continuous))
+            .contextMenu { menuItems }
     }
-
-    // MARK: Aufgeklappt
 
     private var full: some View {
         VStack(alignment: .leading, spacing: Space.m) {
-            // Kopf: Uhrzeit mit Kennzeichnung und rechts „…“; darunter Baustelle (Tipp öffnet die Bauakte) über die volle Breite.
-            HStack(alignment: .top, spacing: Space.s) {
+            // Kopf: Uhrzeit mit Kennzeichnung und rechts „…“; darunter Baustelle (Tipp öffnet die Bauakte).
+            HStack(alignment: .center, spacing: Space.s) {
                 timeRow
                 Spacer(minLength: 0)
                 Menu { menuItems } label: {
-                    Image(systemName: "ellipsis.circle")
-                        .font(.title3)
+                    Image(systemName: "ellipsis")
+                        .font(.body.weight(SymbolWeight.control))
                         .foregroundStyle(Theme.accent)
                         .frame(width: Size.minTap, height: Size.minTap)
                         .contentShape(Rectangle())
                 }
                 .menuStyle(.button)
                 .buttonStyle(.plain)
-                .padding(.top, -Space.s)
+                .padding(.vertical, -Space.s)
+                .padding(.trailing, -Space.s)
                 .accessibilityLabel("Weitere Aktionen")
                 .accessibilityIdentifier("todayJobMore")
             }
             Button { perform(.open) } label: { heading }
                 .buttonStyle(.plain)
-                .padding(.top, -Space.s)
                 .accessibilityIdentifier("todayJob-\(job.title)")
                 .accessibilityHint("Öffnet die Bauakte")
 
-            if let glance, !glance.isEmpty {
-                Button { perform(.open) } label: { GlanceChips(glance: glance) }
-                    .buttonStyle(.plain)
-                    .accessibilityIdentifier("todayJobGlance")
-            }
-
-            InsetDivider()
-
-            VStack(alignment: .leading, spacing: Space.m) {
+            VStack(alignment: .leading, spacing: Space.s) {
                 if let address = job.address {
                     line(symbol: "mappin.and.ellipse", text: address, detail: distance.map { "\($0) entfernt (Luftlinie)" })
+                }
+                line(symbol: "hammer", text: job.activity, detail: extras?.facts, strong: true)
+                if job.crewName != nil || !job.people.isEmpty || !job.resources.isEmpty {
+                    crewLine
                 }
                 if let contact = job.contactName {
                     line(symbol: "person.crop.circle", text: "Vor Ort: \(contact)", detail: job.phoneText)
                 } else if let phone = job.phoneText {
                     line(symbol: "phone", text: "Ansprechpartner vor Ort", detail: phone)
                 }
-                line(symbol: "hammer", text: job.activity, detail: extras?.facts, strong: true)
-                if job.crewName != nil || !job.people.isEmpty {
-                    crewLine
-                }
-                if !job.resources.isEmpty {
-                    line(symbol: "truck.box", text: job.resources.joined(separator: ", "))
+                if let access = extras?.access {
+                    line(symbol: "key", text: access, caption: "Zugang", limit: 3)
                 }
                 if let notes = job.notes?.compactText {
-                    line(symbol: "text.bubble", text: notes, caption: "Hinweis der Disposition")
+                    line(symbol: "text.bubble", text: notes, caption: "Hinweis der Disposition", limit: 3)
                 }
-                if let access = extras?.access {
-                    line(symbol: "key", text: access, caption: "Zugang und Besonderheiten", limit: 4)
+                if let note = extras?.pinned.first {
+                    line(symbol: "pin", text: note, caption: "Angeheftete Notiz", limit: 3)
                 }
-                ForEach(Array((extras?.pinned ?? []).prefix(2).enumerated()), id: \.offset) { _, note in
-                    line(symbol: "pin", text: note, caption: "Angeheftete Notiz", limit: 4)
-                }
-                if let chat = extras?.chat {
-                    chatLine(chat)
-                }
-                ForEach(job.warnings, id: \.self) { warning in
-                    Callout(tone: .warning, message: warning)
-                }
+            }
+
+            if let glance, !glance.isEmpty {
+                GlanceChips(glance: glance)
+                    .accessibilityIdentifier("todayJobGlance")
+            }
+            if let chat = extras?.chat {
+                chatLine(chat)
+            }
+            ForEach(job.warnings, id: \.self) { warning in
+                Callout(tone: .warning, message: warning)
             }
 
             actionBar
@@ -220,107 +209,53 @@ struct TodayJobCard: View {
     }
 
     private var heading: some View {
-        VStack(alignment: .leading, spacing: Space.xs) {
-            HStack(alignment: .firstTextBaseline, spacing: Space.s) {
+        HStack(alignment: .center, spacing: Space.s) {
+            VStack(alignment: .leading, spacing: Space.xs) {
                 Text(job.title)
                     .font(.title3.weight(.semibold))
                     .foregroundStyle(Theme.textPrimary)
                     .multilineTextAlignment(.leading)
                     .fixedSize(horizontal: false, vertical: true)
-                Spacer(minLength: Space.s)
-                Chevron()
-            }
-            // Nummer und Status: nebeneinander, bei sehr großer Schrift untereinander.
-            let layout = typeSize.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading, spacing: Space.xxs))
-                                                      : AnyLayout(HStackLayout(alignment: .firstTextBaseline, spacing: Space.s))
-            layout {
-                if let number = job.number {
-                    Text(number)
-                        .font(Typo.subhead.monospacedDigit())
-                        .foregroundStyle(Theme.textSecondary)
-                        .fixedSize()
+                // Nummer und Status: nebeneinander, bei sehr großer Schrift untereinander.
+                let layout = typeSize.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading, spacing: Space.xxs))
+                                                          : AnyLayout(HStackLayout(alignment: .center, spacing: Space.s))
+                layout {
+                    if let number = job.number {
+                        Text(number)
+                            .font(Typo.subhead.monospacedDigit())
+                            .foregroundStyle(Theme.textSecondary)
+                            .fixedSize()
+                    }
+                    if let status = job.status { StatusBadge(status: status) }
                 }
-                if let status = job.status { StatusLabel(status: status) }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            Chevron()
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
         .contentShape(Rectangle())
     }
 
-    /// Vier gleich große Handgriffe (54 pt hoch); bei sehr großer Schrift zwei je Zeile.
+    /// Vier gleich große Schnellaktionen; bei sehr großer Schrift zwei je Zeile.
     private var actionBar: some View {
         let columns = Array(repeating: GridItem(.flexible(), spacing: Space.s), count: typeSize.isAccessibilitySize ? 2 : 4)
         return LazyVGrid(columns: columns, spacing: Space.s) {
             Button { perform(.route) } label: { Label("Route", systemImage: "arrow.triangle.turn.up.right.diamond.fill") }
+                .buttonStyle(ActionTileStyle(rank: .primary))
                 .disabled(job.route == nil)
                 .accessibilityIdentifier("todayJobRoute")
             Button { perform(.call) } label: { Label("Anrufen", systemImage: "phone.fill") }
                 .disabled(job.phone == nil)
                 .accessibilityLabel(job.contactName.map { "\($0) anrufen" } ?? "Anrufen")
                 .accessibilityIdentifier("todayJobCall")
-            Button { perform(.photo) } label: { Label("Foto", systemImage: "camera.fill") }
-                .buttonStyle(ActionTileStyle(rank: .primary))
-                .disabled(!canCapture)
-                .accessibilityIdentifier("todayJobPhoto")
-            Button { perform(.diary) } label: { Label("Tagebuch", systemImage: "book.fill") }
-                .disabled(!canCapture)
-                .accessibilityLabel("Bautagebuch-Eintrag")
-                .accessibilityIdentifier("todayJobDiary")
+            Button { perform(.chat) } label: { Label("Chat", systemImage: "bubble.left.and.bubble.right.fill") }
+                .disabled(!chatAvailable)
+                .accessibilityLabel("Chat der Baustelle")
+                .accessibilityIdentifier("todayJobChatButton")
+            Button { perform(.open) } label: { Label("Bauakte", systemImage: "folder.fill") }
+                .accessibilityLabel("Bauakte öffnen")
+                .accessibilityIdentifier("todayJobOpenBauakte")
         }
         .buttonStyle(ActionTileStyle())
-    }
-
-    // MARK: Zugeklappt
-
-    private var compact: some View {
-        HStack(alignment: .center, spacing: Space.m) {
-            Button(action: onExpand) {
-                VStack(alignment: .leading, spacing: Space.xs) {
-                    let layout = typeSize.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading, spacing: Space.xs))
-                                                              : AnyLayout(HStackLayout(alignment: .center, spacing: Space.s))
-                    layout {
-                        Text(job.timeText)
-                            .font(Typo.headline.monospacedDigit())
-                            .foregroundStyle(Theme.textPrimary)
-                        PhaseBadge(phase: phase)
-                    }
-                    Text(job.title)
-                        .font(Typo.headline)
-                        .foregroundStyle(Theme.textPrimary)
-                        .multilineTextAlignment(.leading)
-                        .fixedSize(horizontal: false, vertical: true)
-                    Text([job.activity, job.crewName, extras?.facts].compactMap { $0 }.joined(separator: ", "))
-                        .font(Typo.subhead)
-                        .foregroundStyle(Theme.textSecondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                    if let address = job.address {
-                        Text([address, distance].compactMap { $0 }.joined(separator: ", "))
-                            .font(Typo.subhead)
-                            .foregroundStyle(Theme.textSecondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                    if let glance, !glance.isEmpty {
-                        GlanceChips(glance: glance).padding(.top, Space.xxs)
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityHint("Zeigt alle Angaben und Handgriffe")
-            .accessibilityIdentifier("todayJob-\(job.title)")
-
-            VStack(spacing: Space.s) {
-                if job.route != nil {
-                    Button { perform(.route) } label: { Label("Route", systemImage: "arrow.triangle.turn.up.right.diamond.fill") }
-                        .buttonStyle(IconButtonStyle())
-                }
-                if job.phone != nil {
-                    Button { perform(.call) } label: { Label("Anrufen", systemImage: "phone.fill") }
-                        .buttonStyle(IconButtonStyle())
-                }
-            }
-        }
     }
 
     // MARK: Bausteine
@@ -338,7 +273,7 @@ struct TodayJobCard: View {
             Button("Bautagebuch-Eintrag", systemImage: "book") { perform(.diary) }
             Button("Mangel melden", systemImage: "exclamationmark.triangle") { perform(.defect) }
         }
-        if extras?.chat != nil {
+        if chatAvailable {
             Button("Chat der Baustelle", systemImage: "bubble.left.and.bubble.right") { perform(.chat) }
         }
         Button("Bauakte öffnen", systemImage: "folder") { perform(.open) }
@@ -361,6 +296,13 @@ struct TodayJobCard: View {
                 }
                 if !job.people.isEmpty {
                     Text(job.people.joined(separator: ", "))
+                        .font(Typo.subhead)
+                        .foregroundStyle(Theme.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                if !job.resources.isEmpty {
+                    Label(job.resources.joined(separator: ", "), systemImage: "truck.box")
+                        .labelStyle(TightLabelStyle())
                         .font(Typo.subhead)
                         .foregroundStyle(Theme.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -403,7 +345,7 @@ struct TodayJobCard: View {
         .buttonStyle(.plain)
         .accessibilityElement(children: .combine)
         .accessibilityHint("Öffnet den Chat der Baustelle")
-        .accessibilityIdentifier("todayJobChat")
+        .accessibilityIdentifier("todayJobLastMessage")
     }
 
     private func line(symbol: String, text: String, detail: String? = nil, caption: String? = nil, limit: Int? = nil,
@@ -446,11 +388,66 @@ struct TodayJobCard: View {
             SkeletonBar(height: 14)
             SkeletonBar(width: 200, height: 14)
             SkeletonBar(width: 160, height: 14)
-            RoundedRectangle(cornerRadius: Radius.l, style: .continuous).fill(Theme.fill).frame(height: 54)
+            HStack(spacing: Space.s) {
+                ForEach(0..<4, id: \.self) { _ in
+                    RoundedRectangle(cornerRadius: Radius.l, style: .continuous).fill(Theme.fill).frame(height: 54)
+                }
+            }
         }
         .padding(Space.l)
         .card()
         .pulsing()
+    }
+}
+
+/// Weiterer Einsatz des Tages als ruhige Listenzeile: Uhrzeit links, Bauvorhaben, Tätigkeit mit Kolonne, Adresse.
+/// Tipp öffnet die Bauakte; Route, Anrufen und Erfassen per Wischen bzw. Kontextmenü.
+struct TodayJobRow: View {
+    let job: TodayJob
+    var phase: TodayGlance.Phase = .unknown
+    var distance: String?
+    @Environment(\.dynamicTypeSize) private var typeSize
+
+    var body: some View {
+        let layout = typeSize.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading, spacing: Space.xs))
+                                                  : AnyLayout(HStackLayout(alignment: .firstTextBaseline, spacing: Space.m))
+        HStack(spacing: Space.s) {
+            layout {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(job.startText ?? "ganztägig")
+                        .font(Typo.headline.monospacedDigit())
+                        .foregroundStyle(phase == .finished ? Theme.textSecondary : Theme.textPrimary)
+                    if phase == .running {
+                        Text("Jetzt").font(Typo.labelStrong).foregroundStyle(Theme.accent)
+                    }
+                }
+                .frame(minWidth: 56, alignment: .leading)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(job.title)
+                        .font(Typo.headline)
+                        .foregroundStyle(Theme.textPrimary)
+                        .multilineTextAlignment(.leading)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Text([job.activity, job.crewName].compactMap { $0 }.joined(separator: ", "))
+                        .font(Typo.subhead)
+                        .foregroundStyle(Theme.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    if let address = job.address {
+                        Text([address, distance].compactMap { $0 }.joined(separator: ", "))
+                            .font(Typo.subhead)
+                            .foregroundStyle(Theme.textSecondary)
+                            .lineLimit(1)
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            Chevron()
+        }
+        .padding(.vertical, Space.xxs)
+        .contentShape(Rectangle())
+        .accessibilityElement(children: .combine)
+        .accessibilityHint("Öffnet die Bauakte")
+        .accessibilityIdentifier("todayJob-\(job.title)")
     }
 }
 

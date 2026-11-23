@@ -145,13 +145,8 @@ struct ChatListView: View {
                 if loaded, conversations.isEmpty, failure == nil {
                     Section {
                         EmptyStateView(symbol: "bubble.left.and.bubble.right", title: "Noch keine Unterhaltungen",
-                                       message: "Sobald das Büro oder Ihre Kolonne schreibt, erscheint die Unterhaltung hier.")
-                    }
-                }
-                if !archive {
-                    // Dateien und Fotos laufen über Microsoft Teams; Nachrichten, Diktat und Standort bleiben hier.
-                    Section {
-                        ChatTeamsInfo(targets: ChatComposerPolicy.teamsTargets(link: nil, status: teams))
+                                       message: "Sobald das Büro oder Ihre Kolonne schreibt, erscheint die Unterhaltung hier.",
+                                       actionTitle: archive ? nil : "Neuer Chat", actionSymbol: "square.and.pencil") { startsChat = true }
                     }
                 }
                 Section {
@@ -176,6 +171,13 @@ struct ChatListView: View {
                 } footer: {
                     if !conversations.isEmpty {
                         Text(footer)
+                    }
+                }
+                if !archive, loaded {
+                    // Dateien und Fotos laufen über Microsoft Teams; Nachrichten, Diktat und Standort bleiben hier.
+                    // Unter den Unterhaltungen, damit die Liste oben beginnt.
+                    Section {
+                        ChatTeamsInfo(targets: ChatComposerPolicy.teamsTargets(link: nil, status: teams))
                     }
                 }
             }

@@ -93,3 +93,22 @@ struct TodayGlanceTests {
         #expect(roomsOnly.readiness?.text == "1 von 2 Räumen belegreif")
     }
 }
+
+@Suite("Termine kurz")
+struct AppointmentTextTests {
+    private var calendar: Calendar {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Europe/Berlin")!
+        return calendar
+    }
+
+    @Test("Heute, Morgen, Wochentag mit Datum")
+    func labels() {
+        #expect(TodayGlance.dayLabel("2026-11-20", today: "2026-11-20", calendar: calendar) == "Heute")
+        #expect(TodayGlance.dayLabel("2026-11-21", today: "2026-11-20", calendar: calendar) == "Morgen")
+        #expect(TodayGlance.dayLabel("2026-11-26", today: "2026-11-20", calendar: calendar) == "Do., 26.11.")
+        #expect(TodayGlance.appointmentText(day: "2026-11-20", start: "07:00", detail: "Kolonne Huber", today: "2026-11-20", calendar: calendar)
+            == "Heute, 07:00, Kolonne Huber")
+        #expect(TodayGlance.appointmentText(day: "2026-11-21", start: nil, detail: nil, today: "2026-11-20", calendar: calendar) == "Morgen")
+    }
+}

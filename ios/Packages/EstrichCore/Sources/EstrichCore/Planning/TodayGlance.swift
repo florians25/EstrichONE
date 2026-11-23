@@ -170,3 +170,18 @@ public struct SiteGlance: Equatable, Sendable {
         openDefects == 0 && openTasks == 0 && readiness == nil && weatherText == nil
     }
 }
+
+extension TodayGlance {
+    /// Tag eines Termins kurz: „Heute“, „Morgen“, sonst „Do., 26.11.“ (`day` und `today` als `yyyy-MM-dd`).
+    public static func dayLabel(_ day: String, today: String, calendar: Calendar = .current) -> String {
+        if day == today { return "Heute" }
+        guard let date = CalendarDay.date(day, calendar: calendar), let now = CalendarDay.date(today, calendar: calendar) else { return day }
+        if let tomorrow = calendar.date(byAdding: .day, value: 1, to: now), calendar.isDate(date, inSameDayAs: tomorrow) { return "Morgen" }
+        return NoticePresentation.shortDate(date, now: now, calendar: calendar)
+    }
+
+    /// Nächster Termin in einer Zeile: „Heute, 07:00, Kolonne Huber“.
+    public static func appointmentText(day: String, start: String?, detail: String?, today: String, calendar: Calendar = .current) -> String {
+        [dayLabel(day, today: today, calendar: calendar), start, detail].compactMap { $0?.isEmpty == false ? $0 : nil }.joined(separator: ", ")
+    }
+}

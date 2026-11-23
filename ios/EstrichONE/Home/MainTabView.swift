@@ -1,8 +1,8 @@
 import EstrichCore
 import SwiftUI
 
-/// Hauptnavigation: Heute, Baustellen, Chat, Kunden, Mehr. Erfasst wird ausschließlich in der Bauakte (Knopf „Erfassen“
-/// unten in der Akte); „Heute“ bietet für den Einsatz Foto und Bautagebuch direkt an. Der Chat ist ein eigener Reiter mit
+/// Hauptnavigation: Heute, Baustellen, Chat, Kunden, Mehr. Erfasst wird ausschließlich in der Bauakte (Knopf „+“ oben
+/// rechts in der Akte); „Heute“ bietet für den Einsatz Foto und Bautagebuch im Menü und beim Wischen an. Der Chat ist ein eigener Reiter mit
 /// Zähler der ungelesenen Nachrichten. Ab iOS 26 erscheint die Leiste in Liquid Glass; auf dem iPad als einblendbare Seitenleiste.
 struct MainTabView: View {
     enum Tab: Hashable {
@@ -73,6 +73,9 @@ struct MainTabView: View {
         .readOnlyOverrideDialog(isPresented: $confirmsOverride, sync: model.active?.sync)
         .onChange(of: showsChat) { _, visible in
             if !visible, selection == .chat { selection = .today }
+        }
+        .onChange(of: chatNavigation.tabRequest) { _, _ in
+            if showsChat { selection = .chat }
         }
         .task { applyShotScene() }
         .task(id: quick.pending) { await runQuickAction() }
@@ -205,6 +208,15 @@ final class ChatNavigation {
     func open(_ conversation: UUID?) {
         pendingConversation = conversation
         request += 1
+    }
+
+    /// Zähler für „Reiter Chat zeigen“ (aus einer Bauakte; die Hauptnavigation wechselt dann den Reiter).
+    private(set) var tabRequest = 0
+
+    /// Reiter „Chat“ zeigen und dort die Unterhaltung öffnen (`nil` = Liste).
+    func show(_ conversation: UUID?) {
+        open(conversation)
+        tabRequest += 1
     }
 }
 

@@ -175,6 +175,8 @@ final class ScreenshotDirector {
         if scene.hasPrefix("chat-verlauf") { return 4200 }
         // Bereiche öffnen sich nach dem Laden der Bauakte per Navigation – die Animation braucht etwas länger.
         if scene.hasPrefix("bereich-") || scene == "protokoll" || scene.hasPrefix("chat") { return 2800 }
+        // Bauakte: Inhalt, Formular und Planung laden nacheinander (sonst stand teils noch der Platzhalter im Bild).
+        if scene.hasPrefix("bauakte") { return 3000 }
         if scene == "kontakt-neu" || scene.hasPrefix("dispo-") { return 3400 }
         // Helpdesk der IT: Ticket bzw. Anleitung öffnen sich nach dem Laden der Liste (Anleitung zusätzlich nach den Stammdaten).
         if scene == "meldung-it" || scene == "meldung-aufnehmen" { return 3400 }

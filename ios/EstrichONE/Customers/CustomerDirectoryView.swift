@@ -78,7 +78,13 @@ struct CustomerDirectoryView: View {
         }
     }
 
+    /// Nach Anfangsbuchstaben gruppiert erst ab dieser Zahl (sonst stünde jeder Kunde in einem eigenen Abschnitt).
+    private static let groupThreshold = 15
+
     private var groups: [(letter: String, contacts: [Contact])] {
+        if filtered.count < Self.groupThreshold {
+            return filtered.isEmpty ? [] : [("", filtered.sorted { $0.name.localizedCompare($1.name) == .orderedAscending })]
+        }
         let grouped = Dictionary(grouping: filtered) { Self.letter(of: $0.name) }
         return grouped.keys.sorted { $0 == "#" ? false : ($1 == "#" ? true : $0 < $1) }
             .map { ($0, (grouped[$0] ?? []).sorted { $0.name.localizedCompare($1.name) == .orderedAscending }) }
@@ -198,7 +204,7 @@ struct CustomerDirectoryView: View {
                     }
                 }
             } header: {
-                Text(group.letter)
+                Text(group.letter.isEmpty ? (group.contacts.count == 1 ? "1 Kunde" : "\(group.contacts.count) Kunden") : group.letter)
             }
             .id("section-\(group.letter)")
         }

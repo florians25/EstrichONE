@@ -359,3 +359,153 @@ struct NoticeDetailSheet: View {
         .accessibilityElement(children: .combine)
     }
 }
+
+/// Kompakte Zeile auf „Heute“ (Wartung, Übertragung prüfen): Symbol in Statusfarbe, Titel, eine Zeile Erläuterung,
+/// rechts der Pfeil, wenn es weitergeht. Ersetzt große Hinweiskarten, damit die Arbeit oben bleibt.
+struct TodayStatusRow: View {
+    let tone: NoticeItem.Tone
+    let symbol: String
+    let title: String
+    var subtitle: String?
+    var count: Int?
+    var showsChevron = true
+
+    var body: some View {
+        HStack(spacing: Space.m) {
+            Image(systemName: symbol)
+                .font(.body.weight(SymbolWeight.control))
+                .foregroundStyle(tone.tint)
+                .frame(width: 28)
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(Typo.subheadStrong)
+                    .foregroundStyle(tone == .error ? Theme.danger : Theme.textPrimary)
+                    .lineLimit(2)
+                if let subtitle, !subtitle.isEmpty {
+                    Text(subtitle)
+                        .font(Typo.meta)
+                        .foregroundStyle(Theme.textSecondary)
+                        .lineLimit(1)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            if let count, count > 1 {
+                Text("\(count)")
+                    .font(Typo.labelStrong.monospacedDigit())
+                    .foregroundStyle(Theme.onAccent)
+                    .padding(.horizontal, 7)
+                    .frame(minWidth: 22, minHeight: 22)
+                    .background(tone.tint, in: Capsule())
+                    .accessibilityHidden(true)
+            }
+            if showsChevron { Chevron() }
+        }
+        .frame(minHeight: Size.minTap)
+        .contentShape(Rectangle())
+        .accessibilityElement(children: .combine)
+    }
+}
+
+/// „Heute“: alle Mitteilungen der Verwaltung und des Betreibers als eine Zeile („3 Mitteilungen“, Störungen rot).
+/// Tipp öffnet die Liste mit Details; ausblendbare Mitteilungen lassen sich dort schließen.
+struct TodayNoticesRow: View {
+    let sync: SyncController
+    @Environment(AppModel.self) private var model
+    @Environment(\.shotScene) private var shotScene
+    @State private var dismissals = NoticeDismissals.shared
+    @State private var showsList = false
+    @State private var detail: NoticeItem?
+
+    /// Laufende Wartung meldet „Heute“ schon als eigene Zeile („Wartung des Servers“), hier nicht doppelt.
+    private func items(now: Date) -> [NoticeItem] {
+        NoticePresentation.items(sync.notices, now: now).filter { !($0.kind == .maintenanceRunning && sync.maintenanceMessage != nil) }
+    }
+
+    var body: some View {
+        let open = NoticePresentation.open(items(now: .now), dismissed: dismissals.keys)
+        Group {
+            if let summary = NoticePresentation.summary(open) {
+                Button { showsList = true } label: {
+                    TodayStatusRow(tone: summary.tone, symbol: summary.symbol, title: summary.title, subtitle: summary.subtitle, count: summary.count)
+                }
+                .buttonStyle(.plain)
+                .listRowBackground(summary.hasCritical ? Theme.dangerSoft : Theme.surface)
+                .accessibilityHint("Zeigt alle Mitteilungen")
+                .accessibilityIdentifier("systemNotices")
+                .swipeActions(edge: .trailing) {
+                    if open.count == 1, let only = open.first, only.isDismissible {
+                        Button("Ausblenden", systemImage: "eye.slash") { withAnimation(.snappy) { dismissals.dismiss(only.id) } }
+                            .tint(Theme.textSecondary)
+                    }
+                }
+            }
+        }
+        .sheet(isPresented: $showsList) {
+            SystemNoticesSheet(sync: sync)
+        }
+        .sheet(item: $detail) { item in
+            NoticeDetailSheet(item: item) { dismissals.dismiss(item.id) }
+        }
+        .onAppear { dismissals.load(user: model.active.map { "\($0.user.id)" } ?? "anon") }
+        .task(id: shotScene) {
+            // Screenshot „hinweise“: Liste der Mitteilungen, „hinweis-detail“: Details der geplanten Wartung.
+            guard let shotScene else { return }
+            try? await Task.sleep(for: .milliseconds(400))
+            if shotScene == "hinweise" {
+                showsList = true
+            } else if shotScene == "hinweis-detail" {
+                detail = items(now: .now).first { $0.kind == .maintenance || $0.kind == .maintenanceSoon }
+            } else {
+                showsList = false
+                detail = nil
+            }
+        }
+    }
+}
+
+/// Alle aktuellen Mitteilungen als Liste von Karten (wichtigste zuerst) mit Details und Ausblenden.
+struct SystemNoticesSheet: View {
+    let sync: SyncController
+    @Environment(\.dismiss) private var close
+    @State private var dismissals = NoticeDismissals.shared
+    @State private var detail: NoticeItem?
+
+    var body: some View {
+        NavigationStack {
+            TimelineView(.periodic(from: .now, by: 60)) { context in
+                let open = NoticePresentation.open(
+                    NoticePresentation.items(sync.notices, now: context.date).filter { !($0.kind == .maintenanceRunning && sync.maintenanceMessage != nil) },
+                    dismissed: dismissals.keys)
+                ScrollView {
+                    VStack(spacing: Space.s) {
+                        if open.isEmpty {
+                            EmptyStateView(symbol: "checkmark.circle", title: "Keine Mitteilungen",
+                                           message: "Hinweise der Verwaltung zu Wartung und Störungen erscheinen hier.")
+                        }
+                        ForEach(open) { item in
+                            SystemNoticeCard(item: item, onDetails: { detail = item },
+                                             onDismiss: item.isDismissible ? { withAnimation(.snappy) { dismissals.dismiss(item.id) } } : nil)
+                                .transition(.opacity)
+                        }
+                    }
+                    .padding(Space.l)
+                    .frame(maxWidth: 640)
+                    .frame(maxWidth: .infinity)
+                }
+            }
+            .background(Theme.canvas)
+            .navigationTitle("Mitteilungen")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) { Button("Fertig") { close() } }
+            }
+        }
+        .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.visible)
+        .sheet(item: $detail) { item in
+            NoticeDetailSheet(item: item) { dismissals.dismiss(item.id) }
+        }
+        .accessibilityIdentifier("systemNoticesSheet")
+    }
+}
