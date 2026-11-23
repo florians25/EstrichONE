@@ -33,15 +33,16 @@ Legende: ✅ umgesetzt · 🟡 teilweise (siehe Bemerkung) · ❌ fehlt noch
 
 | Funktion | iOS | Android | Bemerkung |
 |---|---|---|---|
-| Datum; Hinweise nur bei Bedarf (Demo steht oben links unter „Demo“) | ✅ | ✅ | ruhige Standardliste ohne Begrüßung und Kacheln |
-| Systemhinweise als Karten (Störung, Wartung, Countdown, Details, Ausblenden, „weitere Hinweise“) | ✅ | ✅ | gleiche Logik (NoticePresentation, unit-getestet) |
+| Kompakte Kopfzeile: Datum als Unterzeile, Abgleich als Symbol, Glocke mit Zahl, „Demo“ klein rechts | ✅ | ✅ | ab 1.0.34 ohne großen Titel und Leerraum |
+| Mein Tag: drei Kennzahlen (Einsätze ab Uhrzeit, offene Aufgaben mit Mängeln, Freigaben bzw. weitere Einsätze) | ✅ | ✅ | `TodayOverview` (unit-getestet) |
+| Mitteilungen (Störung, Wartung, Neuigkeiten) als eine Zeile, aufklappbar; Störungen rot, Ausblenden bleibt | ✅ | ✅ | `TodayOverview.noticeSummary` |
 | Ausfall-Hinweise Backup/Archiv nur, wenn der Server sie liefert | ✅ | ✅ | |
-| Mein Einsatz (Zeit, Status, Adresse + Route, Ansprechpartner + Anruf, Tätigkeit, Kolonne, Fahrzeuge, Notiz, Aktionen) | ✅ | ✅ | Plan offline aus dem letzten Abruf |
-| „Mein Einsatz“: eine Hauptaktion „Foto“, Tagebuch/Mangel/Akte im Menü „…“ bzw. „⋮“ | ✅ | ✅ | |
-| Überblick: Meine Aufgaben (davon Mängel), Wer fährt wohin, Meine Woche als Listenzeilen mit Zahl | ✅ | ✅ | ersetzt Kacheln und die Vorschauen „Offene Aufgaben“/„Wer fährt wohin“ |
-| Morgen (iOS) bzw. Diese Woche (Android), Zuletzt geöffnet | ✅ | ✅ | iOS zusätzlich Wischen/langes Drücken für Foto, Tagebuch, Route |
+| Jetzt im Einsatz bzw. Nächster Einsatz als Hauptkarte (Zeit, Status, Adresse, Leistung mit Kennwerten, Kolonne, Fahrzeuge, Zugang) | ✅ | ✅ | Plan offline aus dem letzten Abruf |
+| Schnellaktionen der Hauptkarte: Route, Anrufen, Chat, Bauakte; Foto, Tagebuch, Mangel im Menü „⋮“ | ✅ | ✅ | |
+| Weitere Einsätze heute als kompakte Zeilen mit Route | ✅ | ✅ | |
+| Offene Aufgaben (drei, mit Bauakte) bzw. Aufgaben und Freigaben | ✅ | ✅ | |
+| Morgen bzw. Demnächst mit Meine Woche und Wer fährt wohin, Zuletzt geöffnet | ✅ | ✅ | iOS zusätzlich Wischen/langes Drücken für Foto, Tagebuch, Route |
 | Laden: graue Platzhalterzeilen statt Drehkreisel (Listen, Bauakte) | ✅ | ✅ | |
-| Oben rechts nur Glocke mit Zahl; Abgleich und „In Teams öffnen“ im Menü „…“ bzw. „⋮“ | ✅ | ✅ | Chat als eigener Reiter unten |
 | „Foto“ und „Tagebuch“ im Einsatz öffnen die Bauakte und erfassen dort (Zurück führt in die Bauakte) | ✅ | ✅ | ab 1.0.32 |
 
 ## Mehr
@@ -56,12 +57,13 @@ Legende: ✅ umgesetzt · 🟡 teilweise (siehe Bemerkung) · ❌ fehlt noch
 
 | Funktion | iOS | Android | Bemerkung |
 |---|---|---|---|
-| Liste mit Suche, Gruppen nach Status, „Heute im Einsatz“ | ✅ | ✅ | zusätzlich Filter-Chips; Suche auch nach Kunde und Kundennummer, Ziehen zum Abgleichen |
+| Liste mit Suche, Filter (Heute, Laufend, Status, Alle) mit Anzahl, „Heute im Einsatz“ zuerst, dann Status und nächster Termin | ✅ | ✅ | `SiteList` (unit-getestet); kompakte Zeilen mit Status-Kennzeichen und nächstem Termin; Suche auch nach Kunde und Kundennummer, Ziehen zum Abgleichen |
 | Schnellanlage mit Art, Adresse, Kunde (vorhanden oder neu) – offline | ✅ | ✅ | |
 | Dublettenprüfung beim neuen Kunden | ✅ | 🟡 | Hinweis auf ähnliche Kunden aus dem Bestand auf dem Gerät (offline); Serverprüfung `contacts/duplicates` nicht genutzt |
-| Basisdaten oben auf einen Blick: Nummer, Status ändern, Titel, Adresse + Route, Kunde/vor Ort/Bauleitung + Anruf, nächster Einsatz | ✅ | ✅ | ohne Kennzahl-Kapseln (stehen unter Basisdaten) |
-| Unten immer „Foto“ und „Erfassen“ (48 dp) | ✅ | ✅ | „Erfassen“: Video, Scan, Datei, Tagebuch, Erstbegehung, CM-Messung, Abnahme, Mangel, Aufgabe, Notiz für diese Bauakte |
-| Menü „…“/„⋮“: Basisdaten, PDF, Teams, Baustellenchat, Austragen, Stornieren | ✅ | ✅ | Erfassen nur noch über den Knopf „Erfassen“ |
+| Aufbau nach dem Arbeitsablauf: Kopf mit Aktionsleiste (Route, Anrufen mit Kontaktauswahl, Chat, Teams), heute bzw. nächster Termin, Hinweise und Behinderungen, Leistung und Kennwerte, Ablauf, Aufgaben und Mängel, Fotos und Dokumentation, Kontakte (einklappbar), Beschreibung und Verlauf | ✅ | ✅ | ab 1.0.34 |
+| Ablauf als Fortschritt (Erstbegehung, Einbringen, Belegreife, Abnahme) mit „Erfassen“ beim nächsten Schritt | ✅ | ✅ | `SiteWorkflow` im Kern, unit-getestet |
+| „Erfassen“ unten rechts (klappt beim Scrollen ein, verdeckt nichts) | ✅ | ✅ | Blatt mit Fotos zuerst, dann Video, Scan, Datei, Tagebuch, Erstbegehung, CM-Messung, Abnahme, Mangel, Aufgabe, Notiz für diese Bauakte |
+| Menü „…“/„⋮“: Basisdaten, PDF, Teams-Chat, Austragen, Stornieren | ✅ | ✅ | Chat und Teams stehen in der Aktionsleiste |
 | Freitexte (Hinweise und Behinderungen, Beschreibung, mehrzeilige Schema-Felder) als Textblöcke mit Überschrift, Links/Telefon antippbar, „Mehr anzeigen“ | ✅ | ✅ | `FreeText` im Kern, unit-getestet |
 | Basisdaten: vier Kennwerte direkt (zuerst Estrichart, Dicke, Fläche, Termin), „Alle Basisdaten“ klappt auf | ✅ | ✅ | unit-getestet |
 | Angeheftete Notiz, Hinweise nur bei Bedarf; Offene Punkte und neueste Fotos nur, wenn vorhanden | ✅ | ✅ | |

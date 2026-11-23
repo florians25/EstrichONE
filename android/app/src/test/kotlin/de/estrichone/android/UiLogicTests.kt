@@ -54,5 +54,7 @@ class UiLogicTests {
         val labels = listOf("Objektart", "Geschosse", "Gesamtfläche", "Priorität", "Estrichart", "Dämmdicke", "Nenndicke")
         val sorted = keyDataFirst(labels.map { it to "x" }).map { it.first }
         assertEquals(listOf("Estrichart", "Nenndicke", "Gesamtfläche", "Objektart", "Geschosse", "Priorität", "Dämmdicke"), sorted)
+        // Einsatzkarte auf Heute: nur Estrichart, Dicke und Fläche.
+        assertEquals(listOf("Estrichart", "Nenndicke", "Gesamtfläche"), sorted.filter { de.estrichone.android.ui.keyDataRank(it) <= 2 })
     }
 }
