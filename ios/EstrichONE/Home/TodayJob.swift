@@ -169,29 +169,35 @@ struct TodayJobCard: View {
                 } else if let phone = job.phoneText {
                     line(symbol: "phone", text: "Ansprechpartner vor Ort", detail: phone)
                 }
-                if let access = extras?.access {
-                    line(symbol: "key", text: access, caption: "Zugang", limit: 3)
-                }
-                if let notes = job.notes?.compactText {
-                    line(symbol: "text.bubble", text: notes, caption: "Hinweis der Disposition", limit: 3)
-                }
-                if let note = extras?.pinned.first {
-                    line(symbol: "pin", text: note, caption: "Angeheftete Notiz", limit: 3)
-                }
             }
 
-            if let glance, !glance.isEmpty {
-                GlanceChips(glance: glance)
-                    .accessibilityIdentifier("todayJobGlance")
-            }
-            if let chat = extras?.chat {
-                chatLine(chat)
-            }
             ForEach(job.warnings, id: \.self) { warning in
                 Callout(tone: .warning, message: warning)
             }
 
             actionBar
+
+            // Unter den Schnellaktionen: Kennzahlen, Zugang, Hinweise und der Chat der Baustelle.
+            if let glance, !glance.isEmpty {
+                GlanceChips(glance: glance)
+                    .accessibilityIdentifier("todayJobGlance")
+            }
+            if extras?.access != nil || job.notes?.compactText != nil || extras?.pinned.first != nil {
+                VStack(alignment: .leading, spacing: Space.s) {
+                    if let access = extras?.access {
+                        line(symbol: "key", text: access, caption: "Zugang", limit: 2)
+                    }
+                    if let notes = job.notes?.compactText {
+                        line(symbol: "text.bubble", text: notes, caption: "Hinweis der Disposition", limit: 2)
+                    }
+                    if let note = extras?.pinned.first {
+                        line(symbol: "pin", text: note, caption: "Angeheftete Notiz", limit: 2)
+                    }
+                }
+            }
+            if let chat = extras?.chat {
+                chatLine(chat)
+            }
         }
     }
 
