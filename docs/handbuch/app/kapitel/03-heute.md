@@ -48,7 +48,8 @@ Die Karte enthält alles, was Sie auf der Baustelle brauchen:
 | **Kennzahlen** als kleine Kapseln | offene **Mängel** (rot) und **Aufgaben**, **Belegreife**, **Wetter** laut heutigem Bautagebuch |
 | **Chat der Baustelle** mit der letzten Nachricht | Antippen öffnet die Unterhaltung im Tab **Chat**. |
 
-Unten liegen vier gleich große Schnellaktionen, gut mit Handschuhen und mit einer Hand:
+Direkt unter Adresse, Leistung, Kolonne und Ansprechpartner liegen vier gleich große Schnellaktionen, gut mit
+Handschuhen und mit einer Hand. Kennzahlen, Zugang, Hinweise und der Chat der Baustelle folgen darunter.
 
 | Schaltfläche | Was passiert |
 |---|---|
