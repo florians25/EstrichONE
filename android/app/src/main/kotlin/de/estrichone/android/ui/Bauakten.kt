@@ -190,7 +190,7 @@ fun BauakteRow(b: Bauakte, customer: de.estrichone.core.Contact?, job: PlannedJo
     ) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(b.numberText, style = MaterialTheme.typography.labelMedium, color = tones.textSecondary, modifier = Modifier.weight(1f, fill = false))
+                Text(b.numberText, style = MaterialTheme.typography.labelMedium, color = tones.textSecondary)
                 Spacer(Modifier.width(8.dp))
                 SyncMark(b.syncState)
                 Spacer(Modifier.weight(1f))
