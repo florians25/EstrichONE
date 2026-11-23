@@ -2,12 +2,11 @@ import CoreLocation
 import EstrichCore
 import SwiftUI
 
-/// „Heute“, der Arbeitsplatz für den Tag, als ruhige Standardliste: oben Datum und dezent der Abgleich, Hinweise nur bei
-/// Bedarf, dann „Ihr Tag“ (Einsätze, Beginn, Fläche, Kolonne mit Besetzung, Fahrzeuge, Abwesende) und alle Einsätze des
-/// Tages. Der laufende bzw. nächste ist aufgeklappt mit Kennzahlen (Mängel, Aufgaben, Belegreife, Wetter), Leistung laut
-/// Basisdaten, Zugang und angehefteten Notizen, letzter Nachricht im Chat der Baustelle, Entfernung und vier Handgriffen;
-/// die übrigen kompakt mit Route und Anruf. Darunter „Überblick“ (Meine Aufgaben, offene Anträge, Wer fährt wohin, Meine
-/// Woche), morgen und zuletzt geöffnet. Lokale Daten erscheinen sofort, frische Planung kommt im Hintergrund dazu.
+/// „Heute“, der Arbeitsplatz für den Tag, nach dem Arbeitsablauf aufgebaut: oben das Datum mit dem Abgleich, eine
+/// Zeile „Mein Tag“ (Einsätze, Beginn, Fläche) und alle Mitteilungen als eine kompakte Zeile (Störungen rot). Dann die
+/// Arbeit: der laufende bzw. nächste Einsatz als Hauptkarte mit Schnellaktionen (Route, Anrufen, Chat, Bauakte), weitere
+/// Einsätze als ruhige Zeilen. Darunter offene Aufgaben und Freigaben, Planung, morgen und zuletzt geöffnet.
+/// Lokale Daten erscheinen sofort, frische Planung kommt im Hintergrund dazu.
 struct HomeView: View {
     /// Öffnet den Reiter „Chat“ (mit Unterhaltung bzw. der Liste).
     var openChat: (UUID?) -> Void = { _ in }
@@ -34,8 +33,6 @@ struct HomeView: View {
     @State private var extras: [UUID: TodaySiteExtras] = [:]
     /// Offene Urlaubsanträge, über die man entscheiden darf (online).
     @State private var pendingApprovals = 0
-    /// Vom Nutzer aufgeklappter Einsatz; sonst der laufende bzw. nächste.
-    @State private var expandedJob: UUID?
     /// Uhr für „Jetzt“/„in 2 Std.“ (minütlich; im Screenshot-Modus fest 9:41).
     @State private var now = Date.now
     /// Zuletzt bekannter Standort (nur wenn schon erlaubt) für die Entfernung.
@@ -65,13 +62,12 @@ struct HomeView: View {
         TodayGlance.phase(start: job.startText, end: job.endText, now: now)
     }
 
-    /// Aufgeklappt: die Wahl des Nutzers, sonst der laufende bzw. nächste Einsatz.
-    private func isExpanded(_ job: TodayJob, in list: [TodayJob]) -> Bool {
-        if list.count == 1 { return true }
-        if let expandedJob, list.contains(where: { $0.id == expandedJob }) { return expandedJob == job.id }
-        guard let index = TodayGlance.focusIndex(list.map(phase(of:))) else { return false }
-        return list[index].id == job.id
+    /// Hauptkarte: der laufende, sonst der nächste, sonst der letzte Einsatz des Tages.
+    private func focusJob(in list: [TodayJob]) -> TodayJob? {
+        TodayGlance.focusIndex(list.map(phase(of:))).map { list[$0] }
     }
+
+    private var chatAvailable: Bool { model.active?.sync?.chat?.isAvailable ?? false }
 
     private func distance(to job: TodayJob) -> String? {
         guard let here, let latitude = job.latitude, let longitude = job.longitude else { return nil }
@@ -93,10 +89,10 @@ struct HomeView: View {
         NavigationStack(path: $path) {
             ScrollViewReader { proxy in
                 List {
-                    // Hinweise stehen im Abschnitt des Einsatzes (unter dem Datum); ohne Planung in einem eigenen Abschnitt.
-                    // So entsteht ohne Hinweis keine leere Lücke oben.
-                    if modules.isOn(AppModules.planning) { todaySection } else { Section { noticeRows } }
-                    overviewSection
+                    headerSection
+                    if modules.isOn(AppModules.planning) { jobsSection }
+                    tasksSection
+                    planningSection
                     if modules.isOn(AppModules.planning) { tomorrowSection }
                     recentSection
                     Color.clear.frame(height: 1)
@@ -107,8 +103,7 @@ struct HomeView: View {
                 .listStyle(.insetGrouped)
                 .listSectionSpacing(.compact)
                 .task(id: loaded) {
-                    // Screenshot-Modus: „heute-zweiter“ klappt den zweiten Einsatz auf, „heute-unten“ zeigt den unteren Teil.
-                    if loaded, shotScene == "heute-zweiter" { expandedJob = jobs.dropFirst().first?.id }
+                    // Screenshot-Modus: „heute-unten“ zeigt den unteren Teil.
                     guard loaded, shotScene == "heute-unten" else { return }
                     try? await Task.sleep(for: .milliseconds(300))
                     proxy.scrollTo("bottom", anchor: .bottom)
@@ -163,36 +158,100 @@ struct HomeView: View {
         }
     }
 
-    // MARK: Kopf und Hinweise
+    // MARK: Kopf: Datum, Mein Tag, Mitteilungen
 
-    /// Hinweise nur, wenn es etwas zu sagen gibt (Wartung, Übertragungsfehler, offline, Systemmeldungen, neue Version).
-    /// Der Demomodus ist oben links gekennzeichnet („Demo“) und wird hier nicht noch einmal erklärt.
-    private var noticeRows: some View {
-            Group {
-                if model.updates.showsBanner {
-                    AppUpdateNotice(center: model.updates)
+    /// Datum mit Abgleich als Überschrift; darin „Mein Tag“ in einer Zeile und Mitteilungen bzw. Störungen als je eine
+    /// kompakte Zeile. Ohne Einsätze und ohne Mitteilungen bleibt nur die Überschrift (keine leere Fläche).
+    private var headerSection: some View {
+        Section {
+            if modules.isOn(AppModules.planning), loaded, !jobs.isEmpty {
+                dayStrip
+            }
+            statusRows
+        } header: {
+            HStack(alignment: .firstTextBaseline, spacing: Space.s) {
+                Text(Date.now.formatted(.dateTime.weekday(.wide).day().month(.wide)))
+                    .accessibilityIdentifier("todayDate")
+                Spacer(minLength: Space.s)
+                syncHint
+            }
+            .textCase(nil)
+        }
+    }
+
+    /// App-Update, Wartung, Übertragungsfehler, Mitteilungen der Verwaltung und Teams, jeweils höchstens eine Zeile.
+    /// „Offline“ steht schon rechts neben dem Datum und braucht keine eigene Zeile.
+    @ViewBuilder
+    private var statusRows: some View {
+        if model.updates.showsBanner {
+            AppUpdateNotice(center: model.updates)
+                .listRowBackground(Color.clear)
+                .listRowInsets(EdgeInsets(top: Space.xs, leading: 0, bottom: Space.xs, trailing: 0))
+        }
+        if let sync = model.active?.sync {
+            if let message = sync.maintenanceMessage {
+                Button { path.append(.sync) } label: {
+                    TodayStatusRow(tone: .warning, symbol: "wrench.and.screwdriver.fill", title: "Wartung des Servers",
+                                   subtitle: "\(message) Erfasstes bleibt auf dem Gerät.")
                 }
-                if let sync = model.active?.sync {
-                    if let message = sync.maintenanceMessage {
-                        Callout(tone: .warning, title: "Wartung des Servers",
-                                message: "\(message) Sie können weiterarbeiten. Erfasste Daten bleiben auf dem Gerät und werden danach übertragen.",
-                                symbol: "wrench.and.screwdriver.fill")
-                    } else if sync.summary?.hasProblems == true {
-                        Callout(tone: .danger, title: "Übertragung prüfen", message: "Einige Änderungen wurden nicht übernommen.",
-                                actionTitle: "Details ansehen") { path.append(.sync) }
-                    } else if sync.isOffline, !sync.isReadOnly, !sync.connection.isLongOffline(at: .now) {
-                        Callout(tone: .neutral, title: "Offline", message: "Alles wird auf dem Gerät gespeichert und übertragen, sobald wieder Verbindung besteht.",
-                                symbol: "wifi.slash")
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("maintenanceRow")
+            } else if sync.summary?.hasProblems == true {
+                Button { path.append(.sync) } label: {
+                    TodayStatusRow(tone: .error, symbol: "exclamationmark.icloud.fill", title: "Übertragung prüfen",
+                                   subtitle: "Einige Änderungen wurden nicht übernommen.")
+                }
+                .buttonStyle(.plain)
+                .listRowBackground(Theme.dangerSoft)
+                .accessibilityIdentifier("syncProblemRow")
+            }
+            TodayNoticesRow(sync: sync)
+        }
+        if let notice = model.active?.sync?.teams?.rolloutNotice, !notice.isEmpty {
+            TeamsRolloutNotice(text: notice)
+        }
+    }
+
+    /// „Mein Tag“: Einsätze, Beginn und Fläche nebeneinander; wer heute fehlt, darunter.
+    private var dayStrip: some View {
+        let day = overview
+        let figures: [(String, String)] = [
+            ("\(day.jobCount)", day.jobCount == 1 ? "Einsatz" : "Einsätze"),
+            (day.firstStart ?? "offen", "Beginn"),
+            day.areaText.map { ($0, "Fläche") } ?? ("\(day.siteCount)", day.siteCount == 1 ? "Baustelle" : "Baustellen"),
+        ]
+        return VStack(alignment: .leading, spacing: Space.s) {
+            let layout = typeSize.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading, spacing: Space.s))
+                                                      : AnyLayout(HStackLayout(alignment: .top, spacing: Space.s))
+            layout {
+                ForEach(Array(figures.enumerated()), id: \.offset) { _, figure in
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(figure.0)
+                            .font(.headline.monospacedDigit())
+                            .foregroundStyle(Theme.textPrimary)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                        Text(figure.1)
+                            .font(Typo.label)
+                            .foregroundStyle(Theme.textSecondary)
                     }
-                    SystemNoticesBanner(sync: sync)
-                }
-                if let notice = model.active?.sync?.teams?.rolloutNotice, !notice.isEmpty {
-                    TeamsRolloutNotice(text: notice)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .accessibilityElement(children: .combine)
                 }
             }
-            .listRowBackground(Color.clear)
-            .listRowInsets(EdgeInsets(top: Space.xs, leading: 0, bottom: Space.xs, trailing: 0))
-            .listRowSeparator(.hidden)
+            if !day.absent.isEmpty {
+                Label("Heute abwesend: \(day.absent.joined(separator: "; "))", systemImage: "person.crop.circle.badge.xmark")
+                    .labelStyle(TightLabelStyle())
+                    .font(Typo.meta)
+                    .foregroundStyle(Theme.warning)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("todaySummaryAbsent")
+            }
+        }
+        .padding(.vertical, Space.xxs)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Mein Tag")
+        .accessibilityIdentifier("todaySummary")
     }
 
     /// „…“ oben rechts: Abgleich (mit Stand) und Microsoft Teams.
@@ -225,65 +284,75 @@ struct HomeView: View {
         return ("checkmark.icloud", "Alles übertragen", false)
     }
 
-    // MARK: Einsatz heute
+    // MARK: Einsätze
 
-    private var todaySection: some View {
-        Section {
-            noticeRows
-            if !loaded {
+    /// Die Arbeit: Hauptkarte für den laufenden bzw. nächsten Einsatz, weitere Einsätze als Zeilen darunter.
+    @ViewBuilder
+    private var jobsSection: some View {
+        if !loaded {
+            Section {
                 TodayJobCard.placeholder
                     .listRowInsets(EdgeInsets())
                     .listRowBackground(Color.clear)
-            } else if jobs.isEmpty {
-                // Leerzustand: eine Zeile (Meine Woche steht direkt darunter).
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Heute ist nichts für Sie eingeplant.")
-                    if let next = tomorrow.first {
-                        Text("Morgen \([next.startText, next.bauakteTitle].compactMap { $0 }.joined(separator: ", "))")
-                            .font(Typo.subhead).foregroundStyle(Theme.textSecondary)
+            }
+        } else if jobs.isEmpty {
+            Section("Einsätze") {
+                // Leerzustand: eine ruhige Zeile mit dem Ausblick auf morgen.
+                HStack(spacing: Space.m) {
+                    Image(systemName: "calendar")
+                        .font(.body.weight(SymbolWeight.content))
+                        .foregroundStyle(Theme.textSecondary)
+                        .frame(width: 28)
+                        .accessibilityHidden(true)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Heute ist nichts für Sie eingeplant.")
+                        if let next = tomorrow.first {
+                            Text("Morgen \([next.startText, next.bauakteTitle].compactMap { $0 }.joined(separator: ", "))")
+                                .font(Typo.subhead).foregroundStyle(Theme.textSecondary)
+                        }
                     }
                 }
                 .padding(.vertical, Space.xs)
-            } else {
-                let list = jobs
-                let day = overview
-                // Mehrere Einsätze: „Ihr Tag“ zuerst. Bei einem Einsatz stehen Kolonne und Fahrzeuge schon auf der Karte;
-                // dann nur, wer heute fehlt.
-                if list.count > 1 || !day.absent.isEmpty {
-                    TodaySummaryCard(overview: day, showsCrew: list.count > 1)
-                        .listRowInsets(EdgeInsets(top: Space.xs, leading: 0, bottom: Space.xs, trailing: 0))
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
-                }
-                ForEach(list) { job in
-                    jobRow(job, in: list)
-                }
             }
-        } header: {
-            // Datum als Überschrift der Einsätze, rechts dezent der Abgleich (Tipp öffnet ihn); bei altem Stand mit Uhrzeit.
-            HStack(alignment: .firstTextBaseline, spacing: Space.s) {
-                Text(Date.now.formatted(.dateTime.weekday(.wide).day().month(.wide)))
-                    .accessibilityIdentifier("todayDate")
-                Spacer(minLength: Space.s)
-                syncHint
+            .accessibilityIdentifier("todayAssignments")
+        } else {
+            let list = jobs
+            let focus = focusJob(in: list)
+            if let focus {
+                let focusPhase = phase(of: focus)
+                Section(focusPhase == .running ? "Läuft jetzt" : focusPhase == .finished ? "Zuletzt" : "Nächster Einsatz") {
+                    jobCard(focus)
+                }
+                .accessibilityIdentifier("todayAssignments")
             }
-            .textCase(nil)
+            let others = list.filter { $0.id != focus?.id }
+            if !others.isEmpty {
+                Section("Weitere Einsätze heute (\(others.count))") {
+                    ForEach(others) { job in jobRow(job) }
+                }
+                .accessibilityIdentifier("todayMoreAssignments")
+            }
         }
-        .accessibilityIdentifier("todayAssignments")
     }
 
-    /// Ein Einsatz als Karte; Wischen nach rechts: Foto, Mangel – nach links: Route, Anrufen.
-    private func jobRow(_ job: TodayJob, in list: [TodayJob]) -> some View {
+    private func jobCard(_ job: TodayJob) -> some View {
         let canCapture = bauakten[job.bauakteId] != nil
-        return TodayJobCard(job: job, glance: glances[job.bauakteId], extras: extras[job.bauakteId], distance: distance(to: job), phase: phase(of: job),
-                            expanded: isExpanded(job, in: list), canCapture: canCapture,
-                            onExpand: { withAnimation(.snappy) { expandedJob = job.id } }) { action in
+        return TodayJobCard(job: job, glance: glances[job.bauakteId], extras: extras[job.bauakteId], distance: distance(to: job),
+                            phase: phase(of: job), canCapture: canCapture, chatAvailable: chatAvailable) { action in
             perform(action, for: job)
         }
-        .listRowInsets(EdgeInsets(top: Space.xs, leading: 0, bottom: Space.xs, trailing: 0))
+        .listRowInsets(EdgeInsets())
         .listRowBackground(Color.clear)
         .listRowSeparator(.hidden)
-        // Wischen: nach rechts Foto bzw. Mangel, nach links Route bzw. Anrufen.
+    }
+
+    /// Weiterer Einsatz als Zeile; Wischen nach rechts: Foto, Mangel; nach links: Route, Anrufen.
+    private func jobRow(_ job: TodayJob) -> some View {
+        let canCapture = bauakten[job.bauakteId] != nil
+        return Button { perform(.open, for: job) } label: {
+            TodayJobRow(job: job, phase: phase(of: job), distance: distance(to: job))
+        }
+        .buttonStyle(.plain)
         .swipeActions(edge: .leading, allowsFullSwipe: true) {
             if canCapture {
                 Button("Foto", systemImage: "camera") { perform(.photo, for: job) }
@@ -301,6 +370,19 @@ struct HomeView: View {
                 Button("Anrufen", systemImage: "phone") { perform(.call, for: job) }
                     .tint(Theme.success)
             }
+        }
+        .contextMenu {
+            if job.route != nil {
+                Button("Route starten", systemImage: "arrow.triangle.turn.up.right.diamond") { perform(.route, for: job) }
+            }
+            if job.phone != nil {
+                Button(job.contactName.map { "\($0) anrufen" } ?? "Anrufen", systemImage: "phone") { perform(.call, for: job) }
+            }
+            if canCapture {
+                Button("Foto aufnehmen", systemImage: "camera") { perform(.photo, for: job) }
+                Button("Bautagebuch-Eintrag", systemImage: "book") { perform(.diary, for: job) }
+            }
+            Button("Bauakte öffnen", systemImage: "folder") { perform(.open, for: job) }
         }
     }
 
@@ -343,57 +425,67 @@ struct HomeView: View {
         .accessibilityIdentifier("todaySyncHint")
     }
 
-    // MARK: Überblick
+    // MARK: Aufgaben, Freigaben, Planung
 
-    /// Die drei Wege des Tages als normale Listenzeilen mit Zahl rechts: Meine Aufgaben, Wer fährt wohin, Meine Woche.
+    /// Offene Aufgaben und Mängel, Anträge zur Freigabe: normale Listenzeilen mit Zahl rechts.
     @ViewBuilder
-    private var overviewSection: some View {
+    private var tasksSection: some View {
         let defects = items.filter { $0.kind == .defect }.count
         let showsTasks = modules.anyOn(AppModules.tasks, AppModules.defects)
-        let showsPlanning = modules.isOn(AppModules.planning)
-        if showsTasks || showsPlanning || pendingApprovals > 0 {
-            Section("Überblick") {
-                // Systemeinstellungen › Module: Zeilen abgeschalteter Module entfallen.
+        if showsTasks || pendingApprovals > 0 {
+            Section("Aufgaben und Freigaben") {
+                // Systemeinstellungen, Module: Zeilen abgeschalteter Module entfallen.
                 if showsTasks {
                     NavigationLink(value: HomeRoute.tasks) {
-                        overviewRow("Meine Aufgaben", symbol: "checklist", value: loaded ? "\(items.count)" : "–",
-                                    detail: defects > 0 ? (defects == 1 ? "davon 1 Mangel" : "davon \(defects) Mängel") : nil)
+                        overviewRow("Meine Aufgaben", symbol: "checklist", value: loaded ? "\(items.count)" : "",
+                                    detail: defects > 0 ? (defects == 1 ? "davon 1 Mangel" : "davon \(defects) Mängel") : (loaded && items.isEmpty ? "Alles erledigt" : nil),
+                                    detailTint: defects > 0 ? Theme.danger : Theme.textSecondary)
                     }
                     .accessibilityIdentifier("myTasksTile")
                 }
                 if pendingApprovals > 0 {
                     NavigationLink(value: HomeRoute.approvals) {
                         overviewRow("Anträge genehmigen", symbol: "checkmark.seal", value: "\(pendingApprovals)",
-                                    detail: pendingApprovals == 1 ? "1 Antrag wartet auf Sie" : "\(pendingApprovals) Anträge warten auf Sie")
+                                    detail: pendingApprovals == 1 ? "1 Antrag wartet auf Sie" : "\(pendingApprovals) Anträge warten auf Sie",
+                                    detailTint: Theme.warning)
                     }
                     .accessibilityIdentifier("approvalsTile")
-                }
-                if showsPlanning {
-                    NavigationLink(value: HomeRoute.dispatch) {
-                        overviewRow("Wer fährt wohin", symbol: "car.2", value: dispatch == nil ? "–" : "\(dispatch?.board?.crewGroups.count ?? 0)")
-                    }
-                    .accessibilityIdentifier("dispatchTile")
-                    NavigationLink(value: HomeRoute.week) {
-                        overviewRow("Meine Woche", symbol: "calendar", value: planning == nil ? "–" : "\(weekCount)")
-                    }
-                    .accessibilityIdentifier("myWeekTile")
                 }
             }
             .accessibilityIdentifier("quickAccess")
         }
     }
 
-    private func overviewRow(_ title: String, symbol: String, value: String, detail: String? = nil) -> some View {
+    /// Wer fährt wohin und Meine Woche.
+    @ViewBuilder
+    private var planningSection: some View {
+        if modules.isOn(AppModules.planning) {
+            Section("Planung") {
+                NavigationLink(value: HomeRoute.dispatch) {
+                    overviewRow("Wer fährt wohin", symbol: "car.2", value: dispatch == nil ? "" : "\(dispatch?.board?.crewGroups.count ?? 0)")
+                }
+                .accessibilityIdentifier("dispatchTile")
+                NavigationLink(value: HomeRoute.week) {
+                    overviewRow("Meine Woche", symbol: "calendar", value: planning == nil ? "" : "\(weekCount)")
+                }
+                .accessibilityIdentifier("myWeekTile")
+            }
+        }
+    }
+
+    private func overviewRow(_ title: String, symbol: String, value: String, detail: String? = nil,
+                             detailTint: Color = Theme.textSecondary) -> some View {
         HStack {
             Label {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title)
                     if let detail {
-                        Text(detail).font(Typo.subhead).foregroundStyle(Theme.warning)
+                        Text(detail).font(Typo.subhead).foregroundStyle(detailTint)
                     }
                 }
             } icon: {
                 Image(systemName: symbol)
+                    .foregroundStyle(Theme.accent)
             }
             Spacer()
             Text(value)
@@ -414,7 +506,7 @@ struct HomeView: View {
                 ForEach(list.prefix(3)) { item in
                     NavigationLink(value: HomeRoute.bauakte(item.bauakteId)) {
                         HStack(alignment: .firstTextBaseline, spacing: Space.m) {
-                            Text(item.startText ?? "–")
+                            Text(item.startText ?? "ganztägig")
                                 .monospacedDigit()
                                 .foregroundStyle(Theme.textSecondary)
                                 .frame(minWidth: 52, alignment: .leading)

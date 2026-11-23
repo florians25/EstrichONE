@@ -98,3 +98,27 @@ struct NoticePresentationTests {
         #expect(live.relative == "läuft seit 10 Min." && live.remaining == "noch 20 Min.")
     }
 }
+
+@Suite("Systemhinweise: Zusammenfassung für „Heute“")
+struct NoticeSummaryTests {
+    private func item(_ id: String, _ kind: NoticeItem.Kind, _ title: String, relative: String = "") -> NoticeItem {
+        NoticeItem(id: id, kind: kind, title: title, text: "", period: "", relative: relative, remaining: "", source: "", start: nil, end: nil)
+    }
+
+    @Test("Eine Mitteilung mit Art und Zeitpunkt, mehrere als Zahl; Störung bleibt rot und nicht ausblendbar")
+    func summary() {
+        #expect(NoticePresentation.summary([]) == nil)
+        let single = NoticePresentation.summary([item("m", .maintenance, "Geplante Wartung", relative: "in 2 Tagen")])
+        #expect(single?.title == "Geplante Wartung")
+        #expect(single?.subtitle == "in 2 Tagen")
+        #expect(single?.tone == .information)
+        let list = [item("c", .critical, "Störung beim E-Mail-Versand"), item("m", .maintenance, "Geplante Wartung"), item("i", .info, "Neu")]
+        let many = NoticePresentation.summary(list)
+        #expect(many?.title == "3 Mitteilungen")
+        #expect(many?.subtitle == "Störung beim E-Mail-Versand, 2 weitere")
+        #expect(many?.tone == .error)
+        #expect(many?.hasCritical == true)
+        let open = NoticePresentation.open(list, dismissed: ["c", "i"])
+        #expect(open.map(\.id) == ["c", "m"])
+    }
+}

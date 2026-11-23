@@ -1,15 +1,27 @@
 import EstrichCore
 import SwiftUI
 
-/// Reiter „Baustellen“: laufende Bauakten nach Stand gruppiert (heute im Einsatz zuerst), Suche über Nummer, Bezeichnung
-/// und Adresse – alles offline aus der lokalen Ablage. Abgeschlossene und stornierte über „Anzeigen“.
+/// Reiter „Baustellen“: oben Suche und Filter (Heute, Laufend, Archiv, Alle) als Segment, darunter kompakte Zeilen mit
+/// Bezeichnung, farbigem Status, Nummer, Ort und nächstem Termin. Laufende nach Stand gruppiert, heute im Einsatz zuerst,
+/// innerhalb einer Gruppe nach dem nächsten Termin. Alles offline aus der lokalen Ablage; „Alle im Betrieb“ online im Menü.
 /// iPad: Liste links, Bauakte rechts.
 struct BauaktenListView: View {
     enum Scope: String, CaseIterable, Identifiable {
-        case running, archive, all, company
+        case today, running, archive, all, company
         var id: String { rawValue }
+        /// Im Segment oben (ohne „Alle im Betrieb“, das steht im Menü).
+        static let segments: [Scope] = [.today, .running, .archive, .all]
+        var segmentTitle: String {
+            switch self {
+            case .today: "Heute"
+            case .running: "Laufend"
+            case .archive: "Archiv"
+            case .all, .company: "Alle"
+            }
+        }
         var title: String {
             switch self {
+            case .today: "Heute im Einsatz"
             case .running: "Laufende"
             case .archive: "Abgeschlossen und storniert"
             case .all: "Alle"
@@ -27,6 +39,8 @@ struct BauaktenListView: View {
     @State private var all: [Bauakte] = []
     @State private var customers: [UUID: String] = [:]
     @State private var today: [UUID: String] = [:]
+    /// Nächster Termin je Bauakte ab heute (Tag `yyyy-MM-dd` und Text „Morgen, 07:30, Kolonne Huber“).
+    @State private var upcoming: [UUID: (day: String, text: String)] = [:]
     @State private var loaded = false
     @State private var path: [UUID] = []
     @State private var selection: UUID?
@@ -121,6 +135,7 @@ struct BauaktenListView: View {
         let archived: (Bauakte) -> Bool = { $0.status == .completed || $0.status == .cancelled }
         if !search.isEmpty { return all }
         switch scope {
+        case .today: return all.filter { today[$0.id] != nil }
         case .running: return all.filter { !archived($0) }
         case .archive: return all.filter(archived)
         case .all: return all
@@ -128,8 +143,35 @@ struct BauaktenListView: View {
         }
     }
 
+    /// Filter als Segment über der Liste (nicht bei der Suche).
+    @ViewBuilder
+    private var filterBar: some View {
+        if search.isEmpty {
+            Section {
+                Picker("Filter", selection: $scope) {
+                    ForEach(Scope.segments) { Text($0.segmentTitle).tag($0) }
+                }
+                .pickerStyle(.segmented)
+                .accessibilityIdentifier("bauakteFilter")
+            }
+            .listRowBackground(Color.clear)
+            .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+            .listRowSeparator(.hidden)
+        }
+    }
+
+    /// Sortierung: heute im Einsatz zuerst, dann nach Stand (laufend vor geplant), dann nach nächstem Termin und Nummer.
+    private func sorted(_ list: [Bauakte]) -> [Bauakte] {
+        list.sorted { lhs, rhs in
+            let left = (today[lhs.id] == nil ? 1 : 0, lhs.status.sortRank, upcoming[lhs.id]?.day ?? "9999", lhs.number ?? "")
+            let right = (today[rhs.id] == nil ? 1 : 0, rhs.status.sortRank, upcoming[rhs.id]?.day ?? "9999", rhs.number ?? "")
+            return left < right
+        }
+    }
+
     @ViewBuilder
     private var content: some View {
+        filterBar
         localContent
         if !others.isEmpty {
             Section {
@@ -171,11 +213,14 @@ struct BauaktenListView: View {
         } else if shown.isEmpty {
             if search.isEmpty {
                 ContentUnavailableView {
-                    Label(scope == .archive ? "Keine abgeschlossenen Bauakten" : "Keine laufenden Baustellen", systemImage: "building.2")
+                    Label(scope == .archive ? "Keine abgeschlossenen Bauakten" : scope == .today ? "Heute kein Einsatz" : "Keine laufenden Baustellen",
+                          systemImage: scope == .today ? "calendar" : "building.2")
                 } description: {
-                    Text(scope == .archive ? "Abgeschlossene und stornierte Bauakten erscheinen hier." : "Neue Bauakten legen Sie mit „+“ an, auch ohne Verbindung.")
+                    Text(scope == .archive ? "Abgeschlossene und stornierte Bauakten erscheinen hier."
+                         : scope == .today ? "Baustellen, auf denen Sie heute eingeplant sind, erscheinen hier."
+                         : "Neue Bauakten legen Sie mit „+“ an, auch ohne Verbindung.")
                 } actions: {
-                    if scope != .archive {
+                    if scope != .archive, scope != .today {
                         Button { creating = true } label: { Label("Neue Bauakte", systemImage: "plus") }
                             .estrichButton(.primary, size: .regular)
                     }
@@ -186,16 +231,16 @@ struct BauaktenListView: View {
                     .listRowBackground(Color.clear)
             }
         } else if !search.isEmpty || scope != .running {
-            Section(search.isEmpty ? scope.title : "Treffer (\(shown.count))") {
-                rows(shown.sorted { ($0.status.sortRank, $0.number ?? "") < ($1.status.sortRank, $1.number ?? "") })
+            Section(search.isEmpty ? "\(scope.title) (\(shown.count))" : "Treffer (\(shown.count))") {
+                rows(sorted(shown))
             }
         } else {
             let todays = shown.filter { today[$0.id] != nil }
             if !todays.isEmpty {
-                Section("Heute im Einsatz") { rows(todays) }
+                Section("Heute im Einsatz (\(todays.count))") { rows(sorted(todays)) }
             }
             ForEach(Self.groups, id: \.self) { status in
-                let group = shown.filter { $0.status == status && today[$0.id] == nil }
+                let group = sorted(shown.filter { $0.status == status && today[$0.id] == nil })
                 if !group.isEmpty {
                     Section("\(status.shortTitle) (\(group.count))") { rows(group) }
                 }
@@ -221,7 +266,8 @@ struct BauaktenListView: View {
     private func rows(_ list: [Bauakte]) -> some View {
         ForEach(list) { bauakte in
             NavigationLink(value: bauakte.id) {
-                BauakteRow(bauakte: bauakte, customerName: bauakte.customerId.flatMap { customers[$0] }, today: today[bauakte.id])
+                BauakteRow(bauakte: bauakte, customerName: bauakte.customerId.flatMap { customers[$0] },
+                           today: today[bauakte.id] ?? upcoming[bauakte.id]?.text)
             }
             .swipeActions(edge: .leading) {
                 Button { captureFor = bauakte } label: { Label("Foto", systemImage: "camera.fill") }
@@ -266,12 +312,19 @@ struct BauaktenListView: View {
         let contacts = (try? await service.contacts()) ?? []
         customers = Dictionary(contacts.map { ($0.id, $0.name) }, uniquingKeysWith: { first, _ in first })
         if let store = model.active?.sync?.store {
-            let assignments = (await MyPlanning(store: store).cached())?.assignments(on: CalendarDay.string(.now)) ?? []
+            let day = CalendarDay.string(.now)
+            let planned = (await MyPlanning(store: store).cached())?.range.assignments
+                .filter { $0.day >= day }
+                .sorted { ($0.day, $0.startTime ?? "99") < ($1.day, $1.startTime ?? "99") } ?? []
             var texts: [UUID: String] = [:]
-            for assignment in assignments where texts[assignment.bauakteId] == nil {
-                texts[assignment.bauakteId] = ["Heute", assignment.startText, assignment.crewName].compactMap { $0 }.joined(separator: ", ")
+            var next: [UUID: (day: String, text: String)] = [:]
+            for assignment in planned where next[assignment.bauakteId] == nil {
+                let text = TodayGlance.appointmentText(day: assignment.day, start: assignment.startText, detail: assignment.crewName, today: day)
+                next[assignment.bauakteId] = (assignment.day, text)
+                if assignment.day == day { texts[assignment.bauakteId] = text }
             }
             today = texts
+            upcoming = next
         }
         loaded = true
         applyShotScene()

@@ -15,6 +15,17 @@ extension BauakteStatus {
         }
     }
 
+    /// Zart getönte Fläche zur Statusfarbe (Kennzeichnung in Listen und im Kopf der Bauakte).
+    var softTint: Color {
+        switch self {
+        case .inquiry, .planned: Theme.fill
+        case .inProgress: Theme.accentSoft
+        case .drying: Theme.warningSoft
+        case .completed: Theme.successSoft
+        case .cancelled: Theme.dangerSoft
+        }
+    }
+
     var symbol: String {
         switch self {
         case .inquiry: "questionmark.circle"
@@ -93,11 +104,33 @@ struct SyncStateBadge: View {
     }
 }
 
-/// Zeile einer Bauakte: Bezeichnung, darunter Nummer und Ort, dann Status und Kunde; optional der heutige Einsatz.
+/// Status als kleine farbige Kennzeichnung (getönte Kapsel mit Text) für Listen und Köpfe. Farben zentral über
+/// `BauakteStatus.tint` und `softTint`, immer zusammen mit dem Text.
+struct StatusBadge: View {
+    let status: BauakteStatus
+    @Environment(\.backgroundProminence) private var prominence
+
+    var body: some View {
+        let selected = prominence == .increased
+        Text(status.shortTitle)
+            .strikethrough(status == .cancelled)
+            .font(Typo.labelStrong)
+            .foregroundStyle(selected ? Color.white : status.tint)
+            .padding(.horizontal, Space.s)
+            .padding(.vertical, 3)
+            .background(selected ? Color.white.opacity(0.2) : status.softTint, in: Capsule())
+            .lineLimit(1)
+            .fixedSize()
+            .accessibilityLabel("Status: \(status.title)")
+    }
+}
+
+/// Zeile einer Bauakte, kompakt in drei Zeilen: Bezeichnung mit farbigem Status rechts, Nummer und Ort (optional Kunde),
+/// nächster Termin in Akzentfarbe. Überall gleich (Baustellen, Heute, Kunden, Auswahl).
 struct BauakteRow: View {
     let bauakte: Bauakte
     var customerName: String?
-    /// „Heute 07:00 · Kolonne Huber“
+    /// Nächster Termin: „Heute, 07:00, Kolonne Huber“ bzw. „Morgen, 07:30“.
     var today: String?
     @Environment(\.backgroundProminence) private var prominence
 
@@ -105,8 +138,14 @@ struct BauakteRow: View {
     private var selected: Bool { prominence == .increased }
     private var secondary: Color { selected ? Color.white.opacity(0.85) : Theme.textSecondary }
 
+    /// „2026-041, Landshut, Familie Schneider“
+    private var meta: String {
+        let place = bauakte.city?.trimmingCharacters(in: .whitespaces).nonEmpty ?? bauakte.addressLine
+        return [bauakte.number ?? "Neu", place, customerName].compactMap { $0 }.joined(separator: ", ")
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 5) {
+        VStack(alignment: .leading, spacing: Space.xs) {
             HStack(alignment: .firstTextBaseline, spacing: Space.s) {
                 Text(bauakte.title)
                     .font(Typo.headline)
@@ -117,30 +156,22 @@ struct BauakteRow: View {
                 if bauakte.syncState != .synced {
                     SyncStateBadge(state: bauakte.syncState)
                 }
+                StatusBadge(status: bauakte.status)
             }
-            Text([bauakte.number ?? "Neu", bauakte.addressLine ?? "ohne Adresse"].joined(separator: ", "))
+            Text(meta)
                 .font(Typo.subhead)
                 .monospacedDigit()
                 .foregroundStyle(secondary)
                 .lineLimit(1)
-            HStack(spacing: Space.s) {
-                StatusLabel(status: bauakte.status)
-                if let customerName {
-                    Text(customerName)
-                        .font(Typo.meta)
-                        .foregroundStyle(secondary)
-                        .lineLimit(1)
-                }
-            }
             if let today {
-                Label(today, systemImage: "calendar.badge.clock")
+                Label(today, systemImage: "calendar")
                     .labelStyle(TightLabelStyle())
                     .font(Typo.metaStrong)
                     .foregroundStyle(selected ? Color.white : Theme.accent)
                     .lineLimit(1)
             }
         }
-        .padding(.vertical, Space.xs)
+        .padding(.vertical, Space.xxs)
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .combine)
     }

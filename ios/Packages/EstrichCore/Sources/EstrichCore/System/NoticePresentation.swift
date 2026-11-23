@@ -231,3 +231,40 @@ public enum NoticePresentation {
         count == 1 ? "1 weiterer Hinweis" : "\(count) weitere Hinweise"
     }
 }
+
+/// Kompakte Zusammenfassung der Mitteilungen für „Heute“: eine Zeile statt einer Karte je Hinweis.
+public struct NoticeSummary: Equatable, Sendable {
+    /// „Störung beim E-Mail-Versand“ bei einer Mitteilung, sonst „3 Mitteilungen“.
+    public let title: String
+    /// Art und Zeitpunkt bei einer Mitteilung, sonst die wichtigste mit Zahl der übrigen.
+    public let subtitle: String
+    /// Farbe der Zeile: die der wichtigsten Mitteilung (Störung rot).
+    public let tone: NoticeItem.Tone
+    public let symbol: String
+    public let count: Int
+    /// Darunter mindestens eine Störung.
+    public let hasCritical: Bool
+}
+
+extension NoticePresentation {
+    /// Offene Mitteilungen: ausgeblendete (nur ausblendbare) fallen weg, Reihenfolge bleibt.
+    public static func open(_ items: [NoticeItem], dismissed: Set<String>) -> [NoticeItem] {
+        items.filter { !$0.isDismissible || !dismissed.contains($0.id) }
+    }
+
+    /// Eine Zeile für alle offenen Mitteilungen; `nil` ohne Mitteilung.
+    public static func summary(_ open: [NoticeItem]) -> NoticeSummary? {
+        guard let first = open.first else { return nil }
+        let critical = open.contains { $0.kind == .critical }
+        if open.count == 1 {
+            let when = [first.relative, first.remaining].first { !$0.isEmpty }
+            let parts = [first.label == first.title ? nil : first.label, when].compactMap { $0 }
+            return NoticeSummary(title: first.title, subtitle: parts.isEmpty ? first.text : parts.joined(separator: ", "),
+                                 tone: first.tone, symbol: first.symbol, count: 1, hasCritical: critical)
+        }
+        let others = open.count - 1
+        return NoticeSummary(title: "\(open.count) Mitteilungen",
+                             subtitle: "\(first.title), \(others == 1 ? "1 weitere" : "\(others) weitere")",
+                             tone: first.tone, symbol: critical ? first.symbol : "megaphone.fill", count: open.count, hasCritical: critical)
+    }
+}
