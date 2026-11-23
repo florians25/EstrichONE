@@ -6,17 +6,20 @@ Sie können sie ohne Netz öffnen und ergänzen. Was Sie erfassen, wird übertra
 
 ## Die Baustellenliste
 
-![Baustellen](bilder/iphone-baustellen.jpg "Tab Baustellen: heute im Einsatz, laufende Bauakten nach Stand"){rechts}
+![Baustellen](bilder/iphone-baustellen.jpg "Tab Baustellen: Filter, heute im Einsatz, laufende Bauakten nach Stand"){rechts}
 
-Der Tab **Baustellen** zeigt oben **Heute im Einsatz** und darunter alle laufenden Bauakten, gruppiert nach Stand
-(z. B. „In Ausführung“, „Trocknung“, „Geplant“, „Anfrage“). Jede Zeile nennt Nummer, Bauvorhaben, Adresse, Kunde und
-den nächsten Einsatz.
+Der Tab **Baustellen** zeigt unter der Suche einen **Filter**: **Heute** (wo Sie heute eingeplant sind), **Laufend**
+(Standard), **Archiv** (abgeschlossen und storniert) und **Alle**. Unter **Laufend** stehen oben **Heute im Einsatz**
+und darunter die laufenden Bauakten, gruppiert nach Stand (z. B. „In Ausführung“, „Trocknung“, „Geplant“, „Anfrage“),
+innerhalb einer Gruppe nach dem nächsten Termin. Jede Zeile nennt Bauvorhaben, den **Stand als farbige Kennzeichnung**,
+Nummer, Ort und Kunde sowie den **nächsten Termin** („Heute, 07:00, Kolonne Huber“, „Morgen, 07:30“).
 
-- **Suchen**: Feld **Nummer, Bauvorhaben oder Adresse**. Gesucht wird auf dem Gerät, mit Verbindung zusätzlich auf
+- **Suchen**: Feld **Nummer, Bauvorhaben, Kunde, Ort**. Gesucht wird auf dem Gerät, mit Verbindung zusätzlich auf
   dem Server: Unter **Weitere Bauakten (online)** stehen Bauakten, denen Sie nicht zugeteilt sind (Augen-Symbol).
-- **Anzeigen** → **Alle im Betrieb (online)** listet alle laufenden Bauakten des Betriebs, auch nicht zugeteilte.
-- **Abgeschlossen und storniert**: Ganz unten öffnet diese Zeile die abgeschlossenen und stornierten Bauakten.
-- **Langes Drücken** auf eine Bauakte bietet **Foto aufnehmen**, **Route starten** und **Ansprechpartner anrufen**.
+- **Weitere Aktionen** (**…**) → **Alle im Betrieb (online)** listet alle laufenden Bauakten des Betriebs, auch nicht
+  zugeteilte.
+- **Wischen nach rechts** nimmt ein **Foto** auf, **Wischen nach links** startet die **Route**. **Langes Drücken** bietet
+  **Foto aufnehmen**, **Route starten** und **Ansprechpartner anrufen**.
 - **„+“** legt eine neue Bauakte an (Abschnitt 4.2).
 - Nach unten ziehen gleicht sofort mit dem Server ab.
 
@@ -49,35 +52,40 @@ es an derselben Adresse schon eine Bauakte, weist die App darauf hin und bietet 
 
 ## Die Bauakte im Überblick
 
-![Bauakte oben](bilder/iphone-bauakte.jpg "Kopf mit Stand und Leistung, Kennzahlen, unten Foto und Erfassen")
-![Bauakte Mitte](bilder/iphone-bauakte-mitte.jpg "Abschnitte, Hinweise zur Baustelle und Basisdaten")
-![Bauakte unten](bilder/iphone-bauakte-unten.jpg "Die Bereiche der Bauakte")
+![Bauakte oben](bilder/iphone-bauakte.jpg "Kopf mit Stand und Adresse, Aktionsleiste, nächster Termin")
+![Bauakte Mitte](bilder/iphone-bauakte-mitte.jpg "Leistung und Kennwerte, Ablauf mit dem nächsten Schritt")
+![Bauakte unten](bilder/iphone-bauakte-unten.jpg "Fotos und Dokumentation, Kontakte, Beschreibung und Verlauf")
 
-Die Bauakte zeigt von oben nach unten:
+Die Bauakte ist nach dem Arbeitsablauf aufgebaut. Von oben nach unten:
 
-- **Kopf**: Nummer, **Stand** (antippen zum Ändern, Abschnitt 4.16), Bauvorhaben, darunter **Heute im Einsatz**, eine
-  hohe Priorität und die **Leistung** (z. B. „142,5 m², Zementestrich CT, 65 mm, Fußbodenheizung“). Darunter **Adresse**
-  mit **Route starten**, **Kunde** und **Ansprechpartner vor Ort** mit **Anrufen**, Bauleiter, **Zuständig** und
-  Beteiligte (mit Verbindung), nächster Einsatz mit Kolonne.
-- **Kennzahlen**: Fotos, offene Mängel, offene Aufgaben und Einträge im Bautagebuch. Ein Tipp öffnet den Bereich.
-- **Abschnitte**: Sprungmarken zu **Hinweise**, **Basisdaten**, **Offene Punkte**, **Fotos** und **Alle Bereiche**.
-- Hinweise nur bei Bedarf: Erstbegehung fehlt, Warnungen aus der Planung, storniert.
-- **Hinweise zur Baustelle**: was oft als Freitext erfasst wird, als gut lesbare Textblöcke mit Überschrift:
-  angeheftete Notizen, **Zugang und Besonderheiten** (und weitere mehrzeilige Felder Ihres Betriebs), der Hinweis der
-  Disposition für heute und die **Beschreibung**. Zeilenumbrüche bleiben erhalten, Telefonnummern, E-Mail-Adressen und
-  Links lassen sich antippen, lange Texte öffnet **Mehr anzeigen**. **Bearbeiten** ändert die Basisdaten.
-- **Basisdaten**: die vier wichtigsten Kennwerte, zuerst **Estrichart**, **Dicke**, **Fläche** und **Termin** (soweit
-  erfasst), danach in der Reihenfolge des Formulars; **Alle Basisdaten**
-  klappt alle weiteren auf, **Bearbeiten** ändert sie.
-- **Offene Punkte** (Mängel und Aufgaben) und die **neuesten Fotos**, nur, wenn es welche gibt.
-- **Bereiche**: **Fotos & Dokumente**, **Aufgaben & Mängel**, **Bautagebuch**, **Räume & Flächen**, **Erstbegehung**,
-  **Abnahme & Messungen**, **Basisdaten**, **Kontakte** und **Notizen & Verlauf**, jeweils mit Kurzinfo. Die letzte
-  Aktivität steht unter **Notizen & Verlauf**.
+1. **Kopf**: Nummer, **Stand** als farbige Kennzeichnung (antippen zum Ändern, Abschnitt 4.16), Bauvorhaben und
+   **Adresse**, bei Bedarf **Heute im Einsatz** und eine hohe Priorität. Darunter die **Aktionsleiste**: **Route**,
+   **Anrufen** (bei mehreren Kontakten mit Auswahl: Kunde, Ansprechpartner vor Ort, Bauleiter und weitere),
+   **Chat** (Chat der Baustelle im Tab **Chat**), **Foto** und, wenn verknüpft, **Teams**.
+2. Hinweise nur bei Bedarf: Erstbegehung fehlt, Warnungen aus der Planung, storniert, nur ansehen.
+3. **Heute auf der Baustelle** bzw. **Nächster Termin**: Tag und Uhrzeit, Tätigkeit mit Leistung, Kolonne mit
+   Besetzung, Fahrzeuge und Geräte. Ohne Einsatz der geplante Ausführungszeitraum.
+4. **Hinweise zur Baustelle**: was oft als Freitext erfasst wird, als gut lesbare Textblöcke mit Überschrift:
+   angeheftete Notizen, **Zugang und Besonderheiten**, **Hinweise und Behinderungen** (und weitere mehrzeilige Felder
+   Ihres Betriebs) und der Hinweis der Disposition für heute. Zeilenumbrüche bleiben erhalten, Telefonnummern,
+   E-Mail-Adressen und Links lassen sich antippen, lange Texte öffnet **Mehr anzeigen**. **Bearbeiten** ändert sie.
+5. **Leistung und Kennwerte**: die vier wichtigsten Kennwerte, zuerst **Estrichart**, **Dicke**, **Fläche** und
+   **Termin** (soweit erfasst), dazu **Räume & Flächen** mit Fortschritt und **Alle Basisdaten**.
+6. **Ablauf**: die Schritte **Erstbegehung**, **Estrich einbringen**, **Belegreife** und **Abnahme** mit Stand
+   (Haken: erledigt, Strich: nicht erforderlich, Nummer: offen) und rechts „2 von 4 erledigt“. Der nächste offene
+   Schritt ist blau hinterlegt und hat die Schaltfläche **Erfassen** (Erstbegehung, CM-Messung bzw. Abnahme; beim
+   Einbringen **Räume**). Ein Tipp auf einen Schritt öffnet den passenden Bereich.
+7. **Offene Aufgaben und Mängel**: die drei wichtigsten, Mängel zuerst; **Alle anzeigen** öffnet den Bereich.
+8. **Fotos und Dokumentation**: die neuesten Fotos, darunter **Fotos & Dokumente**, **Bautagebuch** und **Abnahme &
+   Messungen** mit Kurzinfo.
+9. **Kontakte**: Kunde, Ansprechpartner vor Ort, Bauleiter und Zuständige im Betrieb als kompakte Zeilen; das
+   Telefonsymbol rechts ruft an. **Alle Kontakte** öffnet den Bereich.
+10. **Beschreibung und Verlauf**: die Beschreibung der Baustelle und **Notizen & Verlauf** (letzte Aktivität).
 
-Unten stehen immer die zwei Schaltflächen **Foto** und **Erfassen**. **Foto** öffnet sofort die Kamera, die Aufnahme
-landet in dieser Bauakte. **Erfassen** öffnet die Auswahl aller Erfassungen (Abschnitt „Erfassen in der Bauakte“).
-Oben rechts unter **Weitere Aktionen** (**…** bzw. **⋮**) stehen **Erfassen**, **Bauakte als PDF**, **Route starten**,
-**Basisdaten bearbeiten**, **Verlauf** und **In Teams öffnen**. **Stornieren …** steht im Menü des Stands.
+Erfasst wird über **„+“** oben rechts: Es öffnet die Auswahl aller Erfassungen (Abschnitt „Erfassen in der Bauakte“).
+**Foto** in der Aktionsleiste öffnet sofort die Kamera, die Aufnahme landet in dieser Bauakte. Unter **Weitere
+Aktionen** (**…** bzw. **⋮**) stehen **Erfassen**, **Bauakte als PDF**, **Route starten**, **Basisdaten bearbeiten**,
+**Verlauf** und **In Teams öffnen**. **Stornieren …** steht im Menü des Stands.
 
 Jeder Eintrag zeigt seinen Übertragungsstand: „Auf dem Gerät gespeichert, wird übertragen“ oder „Auf dem Gerät
 gespeichert und übertragen“.
@@ -86,7 +94,8 @@ gespeichert und übertragen“.
 
 ![Fotos und Dokumente](bilder/iphone-bereich-fotos.jpg "Fotos & Dokumente: Fotos, Videos und Dokumente der Bauakte"){rechts}
 
-1. Tippen Sie in der Bauakte (oder auf der Heute-Seite in der Karte des Einsatzes) auf **Foto**.
+1. Tippen Sie in der Bauakte in der Aktionsleiste auf **Foto** (auf der Heute-Seite: **…** in der Karte des Einsatzes
+   → **Foto aufnehmen**).
 2. Geben Sie optional eine **Beschriftung** ein, z. B. „Randdämmung Bad OG“. Sie gilt für alle folgenden Fotos dieser
    Serie.
 3. Fotografieren Sie beliebig viele Bilder hintereinander, die Kamera bleibt offen, der Zähler unten rechts zählt mit.
@@ -108,7 +117,7 @@ In **Fotos & Dokumente** tippen Sie ein Foto an, um es groß zu sehen (Doppeltip
 
 ## Videos aufnehmen
 
-Über **Erfassen** → **Video** unten in der Bauakte nehmen Sie ein kurzes Video auf,
+Über **„+“** (Erfassen) → **Video aufnehmen** in der Bauakte nehmen Sie ein kurzes Video auf,
 **bis 2 Minuten** lang, z. B. „Estrich wird eingebracht“. Alternativ wählen Sie ein Video aus der Mediathek; längere
 Videos werden auf die ersten 2 Minuten gekürzt. Die App verkleinert das Video vor der Übertragung (720p, H.264, rund
 15 MB je Minute, im Browser überall abspielbar) und zeigt die Größe an.
@@ -304,8 +313,8 @@ dem iPhone klein und die Daten für unterwegs vollständig.
 
 ![Erfassen](bilder/iphone-bauakte-erfassen.jpg "Erfassen in der Bauakte: alle Erfassungen an einer Stelle"){rechts}
 
-Erfasst wird immer in der Bauakte, so landet nichts in der falschen Baustelle. Tippen Sie unten in der Bauakte auf
-**Erfassen** (oder oben rechts **Weitere Aktionen** → **Erfassen**) und wählen Sie einen Eintrag:
+Erfasst wird immer in der Bauakte, so landet nichts in der falschen Baustelle. Tippen Sie oben rechts in der Bauakte
+auf **„+“** (oder **Weitere Aktionen** → **Erfassen**) und wählen Sie einen Eintrag:
 
 - unter **Fotos und Dokumente**: **Foto aufnehmen** (Serie mit Beschriftung), **Video aufnehmen** (kurze Aufnahme) und
   **Dokument scannen** (Lieferschein, Plan, Aufmaß),
