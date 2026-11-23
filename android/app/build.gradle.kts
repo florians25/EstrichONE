@@ -69,6 +69,9 @@ android {
                 // Screenshots (Roborazzi, JVM ohne Emulator): nur aufnehmen, nicht vergleichen.
                 it.systemProperty("roborazzi.test.record", "true")
                 it.systemProperty("robolectric.pixelCopyRenderMode", "hardware")
+                // Android-Laufzeit für Robolectric vom Google-Spiegel von Maven Central (Maven Central drosselt CI-Abrufe).
+                it.systemProperty("robolectric.dependency.repo.url", "https://maven-central.storage-download.googleapis.com/maven2")
+                it.systemProperty("robolectric.dependency.repo.id", "google-maven-central")
                 it.maxHeapSize = "3g"
             }
         }
