@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
@@ -122,6 +123,7 @@ private fun chatIcon(type: ChatType) = when (type) {
 }
 
 /** Unterhaltungen (WhatsApp-Ersatz): ungelesene oben fett, Abfrage alle 15 Sekunden (ohne Push). */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatListScreen(root: Boolean = false) {
     val session = LocalSession.current
@@ -149,20 +151,37 @@ fun ChatListScreen(root: Boolean = false) {
             ExtendedFloatingActionButton(onClick = { startingTeams = true }, icon = { Icon(Icons.Outlined.PersonAdd, null) }, text = { Text("Neuer Chat in Teams") })
         }
     }) { padding ->
+        val scope = rememberCoroutineScope()
+        var refreshing by remember { mutableStateOf(false) }
         LoadView(conversations) {
-            val list = (conversations as Load.Done).value.filter { search.isBlank() || it.title.contains(search, true) || it.lastMessage?.summary?.contains(search, true) == true }
+            val all = (conversations as Load.Done).value
+            val list = all.filter { search.isBlank() || it.title.contains(search, true) || it.lastMessage?.summary?.contains(search, true) == true }
+            // Nach unten ziehen: Unterhaltungen und Zähler sofort neu laden.
+            androidx.compose.material3.pulltorefresh.PullToRefreshBox(isRefreshing = refreshing, onRefresh = {
+                scope.launch {
+                    refreshing = true
+                    val next = attempt { session.api.chatConversations() }
+                    if (next is Load.Done) conversations = next
+                    session.refreshCounters()
+                    refreshing = false
+                }
+            }, modifier = Modifier.fillMaxSize()) {
             LazyColumn(contentPadding = padding.content(), modifier = Modifier.readable()) {
                 if (archive) item { ChatArchiveCard() }
-                item { SearchField(search, { search = it }, "Unterhaltungen durchsuchen", Modifier.padding(bottom = 12.dp)) }
-                if (list.isEmpty()) item { EmptyState(Icons.Outlined.Forum, "Keine Unterhaltungen", "Mit „Neuer Chat“ eine Kollegin oder einen Kollegen anschreiben.") }
-                else item {
-                    SectionCard {
-                        list.forEachIndexed { index, c ->
-                            if (index > 0) RowDivider(76.dp)
-                            ConversationRow(c) { nav.push(Route.Chat(c.id)) }
+                item { SearchField(search, { search = it }, "Unterhaltungen durchsuchen", Modifier.padding(bottom = 8.dp)) }
+                when {
+                    all.isEmpty() -> item { EmptyState(Icons.Outlined.Forum, "Keine Unterhaltungen", "Mit „Neuer Chat“ schreiben Sie eine Kollegin oder einen Kollegen an.") }
+                    list.isEmpty() -> item { EmptyState(Icons.Outlined.Forum, "Keine Treffer", "Keine Unterhaltung enthält „$search“.") }
+                    else -> item {
+                        SectionCard {
+                            list.forEachIndexed { index, c ->
+                                if (index > 0) RowDivider(72.dp)
+                                ConversationRow(c) { nav.push(Route.Chat(c.id)) }
+                            }
                         }
                     }
                 }
+            }
             }
         }
     }
@@ -172,15 +191,16 @@ fun ChatListScreen(root: Boolean = false) {
 
 @Composable
 private fun ConversationRow(c: ChatConversation, onClick: () -> Unit) {
-    Row(Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(Modifier.fillMaxWidth().heightIn(min = 72.dp).clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
         val icon = chatIcon(c.type)
-        if (icon == null) Avatar(initials(c.title), 48.dp) else Box(Modifier.size(48.dp).clip(CircleShape).background(tones.infoSoft), contentAlignment = Alignment.Center) {
-            Icon(icon, null, tint = MaterialTheme.colorScheme.primary)
+        if (icon == null) Avatar(initials(c.title), 40.dp) else Box(Modifier.size(40.dp).clip(CircleShape).background(tones.infoSoft), contentAlignment = Alignment.Center) {
+            Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
         }
-        Spacer(Modifier.width(12.dp))
+        Spacer(Modifier.width(16.dp))
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(c.title, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                Text(c.title, style = MaterialTheme.typography.bodyLarge, fontWeight = if (c.unreadCount > 0) FontWeight.SemiBold else FontWeight.Medium,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                 c.lastActivity?.let { Text(Dates.ago(it), style = MaterialTheme.typography.labelMedium, color = if (c.unreadCount > 0) MaterialTheme.colorScheme.primary else tones.textTertiary) }
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -190,8 +210,8 @@ private fun ConversationRow(c: ChatConversation, onClick: () -> Unit) {
                     c.isDirect || last.mine -> (if (last.mine) "Sie: " else "") + last.summary
                     else -> "${last.senderName?.substringBefore(' ')}: ${last.summary}"
                 }
-                Text(preview, style = MaterialTheme.typography.bodyMedium, color = tones.textSecondary, maxLines = 2, overflow = TextOverflow.Ellipsis,
-                    fontWeight = if (c.unreadCount > 0) FontWeight.SemiBold else FontWeight.Normal, modifier = Modifier.weight(1f))
+                Text(preview, style = MaterialTheme.typography.bodyMedium, color = tones.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f))
                 if (c.unreadMentions > 0) Text("@", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 4.dp))
                 CountBadge(c.unreadCount)
             }

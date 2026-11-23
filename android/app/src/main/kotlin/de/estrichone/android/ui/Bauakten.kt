@@ -77,36 +77,38 @@ import de.estrichone.core.BauakteTemplate
 import de.estrichone.core.Dates
 import de.estrichone.core.NewCustomer
 import de.estrichone.core.PlannedJob
-import de.estrichone.core.order
+import de.estrichone.core.SiteList
 import java.time.LocalDate
 
-private enum class Filter(val title: String, val statuses: Set<BauakteStatus>) {
-    Running("Laufend", setOf(BauakteStatus.InProgress, BauakteStatus.Drying, BauakteStatus.Planned, BauakteStatus.Inquiry)),
-    Active("In Ausführung", setOf(BauakteStatus.InProgress, BauakteStatus.Drying)),
-    Planned("Geplant", setOf(BauakteStatus.Planned)),
-    Inquiry("Anfrage", setOf(BauakteStatus.Inquiry)),
-    Done("Abgeschlossen", setOf(BauakteStatus.Completed, BauakteStatus.Cancelled)),
-}
-
+/**
+ * Baustellen: Suche, Filter (Heute, Laufend, Status, Alle) mit Anzahl, kompakte Zeilen mit Nummer, Bauvorhaben, Ort,
+ * Status-Kennzeichen und nächstem Termin. Heute eingeplante zuerst, dann nach Status und nächstem Termin.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BauaktenScreen(selected: String?) {
     val session = LocalSession.current
     val nav = LocalNav.current
     var search by rememberSaveable { mutableStateOf("") }
-    var filter by rememberSaveable { mutableStateOf(Filter.Running) }
+    var filter by rememberSaveable { mutableStateOf(SiteList.Filter.Running) }
     var creating by remember { mutableStateOf(false) }
     val all by session.local { session.service.bauakten() }
-    val plan by produceState<List<PlannedJob>>(emptyList()) { value = session.weekPlan()?.assignments.orEmpty() }
-    val today = LocalDate.now(Dates.zone).toString()
-    val todayJobs = plan.filter { it.day == today }.associateBy { it.bauakteId }
+    val today = LocalDate.now(Dates.zone)
+    val plan by produceState<List<PlannedJob>>(session.cachedWeekPlan()?.assignments.orEmpty()) { value = session.weekPlan()?.assignments.orEmpty() }
+    val next = remember(plan) { SiteList.nextJobs(plan, today.toString()) }
+    val todayIds = next.filterValues { it.day == today.toString() }.keys
     val customers by session.local { session.service.contacts().associateBy { it.id } }
-    val list = remember(all, customers, search, filter) {
-        all.filter { it.matches(search, customers[it.customerId]) && (search.isNotBlank() || it.status in filter.statuses) }
+    val list = remember(all, customers, search, filter, next) {
+        SiteList.ordered(
+            all.filter { it.matches(search, customers[it.customerId]) && (search.isNotBlank() || SiteList.matches(filter, it.status, it.id.lowercase() in todayIds)) },
+            { it.id.lowercase() }, { it.status }, { it.number }, next, today.toString(),
+        )
     }
-    val counts = remember(all) { Filter.entries.associateWith { f -> all.count { it.status in f.statuses } } }
+    val counts = remember(all, next) { SiteList.Filter.entries.associateWith { f -> all.count { SiteList.matches(f, it.status, it.id.lowercase() in todayIds) } } }
     val status by session.status.collectAsState()
     val scope = rememberCoroutineScope()
+    val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+    val fabExpanded by remember { androidx.compose.runtime.derivedStateOf { listState.firstVisibleItemIndex == 0 } }
     // Alle sehen alle Bauakten: Bei der Suche auch nicht zugeteilte vom Server (nicht auf dem Gerät, nur ansehen).
     val others by produceState<List<de.estrichone.core.BauakteListItem>>(emptyList(), search, all) {
         if (search.isBlank()) {
@@ -120,52 +122,54 @@ fun BauaktenScreen(selected: String?) {
     }
 
     ScreenScaffold("Baustellen", root = true, floating = {
-        ExtendedFloatingActionButton(onClick = { creating = true }, icon = { Icon(Icons.Filled.Add, null) }, text = { Text("Neue Bauakte") })
+        ExtendedFloatingActionButton(onClick = { creating = true }, expanded = fabExpanded, icon = { Icon(Icons.Filled.Add, null) }, text = { Text("Neue Bauakte") })
     }) { padding ->
         // Nach unten ziehen: sofort abgleichen (neue Bauakten, Änderungen aus dem Büro).
         PullToRefreshBox(isRefreshing = status.running, onRefresh = { scope.launch { session.synchronize() } }, modifier = Modifier.fillMaxSize()) {
-        LazyColumn(contentPadding = padding.content()) {
+        LazyColumn(state = listState, contentPadding = padding.content()) {
             item(key = "search", contentType = "search") {
                 OfflineBanner(session)
-                SearchField(search, { search = it }, "Nummer, Kunde, Adresse")
-                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Filter.entries.forEach { f ->
-                        FilterChip(selected = filter == f, onClick = { filter = f }, label = { Text("${f.title} (${counts[f] ?: 0})") },
+                SearchField(search, { search = it }, "Nummer, Bauvorhaben, Ort, Kunde")
+                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(top = 8.dp, bottom = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    SiteList.Filter.entries.filter { it != SiteList.Filter.Today || (counts[it] ?: 0) > 0 || filter == it }.forEach { f ->
+                        FilterChip(selected = filter == f && search.isBlank(), onClick = { filter = f }, label = { Text("${f.title} ${counts[f] ?: 0}") },
                             colors = FilterChipDefaults.filterChipColors(containerColor = tones.card), modifier = Modifier.heightIn(min = 40.dp))
                     }
                 }
             }
             if (list.isEmpty()) {
-                item(key = "empty") { EmptyState(Icons.Outlined.Apartment, if (search.isBlank()) "Keine Baustellen" else "Keine Bauakte gefunden",
-                    if (search.isBlank()) "Neue Bauakten legen Sie unten rechts an." else "Suche nach Nummer, Bauvorhaben, Adresse, Kunde oder Kundennummer.") }
+                item(key = "empty") {
+                    EmptyState(Icons.Outlined.Apartment, if (search.isBlank()) "Keine Baustellen in „${filter.title}“" else "Keine Bauakte gefunden",
+                        if (search.isBlank()) "Wählen Sie oben einen anderen Filter oder legen Sie eine neue Bauakte an."
+                        else "Suche nach Nummer, Bauvorhaben, Adresse, Kunde oder Kundennummer.")
+                }
             }
-            val todayList = if (search.isBlank()) list.filter { it.id in todayJobs } else emptyList()
+            val todayList = list.filter { it.id.lowercase() in todayIds }
             // Jede Zeile ein eigenes Listenelement mit fester ID: auch bei Hunderten Bauakten wird nur das Sichtbare gezeichnet.
             fun group(id: String, title: String, rows: List<Bauakte>) {
                 item(key = "label-$id", contentType = "label") { GroupLabel(title) }
                 itemsIndexed(rows, key = { _, b -> "$id-${b.id}" }, contentType = { _, _ -> "bauakte" }) { index, b ->
                     CardSlot(index, rows.size) {
-                        BauakteRow(b, customers[b.customerId], todayJobs[b.id], selected == b.id) { nav.set(nav.tab, listOf(Route.Bauakte(b.id))) }
+                        BauakteRow(b, customers[b.customerId], next[b.id.lowercase()], selected == b.id, today) { nav.set(nav.tab, listOf(Route.Bauakte(b.id))) }
                     }
                 }
             }
-            if (todayList.isNotEmpty()) group("today", "Heute im Einsatz", todayList)
-            val rest = list.filter { it !in todayList }
-            rest.groupBy { it.status }.toSortedMap(compareBy { it.order }).forEach { (status, rows) ->
-                group(status.name, "${if (status == BauakteStatus.Drying) "Trocknung" else status.label} (${rows.size})", rows)
-            }
+            if (todayList.isNotEmpty() && filter != SiteList.Filter.Today) group("today", "Heute im Einsatz (${todayList.size})", todayList)
+            val rest = list.filter { it !in todayList || filter == SiteList.Filter.Today }
+            if (rest.isNotEmpty()) group("rest", if (search.isBlank()) "${filter.title} (${rest.size})" else "Treffer (${rest.size})", rest)
             if (others.isNotEmpty()) {
                 item(key = "label-online", contentType = "label") { GroupLabel("Weitere Bauakten (online, nur ansehen)") }
                 itemsIndexed(others, key = { _, b -> "online-${b.id}" }, contentType = { _, _ -> "online" }) { index, b ->
                     CardSlot(index, others.size) {
                         Row(Modifier.fillMaxWidth().clickable { nav.set(nav.tab, listOf(Route.Bauakte(b.id.lowercase()))) }
-                            .padding(horizontal = 16.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+                            .padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                Text(b.title, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                Secondary(listOfNotNull(b.number, listOfNotNull(b.street, b.city).joinToString(", ").ifBlank { null }).joinToString(", "), maxLines = 1)
-                                StatusLabel(b.status)
+                                Text(b.number ?: "ohne Nummer", style = MaterialTheme.typography.labelMedium, color = tones.textSecondary)
+                                Text(b.title, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Secondary(listOfNotNull(b.street, b.city).joinToString(", "), maxLines = 1)
                             }
-                            Icon(Icons.Outlined.Visibility, "Nur ansehen", tint = tones.textSecondary)
+                            StatusChip(b.status)
+                            Icon(Icons.Outlined.Visibility, "Nur ansehen", tint = tones.textSecondary, modifier = Modifier.padding(start = 8.dp))
                         }
                     }
                 }
@@ -176,37 +180,34 @@ fun BauaktenScreen(selected: String?) {
     if (creating) NewBauakteSheet(onDismiss = { creating = false }) { id -> creating = false; nav.set(nav.tab, listOf(Route.Bauakte(id))) }
 }
 
+/** Kompakte Zeile: Nummer und Status oben, Bauvorhaben, Ort und Kunde, nächster Termin (heute in der Markenfarbe). */
 @Composable
-fun BauakteRow(b: Bauakte, customer: de.estrichone.core.Contact?, job: PlannedJob?, selected: Boolean = false, onClick: () -> Unit) {
+fun BauakteRow(b: Bauakte, customer: de.estrichone.core.Contact?, job: PlannedJob?, selected: Boolean = false, today: LocalDate = LocalDate.now(Dates.zone), onClick: () -> Unit) {
     Row(
         Modifier.fillMaxWidth().background(if (selected) tones.infoSoft else Color.Transparent).clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 14.dp),
+            .heightIn(min = 72.dp).padding(start = 16.dp, end = 12.dp, top = 12.dp, bottom = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(b.title, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
-                Spacer(Modifier.width(6.dp))
+                Text(b.numberText, style = MaterialTheme.typography.labelMedium, color = tones.textSecondary, modifier = Modifier.weight(1f, fill = false))
+                Spacer(Modifier.width(8.dp))
                 SyncMark(b.syncState)
+                Spacer(Modifier.weight(1f))
+                StatusChip(b.status)
             }
-            Secondary(listOfNotNull(b.numberText, b.addressLine).joinToString(", "), maxLines = 1)
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                StatusLabel(b.status)
-                if (customer != null) {
-                    Spacer(Modifier.width(8.dp))
-                    Text(listOfNotNull(customer.name, customer.customerNumber).joinToString(", "), style = MaterialTheme.typography.bodyMedium, color = tones.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                }
-            }
+            Text(b.title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Secondary(listOfNotNull(listOfNotNull(b.postalCode, b.city).joinToString(" ").ifBlank { null } ?: b.addressLine, customer?.name).joinToString(", "), maxLines = 1)
             if (job != null) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Filled.CalendarMonth, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
+                val isToday = job.day == today.toString()
+                Row(Modifier.padding(top = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Filled.CalendarMonth, null, tint = if (isToday) MaterialTheme.colorScheme.primary else tones.textSecondary, modifier = Modifier.size(14.dp))
                     Spacer(Modifier.width(4.dp))
-                    Text(listOfNotNull("Heute", Dates.clock(job.startTime), job.crewName).joinToString(", "), color = MaterialTheme.colorScheme.primary,
-                        style = MaterialTheme.typography.labelLarge)
+                    Text(listOfNotNull(SiteList.appointmentText(job, today), job.activity).joinToString(", "), maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        color = if (isToday) MaterialTheme.colorScheme.primary else tones.textSecondary, style = MaterialTheme.typography.labelLarge)
                 }
             }
         }
-        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = tones.textTertiary)
     }
 }
 

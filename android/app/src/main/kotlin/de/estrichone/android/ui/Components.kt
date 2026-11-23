@@ -28,6 +28,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.ErrorOutline
@@ -50,6 +51,7 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -190,25 +192,83 @@ fun RowDivider(inset: Dp = 64.dp) {
     HorizontalDivider(Modifier.padding(start = inset), color = tones.separator)
 }
 
-/** Runde Schaltfläche mit Symbol (Anrufen, Route). */
+/** Runde Schaltfläche mit Symbol (Anrufen, Route): 48 dp Trefferfläche, ruhige getönte Fläche (Material 3). */
 @Composable
 fun CircleAction(icon: ImageVector, label: String, onClick: () -> Unit, tint: Color = MaterialTheme.colorScheme.primary, background: Color = tones.infoSoft) {
     Box(
-        Modifier.size(48.dp).clip(CircleShape).background(background).clickable(role = Role.Button, onClick = onClick)
-            .semantics { contentDescription = label },
+        Modifier.size(48.dp).clip(CircleShape).clickable(role = Role.Button, onClick = onClick).semantics { contentDescription = label },
         contentAlignment = Alignment.Center,
-    ) { Icon(icon, null, tint = tint, modifier = Modifier.size(22.dp)) }
+    ) {
+        Box(Modifier.size(40.dp).clip(CircleShape).background(background), contentAlignment = Alignment.Center) {
+            Icon(icon, null, tint = tint, modifier = Modifier.size(20.dp))
+        }
+    }
 }
 
-/** Farbe und Fläche je Bauakten-Status. */
+/**
+ * Beschriftete Schnellaktion (Route, Anrufen, Chat, Bauakte): Symbol in getönter Fläche, darunter die Beschriftung.
+ * Mindestens 64 dp hoch, auch mit Handschuhen gut zu treffen. Mehrere davon teilen sich eine Zeile gleichmäßig.
+ */
+@Composable
+fun QuickAction(icon: ImageVector, label: String, modifier: Modifier = Modifier, enabled: Boolean = true, primary: Boolean = false, onClick: () -> Unit) {
+    val container = if (primary) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer
+    val content = if (primary) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onPrimaryContainer
+    Column(
+        modifier.heightIn(min = 64.dp).clip(RoundedCornerShape(12.dp)).clickable(enabled = enabled, role = Role.Button, onClickLabel = label, onClick = onClick)
+            .alpha(if (enabled) 1f else 0.38f).padding(vertical = 4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center,
+    ) {
+        Box(Modifier.size(width = 56.dp, height = 32.dp).clip(RoundedCornerShape(16.dp)).background(container), contentAlignment = Alignment.Center) {
+            Icon(icon, null, tint = content, modifier = Modifier.size(20.dp))
+        }
+        Spacer(Modifier.height(4.dp))
+        Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurface, maxLines = 1, overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center)
+    }
+}
+
+/** Zeile gleich breiter [QuickAction]s. */
+@Composable
+fun QuickActionRow(modifier: Modifier = Modifier, content: @Composable RowScope.() -> Unit) {
+    Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.Top, content = content)
+}
+
+/** Kennzahl mit Beschriftung (Mein Tag): große Zahl, darunter kurze Beschriftung; antippbar. */
+@Composable
+fun StatTile(value: String, label: String, modifier: Modifier = Modifier, accent: Color = MaterialTheme.colorScheme.onSurface, onClick: (() -> Unit)? = null) {
+    Column(
+        modifier.clip(RoundedCornerShape(12.dp)).background(tones.card)
+            .then(if (onClick != null) Modifier.clickable(role = Role.Button, onClick = onClick) else Modifier)
+            .heightIn(min = 72.dp).padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Text(value, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold, color = accent, maxLines = 1)
+        Text(label, style = MaterialTheme.typography.labelMedium, color = tones.textSecondary, maxLines = 2, overflow = TextOverflow.Ellipsis)
+    }
+}
+
+/**
+ * Statusfarben der Bauakte: eine zentrale Definition für Text bzw. Punkt ([statusColor]) und helle Fläche ([statusSoft]).
+ * Gilt für Listen, Kopf der Bauakte, Heute und Kunden.
+ */
 @Composable
 fun statusColor(status: BauakteStatus): Color = when (status) {
     BauakteStatus.InProgress -> tones.info
     BauakteStatus.Drying -> tones.warning
     BauakteStatus.Planned -> tones.textSecondary
-    BauakteStatus.Inquiry -> Color(0xFF7B4FD0).let { if (tones.dark) Color(0xFFB79BFF) else it }
+    BauakteStatus.Inquiry -> if (tones.dark) Color(0xFFB79BFF) else Color(0xFF7B4FD0)
     BauakteStatus.Completed -> tones.success
     BauakteStatus.Cancelled -> tones.danger
+}
+
+@Composable
+fun statusSoft(status: BauakteStatus): Color = when (status) {
+    BauakteStatus.InProgress -> tones.infoSoft
+    BauakteStatus.Drying -> tones.warningSoft
+    BauakteStatus.Planned -> tones.fill
+    BauakteStatus.Inquiry -> if (tones.dark) Color(0xFF2A2140) else Color(0xFFF1EBFC)
+    BauakteStatus.Completed -> tones.successSoft
+    BauakteStatus.Cancelled -> tones.dangerSoft
 }
 
 /** „● In Ausführung“. */
@@ -219,6 +279,20 @@ fun StatusLabel(status: BauakteStatus, short: Boolean = true, modifier: Modifier
         Box(Modifier.size(8.dp).clip(CircleShape).background(color))
         Spacer(Modifier.width(6.dp))
         Text(if (short && status == BauakteStatus.Drying) "Trocknung" else status.label, style = MaterialTheme.typography.labelLarge, color = color)
+    }
+}
+
+/** Status als Kennzeichen mit heller Fläche (Listen, Kopf der Bauakte). */
+@Composable
+fun StatusChip(status: BauakteStatus, modifier: Modifier = Modifier, short: Boolean = true, dropDown: Boolean = false) {
+    val color = statusColor(status)
+    Row(modifier.clip(RoundedCornerShape(8.dp)).background(statusSoft(status)).padding(start = 8.dp, end = if (dropDown) 2.dp else 8.dp, top = 3.dp, bottom = 3.dp),
+        verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.size(6.dp).clip(CircleShape).background(color))
+        Spacer(Modifier.width(6.dp))
+        Text(if (short && status == BauakteStatus.Drying) "Trocknung" else status.label, style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.SemiBold, color = color, maxLines = 1)
+        if (dropDown) Icon(Icons.Filled.ArrowDropDown, "Status ändern", tint = color, modifier = Modifier.size(18.dp))
     }
 }
 

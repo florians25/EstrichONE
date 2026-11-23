@@ -1,6 +1,7 @@
 package de.estrichone.android.ui
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
@@ -22,7 +23,6 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -48,8 +48,8 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.ui.unit.dp
 
 /**
- * Seitengerüst: Startseiten mit großem Titel, der beim Scrollen einklappt (Material 3), Unterseiten mit Zurück-Pfeil.
- * Im Demomodus steht links eine Kennzeichnung mit „Demo beenden“.
+ * Seitengerüst: kompakte obere Leiste (Material 3) mit Titel und optionaler Unterzeile, ohne großen Leerraum. Unterseiten
+ * mit Zurück-Pfeil. Im Demomodus steht auf Startseiten rechts eine kleine Kennzeichnung „Demo“ mit Menü.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -57,33 +57,37 @@ fun ScreenScaffold(
     title: String,
     root: Boolean = false,
     showBack: Boolean = !root,
+    subtitle: String? = null,
     actions: @Composable RowScope.() -> Unit = {},
     floating: @Composable () -> Unit = {},
     bottomBar: @Composable () -> Unit = {},
     content: @Composable (PaddingValues) -> Unit,
 ) {
     val nav = LocalNav.current
-    val behavior = if (root) TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
-    else TopAppBarDefaults.pinnedScrollBehavior(rememberTopAppBarState())
+    val behavior = TopAppBarDefaults.pinnedScrollBehavior(rememberTopAppBarState())
     val colors = TopAppBarDefaults.topAppBarColors(containerColor = tones.canvas, scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer)
     Scaffold(
         modifier = Modifier.nestedScroll(behavior.nestedScrollConnection),
         containerColor = tones.canvas,
         topBar = {
             val navigation: @Composable () -> Unit = {
-                if (showBack) {
-                    IconButton(onClick = { nav.back() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Zurück") }
-                } else if (root) {
-                    DemoMark()
-                }
+                if (showBack) IconButton(onClick = { nav.back() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Zurück") }
             }
-            if (root) {
-                LargeTopAppBar(title = { Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.Bold) },
-                    navigationIcon = navigation, actions = actions, colors = colors, scrollBehavior = behavior)
-            } else {
-                TopAppBar(title = { Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis) }, navigationIcon = navigation, actions = actions,
-                    colors = colors, scrollBehavior = behavior)
-            }
+            TopAppBar(
+                title = {
+                    Column {
+                        Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.titleLarge,
+                            fontWeight = if (root) FontWeight.SemiBold else FontWeight.Normal)
+                        if (subtitle != null) Text(subtitle, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall, color = tones.textSecondary)
+                    }
+                },
+                navigationIcon = navigation,
+                actions = {
+                    if (root) DemoMark()
+                    actions()
+                },
+                colors = colors, scrollBehavior = behavior,
+            )
         },
         floatingActionButton = floating,
         bottomBar = bottomBar,
@@ -100,9 +104,9 @@ fun DemoMark() {
     var open by remember { mutableStateOf(false) }
     var tick by remember { mutableStateOf(0) }
     Box {
-        Text("Demo", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge,
-            modifier = Modifier.padding(start = 12.dp).clip(RoundedCornerShape(50)).background(tones.infoSoft).clickable { open = true }
-                .padding(horizontal = 14.dp, vertical = 7.dp))
+        Text("Demo", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelMedium,
+            modifier = Modifier.padding(end = 4.dp).clip(RoundedCornerShape(8.dp)).background(tones.infoSoft).clickable { open = true }
+                .padding(horizontal = 10.dp, vertical = 6.dp))
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
             Text("Demomodus mit Beispieldaten. Es werden keine Daten gesendet.", style = MaterialTheme.typography.bodySmall, color = tones.textSecondary,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
@@ -177,7 +181,7 @@ fun ConfirmDialog(title: String, text: String, confirm: String, onConfirm: () ->
 
 /** Inhalt der Seite mit Standardabständen. */
 fun PaddingValues.content(extraBottom: Int = 96): PaddingValues = PaddingValues(
-    start = 16.dp, end = 16.dp, top = calculateTopPadding() + 4.dp, bottom = calculateBottomPadding() + extraBottom.dp,
+    start = 16.dp, end = 16.dp, top = calculateTopPadding() + 8.dp, bottom = calculateBottomPadding() + extraBottom.dp,
 )
 
 @Composable

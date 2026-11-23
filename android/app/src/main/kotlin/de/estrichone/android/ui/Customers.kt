@@ -63,8 +63,12 @@ import de.estrichone.core.deleteCustomer
 import de.estrichone.core.reactivateCustomer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.widthIn
 import kotlinx.coroutines.withContext
 
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 fun CustomersScreen(selected: String?) {
     val session = LocalSession.current
@@ -76,7 +80,12 @@ fun CustomersScreen(selected: String?) {
     // Archivierte Kunden nur auf Wunsch (wie „Archivierte“ im Büro).
     val archivedCount = contacts.count { it.isArchived }
     val list = contacts.filter { (showArchived || !it.isArchived) && it.matches(search) }
+    val status by session.status.collectAsState()
+    val scope = rememberCoroutineScope()
     ScreenScaffold("Kunden", root = true) { padding ->
+        // Nach unten ziehen: sofort abgleichen.
+        androidx.compose.material3.pulltorefresh.PullToRefreshBox(isRefreshing = status.running, onRefresh = { scope.launch { session.synchronize() } },
+            modifier = Modifier.fillMaxSize()) {
         LazyColumn(contentPadding = padding.content()) {
             item { SearchField(search, { search = it }, "Name, Nummer, Ort oder Telefon", Modifier.padding(bottom = 8.dp)) }
             if (archivedCount > 0) {
@@ -99,15 +108,15 @@ fun CustomersScreen(selected: String?) {
                             Row(Modifier.fillMaxWidth().background(if (selected == c.id) tones.infoSoft else Color.Transparent)
                                 .clickable { nav.set(nav.tab, listOf(Route.Customer(c.id))) }.padding(horizontal = 16.dp, vertical = 12.dp),
                                 verticalAlignment = Alignment.CenterVertically) {
-                                Avatar(c.initials)
-                                Spacer(Modifier.width(12.dp))
+                                Avatar(c.initials, 40.dp)
+                                Spacer(Modifier.width(16.dp))
                                 Column(Modifier.weight(1f)) {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text(c.name, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, false))
+                                        Text(c.name, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, false))
                                         Spacer(Modifier.width(6.dp))
                                         SyncMark(c.syncState)
                                     }
-                                    Secondary(listOf(if (c.isArchived) "Archiviert" else "", c.subtitle.ifEmpty { "Neu" }, if (count > 0) "$count Bauakte${if (count > 1) "n" else ""}" else "").filter { it.isNotEmpty() }.joinToString(", "))
+                                    Secondary(listOf(if (c.isArchived) "Archiviert" else "", c.subtitle.ifEmpty { "Neu" }, if (count > 0) "$count Bauakte${if (count > 1) "n" else ""}" else "").filter { it.isNotEmpty() }.joinToString(", "), maxLines = 1)
                                 }
                                 Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = tones.textTertiary)
                             }
@@ -115,6 +124,7 @@ fun CustomersScreen(selected: String?) {
                     }
                 }
             }
+        }
         }
     }
 }
@@ -163,10 +173,10 @@ fun CustomerScreen(id: String, showBack: Boolean = true) {
                     Text(c.name, style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(top = 10.dp))
                     Secondary(listOfNotNull(c.customerNumber?.let { "Kd.-Nr. $it" } ?: "Kd.-Nr. wird automatisch vergeben", if (c.isCompany) "Firma" else "Privat",
                         if (c.anonymizedAt != null) "Anonymisiert" else if (c.isArchived) "Archiviert" else null).joinToString(", "))
-                    Row(Modifier.padding(top = 14.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                        c.phone?.let { CircleAction(Icons.Filled.Phone, "Anrufen", { Links.call(context, it) }) }
-                        c.email?.let { CircleAction(Icons.Filled.Email, "E-Mail", { Links.mail(context, it) }) }
-                        c.addressLine?.let { CircleAction(Icons.Filled.Directions, "Route", { Links.route(context, it) }) }
+                    QuickActionRow(Modifier.padding(top = 16.dp).widthIn(max = 360.dp)) {
+                        QuickAction(Icons.Filled.Phone, "Anrufen", Modifier.weight(1f), enabled = c.phone != null) { c.phone?.let { Links.call(context, it) } }
+                        QuickAction(Icons.Filled.Email, "E-Mail", Modifier.weight(1f), enabled = c.email != null) { c.email?.let { Links.mail(context, it) } }
+                        QuickAction(Icons.Filled.Directions, "Route", Modifier.weight(1f), enabled = c.addressLine != null) { c.addressLine?.let { Links.route(context, it) } }
                     }
                 }
             }
