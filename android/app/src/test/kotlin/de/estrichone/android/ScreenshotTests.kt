@@ -377,3 +377,52 @@ class TabletLightScreenshots : ScreenshotBase("tablet", Appearance.Light)
 
 @Config(application = TestApp::class, sdk = [35], qualifiers = "w1280dp-h800dp-land-night-xhdpi")
 class TabletDarkScreenshots : ScreenshotBase("tablet", Appearance.Dark)
+
+/**
+ * Lange Telefonansicht (2400 dp hoch): Heute und Bauakte vollständig, damit Ablauf, Aufgaben, Dokumentation, Kontakte und
+ * Verlauf auf einem Bild prüfbar sind. Ablage: telefon-lang-<bildschirm>-hell.png
+ */
+@RunWith(RobolectricTestRunner::class)
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
+@Config(application = TestApp::class, sdk = [35], qualifiers = "w411dp-h2400dp-port-notnight-xhdpi")
+class PhoneTallScreenshots {
+    @get:Rule
+    val compose = createComposeRule()
+
+    init {
+        de.estrichone.android.ui.Live.polling = false
+        de.estrichone.android.ui.Live.fixedTime = java.time.LocalTime.of(9, 41)
+    }
+
+    private fun scene(name: String, tab: Tab, routes: List<Route>) {
+        val model = AppModel(ApplicationProvider.getApplicationContext())
+        model.startDemo()
+        val deadline = System.currentTimeMillis() + 60_000
+        while (!(model.session.value?.service?.bauakten()?.isNotEmpty() == true && model.session.value?.notices?.value != null)) {
+            ShadowLooper.idleMainLooper()
+            Thread.sleep(50)
+            check(System.currentTimeMillis() < deadline) { "Demomodus nicht bereit" }
+        }
+        val session = model.session.value!!
+        compose.setContent {
+            EstrichTheme(Appearance.Light) {
+                val nav = remember { Nav(tab).also { it.set(tab, routes) } }
+                MainScreen(model, session, nav)
+            }
+        }
+        compose.waitForIdle()
+        repeat(8) {
+            Thread.sleep(200)
+            ShadowLooper.idleMainLooper()
+            compose.mainClock.advanceTimeBy(500)
+            compose.waitForIdle()
+        }
+        compose.onRoot().captureRoboImage("build/outputs/roborazzi/telefon-lang-$name-hell.png")
+    }
+
+    @Test
+    fun heute() = scene("heute", Tab.Today, emptyList())
+
+    @Test
+    fun bauakte() = scene("bauakte", Tab.Bauakten, listOf(Route.Bauakte(DemoData.EFH)))
+}
