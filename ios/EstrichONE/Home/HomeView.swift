@@ -596,6 +596,8 @@ struct HomeView: View {
 
         planning = await MyPlanning(store: store).load(using: model.active?.client) ?? planning
         dispatch = await DispatchData.load(day: day, model: model) ?? dispatch
+        // Rechte frisch vom Server (der Zwischenstand kann beim ersten Start noch leer sein).
+        canPlan = await MyPermissions(store: store).load(using: model.active?.client).contains("planning.manage")
         if canPlan, modules.isOn(AppModules.planning) {
             todayPlan = await DayPlanStore.load(day: day, model: model) ?? todayPlan
             todayPlanLoaded = true

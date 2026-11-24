@@ -312,10 +312,19 @@ struct DispatchView: View {
     /// Baustelle mit Bauakte (Tippen), für Planer rechts ein sichtbares Menü; dieselben Aktionen beim Wischen und lange Drücken.
     private func stopRow(_ stop: DayPlan.Stop, crew: DayPlan.Crew?, plan: DayPlan) -> some View {
         HStack(alignment: .top, spacing: Space.xs) {
-            NavigationLink(value: HomeRoute.bauakte(stop.bauakteId)) {
+            if usesBoard {
+                NavigationLink(value: HomeRoute.bauakte(stop.bauakteId)) {
+                    StopRow(stop: stop, tint: Color(hexString: crew?.color) ?? Theme.accent)
+                }
+                .buttonStyle(.plain)
+            } else {
+                // In der Liste ohne Pfeil: die ganze Zeile öffnet die Bauakte, Adresse und Anruf bleiben eigene Schaltflächen.
                 StopRow(stop: stop, tint: Color(hexString: crew?.color) ?? Theme.accent)
+                    .background {
+                        NavigationLink(value: HomeRoute.bauakte(stop.bauakteId)) { EmptyView() }
+                            .opacity(0)
+                    }
             }
-            .buttonStyle(.plain)
             if plan.canPlan, !editMode.isEditing {
                 Menu {
                     stopActions(stop, crew: crew)

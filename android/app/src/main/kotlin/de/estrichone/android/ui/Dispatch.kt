@@ -496,15 +496,17 @@ private fun CrewCard(
     SectionCard {
         Column(Modifier.fillMaxWidth().background(if (crew.isMine) tones.infoSoft else Color.Transparent).padding(start = 16.dp, end = 8.dp, top = 10.dp, bottom = 12.dp)) {
             Row(Modifier.heightIn(min = 40.dp), verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.width(4.dp).height(20.dp).clip(RoundedCornerShape(2.dp)).background(tint))
-                Spacer(Modifier.width(10.dp))
-                Text(crew.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f, fill = false))
-                if (crew.isMine) {
-                    Spacer(Modifier.width(8.dp))
-                    Pill("Meine", MaterialTheme.colorScheme.primary, tones.card, modifier = Modifier.semantics { contentDescription = "Meine Kolonne" })
+                // Name und „Meine“ nehmen den ganzen Platz links; „Anpassen“ steht rechts.
+                Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.width(4.dp).height(20.dp).clip(RoundedCornerShape(2.dp)).background(tint))
+                    Spacer(Modifier.width(10.dp))
+                    Text(crew.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, maxLines = 1,
+                        overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+                    if (crew.isMine) {
+                        Spacer(Modifier.width(8.dp))
+                        Pill("Meine", MaterialTheme.colorScheme.primary, tones.card, modifier = Modifier.semantics { contentDescription = "Meine Kolonne" })
+                    }
                 }
-                Spacer(Modifier.weight(1f))
                 if (plan.canPlan) AdjustMenu(crew, canReorder = crew.stops.size > 1, canSwapCrews = plan.crews.size > 1, onCrew)
             }
             if (crew.memberText.isNotEmpty()) RosterLine(crew.memberText, Icons.Filled.Groups)
