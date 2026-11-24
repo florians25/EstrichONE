@@ -191,12 +191,14 @@ struct AssignStopSheet: View {
     }
 }
 
-/// Einsatz verschieben: anderer Tag, andere Kolonne und/oder andere Uhrzeit – mit Konfliktvorschau.
+/// Einsatz verschieben: anderer Tag, andere Kolonne und/oder andere Uhrzeit, mit Konfliktvorschau. Mit `timeOnly`
+/// („Uhrzeit ändern“) nur Beginn und Ende.
 struct MoveStopSheet: View {
     let stop: DayPlan.Stop
     let crewId: UUID?
     let day: Date
     let plan: DayPlan
+    var timeOnly = false
     let done: (PlanChange?) -> Void
 
     @Environment(AppModel.self) private var model
@@ -218,22 +220,24 @@ struct MoveStopSheet: View {
                         Text("\(stop.activity), \(stop.timeText)").font(Typo.meta).foregroundStyle(Theme.textSecondary)
                     }
                 }
-                Section("Tag") {
-                    HStack(spacing: Space.s) {
-                        quickDay("Morgen", 1)
-                        quickDay("Übermorgen", 2)
-                        quickDay("+1 Woche", 7)
+                if !timeOnly {
+                    Section("Tag") {
+                        HStack(spacing: Space.s) {
+                            quickDay("Morgen", 1)
+                            quickDay("Übermorgen", 2)
+                            quickDay("+1 Woche", 7)
+                        }
+                        DatePicker("Tag", selection: $targetDay, displayedComponents: .date)
                     }
-                    DatePicker("Tag", selection: $targetDay, displayedComponents: .date)
-                }
-                Section("Kolonne") {
-                    Picker("Kolonne", selection: $targetCrew) {
-                        if crewId == nil { Text("Ohne Kolonne").tag(UUID?.none) }
-                        ForEach(plan.crews) { crew in Text(crew.name).tag(UUID?.some(crew.id)) }
+                    Section("Kolonne") {
+                        Picker("Kolonne", selection: $targetCrew) {
+                            if crewId == nil { Text("Ohne Kolonne").tag(UUID?.none) }
+                            ForEach(plan.crews) { crew in Text(crew.name).tag(UUID?.some(crew.id)) }
+                        }
                     }
                 }
                 Section("Uhrzeit") {
-                    Toggle("Uhrzeit ändern", isOn: $changeTime.animation())
+                    if !timeOnly { Toggle("Uhrzeit ändern", isOn: $changeTime.animation()) }
                     if changeTime {
                         DatePicker("Beginn", selection: $start, displayedComponents: .hourAndMinute)
                         Toggle("Ende festlegen", isOn: $hasEnd.animation())
@@ -244,12 +248,12 @@ struct MoveStopSheet: View {
                     Section("Prüfung") { ConflictPreview(warnings: warnings, checking: checking) }
                 }
             }
-            .navigationTitle("Verschieben")
+            .navigationTitle(timeOnly ? "Uhrzeit ändern" : "Verschieben")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Abbrechen") { done(nil) } }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Verschieben") { done(change) }
+                    Button(timeOnly ? "Übernehmen" : "Verschieben") { done(change) }
                         .disabled(change == nil)
                         .accessibilityIdentifier("confirmMove")
                 }
@@ -257,6 +261,7 @@ struct MoveStopSheet: View {
             .onAppear {
                 targetDay = day
                 targetCrew = crewId
+                changeTime = timeOnly
                 start = PlanTime.date(stop.startTime)
                 hasEnd = stop.endTime != nil
                 end = PlanTime.date(stop.endTime, fallback: "16:00")
@@ -480,7 +485,7 @@ struct SwapCrewsSheet: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Tauschen") {
                         guard let other, let target = plan.crew(other) else { return }
-                        done(.swapCrews(day: day, crewA: crew.id, crewB: other, text: "\(crew.name) ↔ \(target.name) tauschen"))
+                        done(.swapCrews(day: day, crewA: crew.id, crewB: other, text: "\(crew.name) und \(target.name) tauschen"))
                     }
                     .disabled(other == nil)
                     .accessibilityIdentifier("confirmSwapCrews")
@@ -497,7 +502,7 @@ struct SwapCrewsSheet: View {
             Text("Keine Baustelle").font(Typo.subhead).foregroundStyle(Theme.textSecondary)
         }
         ForEach(crew.stops) { stop in
-            Text("\(stop.startText ?? "–"), \(stop.title)")
+            Text("\(stop.startText ?? "ganztägig"), \(stop.title)")
                 .font(Typo.subhead.monospacedDigit())
                 .foregroundStyle(Theme.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)

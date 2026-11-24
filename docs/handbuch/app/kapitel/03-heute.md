@@ -17,13 +17,16 @@ Die Seite folgt dem Arbeitstag: oben kurz der Stand, dann die Arbeit, danach all
 3. **Mitteilungen** in einer Zeile: bei einer Mitteilung deren Titel, bei mehreren „3 Mitteilungen“ mit der
    wichtigsten. Eine **Störung** ist rot hinterlegt. Ein Tipp öffnet die Liste aller Mitteilungen mit **Details**;
    Mitteilungen mit **x** lassen sich dort ausblenden, Störungen und laufende Wartung nicht. Ebenfalls je eine Zeile:
-   **Wartung des Servers** und **Übertragung prüfen**, nur wenn es sie gibt.
+   **Wartung des Servers** und **Übertragung prüfen**, nur wenn es sie gibt. Wer das Recht zur Planung hat, sieht
+   darunter **Disposition heute** mit dem Stand des Tages (z. B. „3 Kolonnen, freigegeben“); ein Tipp öffnet die
+   Disposition (Kapitel 6).
 4. **Nächster Einsatz** (bzw. **Läuft jetzt**): der laufende, sonst der nächste Einsatz als große Karte (siehe unten).
 5. **Weitere Einsätze heute**: die übrigen Einsätze als ruhige Zeilen mit Uhrzeit, Bauvorhaben, Tätigkeit, Kolonne und
    Adresse. Ein Tipp öffnet die Bauakte.
 6. **Aufgaben und Freigaben**: **Meine Aufgaben** (offen, davon Mängel in Rot) und **Anträge genehmigen** (nur für
    Genehmiger, wenn Urlaubsanträge warten).
-7. **Planung**: **Wer fährt wohin** (Kolonnen heute) und **Meine Woche** (Einsätze der nächsten Tage).
+7. **Planung**: **Wer fährt wohin** (Kolonnen heute, für Planer oben als **Disposition heute**) und **Meine Woche**
+   (Einsätze der nächsten Tage).
 8. **Morgen** (Android: **Diese Woche**), Ihre nächsten Einsätze mit Adresse.
 9. **Zuletzt geöffnet**: die Bauakten, die Sie zuletzt angesehen haben. Wischen nach rechts legt gleich ein **Foto**
    an; langes Drücken zeigt **Foto aufnehmen**, **Bautagebuch-Eintrag** und **Route starten**.

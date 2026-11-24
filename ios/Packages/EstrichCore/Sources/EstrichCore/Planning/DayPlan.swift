@@ -198,6 +198,36 @@ extension DayPlan.Stop {
     }
 }
 
+// MARK: Kurzfassung
+
+/// Disposition des Tages in einer Zeile (Startseite „Heute“ für Planer): Kolonnen mit Einsätzen und Freigabestand,
+/// z. B. „3 Kolonnen, freigegeben“ oder „2 Kolonnen, noch nicht freigegeben“. Gleiche Texte wie auf Android.
+public enum DispatchSummary {
+    public enum Tone: Sendable, Equatable { case success, warning, neutral }
+
+    public static func text(_ plan: DayPlan) -> String {
+        let crews = plan.crews.filter { !$0.stops.isEmpty }.count
+        if plan.stopCount == 0 { return plan.release != nil ? "Keine Einsätze, freigegeben" : "Noch keine Einsätze geplant" }
+        let head: String
+        switch crews {
+        case 0: head = plan.withoutCrew.count == 1 ? "1 Einsatz ohne Kolonne" : "\(plan.withoutCrew.count) Einsätze ohne Kolonne"
+        case 1: head = "1 Kolonne"
+        default: head = "\(crews) Kolonnen"
+        }
+        guard let release = plan.release else { return "\(head), noch nicht freigegeben" }
+        if release.changedCount > 0 { return "\(head), \(changes(release.changedCount)) seit Freigabe" }
+        return "\(head), freigegeben"
+    }
+
+    public static func tone(_ plan: DayPlan) -> Tone {
+        guard let release = plan.release else { return .neutral }
+        return release.changedCount > 0 ? .warning : .success
+    }
+
+    /// „1 Änderung“, „3 Änderungen“.
+    public static func changes(_ count: Int) -> String { count == 1 ? "1 Änderung" : "\(count) Änderungen" }
+}
+
 // MARK: Schnelldisposition
 
 /// Eine Änderung der Schnelldisposition. Online sofort an den Server, ohne Verbindung vorgemerkt

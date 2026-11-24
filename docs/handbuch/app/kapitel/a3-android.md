@@ -19,12 +19,13 @@ im Menü **⋮** der Einsatzkarte; sie öffnen die Bauakte und erfassen dort, **
 | Bereich | Funktionen |
 |---|---|
 | **Einrichtung** | Serveradresse, Anmeldung mit Anmeldename oder E-Mail und Passwort, optional **Einrichtungscode**, Zwei-Faktor-Anmeldung, persönliches Gerät oder Poolgerät mit PIN |
-| **Heute** | Kopfzeile mit Datum, Abgleich (Wolkensymbol) und Benachrichtigungen; Mitteilungen der Verwaltung als eine Zeile (Störungen rot, antippen klappt die Liste auf); **Jetzt im Einsatz** bzw. **Nächster Einsatz** als Hauptkarte mit **Route**, **Anrufen**, **Chat** und **Bauakte**; weitere Einsätze kompakt; **Offene Aufgaben** bzw. **Aufgaben und Freigaben**; **Morgen** mit **Meine Woche** und **Wer fährt wohin**; Zuletzt geöffnet |
+| **Heute** | Kopfzeile mit Datum, Abgleich (Wolkensymbol) und Benachrichtigungen; Mitteilungen der Verwaltung als eine Zeile (Störungen rot, antippen klappt die Liste auf); für Planer **Disposition heute**; **Jetzt im Einsatz** bzw. **Nächster Einsatz** als Hauptkarte mit **Route**, **Anrufen**, **Chat** und **Bauakte**; weitere Einsätze kompakt; **Offene Aufgaben** bzw. **Aufgaben und Freigaben**; **Morgen** mit **Meine Woche** und (ohne Recht zur Planung) **Wer fährt wohin**; Zuletzt geöffnet |
 | **Baustellen** | Suche nach Nummer, Bauvorhaben, Ort und Kunde, Filter **Heute**, **Laufend**, **In Ausführung**, **Geplant**, **Anfrage**, **Abgeschlossen** und **Alle** mit Anzahl; heute eingeplante Baustellen zuerst, dann nach Status und nächstem Termin; je Zeile Nummer, Status, Bauvorhaben, Ort, Kunde und nächster Termin; **Neue Bauakte** (auch offline) |
 | **Bauakte** | Aufbau nach dem Arbeitsablauf (siehe unten), unten rechts **Erfassen** |
 | **Chat** | Unterhaltungen mit Suche, Text, Diktat, **Standort teilen** (eigener Standort oder Baustellenadresse), Antworten, Reaktionen; Hinweis „Dateien und Fotos tauschen Sie über Microsoft Teams aus.“ mit **In Teams öffnen** |
 | **Kunden** | Kundenliste mit Suche, Kundenakte mit **Anrufen**, **E-Mail**, **Route** und Bauakten |
-| **Mehr** | Benachrichtigungen, Microsoft Teams, Urlaub, Tankbelege, IT-Service/Helpdesk, Problem melden, Synchronisation, Einstellungen |
+| **Mehr** | Benachrichtigungen, Microsoft Teams, **Planung** (**Disposition** bzw. **Wer fährt wohin**, **Meine Woche**), Urlaub, Tankbelege, IT-Service/Helpdesk, Problem melden, Synchronisation, Einstellungen |
+| **Disposition** | Für Planer wie auf dem iPhone: Tagesleiste mit Kalender, Freigabestand, Kolonnen mit Einsätzen in Fahrtreihenfolge, Menü **⋮** je Einsatz, **Anpassen** je Kolonne (Baustelle zuweisen, Reihenfolge ändern, Mitarbeiter, Fahrzeug oder Kolonnen tauschen), **Freigabe**; ohne Verbindung vorgemerkt (Kapitel 6) |
 
 Listen auf **Heute**, **Baustellen**, **Chat** und **Kunden** aktualisieren Sie, indem Sie die Seite nach unten ziehen.
 

@@ -1,7 +1,8 @@
 import EstrichCore
 import SwiftUI
 
-/// Reiter „Mehr“: Person und Abgleich oben, dann Planung, Hilfe, Gerät und Server, Sperren und Abmelden (07, Abschnitt 2).
+/// Reiter „Mehr“: Person und Abgleich oben, Benachrichtigungen, Planung (Disposition bzw. „Wer fährt wohin“, Meine Woche),
+/// Service, Gerät und Server, Sperren und Abmelden (07, Abschnitt 2).
 struct MoreView: View {
     enum Route: String, Identifiable, Hashable {
         case sync, tasks, dispatch, week, absences, tickets, inbox, chat, security, device, fuel
@@ -19,6 +20,8 @@ struct MoreView: View {
     @State private var crewChats: [TeamsCrewChat] = []
     /// Recht „Eigene Tankbelege erfassen“ (zuletzt bekannter Stand).
     @State private var canRecordFuel = false
+    /// Recht zur Planung (`planning.manage`, zuletzt bekannter Stand): „Disposition“ statt „Wer fährt wohin“.
+    @State private var canPlan = false
 
     /// Module der Suite (zuletzt bekannter Stand; ohne Angabe alles an).
     private var modules: AppModules { model.active?.sync?.modules ?? .allOn }
@@ -71,8 +74,20 @@ struct MoreView: View {
                     }
                 }
 
-                // Systemeinstellungen › Module: Einträge abgeschalteter Module erscheinen nicht. Meine Aufgaben,
-                // Wer fährt wohin und Meine Woche stehen auf „Heute“ und hier nicht noch einmal.
+                // Planung: Planer öffnen hier die Disposition (Schnelldisposition), alle anderen „Wer fährt wohin“.
+                if modules.isOn(AppModules.planning) {
+                    Section("Planung") {
+                        Button { route = .dispatch } label: {
+                            row(canPlan ? "Disposition" : "Wer fährt wohin", symbol: "car.2")
+                        }
+                        .accessibilityIdentifier("dispatchRow")
+                        Button { route = .week } label: { row("Meine Woche", symbol: "calendar") }
+                            .accessibilityIdentifier("weekRow")
+                    }
+                }
+
+                // Systemeinstellungen › Module: Einträge abgeschalteter Module erscheinen nicht. Meine Aufgaben steht auf
+                // „Heute“ und hier nicht noch einmal.
                 if modules.anyOn(AppModules.absence, AppModules.helpdesk) || (modules.isOn(AppModules.fuel) && canRecordFuel) {
                     Section("Service") {
                         if modules.isOn(AppModules.absence) {
@@ -173,7 +188,11 @@ struct MoreView: View {
             }
             .task { applyShotScene() }
             .task(id: model.active?.sync?.revision ?? 0) {
-                if let store = model.active?.sync?.store { canRecordFuel = await MyPermissions(store: store).cached().contains("fuel.record") }
+                if let store = model.active?.sync?.store {
+                    let granted = await MyPermissions(store: store).cached()
+                    canRecordFuel = granted.contains("fuel.record")
+                    canPlan = granted.contains("planning.manage")
+                }
             }
             .task(id: model.active?.sync?.teams?.available == true) {
                 crewChats = model.active?.sync?.teams?.available == true ? await model.active?.client.myTeamsCrewChats() ?? [] : []

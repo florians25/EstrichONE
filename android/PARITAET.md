@@ -108,8 +108,10 @@ Legende: ✅ umgesetzt · 🟡 teilweise (siehe Bemerkung) · ❌ fehlt noch
 | Funktion | iOS | Android | Bemerkung |
 |---|---|---|---|
 | Meine Woche | ✅ | ✅ | |
-| Wer fährt wohin (lesend) | ✅ | ✅ | |
-| Kolonnenplan und Disposition für Planer (zuweisen, tauschen, freigeben) | ✅ | ❌ | iOS CrewPlanView/PlanningSheets; auf Android nur lesend |
+| Wer fährt wohin (lesend, Kolonnen mit Einsätzen in Fahrtreihenfolge, Freigabestand) | ✅ | ✅ | beide `GET /planning/day/{day}`; offline der zuletzt geladene Stand |
+| Disposition für Planer: zuweisen mit Suche und Tätigkeit, verschieben (Morgen, Übermorgen, +1 Woche, Datum, Kolonne), Uhrzeit, nächster freier Tag, aus dem Plan nehmen, Reihenfolge ziehen, Mitarbeiter/Fahrzeug/Kolonnen tauschen, Freigabe, Konfliktprüfung, offline vormerken | ✅ | ✅ | iOS CrewPlanView/PlanningSheets, Android ui/Dispatch.kt mit Logik in core/DayPlan.kt; Rechte vom Server (`canPlan`, Recht `planning.manage`) |
+| Einstieg Disposition: „Disposition heute“ auf Heute unter den Mitteilungen (Planer), Abschnitt „Planung“ in Mehr | ✅ | ✅ | ab 1.0.36 |
+| Disposition auf dem Tablet als Kolonnenraster | ✅ | ❌ | Android zeigt auch auf dem Tablet die Liste (lesbar begrenzt) |
 | Urlaub: Konto, Anträge, Vorschau mit Feiertagen, Genehmigen | ✅ | ✅ | |
 | Urlaub: Vertretung wählen, Änderungsantrag zu genehmigtem Urlaub | ✅ | ✅ | Demomodus rechnet Feiertage (Bayern) heraus |
 | Tankbelege: Beleg fotografieren, Fahrzeug vorbelegt (Dispo), offline über die Outbox, eigene Belege mit Status | ✅ | ✅ | iOS Dokumentkamera, Android Kamera-App bzw. Galerie |

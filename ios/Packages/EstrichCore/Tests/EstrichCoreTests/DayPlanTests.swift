@@ -56,6 +56,25 @@ struct DayPlanTests {
         #expect(plan.crew(of: UUID(uuidString: Self.stopB)!)?.name == "Kolonne Huber")
     }
 
+    @Test("Kurzfassung für Heute: Kolonnen mit Einsätzen und Freigabestand")
+    func summary() throws {
+        let plan = try JSONCoding.decoder.decode(DayPlan.self, from: Data(Self.json.utf8))
+        #expect(DispatchSummary.text(plan) == "1 Kolonne, 2 Änderungen seit Freigabe")
+        #expect(DispatchSummary.tone(plan) == .warning)
+        let released = try JSONCoding.decoder.decode(DayPlan.self, from: Data(Self.json.replacingOccurrences(of: "\"changedCount\":2", with: "\"changedCount\":0").utf8))
+        #expect(DispatchSummary.text(released) == "1 Kolonne, freigegeben")
+        #expect(DispatchSummary.tone(released) == .success)
+        let draft = try JSONCoding.decoder.decode(DayPlan.self, from: Data("""
+            {"day":"2026-11-02","crews":[
+             {"id":"\(Self.crew)","name":"A","stops":[{"assignmentId":"\(Self.stopA)","bauakteId":"\(Self.stopA)","title":"X"}]},
+             {"id":"\(Self.other)","name":"B","stops":[{"assignmentId":"\(Self.stopB)","bauakteId":"\(Self.stopB)","title":"Y"}]}]}
+            """.utf8))
+        #expect(DispatchSummary.text(draft) == "2 Kolonnen, noch nicht freigegeben")
+        #expect(DispatchSummary.tone(draft) == .neutral)
+        let empty = try JSONCoding.decoder.decode(DayPlan.self, from: Data(#"{"day":"2026-11-02"}"#.utf8))
+        #expect(DispatchSummary.text(empty) == "Noch keine Einsätze geplant")
+    }
+
     private func makeClient(_ transport: RoutingTransport) -> AuthorizedClient {
         AuthorizedClient(api: APIClient(server: Samples.server, transport: transport), session: StoredSession(Samples.tokens()), keys: nil,
                          persist: { _ in }, ended: { _ in })

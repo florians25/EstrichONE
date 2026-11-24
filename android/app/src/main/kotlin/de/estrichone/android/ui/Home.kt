@@ -103,6 +103,7 @@ import de.estrichone.core.PlannedJob
 import de.estrichone.core.SiteGlance
 import de.estrichone.core.TodayGlance
 import de.estrichone.core.WorkItemKind
+import de.estrichone.core.DispatchDesk
 import de.estrichone.core.dueText
 import de.estrichone.core.myPlan
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -131,9 +132,9 @@ suspend fun Session.weekPlan(today: LocalDate = LocalDate.now(Dates.zone)): MyPl
 }
 
 /**
- * Heute (gleiches Konzept wie iOS): Arbeit zuerst. Oben „Mein Tag“ in drei Kennzahlen, Mitteilungen der Verwaltung als
- * eine Zeile (aufklappbar, Störungen rot), dann der laufende bzw. nächste Einsatz als Hauptkarte mit Schnellaktionen,
- * weitere Einsätze kompakt, offene Aufgaben und Freigaben, Morgen.
+ * Heute (gleiches Konzept wie iOS): Arbeit zuerst. Oben die Mitteilungen der Verwaltung als eine Zeile (aufklappbar,
+ * Störungen rot), für Planer darunter „Disposition heute“, dann der laufende bzw. nächste Einsatz als Hauptkarte mit
+ * Schnellaktionen, weitere Einsätze kompakt, offene Aufgaben und Freigaben, Morgen.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -148,6 +149,7 @@ fun HomeScreen() {
     val scope = rememberCoroutineScope()
     val tasks by session.local { session.service.myTasks().filter { it.isOpen } }
     val modules by session.modules.collectAsState()
+    val permissions by session.permissions.collectAsState()
     // Uhr für „Jetzt“/„in 2 Std.“ (minütlich).
     var clock by remember { mutableStateOf(Live.clock()) }
     LaunchedEffect(Unit) { while (Live.polling) { delay(60_000); clock = Live.clock() } }
@@ -162,6 +164,8 @@ fun HomeScreen() {
         PullToRefreshBox(isRefreshing = status.running, onRefresh = { scope.launch { session.synchronize() } }, modifier = Modifier.fillMaxSize()) {
         LazyColumn(contentPadding = padding.content(), modifier = Modifier.readable()) {
             val planning = modules.isOn(AppModules.PLANNING)
+            // Planer (Recht zur Planung): Disposition des Tages als kompakte Zeile gleich unter den Mitteilungen.
+            val planner = planning && DispatchDesk.PERMISSION_MANAGE in permissions
             val showsTasks = modules.anyOn(AppModules.TASKS, AppModules.DEFECTS)
             val todays = plan?.assignments?.filter { it.day == today.toString() }.orEmpty()
             val day = TodayOverview.plan(todays, clock)
@@ -170,6 +174,7 @@ fun HomeScreen() {
                 TeamsRolloutCard()
             }
             item(key = "notices") { NoticeSummary(session) }
+            if (planner) item(key = "dispatch") { DispatchTodayRow(status.outcome) }
             if (planning) {
                 when {
                     plan == null -> item(key = "loading") { SkeletonRows(3) }
@@ -234,8 +239,11 @@ fun HomeScreen() {
                             if (index > 0) RowDivider(16.dp)
                             WeekRow(job, today) { nav.open(de.estrichone.core.NotificationRoute.Bauakte(job.bauakteId)) }
                         }
-                        RowDivider(16.dp)
-                        RowItem("Wer fährt wohin", icon = Icons.Outlined.DirectionsCar, showChevron = true, onClick = { nav.push(Route.Dispatch) })
+                        // Planer erreichen die Disposition oben; alle anderen sehen hier „Wer fährt wohin“.
+                        if (!planner) {
+                            RowDivider(16.dp)
+                            RowItem("Wer fährt wohin", icon = Icons.Outlined.DirectionsCar, showChevron = true, onClick = { nav.push(Route.Dispatch()) })
+                        }
                     }
                 }
             }

@@ -50,7 +50,7 @@ struct DispatchView: View {
         .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
         .background(Theme.canvas)
         .overlay { if loading && plan == nil { ListSkeleton() } }
-        .navigationTitle("Wer fährt wohin")
+        .navigationTitle(plan?.canPlan == true ? "Disposition" : "Wer fährt wohin")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             if plan?.canPlan == true, plan?.crews.contains(where: { $0.stops.count > 1 }) == true {
@@ -309,43 +309,68 @@ struct DispatchView: View {
         }
     }
 
+    /// Baustelle mit Bauakte (Tippen), für Planer rechts ein sichtbares Menü; dieselben Aktionen beim Wischen und lange Drücken.
     private func stopRow(_ stop: DayPlan.Stop, crew: DayPlan.Crew?, plan: DayPlan) -> some View {
-        StopRow(stop: stop, tint: Color(hexString: crew?.color) ?? Theme.accent)
-            .swipeActions(edge: .trailing) {
-                if plan.canPlan {
-                    Button("Entfernen", systemImage: "trash", role: .destructive) { removing = stop }
-                    Button("Verschieben", systemImage: "arrow.right.circle") { sheet = .move(stop: stop, crewId: crew?.id) }
-                        .tint(Theme.accentFill)
-                    if crew != nil {
-                        Button("Freier Tag", systemImage: "calendar.badge.plus") {
-                            Task { await perform(.nextFreeDay(id: stop.assignmentId, title: stop.title)) }
-                        }
-                        .tint(Theme.success)
+        HStack(alignment: .top, spacing: Space.xs) {
+            NavigationLink(value: HomeRoute.bauakte(stop.bauakteId)) {
+                StopRow(stop: stop, tint: Color(hexString: crew?.color) ?? Theme.accent)
+            }
+            .buttonStyle(.plain)
+            if plan.canPlan, !editMode.isEditing {
+                Menu {
+                    stopActions(stop, crew: crew)
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                        .font(.title3)
+                        .foregroundStyle(Theme.accent)
+                        .frame(width: 44, height: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.borderless)
+                .accessibilityLabel("Aktionen für \(stop.title)")
+                .accessibilityIdentifier("stopMenu-\(stop.title)")
+            }
+        }
+        .swipeActions(edge: .trailing) {
+            if plan.canPlan {
+                Button("Entfernen", systemImage: "trash", role: .destructive) { removing = stop }
+                Button("Verschieben", systemImage: "arrow.right.circle") { sheet = .move(stop: stop, crewId: crew?.id, timeOnly: false) }
+                    .tint(Theme.accentFill)
+                if crew != nil {
+                    Button("Freier Tag", systemImage: "calendar.badge.plus") {
+                        Task { await perform(.nextFreeDay(id: stop.assignmentId, title: stop.title)) }
                     }
+                    .tint(Theme.success)
                 }
             }
-            .swipeActions(edge: .leading) {
-                if plan.canPlan {
-                    Button("Morgen", systemImage: "forward") {
-                        let next = CalendarDay.string(Calendar.current.date(byAdding: .day, value: 1, to: day) ?? day)
-                        Task { await perform(.move(id: stop.assignmentId, title: stop.title, day: next, crewId: nil, startTime: nil, endTime: nil,
-                                                   setTime: false)) }
-                    }
-                    .tint(Theme.warning)
+        }
+        .swipeActions(edge: .leading) {
+            if plan.canPlan {
+                Button("Morgen", systemImage: "forward") {
+                    let next = CalendarDay.string(Calendar.current.date(byAdding: .day, value: 1, to: day) ?? day)
+                    Task { await perform(.move(id: stop.assignmentId, title: stop.title, day: next, crewId: nil, startTime: nil, endTime: nil,
+                                               setTime: false)) }
                 }
+                .tint(Theme.warning)
             }
-            .contextMenu {
-                if plan.canPlan {
-                    Button("Verschieben", systemImage: "arrow.right.circle") { sheet = .move(stop: stop, crewId: crew?.id) }
-                    Button("Uhrzeit ändern", systemImage: "clock") { sheet = .move(stop: stop, crewId: crew?.id) }
-                    if crew != nil {
-                        Button("Auf nächsten freien Tag", systemImage: "calendar.badge.plus") {
-                            Task { await perform(.nextFreeDay(id: stop.assignmentId, title: stop.title)) }
-                        }
-                    }
-                    Button("Aus dem Plan nehmen", systemImage: "trash", role: .destructive) { removing = stop }
-                }
+        }
+        .contextMenu {
+            if plan.canPlan { stopActions(stop, crew: crew) }
+        }
+    }
+
+    /// Aktionen eines Einsatzes (Menü und lange Drücken): verschieben, Uhrzeit, nächster freier Tag, aus dem Plan nehmen.
+    @ViewBuilder
+    private func stopActions(_ stop: DayPlan.Stop, crew: DayPlan.Crew?) -> some View {
+        Button("Verschieben", systemImage: "arrow.right.circle") { sheet = .move(stop: stop, crewId: crew?.id, timeOnly: false) }
+        Button("Uhrzeit ändern", systemImage: "clock") { sheet = .move(stop: stop, crewId: crew?.id, timeOnly: true) }
+        if crew != nil {
+            Button("Auf nächsten freien Tag", systemImage: "calendar.badge.plus") {
+                Task { await perform(.nextFreeDay(id: stop.assignmentId, title: stop.title)) }
             }
+        }
+        Divider()
+        Button("Aus dem Plan nehmen", systemImage: "trash", role: .destructive) { removing = stop }
     }
 
     @ViewBuilder
@@ -383,8 +408,8 @@ struct DispatchView: View {
                     self.sheet = nil
                     if let change { Task { await perform(change) } }
                 }
-            case let .move(stop, crewId):
-                MoveStopSheet(stop: stop, crewId: crewId, day: day, plan: plan) { change in
+            case let .move(stop, crewId, timeOnly):
+                MoveStopSheet(stop: stop, crewId: crewId, day: day, plan: plan, timeOnly: timeOnly) { change in
                     self.sheet = nil
                     if let change { Task { await perform(change) } }
                 }
@@ -411,8 +436,6 @@ struct DispatchView: View {
 
     private var outbox: PlanningOutbox? { model.active?.sync.map { PlanningOutbox(store: $0.store) } }
 
-    private func cacheKey(_ day: String) -> String { "day_plan_\(day)" }
-
     private func load() async {
         guard let active = model.active else { return }
         loading = true
@@ -432,9 +455,7 @@ struct DispatchView: View {
             loadedAt = .now
             isCurrent = true
             message = nil
-            if let data = try? JSONCoding.encoder.encode(StoredPlan(plan: fresh, loadedAt: .now)) {
-                try? await active.sync?.store.setMeta(cacheKey(requested), String(decoding: data, as: UTF8.self))
-            }
+            await DayPlanStore.save(fresh, day: requested, model: model)
         } catch {
             guard requested == dayText else { return }
             if error.status == 403 {
@@ -442,8 +463,7 @@ struct DispatchView: View {
                 message = "Für die Planung fehlt Ihnen die Berechtigung."
                 return
             }
-            if let text = try? await active.sync?.store.meta(cacheKey(requested)),
-               let stored = try? JSONCoding.decoder.decode(StoredPlan.self, from: Data(text.utf8)) {
+            if let stored = await DayPlanStore.cached(day: requested, model: model) {
                 plan = stored.plan
                 loadedAt = stored.loadedAt
                 isCurrent = false
@@ -458,7 +478,7 @@ struct DispatchView: View {
             switch shotScene {
             case "dispo-zuweisen": sheet = .assign(crew: crew)
             case "dispo-verschieben":
-                if let stop = plan?.crews.flatMap(\.stops).first { sheet = .move(stop: stop, crewId: plan?.crew(of: stop.assignmentId)?.id) }
+                if let stop = plan?.crews.flatMap(\.stops).first { sheet = .move(stop: stop, crewId: plan?.crew(of: stop.assignmentId)?.id, timeOnly: false) }
             case "dispo-tauschen": sheet = .swap(crew: crew, vehicle: false)
             case "dispo-fahrzeug": sheet = .swap(crew: crew, vehicle: true)
             case "dispo-kolonnen": sheet = .swapCrews(crew: crew)
@@ -524,17 +544,47 @@ struct DispatchView: View {
             toast = error == .offline ? "Freigeben geht nur mit Verbindung." : (error.serverMessage ?? error.message)
         }
     }
+}
 
-    private struct StoredPlan: Codable {
+/// Zuletzt geladener Tagesplan je Tag im lokalen Speicher (Tagesansicht und „Disposition heute“ auf der Startseite).
+enum DayPlanStore {
+    struct Stored: Codable {
         let plan: DayPlan
         let loadedAt: Date
+    }
+
+    private static func key(_ day: String) -> String { "day_plan_\(day)" }
+
+    @MainActor
+    static func cached(day: String, model: AppModel) async -> Stored? {
+        guard let store = model.active?.sync?.store, let text = try? await store.meta(key(day)) else { return nil }
+        return try? JSONCoding.decoder.decode(Stored.self, from: Data(text.utf8))
+    }
+
+    @MainActor
+    static func save(_ plan: DayPlan, day: String, model: AppModel) async {
+        guard let data = try? JSONCoding.encoder.encode(Stored(plan: plan, loadedAt: .now)) else { return }
+        try? await model.active?.sync?.store.setMeta(key(day), String(decoding: data, as: UTF8.self))
+    }
+
+    /// Frisch vom Server (und gespeichert), sonst der zuletzt geladene Stand.
+    @MainActor
+    static func load(day: String, model: AppModel) async -> DayPlan? {
+        guard let client = model.active?.client else { return nil }
+        do throws(APIError) {
+            let plan = try await client.dayPlan(day)
+            await save(plan, day: day, model: model)
+            return plan
+        } catch {
+            return await cached(day: day, model: model)?.plan
+        }
     }
 }
 
 /// Offene Blätter der Schnelldisposition.
 enum PlanSheet: Identifiable {
     case assign(crew: DayPlan.Crew)
-    case move(stop: DayPlan.Stop, crewId: UUID?)
+    case move(stop: DayPlan.Stop, crewId: UUID?, timeOnly: Bool)
     case swap(crew: DayPlan.Crew, vehicle: Bool)
     case swapCrews(crew: DayPlan.Crew)
     case release
@@ -542,7 +592,7 @@ enum PlanSheet: Identifiable {
     var id: String {
         switch self {
         case let .assign(crew): "assign-\(crew.id)"
-        case let .move(stop, _): "move-\(stop.id)"
+        case let .move(stop, _, timeOnly): "move-\(stop.id)-\(timeOnly)"
         case let .swap(crew, vehicle): "swap-\(crew.id)-\(vehicle)"
         case let .swapCrews(crew): "swap-crews-\(crew.id)"
         case .release: "release"

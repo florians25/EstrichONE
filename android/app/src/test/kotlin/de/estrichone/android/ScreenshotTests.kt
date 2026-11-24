@@ -316,6 +316,29 @@ abstract class ScreenshotBase(private val device: String, private val appearance
     @Test
     fun kunden() = main("kunden", Tab.Customers)
 
+    // Disposition (Planer im Demomodus): Tagesansicht, Menü eines Einsatzes, Blätter der Schnelldisposition.
+
+    @Test
+    fun disposition() = main("dispo-tag", Tab.More, listOf(Route.Dispatch()))
+
+    @Test
+    fun dispositionMenue() = main("dispo-menue", Tab.More, listOf(Route.Dispatch(scene = "menue")))
+
+    @Test
+    fun dispositionZuweisen() = main("dispo-zuweisen", Tab.More, listOf(Route.Dispatch(scene = "zuweisen")))
+
+    @Test
+    fun dispositionVerschieben() = main("dispo-verschieben", Tab.More, listOf(Route.Dispatch(scene = "verschieben")))
+
+    @Test
+    fun dispositionTauschen() = main("dispo-tauschen", Tab.More, listOf(Route.Dispatch(scene = "tauschen")))
+
+    @Test
+    fun dispositionReihenfolge() = main("dispo-reihenfolge", Tab.More, listOf(Route.Dispatch(scene = "reihenfolge")))
+
+    @Test
+    fun dispositionFreigabe() = main("dispo-freigabe", Tab.More, listOf(Route.Dispatch(scene = "freigabe")))
+
     // App-Updates (docs/app-updates.md)
 
     private val notes = listOf(

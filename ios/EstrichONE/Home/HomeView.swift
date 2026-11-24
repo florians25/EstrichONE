@@ -3,7 +3,8 @@ import EstrichCore
 import SwiftUI
 
 /// „Heute“, der Arbeitsplatz für den Tag, nach dem Arbeitsablauf aufgebaut: oben das Datum mit dem Abgleich, eine
-/// Abwesende des Tages und alle Mitteilungen als eine kompakte Zeile (Störungen rot). Dann die
+/// Abwesende des Tages und alle Mitteilungen als eine kompakte Zeile (Störungen rot), für Planer darunter die
+/// Disposition des Tages als eine Zeile. Dann die
 /// Arbeit: der laufende bzw. nächste Einsatz als Hauptkarte mit Schnellaktionen (Route, Anrufen, Chat, Bauakte), weitere
 /// Einsätze als ruhige Zeilen. Darunter offene Aufgaben und Freigaben, Planung, morgen und zuletzt geöffnet.
 /// Lokale Daten erscheinen sofort, frische Planung kommt im Hintergrund dazu.
@@ -18,6 +19,11 @@ struct HomeView: View {
     @State private var path: [HomeRoute] = []
     @State private var planning: MyPlanning.Snapshot?
     @State private var dispatch: DispatchData.Day?
+    /// Recht zur Planung (`planning.manage`, zuletzt bekannter Stand): „Disposition heute“ oben statt „Wer fährt wohin“ unten.
+    @State private var canPlan = false
+    /// Tagesplan für „Disposition heute“ (nur Planer).
+    @State private var todayPlan: DayPlan?
+    @State private var todayPlanLoaded = false
     @State private var items: [WorkItem] = []
     @State private var recent: [Bauakte] = []
     @State private var bauakten: [UUID: Bauakte] = [:]
@@ -168,6 +174,7 @@ struct HomeView: View {
                 dayStrip
             }
             statusRows
+            dispatchRow
         } header: {
             HStack(alignment: .firstTextBaseline, spacing: Space.s) {
                 Text(Date.now.formatted(.dateTime.weekday(.wide).day().month(.wide)))
@@ -209,6 +216,50 @@ struct HomeView: View {
         }
         if let notice = model.active?.sync?.teams?.rolloutNotice, !notice.isEmpty {
             TeamsRolloutNotice(text: notice)
+        }
+    }
+
+    /// Planer: Disposition des Tages als eine Zeile unter den Mitteilungen („3 Kolonnen, freigegeben“); Tippen öffnet die
+    /// Tagesansicht mit der Schnelldisposition.
+    @ViewBuilder
+    private var dispatchRow: some View {
+        if modules.isOn(AppModules.planning), canPlan {
+            Button { path.append(.dispatch) } label: {
+                HStack(spacing: Space.m) {
+                    Image(systemName: "car.2")
+                        .font(.body.weight(SymbolWeight.control))
+                        .foregroundStyle(Theme.accent)
+                        .frame(width: 28)
+                        .accessibilityHidden(true)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Disposition heute")
+                            .font(Typo.subheadStrong)
+                            .foregroundStyle(Theme.textPrimary)
+                        Text(todayPlan.map { DispatchSummary.text($0) } ?? (todayPlanLoaded ? "Plan für heute nicht verfügbar" : "Wird geladen"))
+                            .font(Typo.meta)
+                            .foregroundStyle(Theme.textSecondary)
+                            .lineLimit(2)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    if let plan = todayPlan {
+                        switch DispatchSummary.tone(plan) {
+                        case .success:
+                            Image(systemName: "checkmark.seal.fill").foregroundStyle(Theme.success).accessibilityLabel("Freigegeben")
+                        case .warning:
+                            Image(systemName: "arrow.triangle.2.circlepath").foregroundStyle(Theme.warning).accessibilityLabel("Geändert seit Freigabe")
+                        case .neutral:
+                            EmptyView()
+                        }
+                    }
+                    Chevron()
+                }
+                .frame(minHeight: Size.minTap)
+                .contentShape(Rectangle())
+                .accessibilityElement(children: .combine)
+            }
+            .buttonStyle(.plain)
+            .accessibilityHint("Öffnet die Disposition des Tages")
+            .accessibilityIdentifier("dispatchTile")
         }
     }
 
@@ -428,15 +479,17 @@ struct HomeView: View {
         }
     }
 
-    /// Wer fährt wohin und Meine Woche.
+    /// Wer fährt wohin (Planer erreichen die Disposition schon oben) und Meine Woche.
     @ViewBuilder
     private var planningSection: some View {
         if modules.isOn(AppModules.planning) {
             Section("Planung") {
-                NavigationLink(value: HomeRoute.dispatch) {
-                    overviewRow("Wer fährt wohin", symbol: "car.2", value: dispatch == nil ? "" : "\(dispatch?.board?.crewGroups.count ?? 0)")
+                if !canPlan {
+                    NavigationLink(value: HomeRoute.dispatch) {
+                        overviewRow("Wer fährt wohin", symbol: "car.2", value: dispatch == nil ? "" : "\(dispatch?.board?.crewGroups.count ?? 0)")
+                    }
+                    .accessibilityIdentifier("dispatchTile")
                 }
-                .accessibilityIdentifier("dispatchTile")
                 NavigationLink(value: HomeRoute.week) {
                     overviewRow("Meine Woche", symbol: "calendar", value: planning == nil ? "" : "\(weekCount)")
                 }
@@ -536,11 +589,17 @@ struct HomeView: View {
         let day = CalendarDay.string(.now)
         if planning == nil { planning = await MyPlanning(store: store).cached() }
         if dispatch == nil { dispatch = await DispatchData.cached(day: day, model: model) }
+        canPlan = await MyPermissions(store: store).cached().contains("planning.manage")
+        if canPlan, todayPlan == nil { todayPlan = await DayPlanStore.cached(day: day, model: model)?.plan }
         await loadLocal(service)
         loaded = true
 
         planning = await MyPlanning(store: store).load(using: model.active?.client) ?? planning
         dispatch = await DispatchData.load(day: day, model: model) ?? dispatch
+        if canPlan, modules.isOn(AppModules.planning) {
+            todayPlan = await DayPlanStore.load(day: day, model: model) ?? todayPlan
+            todayPlanLoaded = true
+        }
         await loadLocal(service)
         await loadOnline()
     }

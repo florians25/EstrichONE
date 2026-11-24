@@ -149,6 +149,54 @@ class LiveServerTests {
     }
 
     @Test
+    @DisplayName("Echter Server: Schnelldisposition mit Konfliktprüfung, Reihenfolge, Uhrzeit, Freigabe, nächstem freien Tag")
+    fun liveDispatch() = runBlocking {
+        assumeTrue(server != null, "ESTRICHONE_LIVE_SERVER nicht gesetzt")
+        val api = EstrichOneApi(server!!, MemorySessionStore(), SoftwareDeviceKeys())
+        val tokens = api.signIn(login, password, "Testtelefon")
+        api.bindDevice(DeviceKind.Personal, null, phone)
+        val crewId = Ids.v7()
+        api.send<kotlinx.serialization.json.JsonObject>("PUT", "planning/crews/$crewId", json("name" to "Kolonne Android ${System.nanoTime() % 100000}",
+            "leaderUserId" to tokens.user.id, "memberUserIds" to listOf(tokens.user.id), "color" to "#2F80ED"))
+        val first = api.createBauakte(CreateBauakteRequest(EstrichOneApi.newId(), "Dispo A ${System.nanoTime()}", city = "Landshut"))
+        val second = api.createBauakte(CreateBauakteRequest(EstrichOneApi.newId(), "Dispo B ${System.nanoTime()}", city = "Ergolding"))
+        val desk = DispatchDesk(api, MemoryStorage())
+        val day = java.time.LocalDate.now(Dates.zone).plusDays(21).toString()
+
+        val plan = desk.load(day).plan!!
+        assertTrue(plan.canPlan)
+        assertNotNull(plan.crew(crewId))
+        val assignA = PlanChange.Assign(Ids.v7(), first.id, first.title, crewId, day, "Erstbegehung", "07:00:00", "09:00:00")
+        assertNotNull(desk.check(assignA))
+        assertTrue(desk.perform(assignA) is PlanOutcome.Applied)
+        val assignB = PlanChange.Assign(Ids.v7(), second.id, second.title, crewId, day, "Estrich einbringen", "10:00:00", null)
+        assertTrue(desk.perform(assignB) is PlanOutcome.Applied)
+        val crew = desk.load(day).plan!!.crew(crewId)!!
+        assertEquals(listOf(assignA.id, assignB.id), crew.stops.map { it.assignmentId })
+
+        val order = PlanOrder.change(crew, day, PlanOrder.move(crew.stops.map { it.assignmentId }, 1, 0))!!
+        val ordered = (desk.perform(order) as PlanOutcome.Applied).plan!!.crew(crewId)!!
+        assertEquals(listOf(assignB.id, assignA.id), ordered.stops.map { it.assignmentId })
+        assertEquals("07:00", ordered.stops.first().startText)
+
+        val time = PlanChange.Move(assignA.id, first.title, startTime = "13:00:00", endTime = "14:30:00", setTime = true)
+        assertTrue(desk.perform(time) is PlanOutcome.Applied, "Uhrzeit")
+        assertEquals("13:00 bis 14:30", desk.load(day).plan!!.crew(crewId)!!.stops.first { it.assignmentId == assignA.id }.timeText)
+
+        assertEquals("Plan freigegeben", (desk.release(java.time.LocalDate.parse(day), java.time.LocalDate.parse(day), "Test") as PlanOutcome.Applied).message)
+        assertEquals(0, desk.load(day).plan!!.release!!.changedCount)
+        assertTrue(desk.perform(PlanChange.Remove(assignA.id, first.title)) is PlanOutcome.Applied)
+        assertTrue(desk.load(day).plan!!.release!!.changedCount >= 1)
+        assertTrue(desk.withdraw(java.time.LocalDate.parse(day)) is PlanOutcome.Applied)
+        assertEquals(null, desk.load(day).plan!!.release)
+
+        val next = desk.perform(PlanChange.NextFreeDay(assignB.id, second.title)) as PlanOutcome.Applied
+        assertTrue(next.message.startsWith("Verschoben auf "), next.message)
+        api.planningBacklog()
+        api.planningResources()
+    }
+
+    @Test
     @DisplayName("Echter Server: falsches Passwort und Problem melden")
     fun liveWrongPasswordAndReportProblem() = runBlocking {
         assumeTrue(server != null, "ESTRICHONE_LIVE_SERVER nicht gesetzt")

@@ -89,7 +89,8 @@ sealed interface Route {
     /** Tankbelege: eigene Belege und neuen Beleg erfassen. */
     data object FuelReceipts : Route
     data object FuelReceiptNew : Route
-    data object Dispatch : Route
+    /** Disposition bzw. „Wer fährt wohin“; [day] JJJJ-MM-TT (leer = heute), [scene] nur für Screenshots. */
+    data class Dispatch(val day: String? = null, val scene: String? = null) : Route
     data object Helpdesk : Route
     data object ReportProblem : Route
     /** IT: Meldung im Namen eines Melders aufnehmen (Anruf, E-Mail, vor Ort). */
@@ -168,7 +169,7 @@ class Nav(initialTab: Tab) {
             }
             is NotificationRoute.Absences -> { tab = Tab.More; stacks[tab] = listOfNotNull(Route.Absences, if (route.approvals) Route.AbsenceApprovals else null) }
             is NotificationRoute.Ticket -> { tab = Tab.More; stacks[tab] = listOf(Route.Helpdesk, Route.Ticket(route.id)) }
-            is NotificationRoute.Planning -> { tab = Tab.More; stacks[tab] = listOf(Route.Dispatch) }
+            is NotificationRoute.Planning -> { tab = Tab.More; stacks[tab] = listOf(Route.Dispatch(route.day)) }
             NotificationRoute.Tasks -> { tab = Tab.More; stacks[tab] = listOf(Route.Tasks) }
             is NotificationRoute.Chat -> openChat(route.conversationId)
             NotificationRoute.Inbox -> { tab = Tab.Today; stacks[tab] = listOf(Route.Inbox) }
@@ -321,7 +322,7 @@ private fun RouteScreen(route: Route, twoPane: Boolean) {
         Route.AbsenceApprovals -> AbsenceApprovalsScreen()
         Route.FuelReceipts -> FuelReceiptsScreen()
         Route.FuelReceiptNew -> FuelReceiptNewScreen()
-        Route.Dispatch -> DispatchScreen()
+        is Route.Dispatch -> DispatchScreen(route.day, route.scene)
         Route.Helpdesk -> HelpdeskScreen()
         Route.ReportProblem -> ReportProblemScreen()
         Route.RecordTicket -> RecordTicketScreen()

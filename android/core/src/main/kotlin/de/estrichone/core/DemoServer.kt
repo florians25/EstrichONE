@@ -30,6 +30,7 @@ class DemoServer(private val content: (String) -> ByteArray? = { null }) : Inter
     private val tickets = DemoTickets()
     private val absences = DemoAbsences()
     private val fuel = DemoFuel()
+    private val planning = DemoPlanning()
 
     /** Störungen vorführen (Menü „Demo“). */
     @Volatile var backupDown = false
@@ -100,7 +101,7 @@ class DemoServer(private val content: (String) -> ByteArray? = { null }) : Inter
                     "createdAt" to ApiDate.format(now.minusSeconds(86_400)), "lastSeenAt" to ApiDate.format(now.minusSeconds(7200)), "current" to false))
             path == "auth/two-factor" -> 200 to json("enabled" to false, "recoveryCodesRemaining" to 0, "requiredByPolicy" to false)
             path == "access/me/permissions" -> 200 to listOf("bauakten.read", "bauakten.create", "bauakten.edit", "notes.write", "files.upload", "work.edit",
-                "contacts.read", "contacts.edit", "chat.use", "absence.request", "absence.approve", "fuel.record") + (if (itAgent) listOf("helpdesk.agent") else emptyList())
+                "contacts.read", "contacts.edit", "chat.use", "absence.request", "absence.approve", "fuel.record", "planning.read", "planning.manage") + (if (itAgent) listOf("helpdesk.agent") else emptyList())
             path == "settings" -> 200 to json("settings" to json("bauakte" to json("warnMissingInspection" to true)), "version" to 1)
             path == "sync/push" -> 200 to push(body)
             path == "sync/pull" -> 200 to json("changes" to entities.values.map { EstrichOneApi.json.encodeToJsonElement(SyncChange.serializer(), it) },
@@ -126,6 +127,7 @@ class DemoServer(private val content: (String) -> ByteArray? = { null }) : Inter
             path.startsWith("bauakten/") && path.endsWith(".pdf") -> content(DemoData.PDF)?.let { 200 to it } ?: problem(404, "NOT_FOUND", "Nicht gefunden")
             path == "planning/mine" -> 200 to DemoData.myPlanning(LocalDate.parse(query["from"] ?: LocalDate.now(Dates.zone).toString()))
             path.startsWith("planning/dispatch/") -> 200 to DemoData.dispatch(parts.last())
+            path.startsWith("planning/") -> planning.handle(method, parts, body) ?: problem(404, "NOT_FOUND", "Im Demomodus nicht verfügbar.")
             path == "system/notices" -> 200 to if (maintenance) json("announcements" to emptyList<String>(), "maintenance" to mapOf("active" to true,
                 "message" to "Update auf Version 1.1. EstrichONE ist in Kürze wieder verfügbar.", "startsAt" to ApiDate.format(now.minusSeconds(120)),
                 "endsAt" to ApiDate.format(now.plusSeconds(20 * 60)), "adminsMayWork" to true), "serverTime" to ApiDate.format(now)) else DemoData.notices(now)

@@ -1,15 +1,24 @@
 # Disposition unterwegs
 
 Unter **Wer fährt wohin** sieht jeder, welche Kolonne mit welchen Fahrzeugen zu welchen Baustellen fährt. Wer in
-EstrichONE das Recht zur **Planung** hat (Disposition, Bauleitung), kann den Plan direkt in der App ändern: Baustellen
-zuweisen und verschieben, Personen, Fahrzeuge oder ganze Kolonnen tauschen und den Plan freigeben. Ohne dieses Recht
-ist die Seite nur zum Ansehen; die Schaltflächen zum Ändern erscheinen dann nicht.
+EstrichONE das Recht zur **Planung** hat (Recht „Einsätze planen“, z. B. Disposition und Bauleitung), kann den Plan
+direkt in der App ändern: Baustellen zuweisen und verschieben, Personen, Fahrzeuge oder ganze Kolonnen tauschen und den
+Plan freigeben. Für Planer heißt die Seite **Disposition**. Ohne dieses Recht ist die Seite nur zum Ansehen; die
+Schaltflächen zum Ändern erscheinen dann nicht. Die Disposition gibt es in der App für iPhone und iPad und in der App
+für Android mit demselben Umfang; beide ändern dieselben Einsätze wie das Planungs-Cockpit im Web.
 
 ![Wer fährt wohin](bilder/iphone-disposition.jpg "Wer fährt wohin: Tagesleiste, Freigabestand und Kolonnen"){rechts}
 
-## Die Tagesansicht
+## Die Disposition öffnen
 
-Öffnen Sie **Wer fährt wohin** auf der Heute-Seite unter **Überblick**.
+- **Heute**: Planer sehen direkt unter den Mitteilungen die Zeile **Disposition heute** mit dem Stand des Tages, z. B.
+  „3 Kolonnen, freigegeben“, „2 Kolonnen, noch nicht freigegeben“ oder „3 Kolonnen, 2 Änderungen seit Freigabe“. Ein
+  Tipp öffnet die Tagesansicht. Alle anderen finden **Wer fährt wohin** weiter unten auf der Heute-Seite (iPhone und
+  iPad: **Planung**, Android: unter **Morgen**).
+- **Mehr**: Im Abschnitt **Planung** stehen **Disposition** (für Planer) bzw. **Wer fährt wohin** und **Meine Woche**.
+- Eine Benachrichtigung zur Planung öffnet die Tagesansicht des betroffenen Tages.
+
+## Die Tagesansicht
 
 - Die **Tagesleiste** oben wechselt den Tag; das Kalendersymbol wählt ein beliebiges Datum.
 - Darunter steht der **Freigabestand** des Tages, z. B. „Freigegeben 27. Okt., 06:30, 2 Änderungen seit Freigabe“
@@ -19,7 +28,8 @@ ist die Seite nur zum Ansehen; die Schaltflächen zum Ändern erscheinen dann ni
   Einsätze seit der Freigabe sind mit **Neu** bzw. **Geändert** gekennzeichnet.
 - Unten unter **Mitarbeiter** stehen, wer an dem Tag **frei** (keiner Kolonne zugeteilt) und wer **abwesend** ist.
 
-Ein Tipp auf die Adresse startet die Route, ein Tipp auf den Einsatz öffnet die Bauakte.
+Ein Tipp auf die Adresse startet die Route, ein Tipp auf den Ansprechpartner ruft an, ein Tipp auf den Einsatz öffnet
+die Bauakte. Nach unten ziehen lädt den Tag neu.
 
 > **Hinweis:** Die Planung eines Tages wird vom Server geladen. Ohne Verbindung ist ein Tag, der noch nicht auf dem
 > Gerät liegt, nicht verfügbar; Ihr eigener Einsatz steht trotzdem auf der Heute-Seite.
@@ -40,7 +50,8 @@ Ein Tipp auf die Adresse startet die Route, ein Tipp auf den Einsatz öffnet die
 
 ## Einsätze ändern
 
-Ein Tipp auf das Menü eines Einsatzes bietet:
+Planer sehen rechts neben jedem Einsatz ein **Menü** (iPhone und iPad: **…** im Kreis, auch durch langes Drücken;
+Android: **⋮**). Es bietet:
 
 | Aktion | Wirkung |
 |---|---|
@@ -49,8 +60,14 @@ Ein Tipp auf das Menü eines Einsatzes bietet:
 | **Auf nächsten freien Tag** | legt den Einsatz auf den nächsten Tag, an dem die Kolonne frei ist |
 | **Aus dem Plan nehmen** | entfernt den Einsatz (mit Rückfrage); die Bauakte bleibt unverändert |
 
-Die **Reihenfolge** der Baustellen einer Kolonne (Fahrtreihenfolge) ändern Sie über **Reihenfolge** oben rechts: Einsätze
-an den Griffen an die gewünschte Stelle ziehen und mit **Fertig** abschließen. Die App bestätigt „Reihenfolge gesichert“.
+**Uhrzeit ändern** öffnet nur Beginn und Ende; **Verschieben** zusätzlich Tag und Kolonne. Auf dem iPhone geht
+**Morgen** auch per Wischen nach rechts, **Verschieben**, **Freier Tag** und **Entfernen** per Wischen nach links.
+
+Die **Reihenfolge** der Baustellen einer Kolonne (Fahrtreihenfolge) ändern Sie auf dem iPhone und iPad über
+**Reihenfolge** oben rechts: Einsätze an den Griffen an die gewünschte Stelle ziehen und mit **Fertig** abschließen. Auf
+Android wählen Sie bei der Kolonne **Anpassen** → **Reihenfolge ändern**, ziehen die Baustellen am Griff und tippen auf
+**Sichern**. Die Uhrzeiten bleiben in ihrer Reihenfolge, die Baustellen tauschen die Plätze. Die App bestätigt
+„Reihenfolge gesichert“.
 
 ## Mitarbeiter, Fahrzeuge oder Kolonnen tauschen
 
@@ -68,7 +85,8 @@ an den Griffen an die gewünschte Stelle ziehen und mit **Fertig** abschließen.
 - **Kolonnen tauschen**: die Baustellen beider Kolonnen wechseln für diesen Tag die Kolonne; Besetzung und Fahrzeuge
   bleiben.
 
-Alle Tauschaktionen **gelten nur für den gewählten Tag**. Auch hier zeigt **Prüfung** vorher mögliche Konflikte.
+Alle Tauschaktionen **gelten nur für den gewählten Tag**. Konflikte, die sich daraus ergeben, zeigt die Kolonne danach in
+ihrer Karte an.
 
 ## Plan freigeben
 
@@ -88,7 +106,9 @@ wieder vorläufig. Freigeben und Zurücknehmen gehen nur mit Verbindung.
 
 ## Ohne Verbindung disponieren
 
-Ändern Sie den Plan ohne Netz, merkt die App die Änderung vor („Keine Verbindung, Änderung vorgemerkt“) und überträgt sie, sobald
-der Server erreichbar ist. Der Server prüft dann auf Konflikte; lehnt er eine vorgemerkte Änderung ab, meldet die App
+Ändern Sie den Plan ohne Netz, merkt die App die Änderung vor („Keine Verbindung, Änderung vorgemerkt“) und überträgt
+sie beim nächsten Öffnen der Disposition, sobald der Server erreichbar ist. Ohne Verbindung zeigt die Tagesansicht den
+zuletzt geladenen Stand mit Uhrzeit („Keine Verbindung, Stand heute, 06:45“) und darüber, wie viele Änderungen
+vorgemerkt sind (**Anzeigen** listet sie). Der Server prüft dann auf Konflikte; lehnt er eine vorgemerkte Änderung ab, meldet die App
 „Vorgemerkte Änderung abgelehnt“ und zeigt den aktuellen Stand. Vorgemerkte Änderungen lassen sich bis dahin
 **verwerfen**.

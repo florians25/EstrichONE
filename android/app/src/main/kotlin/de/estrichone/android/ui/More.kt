@@ -87,14 +87,13 @@ import de.estrichone.android.support.Links
 import de.estrichone.core.AppModules
 import de.estrichone.core.ApiDate
 import de.estrichone.core.Dates
-import de.estrichone.core.DispatchBoard
+import de.estrichone.core.DispatchDesk
 import de.estrichone.core.InboxNotification
 import de.estrichone.core.LockDelay
 import de.estrichone.core.NotificationInbox
 import de.estrichone.core.SyncOutcome
 import de.estrichone.core.WorkItemKind
 import de.estrichone.core.deleteNotification
-import de.estrichone.core.dispatch
 import de.estrichone.core.markAllNotificationsRead
 import de.estrichone.core.markNotificationRead
 import de.estrichone.core.notificationPreferences
@@ -164,8 +163,21 @@ fun MoreScreen() {
                     RowItem("Benachrichtigungen", icon = Icons.Outlined.Inbox, showChevron = true, onClick = { nav.push(Route.Inbox) }, trailing = { CountBadge(unread) })
                 }
             }
-            // Systemeinstellungen › Module: Einträge abgeschalteter Module erscheinen nicht. Meine Aufgaben, Wer fährt wohin und
-            // Meine Woche stehen auf „Heute“ und hier nicht noch einmal.
+            // Planung: Planer (Recht zur Planung) öffnen hier die Disposition, alle anderen „Wer fährt wohin“; dazu Meine Woche.
+            if (modules.isOn(AppModules.PLANNING)) {
+                val planner = DispatchDesk.PERMISSION_MANAGE in permissions
+                item { GroupLabel("Planung") }
+                item {
+                    SectionCard {
+                        RowItem(if (planner) "Disposition" else "Wer fährt wohin", icon = Icons.Filled.DirectionsCar,
+                            subtitle = if (planner) "Wer fährt wohin, zuweisen, tauschen, freigeben" else null, showChevron = true,
+                            onClick = { nav.push(Route.Dispatch()) })
+                        RowDivider()
+                        RowItem("Meine Woche", icon = Icons.Outlined.CalendarMonth, showChevron = true, onClick = { nav.push(Route.Week) })
+                    }
+                }
+            }
+            // Systemeinstellungen › Module: Einträge abgeschalteter Module erscheinen nicht. Meine Aufgaben steht auf „Heute“.
             val fuel = modules.isOn(AppModules.FUEL) && "fuel.record" in permissions
             if (modules.isOn(AppModules.ABSENCE) || modules.isOn(AppModules.HELPDESK) || fuel) {
                 item { GroupLabel("Service") }
@@ -578,64 +590,6 @@ fun WeekScreen() {
                                 if (i > 0) RowDivider()
                                 RowItem(job.bauakteTitle, icon = Icons.Filled.Apartment, subtitle = "${job.time}, ${job.activity}${job.crewName?.let { ", $it" } ?: ""}",
                                     showChevron = true, onClick = { nav.push(Route.Bauakte(job.bauakteId)) })
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-/** „Wer fährt wohin“: Baustellen des Tages mit Kolonnen, Personen und Fahrzeugen (lesend). */
-@Composable
-fun DispatchScreen() {
-    val session = LocalSession.current
-    val nav = LocalNav.current
-    val context = LocalContext.current
-    var day by remember { mutableStateOf(LocalDate.now(Dates.zone)) }
-    val board by rememberLoad(day) { session.api.dispatch(day.toString()) }
-    ScreenScaffold("Wer fährt wohin") { padding ->
-        LazyColumn(contentPadding = padding.content(), verticalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.readable()) {
-            item {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf(0L, 1L, 2L).forEach { offset ->
-                        val d = LocalDate.now(Dates.zone).plusDays(offset)
-                        FilterChip(day == d, { day = d }, label = { Text(Dates.relativeDay(d)) })
-                    }
-                }
-            }
-            item {
-                LoadView(board) {
-                    val b: DispatchBoard = (board as Load.Done).value
-                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        if (b.sites.isEmpty()) EmptyState(Icons.Filled.DirectionsCar, "Kein Plan freigegeben", "Für diesen Tag ist noch nichts veröffentlicht.")
-                        b.sites.forEach { site ->
-                            val mine = site.bauakteId in b.mySiteIds
-                            SectionCard(Modifier.clickable { nav.push(Route.Bauakte(site.bauakteId)) }, padding = PaddingValues(16.dp)) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(Dates.clock(site.startTime) ?: "–", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                                    Spacer(Modifier.width(10.dp))
-                                    Column(Modifier.weight(1f)) {
-                                        Text(site.title, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                        Secondary(listOfNotNull(site.number, site.address).joinToString(", "), maxLines = 1)
-                                    }
-                                    if (mine) Pill("Ich", MaterialTheme.colorScheme.primary, tones.infoSoft)
-                                }
-                                site.jobs.forEach { job ->
-                                    Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                                        Box(Modifier.size(10.dp).clip(CircleShape).background(parseColor(job.crewColor) ?: tones.textTertiary))
-                                        Spacer(Modifier.width(8.dp))
-                                        Text("${job.crewName ?: ""}, ${job.activity}", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
-                                    }
-                                }
-                                if (site.people.isNotEmpty()) Secondary(site.people.joinToString(", ") { it.name }, Modifier.padding(top = 4.dp))
-                                if (site.vehicles.isNotEmpty()) Secondary("Fahrzeuge: " + site.vehicles.joinToString(", ") { it.name })
-                                site.warnings.forEach { Text("⚠ $it", color = tones.warning, style = MaterialTheme.typography.bodyMedium) }
-                                Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    site.address?.let { a -> OutlinedButton(onClick = { Links.route(context, a, site.latitude, site.longitude) }) { Text("Route") } }
-                                    site.siteContactPhone?.let { p -> OutlinedButton(onClick = { Links.call(context, p) }) { Icon(Icons.Filled.Phone, null); Text(" ${site.siteContactName ?: "Anrufen"}") } }
-                                }
                             }
                         }
                     }
