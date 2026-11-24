@@ -4,7 +4,7 @@
 # Enthält: Konsole (ASP.NET Core), Weboberfläche (OpenUI5, self-hosted), Docker-CLI mit Compose-Plugin,
 # die Compose-Vorlagen der Suite (eine Quelle: deploy/compose*.yml) und den Installer (… install).
 
-FROM node:24-bookworm@sha256:8fa96264f302f58bbb13aa7339c541547b56975766ce956c875da149452a3e40 AS ui
+FROM node:25-bookworm@sha256:78839ac448c23517f8eab2e8f7943d9b4f73979eb7f8bed2c73dbf72ff869e7b AS ui
 WORKDIR /src/hosting/ui
 COPY hosting/ui/package.json hosting/ui/package-lock.json ./
 RUN npm ci --no-audit --no-fund
@@ -13,7 +13,7 @@ COPY branding/ /src/branding/
 COPY hosting/ui/ ./
 RUN npm run lint && npm run build
 
-FROM mcr.microsoft.com/dotnet/sdk:10.0@sha256:fe0fd4e93bd2fbb47c883b7a6369e5c8d3db8bf01cdc5981f6ee35fbdf3ff4fb AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0@sha256:8c6edfb26c85153f236d26efebd9ad349aec403583f343f201ee67838b23658d AS build
 WORKDIR /src
 COPY global.json ./
 COPY hosting/Directory.Build.props hosting/Directory.Packages.props hosting/
@@ -24,9 +24,9 @@ ARG ESTRICHONE_VERSION=0.1.0
 RUN rm -rf hosting/src/EstrichOne.Hosting/wwwroot && dotnet publish hosting/src/EstrichOne.Hosting/EstrichOne.Hosting.csproj \
       --configuration Release --no-restore --output /app -p:Version=${ESTRICHONE_VERSION} -p:UseAppHost=false
 
-FROM docker:29.9.3-cli@sha256:2357639ad1ea7d0194134bf3292622fd4e562483966ed674e5d7c945b5f3b28d AS dockercli
+FROM docker:29.10.0-cli@sha256:34507eb5069d8be82c95dd3b6987d4250fd5fee49b82e2509b7d7a7030740d6d AS dockercli
 
-FROM mcr.microsoft.com/dotnet/aspnet:10.0@sha256:bfd912c83295ce66d4b706ebb8541b9f14259b0e76fbb88b2751f58ce2399d2e
+FROM mcr.microsoft.com/dotnet/aspnet:10.0@sha256:aac50ceef10391e78a899e3d2ccd00bbafa2dcb56ccf4586cbccf00edb84fc21
 # Docker-CLI und Compose-Plugin (statische Binärdateien) – gesteuert wird der Docker-Daemon des Hosts über den Socket.
 COPY --from=dockercli /usr/local/bin/docker /usr/local/bin/docker
 COPY --from=dockercli /usr/local/libexec/docker/cli-plugins/docker-compose /usr/local/libexec/docker/cli-plugins/docker-compose
