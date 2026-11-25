@@ -35,8 +35,8 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-dotnet@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
         with:
           global-json-file: global.json
       - name: Shellcheck
@@ -49,7 +49,7 @@ jobs:
     runs-on: macos-15
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - name: Neuestes Xcode wählen
         run: |
@@ -112,7 +112,7 @@ jobs:
 
       - name: Ergebnisse sichern
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ios-ergebnisse
           path: |
@@ -141,7 +141,7 @@ jobs:
       IPHONE_SCENES_3: "heute,bauakte,kamera-serie,tagebuch-diktat,tagebuch-entwurf,abnahme-pruefen,abnahme-unterschrift,foto-kunde,uebertragung,sync-warteschlange"
       IPAD_SCENES: "heute,heute-glocke,hinweise,hinweis-detail,baustellen,bauakte,bereich-kontakte,kunden,disposition,meldung-detail,anmelden,stoerung,chat-verlauf,chat-gruppe,wartung,heute-quer,baustellen-quer,bauakte-quer,kunden-quer,disposition-quer,meldung-detail-quer,postfach,postfach-quer,systemupdate-update,mehr-zuruecksetzen"
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -238,7 +238,7 @@ jobs:
 
       - name: Screenshots sichern
         if: always() && steps.changes.outputs.run == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ios-screenshots-${{ matrix.device }}
           path: ${{ runner.temp }}/shots
@@ -269,7 +269,7 @@ jobs:
       APPSTORE: "1"
       APPSTORE_SCENES: "heute,bauakte,bereich-fotos,disposition,dispo-zuweisen,erstbegehung,chat-verlauf,kundenkarte,meldung-detail"
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - name: Xcode wählen, Simulator wählen
         id: sim
@@ -328,7 +328,7 @@ jobs:
 
       - name: Screenshots sichern
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: appstore-${{ matrix.device }}
           path: ${{ runner.temp }}/shots
