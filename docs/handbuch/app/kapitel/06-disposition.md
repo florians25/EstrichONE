@@ -36,17 +36,21 @@ die Bauakte. Nach unten ziehen lädt den Tag neu.
 
 ## Baustelle zuweisen (Schnelldisposition)
 
-![Baustelle zuweisen](bilder/iphone-dispo-zuweisen.jpg "Baustelle zuweisen: Bauvorhaben suchen")
+![Baustelle zuweisen](bilder/iphone-dispo-zuweisen.jpg "Baustelle zuweisen: Bauvorhaben wählen")
 ![Verschieben](bilder/iphone-dispo-verschieben.jpg "Einsatz verschieben: Tag, Kolonne, Uhrzeit")
 
 1. Tippen Sie bei einer Kolonne auf **Anpassen** → **Baustelle zuweisen**.
 2. Suchen Sie das **Bauvorhaben** (Nummer, Name, Ort). Ungeplante Bauvorhaben sind mit **Ungeplant** markiert.
-3. Wählen Sie die **Tätigkeit**, z. B. **Estrich einbringen**, **Randdämmung und Folie**, **Erstbegehung**,
-   **CM-Messung und Belegreife**, **Nacharbeiten**, **Schleifen und Grundieren**, und bei Bedarf eine **Uhrzeit** und
-   ein Ende.
+3. Es öffnet sich das kompakte Blatt **Einplanen**; Tag und Kolonne sind vorbelegt und lassen sich ändern. Unter
+   jeder Kolonne steht die Auslastung des Tages. Wählen Sie die **Tätigkeit**, z. B. **Estrich einbringen**,
+   **Randdämmung und Folie**, **Erstbegehung**, **CM-Messung und Belegreife**, **Nacharbeiten**, **Schleifen und
+   Grundieren**, und bei Bedarf eine **Uhrzeit**. Ein Ende setzen Sie danach über **Uhrzeit ändern**.
 4. Unter **Prüfung** zeigt die App, ob es **Konflikte** gibt (z. B. Kolonne oder Fahrzeug doppelt belegt, Person
    abwesend). Die Konfliktprüfung braucht eine Verbindung.
 5. Tippen Sie auf **Einplanen**.
+
+Dasselbe Blatt öffnen Sie auch direkt aus der Bauakte und aus der Liste **Baustellen**; dort ist das Bauvorhaben
+vorbelegt (Kapitel 4, „Aus der Bauakte einplanen“).
 
 ## Einsätze ändern
 

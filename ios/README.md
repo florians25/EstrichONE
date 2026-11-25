@@ -125,7 +125,7 @@ Workflow „iOS“ starten, optional mit eigener Liste von Bildschirmen (dann nu
 
 Bildschirme: `heute`, `heute-unten`, `baustellen`, `bauakte`, `bauakte-unten`, `bereich-fotos`, `bereich-aufgaben`,
 `bereich-erstbegehung`, `bereich-protokolle`, `bereich-tagebuch`, `bereich-raeume`, `bereich-basisdaten`, `bereich-kontakte`, `bereich-notizen`,
-`bauakte-erfassen` (Blatt „Erfassen“ in der Bauakte), `chat`, `neu-1` … `neu-4` (Anlage-Assistent), `erstbegehung`, `abnahme`, `kunden`, `kundenkarte`, `disposition`,
+`bauakte-erfassen` (Blatt „Erfassen“ in der Bauakte), `bauakte-einplanen` (Blatt „Einplanen“ für die Planung), `chat`, `neu-1` … `neu-4` (Anlage-Assistent), `erstbegehung`, `abnahme`, `kunden`, `kundenkarte`, `disposition`,
 `mehr`, `sync`, `meldung`, `meldung-detail`, `aufgaben`, `woche`, `wartung` (Wartungshinweis), `start` (Willkommen),
 `anmelden`, `postfach` (Benachrichtigungen), `dispo-zuweisen`, `dispo-verschieben`, `dispo-tauschen`, `dispo-fahrzeug`,
 `dispo-kolonnen`, `dispo-freigabe`.

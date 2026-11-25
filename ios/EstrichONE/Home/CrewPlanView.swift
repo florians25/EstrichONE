@@ -413,9 +413,10 @@ struct DispatchView: View {
         if let plan {
             switch sheet {
             case let .assign(crew):
-                AssignStopSheet(crew: crew, day: day, plan: plan) { change in
+                // Dasselbe kompakte Blatt wie in der Bauakte; Kolonne und Tag sind vorbelegt.
+                QuickPlanSheet(initialDay: day, initialCrew: crew.id) { result in
                     self.sheet = nil
-                    if let change { Task { await perform(change) } }
+                    if let result { Task { await perform(result.change) } }
                 }
             case let .move(stop, crewId, timeOnly):
                 MoveStopSheet(stop: stop, crewId: crewId, day: day, plan: plan, timeOnly: timeOnly) { change in

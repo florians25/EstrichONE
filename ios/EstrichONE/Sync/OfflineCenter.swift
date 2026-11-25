@@ -152,41 +152,38 @@ final class OfflineCenter {
     }
 }
 
-/// Zeile im Kopf der Bauakte: „Auf dem Gerät verfügbar“ mit dem, was für die Arbeit ohne Netz bereitliegt.
-struct OfflineAvailabilityLine: View {
+/// Symbol in der Navigationsleiste der Bauakte: Stand auf dem Gerät (verfügbar, lädt, nur Daten). Antippen zeigt, was
+/// für die Arbeit ohne Netz bereitliegt (`offlineAvailabilityDetail` an der Seite, nicht in der Leiste).
+struct OfflineAvailabilityButton: View {
     let availability: OfflineAvailability
-
-    @State private var showsDetail = false
+    @Binding var showsDetail: Bool
 
     private var symbol: String {
         switch availability.state {
-        case .complete: "checkmark.circle.fill"
-        case .loading: "arrow.down.circle"
-        case .dataOnly: "internaldrive"
+        case .complete: "checkmark.icloud"
+        case .loading: "icloud.and.arrow.down"
+        case .dataOnly: "icloud"
         }
     }
 
     var body: some View {
         Button { showsDetail = true } label: {
-            Label {
-                Text(availability.title)
-            } icon: {
-                Image(systemName: symbol)
-            }
-            .labelStyle(TightLabelStyle())
-            .font(Typo.subhead)
-            .foregroundStyle(availability.state == .complete ? Theme.success : Theme.textSecondary)
-            .frame(minHeight: Size.minTap, alignment: .leading)
-            .contentShape(Rectangle())
+            Image(systemName: symbol)
+                .foregroundStyle(availability.state == .complete ? Theme.success : Theme.textSecondary)
         }
-        .buttonStyle(.plain)
-        .padding(.vertical, -Space.m)
+        .accessibilityLabel("Stand auf dem Gerät: \(availability.title)")
         .accessibilityHint("Zeigt, was ohne Netz verfügbar ist")
         .accessibilityIdentifier("offlineAvailability")
-        .alert(availability.title, isPresented: $showsDetail) {
+    }
+}
+
+extension View {
+    /// Einzelheiten zum Stand auf dem Gerät als Hinweisfenster.
+    func offlineAvailabilityDetail(_ availability: OfflineAvailability?, isPresented: Binding<Bool>) -> some View {
+        alert(availability?.title ?? "Stand auf dem Gerät", isPresented: isPresented) {
             Button("OK", role: .cancel) {}
         } message: {
-            Text(availability.detail + " Neue Fotos, Einträge und Messungen werden immer zuerst auf dem Gerät gespeichert.")
+            Text((availability?.detail ?? "") + " Neue Fotos, Einträge und Messungen werden immer zuerst auf dem Gerät gespeichert.")
         }
     }
 }
