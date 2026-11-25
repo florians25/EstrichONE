@@ -127,7 +127,7 @@ private fun weatherIcon(w: DiaryWeather) = when (w) {
 /** Bautagebuch für heute: Wetter, Temperatur, Personen, Arbeitszeit, Kolonne, Text (wie DiaryViews auf iOS). */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun DiarySheet(bauakteId: String, onDismiss: () -> Unit, prefill: Map<String, String> = emptyMap()) {
+fun DiarySheet(bauakteId: String, prefill: Map<String, String> = emptyMap(), onDismiss: () -> Unit) {
     val session = LocalSession.current
     val model = LocalModel.current
     // Entwurf: bei jeder Eingabe gesichert, nach Abbruch oder Neustart wieder da. Vorgaben (Ankunft, Abschluss) füllen Lücken.
@@ -258,7 +258,7 @@ fun TaskSheet(bauakteId: String?, initialKind: WorkItemKind, onDismiss: () -> Un
     val session = LocalSession.current
     val model = LocalModel.current
     // Mangel und Aufgabe haben getrennte Entwürfe: Wer einen Mangel meldet, bekommt keinen halben Aufgabentext vorgesetzt.
-    val form = "${Drafts.TASK}-${initialKind.raw}"
+    val form = "${Drafts.TASK}-${initialKind.name.lowercase()}"
     var generation by remember { mutableIntStateOf(0) }
     val draft = rememberDraft(form, bauakteId, generation)
     var kind by remember(generation) { mutableStateOf(initialKind) }

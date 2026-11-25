@@ -261,7 +261,7 @@ fun CaptureFlow(request: CaptureRequest, onDone: () -> Unit) {
         SiteTask.Gallery -> GalleryImport(id, onDone)
         SiteTask.Video -> VideoCapture(id, onDone)
         SiteTask.Upload -> DocumentImport(id, onDone)
-        SiteTask.Diary -> DiarySheet(id, onDone, request.prefill)
+        SiteTask.Diary -> DiarySheet(id, request.prefill, onDone)
         SiteTask.Measurement -> CmSheet(id, onDone)
         SiteTask.Defect -> TaskSheet(id, WorkItemKind.Defect, onDone)
         SiteTask.Task -> TaskSheet(id, WorkItemKind.Task, onDone)
