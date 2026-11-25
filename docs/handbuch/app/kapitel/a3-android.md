@@ -29,27 +29,40 @@ im Menü **⋮** der Einsatzkarte; sie öffnen die Bauakte und erfassen dort, **
 
 Listen auf **Heute**, **Baustellen**, **Chat** und **Kunden** aktualisieren Sie, indem Sie die Seite nach unten ziehen.
 
-**Aufbau der Bauakte.** Von oben nach unten, in der Reihenfolge der Arbeit:
+**Aufbau der Bauakte.** Von oben nach unten:
 
 1. **Kopf**: Nummer, Bauvorhaben, Status (antippen ändert ihn) und Adresse, darunter die Aktionsleiste **Route**,
    **Anrufen** (bei mehreren Kontakten mit Auswahl: Ansprechpartner vor Ort, Kunde, Bauleiter und weitere Beteiligte),
-   **Chat** der Baustelle und **Teams**, wenn die Bauakte mit Microsoft Teams verknüpft ist.
+   **Chat** der Baustelle, für Planer **Einplanen** und **Teams**, wenn die Bauakte mit Microsoft Teams verknüpft ist.
 2. **Heute auf der Baustelle** bzw. **Nächster Termin**: Tag und Uhrzeit, Tätigkeit, Kolonne mit Besetzung, Fahrzeuge.
-3. **Hinweise und Behinderungen**, **Zugang** und **angeheftete Notizen**, bei Bedarf der Hinweis auf eine fehlende
-   Erstbegehung.
-4. **Leistung und Kennwerte**: Estrichart, Dicke, Fläche und Termin zuerst, dazu die Räume mit Gesamtfläche; **Alle
+   Planer sehen den nächsten Einsatz jeder Kolonne und darunter **Einplanen** und **Verschieben**.
+3. **Leistung und Kennwerte**: Estrichart, Dicke, Fläche und Termin zuerst, dazu die Räume mit Gesamtfläche; **Alle
    Kennwerte** klappt die übrigen Basisdaten auf, **Bearbeiten** öffnet sie.
-5. **Ablauf**: Erstbegehung, Estrich einbringen, Belegreife und Abnahme als Schritte mit Fortschrittsbalken. Erledigte
-   Schritte tragen einen Haken, der nächste offene Schritt hat **Erfassen** (z. B. CM-Messung oder Abnahme). Ein Tipp auf
-   einen Schritt öffnet den passenden Bereich.
-6. **Offene Aufgaben und Mängel**, Mängel zuerst; der Kreis hakt einen Punkt ab.
-7. **Fotos und Dokumentation**: neueste Fotos, darunter Fotos und Videos, Dokumente, Bautagebuch, Notizen, Protokolle,
+4. **Beschreibung und Hinweise** als zusammenhängender Block: Beschreibung, **Hinweise und Behinderungen**, **Zugang /
+   Besonderheiten** und **angeheftete Notizen**, bei Bedarf der Hinweis auf eine fehlende Erstbegehung.
+5. **Offene Aufgaben und Mängel**, Mängel zuerst; der Kreis hakt einen Punkt ab.
+6. **Fotos und Dokumentation**: neueste Fotos, darunter Fotos und Videos, Dokumente, Bautagebuch, Notizen, Protokolle,
    Erstbegehung und Räume mit Anzahl.
-8. **Kontakte**: eingeklappt eine Zeile mit allen Namen, aufgeklappt je Kontakt Rolle, Telefonnummer und Anruf.
-9. **Beschreibung** und **Verlauf** (neueste Einträge im Bautagebuch).
+7. **Kontakte**: eingeklappt eine Zeile mit allen Namen, aufgeklappt je Kontakt Rolle, Telefonnummer und Anruf.
+8. **Verlauf** (neueste Einträge im Bautagebuch).
 
-Unter **⋮** oben rechts stehen Basisdaten bearbeiten, Bauakte als PDF, Chat mit dem Team in Teams, Austragen und
-Stornieren.
+Einen eigenen Abschnitt zum Ablauf gibt es nicht mehr. Erstbegehung, CM-Messung und Abnahme erfassen Sie über
+**Erfassen** unten rechts oder unter **Fotos und Dokumentation**.
+
+Ganz oben rechts steht neben **⋮** ein kleines Symbol zur Verfügbarkeit ohne Netz: grün bedeutet, die Bauakte liegt
+vollständig auf dem Gerät; sonst werden Dokumente noch geladen oder es liegen nur die Daten vor. Antippen zeigt die
+Einzelheiten. Unter **⋮** stehen für Planer Einplanen und Einsatz verschieben, außerdem Basisdaten bearbeiten, Bauakte
+als PDF, Chat mit dem Team in Teams, Austragen und Stornieren.
+
+**Einplanen vom Handy.** Planer (Recht zur Planung) planen eine Baustelle direkt ein: in der Bauakte über **Einplanen**
+oder in der Liste **Baustellen** durch langes Drücken auf die Zeile. Das Blatt fragt nur das Nötige ab: **Tag** (Heute,
+Morgen, Übermorgen oder Datum), **Kolonne** mit der Auslastung des Tages (zum Beispiel „2 Einsätze“), **Tätigkeit** (nach
+dem Stand der Bauakte vorgeschlagen) und auf Wunsch die **Uhrzeit**. Konflikte prüft die App vor dem Speichern, sie
+verhindern das Einplanen nicht. Nach **Einplanen** bestätigt die App den Tag und **Nächster Termin** zeigt den Einsatz.
+**Verschieben** setzt den nächsten Einsatz auf einen anderen Tag, eine andere Kolonne oder eine andere Uhrzeit. Ohne
+Verbindung gilt der zuletzt geladene Tagesplan und die Änderung wird vorgemerkt; liegt für den Tag kein Plan auf dem
+Gerät, sagt das Blatt das. **Baustelle zuweisen** in der Disposition nutzt dasselbe Blatt, Kolonne und Tag sind dort
+vorbelegt.
 
 **Freitexte in der Bauakte.** Hinweise und Behinderungen (farbig markiert), Beschreibung und mehrzeilige Felder wie
 **Zugang / Besonderheiten** stehen als eigene Karten mit Überschrift. Zeilenumbrüche bleiben erhalten, Links,
@@ -67,8 +80,8 @@ Sicherheitschip StrongBox), die Anmeldung wird verschlüsselt gespeichert und ni
 
 **Ohne Netz arbeiten.** Die Bauakten Ihrer Einsätze von heute und der nächsten sechs Tage lädt die App vorab vollständig:
 Daten, Kontakte, Hinweise und Protokolle kommen mit dem Abgleich, dazu die Dokumente (Pläne, Aufträge, bis 25 MB je Datei)
-und die Vorschaubilder der neuesten Fotos. Im Kopf der Bauakte steht **Auf dem Gerät verfügbar** mit dem Stand der
-Dokumente. Was zu keinem kommenden Einsatz mehr gehört, entfernt die App wieder. Eigene Aufnahmen sind davon nie betroffen.
+und die Vorschaubilder der neuesten Fotos. Das Symbol oben rechts in der Bauakte zeigt den Stand, Antippen nennt
+die Zahl der geladenen Dokumente. Was zu keinem kommenden Einsatz mehr gehört, entfernt die App wieder. Eigene Aufnahmen sind davon nie betroffen.
 
 **Übertragung.** Alles Erfasste liegt zuerst verschlüsselt auf dem Gerät. Wartet etwas, zeigen **Heute** und die Bauakte
 eine ruhige Zeile, zum Beispiel „3 Fotos warten auf Übertragung“. Die App sendet automatisch: nach jeder Änderung, alle

@@ -49,7 +49,7 @@ Legende: ✅ umgesetzt · 🟡 teilweise (siehe Bemerkung) · ❌ fehlt noch
 
 | Funktion | Android | Bemerkung |
 |---|---|---|
-| Bauakten der Einsätze von heute bis in 6 Tagen vorab laden (Dokumente bis 25 MB, Vorschaubilder der Fotos), „Auf dem Gerät verfügbar“ im Kopf | ✅ | `OfflinePack` im Kern; höchstens 400 MB, Überholtes wird entfernt |
+| Bauakten der Einsätze von heute bis in 6 Tagen vorab laden (Dokumente bis 25 MB, Vorschaubilder der Fotos), Stand als Symbol oben in der Bauakte (verfügbar, Dokumente werden geladen, nur Daten), Antippen zeigt die Einzelheiten | ✅ | `OfflinePack` im Kern; höchstens 400 MB, Überholtes wird entfernt |
 | Übertragungsstand in Worten („3 Fotos warten auf Übertragung“) auf Heute und in der Bauakte | ✅ | `TransferStatus` im Kern |
 | Fehlgeschlagene Uploads einzeln mit Grund und „Erneut senden“, Mitteilung „Übertragung prüfen“ | ✅ | |
 | Upload im Hintergrund auch nach Beenden der App | ✅ | WorkManager stellt die Sitzung wieder her (nicht auf Poolgeräten: dort braucht es die PIN) |
@@ -74,8 +74,8 @@ Legende: ✅ umgesetzt · 🟡 teilweise (siehe Bemerkung) · ❌ fehlt noch
 | Liste mit Suche, Filter (Heute, Laufend, Status, Alle) mit Anzahl, „Heute im Einsatz“ zuerst, dann Status und nächster Termin | ✅ | ✅ | `SiteList` (unit-getestet); kompakte Zeilen mit Status-Kennzeichen und nächstem Termin; Suche auch nach Kunde und Kundennummer, Ziehen zum Abgleichen |
 | Schnellanlage mit Art, Adresse, Kunde (vorhanden oder neu) – offline | ✅ | ✅ | |
 | Dublettenprüfung beim neuen Kunden | ✅ | 🟡 | Hinweis auf ähnliche Kunden aus dem Bestand auf dem Gerät (offline); Serverprüfung `contacts/duplicates` nicht genutzt |
-| Aufbau nach dem Arbeitsablauf: Kopf mit Aktionsleiste (Route, Anrufen mit Kontaktauswahl, Chat, Teams), heute bzw. nächster Termin, Hinweise und Behinderungen, Leistung und Kennwerte, Ablauf, Aufgaben und Mängel, Fotos und Dokumentation, Kontakte (einklappbar), Beschreibung und Verlauf | ✅ | ✅ | ab 1.0.34 |
-| Ablauf als Fortschritt (Erstbegehung, Einbringen, Belegreife, Abnahme) mit „Erfassen“ beim nächsten Schritt | ✅ | ✅ | `SiteWorkflow` im Kern, unit-getestet |
+| Aufbau der Bauakte: Kopf mit Aktionsleiste (Route, Anrufen mit Kontaktauswahl, Chat, Einplanen für Planer, Teams), heute bzw. nächster Termin, Leistung und Kennwerte, Beschreibung und Hinweise (Beschreibung, Hinweise und Behinderungen, Zugang, angeheftete Notiz), Aufgaben und Mängel, Fotos und Dokumentation, Kontakte (einklappbar), Verlauf | ✅ | ✅ | ab 1.0.38; der Abschnitt „Ablauf“ ist entfallen (`SiteWorkflow` entfernt), Erfassen über „Erfassen“ und „Fotos und Dokumentation“ |
+| Einplanen vom Handy für Planer: in der Bauakte (Aktionsleiste, Menü, „Nächster Termin“) und im Langdruck-Menü der Baustellenliste; kompaktes Blatt mit Tag (Heute, Morgen, Übermorgen, Datum), Kolonne mit Auslastung, Tätigkeit, Uhrzeit, Konfliktprüfung; „Verschieben“ des nächsten Einsatzes | ✅ | ✅ | Android `QuickPlan` in core/DayPlan.kt (unit-getestet), Blatt `QuickPlanSheet` in ui/Dispatch.kt, auch für „Baustelle zuweisen“; gleiche Endpunkte (`POST /planning/batch`), offline vorgemerkt |
 | „Erfassen“ unten rechts (klappt beim Scrollen ein, verdeckt nichts) | ✅ | ✅ | Blatt mit Fotos zuerst, dann Video, Scan, Datei, Tagebuch, Erstbegehung, CM-Messung, Abnahme, Mangel, Aufgabe, Notiz für diese Bauakte |
 | Menü „…“/„⋮“: Basisdaten, PDF, Teams-Chat, Austragen, Stornieren | ✅ | ✅ | Chat und Teams stehen in der Aktionsleiste |
 | Freitexte (Hinweise und Behinderungen, Beschreibung, mehrzeilige Schema-Felder) als Textblöcke mit Überschrift, Links/Telefon antippbar, „Mehr anzeigen“ | ✅ | ✅ | `FreeText` im Kern, unit-getestet |

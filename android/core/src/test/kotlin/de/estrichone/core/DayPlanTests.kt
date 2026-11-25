@@ -186,6 +186,77 @@ class DayPlanTests {
     }
 
     @Test
+    fun `Einplanen vom Handy, Auslastung, Vorgaben und Bestätigung`() {
+        val plan = plan()
+        val huber = plan.crew("c1")!!
+        val brandl = plan.crew("c2")!!
+        assertEquals("1 Einsatz", QuickPlan.load(huber))
+        assertEquals("2 Einsätze", QuickPlan.load(brandl))
+        assertEquals("Frei", QuickPlan.load(huber.copy(stops = emptyList())))
+        assertEquals("1 Einsatz, Max Huber (Leitung), Lukas Brandl", QuickPlan.crewDetail(huber))
+        assertEquals(listOf("Heute", "Morgen", "Übermorgen"), QuickPlan.quickDays.map { it.first })
+
+        assertEquals("c2", QuickPlan.defaultCrew(plan, "c2"))
+        assertEquals("c1", QuickPlan.defaultCrew(plan, null))
+        assertEquals("c2", QuickPlan.defaultCrew(plan.copy(crews = plan.crews.map { it.copy(isMine = false, stops = if (it.id == "c2") emptyList() else it.stops) }), "fehlt"))
+        assertNull(QuickPlan.defaultCrew(plan.copy(crews = emptyList()), null))
+
+        assertEquals("Estrich einbringen", QuickPlan.defaultActivity(BauakteStatus.Planned))
+        assertEquals("Erstbegehung", QuickPlan.defaultActivity(BauakteStatus.Inquiry))
+        assertEquals("CM-Messung und Belegreife", QuickPlan.defaultActivity(BauakteStatus.Drying))
+        assertEquals("Estrich einbringen", QuickPlan.defaultActivity(null))
+        val offered = QuickPlan.activities("Erstbegehung")
+        assertEquals("Erstbegehung", offered.first())
+        assertEquals(PlanChoices.activities.toSet(), offered.toSet())
+        assertEquals(PlanChoices.activities.size, offered.size)
+
+        val site = PlanChoice("b9", "2026-050, Neubau Lang", null, isFree = true)
+        val day = LocalDate.parse("2026-11-25")
+        val timed = QuickPlan.assign("n1", site, "c1", day, "Estrich einbringen", LocalTime.of(7, 30), LocalTime.of(7, 0))
+        assertEquals(PlanChange.Assign("n1", "b9", "2026-050, Neubau Lang", "c1", "2026-11-25", "Estrich einbringen", "07:30:00", "07:30:00"), timed)
+        val allDay = QuickPlan.assign("n1", site, "c1", day, "Estrich einbringen", null, LocalTime.of(9, 0))
+        assertNull(allDay.startTime)
+        assertNull(allDay.endTime)
+        assertEquals("Eingeplant für Mi. 25.11.", QuickPlan.confirmation(timed, "Eingeplant", emptyList()))
+        assertEquals("Eingeplant für Mi. 25.11. Bitte prüfen Sie die Konflikte in der Disposition.",
+            QuickPlan.confirmation(timed, "Eingeplant", listOf("Überschneidung")))
+        assertEquals("Verschoben auf Do. 26.11.", QuickPlan.confirmation(PlanChange.Move("a1", "EFH", day = "2026-11-26"), "Verschoben", emptyList()))
+        assertEquals("Verschoben", QuickPlan.confirmation(PlanChange.Move("a1", "EFH", startTime = "08:00:00", setTime = true), "Verschoben", emptyList()))
+
+        val found = QuickPlan.find(plan, "B2")!!
+        assertEquals("a2", found.stop.assignmentId)
+        assertEquals("2026-11-24", found.day)
+        assertEquals("Kolonne Brandl: Anna Koller (Leitung)", found.crewLine)
+        assertNull(QuickPlan.find(plan, "b9"))
+    }
+
+    @Test
+    fun `Nächster Einsatz einer Bauakte für Planer, nach dem Einplanen aktualisiert`() = runBlocking {
+        val api = EstrichOneApi("https://demo.invalid", MemorySessionStore(), SoftwareDeviceKeys(), DemoServer().client())
+        api.signIn("m.huber", "demo", "Test")
+        val desk = DispatchDesk(api, MemoryStorage())
+        val today = LocalDate.now(Dates.zone)
+        val efh = desk.nextAppointment(DemoData.EFH)!!
+        assertEquals(today.toString(), efh.day)
+        assertEquals("Kolonne Huber", efh.crew?.name)
+        assertNull(desk.nextAppointment(DemoData.WEBER))
+
+        val crew = desk.load(today.plusDays(2).toString()).plan!!.crews.first { it.name == "Kolonne Brandl" }
+        val site = PlanChoice(DemoData.WEBER, "2026-047, Anbau Weber", null, isFree = true)
+        val change = QuickPlan.assign(Ids.v7(), site, crew.id, today.plusDays(2), QuickPlan.defaultActivity(BauakteStatus.Inquiry), LocalTime.of(8, 0), null)
+        assertTrue(desk.perform(change) is PlanOutcome.Applied)
+        val planned = desk.nextAppointment(DemoData.WEBER, change.targetDay)!!
+        assertEquals(today.plusDays(2).toString(), planned.day)
+        assertEquals("Erstbegehung", planned.stop.activity)
+        assertEquals("Kolonne Brandl", planned.crew?.name)
+        assertEquals("08:00", planned.stop.startText)
+
+        val move = PlanMove.change(planned.stop, today.plusDays(2), crew.id, today.plusDays(3), crew.id, false, LocalTime.of(8, 0), null)!!
+        assertTrue(desk.perform(move) is PlanOutcome.Applied)
+        assertEquals(today.plusDays(3).toString(), desk.nextAppointment(DemoData.WEBER, move.targetDay)!!.day)
+    }
+
+    @Test
     fun `Ohne Verbindung letzter Stand, vormerken, später senden, Ablehnung bleibt sichtbar`() = runBlocking {
         val server = DemoServer()
         var offline = false

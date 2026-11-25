@@ -2,13 +2,14 @@ package de.estrichone.android.ui
 
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.RemoveCircleOutline
-import androidx.compose.material.icons.filled.Timelapse
+import androidx.compose.material.icons.filled.EventAvailable
+import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.outlined.Groups
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.runtime.saveable.rememberSaveable
 import de.estrichone.core.SiteList
-import de.estrichone.core.SiteWorkflow
+import de.estrichone.core.DispatchDesk
+import de.estrichone.core.SiteAppointment
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.foundation.layout.IntrinsicSize
@@ -19,7 +20,6 @@ import de.estrichone.core.chatBauakteGroup
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material3.Button
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Surface
 import androidx.compose.ui.text.style.TextAlign
@@ -156,10 +156,11 @@ enum class AreaKind(val title: String, val icon: ImageVector) {
 }
 
 /**
- * Bauakte nach dem Arbeitsablauf (gleiches Konzept wie iOS): 1. Kopf mit Aktionsleiste, 2. heute bzw. nächster Termin,
- * 3. Hinweise und Behinderungen, angeheftete Notizen, 4. Leistung und Kennwerte, 5. Ablauf als Fortschritt mit dem
- * nächsten Schritt zum Erfassen, 6. offene Aufgaben und Mängel, 7. Fotos und Dokumentation, 8. Kontakte, 9. Beschreibung
- * und Verlauf. Erfassen als „Erfassen“ unten rechts (klappt beim Scrollen ein und verdeckt keinen Inhalt).
+ * Bauakte (gleiches Konzept wie iOS): 1. Kopf mit Aktionsleiste, 2. heute bzw. nächster Termin, 3. Leistung und Kennwerte,
+ * 4. Beschreibung und Hinweise (Beschreibung, Hinweise und Behinderungen, Zugang, angeheftete Notiz), 5. offene Aufgaben
+ * und Mängel, 6. Fotos und Dokumentation, 7. Kontakte, 8. Verlauf. Oben rechts das Symbol zur Offline-Verfügbarkeit und
+ * das Menü. Planer planen die Baustelle über „Einplanen“ direkt ein. Erfassen als „Erfassen“ unten rechts (klappt beim
+ * Scrollen ein und verdeckt keinen Inhalt).
  */
 @Composable
 fun BauakteScreen(id: String, showBack: Boolean = true) {
@@ -206,6 +207,17 @@ fun BauakteScreen(id: String, showBack: Boolean = true) {
         }
     }
 
+    // Schnelldisposition: Planer sehen den nächsten Einsatz jeder Kolonne und planen von hier aus ein bzw. verschieben.
+    val permissions by session.permissions.collectAsState()
+    val planner = modules.isOn(AppModules.PLANNING) && DispatchDesk.PERMISSION_MANAGE in permissions && b.status != BauakteStatus.Cancelled
+    val desk = remember(session) { DispatchDesk(session.api, session.store.backend) }
+    val planChanged = nav.planChanged
+    val appointment by produceState<SiteAppointment?>(null, id, planner, planChanged) {
+        value = if (planner) withContext(Dispatchers.IO) { desk.nextAppointment(id, nav.planDay) } else null
+    }
+    val plan: () -> Unit = { nav.planRequest = b.planRequest() }
+    val move: (SiteAppointment) -> Unit = { nav.planRequest = QuickPlanRequest.Move(it) }
+
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
     // Titel oben erst nach dem Kopf; „Erfassen“ klappt beim Scrollen nach unten auf das Symbol ein.
     val scrolled by remember { androidx.compose.runtime.derivedStateOf { listState.firstVisibleItemIndex > 0 } }
@@ -217,8 +229,17 @@ fun BauakteScreen(id: String, showBack: Boolean = true) {
                 icon = { Icon(Icons.Filled.Add, null) }, text = { Text("Erfassen") }, modifier = Modifier.testTag("bauakteCapture"))
         }
     }, actions = {
+        // Offline: Die Bauakte liegt auf dem Gerät; das Symbol zeigt den Stand der Dokumente, Antippen die Einzelheiten.
+        if (!viewOnly) OfflineAvailability(b.id)
         IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, "Weitere Aktionen") }
         DropdownMenu(menu, { menu = false }) {
+            if (planner) {
+                DropdownMenuItem(text = { Text("Einplanen") }, leadingIcon = { Icon(Icons.Filled.EventAvailable, null) }, onClick = { menu = false; plan() })
+                appointment?.let { next ->
+                    DropdownMenuItem(text = { Text("Einsatz verschieben") }, leadingIcon = { Icon(Icons.Filled.Event, null) },
+                        onClick = { menu = false; move(next) })
+                }
+            }
             if (viewOnly) {
                 DropdownMenuItem(text = { Text(BauakteNotAssignedException.JOIN) }, onClick = { menu = false; join() })
             }
@@ -268,28 +289,24 @@ fun BauakteScreen(id: String, showBack: Boolean = true) {
             // 1. Kopf und Aktionsleiste
             item(key = "head") {
                 Header(b, session, viewOnly)
-                ActionBar(b, session, teamsLink)
+                ActionBar(b, session, teamsLink, onPlan = if (planner) plan else null)
             }
             // 2. Heute bzw. nächster Termin
-            if (modules.isOn(AppModules.PLANNING)) item(key = "next") { NextAppointment(b, session) }
-            // 3. Hinweise und Behinderungen, Zugang, angeheftete Notizen, fehlende Erstbegehung
-            item(key = "hints") {
-                FreeTexts(session, b, viewOnly, important = true)
-                PinnedNote(session, id)
-                InitialInspectionHint(session, b)
+            if (modules.isOn(AppModules.PLANNING)) {
+                item(key = "next") { NextAppointment(b, session, appointment, planChanged, onPlan = if (planner) plan else null, onMove = move) }
             }
-            // 4. Leistung und Kennwerte
+            // 3. Leistung und Kennwerte
             item(key = "keyData") { KeyData(session, b) }
-            // 5. Ablauf
-            item(key = "workflow") { Workflow(session, b, viewOnly) }
-            // 6. Offene Aufgaben und Mängel
+            // 4. Beschreibung und Hinweise: Beschreibung, Hinweise und Behinderungen, Zugang, angeheftete Notiz, fehlende Erstbegehung
+            item(key = "texts") { DescriptionAndHints(session, b, viewOnly) }
+            // 5. Offene Aufgaben und Mängel
             if (modules.anyOn(AppModules.TASKS, AppModules.DEFECTS)) item(key = "tasks") { OpenPoints(session, id) }
-            // 7. Fotos und Dokumentation
+            // 6. Fotos und Dokumentation
             item(key = "docs") { Documentation(session, b) }
-            // 8. Kontakte
+            // 7. Kontakte
             item(key = "contacts") { ContactSection(b, session) }
-            // 9. Beschreibung und Verlauf
-            item(key = "history") { History(session, b, viewOnly) }
+            // 8. Verlauf
+            item(key = "history") { History(session, b) }
         }
         }
     }
@@ -323,8 +340,6 @@ private fun Header(b: Bauakte, session: Session, viewOnly: Boolean = false) {
         }
         b.addressLine?.let { Secondary(it, Modifier.padding(top = 8.dp)) }
         if (b.status == BauakteStatus.Cancelled && b.cancellationReason != null) Secondary("Storniert: ${b.cancellationReason}", Modifier.padding(top = 4.dp))
-        // Offline: Die Bauakte liegt vollständig auf dem Gerät; Dokumente kommender Einsätze werden vorab geladen.
-        if (!viewOnly) OfflineAvailability(b.id, Modifier.padding(top = 8.dp))
     }
     TransferLine(b.id, Modifier.padding(top = Space.m))
 }
@@ -350,9 +365,12 @@ private fun siteContacts(b: Bauakte, session: Session): List<SiteContact> {
     return out
 }
 
-/** Aktionsleiste unter dem Kopf: Route, Anrufen (mit Auswahl der Kontakte), Chat der Baustelle, Teams (wenn verknüpft). */
+/**
+ * Aktionsleiste unter dem Kopf: Route, Anrufen (mit Auswahl der Kontakte), Chat der Baustelle, für Planer Einplanen
+ * ([onPlan]), Teams (wenn verknüpft).
+ */
 @Composable
-private fun ActionBar(b: Bauakte, session: Session, teamsLink: de.estrichone.core.TeamsLink?) {
+private fun ActionBar(b: Bauakte, session: Session, teamsLink: de.estrichone.core.TeamsLink?, onPlan: (() -> Unit)?) {
     val context = LocalContext.current
     val nav = LocalNav.current
     val model = LocalModel.current
@@ -387,6 +405,7 @@ private fun ActionBar(b: Bauakte, session: Session, teamsLink: de.estrichone.cor
                     nav.openChat(group?.conversationId?.takeIf { group.member })
                 }
             }
+            if (onPlan != null) QuickAction(Icons.Filled.EventAvailable, "Einplanen", Modifier.weight(1f).testTag("bauaktePlan"), onClick = onPlan)
             if (teamsLink != null) {
                 QuickAction(Icons.Outlined.Groups, "Teams", Modifier.weight(1f)) {
                     if (!Links.teams(context, teamsLink.targets)) model.message("Microsoft Teams lässt sich auf diesem Gerät nicht öffnen.")
@@ -396,52 +415,100 @@ private fun ActionBar(b: Bauakte, session: Session, teamsLink: de.estrichone.cor
     }
 }
 
-/** Heute bzw. nächster Termin auf dieser Baustelle: Einsatz, Kolonne mit Besetzung, Fahrzeuge. */
+/**
+ * Heute bzw. nächster Termin auf dieser Baustelle: Einsatz, Kolonne mit Besetzung, Fahrzeuge. Aus der eigenen Planung der
+ * Woche; Planer sehen mit [planned] den nächsten Einsatz jeder Kolonne und darunter „Einplanen“ und „Verschieben“.
+ */
 @Composable
-private fun NextAppointment(b: Bauakte, session: Session) {
+private fun NextAppointment(b: Bauakte, session: Session, planned: SiteAppointment?, refresh: Int, onPlan: (() -> Unit)?, onMove: (SiteAppointment) -> Unit) {
     val today = remember { LocalDate.now(Dates.zone) }
-    val next by produceState<PlannedJob?>(null, b.id) {
+    val own by produceState<PlannedJob?>(null, b.id, refresh) {
         value = session.weekPlan()?.assignments?.let { SiteList.nextJobs(it, today.toString())[b.id.lowercase()] }
     }
-    val job = next
-    SectionHeader(if (job?.day == today.toString()) "Heute auf der Baustelle" else "Nächster Termin")
+    val job = own
+    // Der frühere von beiden: der Einsatz aus dem Tagesplan (alle Kolonnen) bzw. der eigene.
+    val fromPlan = planned?.takeIf { job == null || it.day + (it.stop.startTime ?: "99") <= job.day + (job.startTime ?: "99") }
+    val day = fromPlan?.day ?: job?.day
+    SectionHeader(if (day == today.toString()) "Heute auf der Baustelle" else "Nächster Termin")
     SectionCard {
-        if (job == null) {
-            RowItem("Kein Einsatz in den nächsten 7 Tagen geplant", icon = Icons.Filled.CalendarMonth, iconTint = tones.textSecondary)
-            return@SectionCard
+        if (fromPlan == null && job == null) {
+            RowItem(if (onPlan != null) "Noch kein Einsatz geplant" else "Kein Einsatz in den nächsten 7 Tagen geplant", icon = Icons.Filled.CalendarMonth,
+                iconTint = tones.textSecondary)
+        } else {
+            val stop = fromPlan?.stop
+            val whenText = if (fromPlan != null && stop != null) {
+                listOfNotNull(SiteList.appointmentText(fromPlan.day, stop.startTime, today), stop.endText?.let { "bis $it" }).joinToString(" ")
+            } else {
+                listOfNotNull(job?.let { SiteList.appointmentText(it, today) }, Dates.clock(job?.endTime)?.let { "bis $it" }).joinToString(" ")
+            }
+            val activity = stop?.activity ?: job?.activity.orEmpty()
+            val crew = if (fromPlan != null && stop != null) {
+                fromPlan.crewLine ?: stop.people.joinToString(", ") { it.name }
+            } else {
+                listOfNotNull(job?.crewName, job?.people?.joinToString(", ") { it.name }?.ifEmpty { null }).joinToString(": ")
+            }
+            val resources = if (stop != null) stop.resources.joinToString(", ") { it.name } else job?.resources?.joinToString(", ") { it.name }.orEmpty()
+            val notes = if (stop != null) stop.notes else job?.notes
+            Row(Modifier.fillMaxWidth().padding(16.dp).testTag("nextAppointment"), verticalAlignment = Alignment.Top) {
+                Icon(Icons.Filled.CalendarMonth, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
+                Spacer(Modifier.width(16.dp))
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(whenText, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+                    Text(activity, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+                    if (crew.isNotEmpty()) Secondary(crew)
+                    if (resources.isNotEmpty()) Secondary(resources)
+                    if (!notes.isNullOrBlank()) Secondary(notes)
+                }
+            }
         }
-        Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.Top) {
-            Icon(Icons.Filled.CalendarMonth, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
-            Spacer(Modifier.width(16.dp))
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(listOfNotNull(SiteList.appointmentText(job, today), Dates.clock(job.endTime)?.let { "bis $it" }).joinToString(" "),
-                    style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
-                Text(job.activity, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
-                val crew = listOfNotNull(job.crewName, job.people.joinToString(", ") { it.name }.ifEmpty { null }).joinToString(": ")
-                if (crew.isNotEmpty()) Secondary(crew)
-                if (job.resources.isNotEmpty()) Secondary(job.resources.joinToString(", ") { it.name })
-                job.notes?.let { Secondary(it) }
+        if (onPlan != null) {
+            RowDivider(16.dp)
+            Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                TextButton(onClick = onPlan, modifier = Modifier.heightIn(min = 48.dp)) { Text(if (planned == null && job == null) "Einplanen" else "Weiteren Einsatz einplanen") }
+                if (planned != null) TextButton(onClick = { onMove(planned) }, modifier = Modifier.heightIn(min = 48.dp)) { Text("Verschieben") }
             }
         }
     }
 }
 
-/** Textblöcke: [important] = Hinweise und Behinderungen sowie Zugang; sonst Beschreibung und weitere Freitexte. */
-@Composable
-private fun FreeTexts(session: Session, b: Bauakte, viewOnly: Boolean, important: Boolean) {
-    val nav = LocalNav.current
-    val schema = remember(b.id) { session.service.schema("bauakte") }
-    val blocks = remember(b) { de.estrichone.core.FreeText.blocks(b, schema) }.filter { isHint(it) == important }
-    if (blocks.isEmpty()) return
-    if (!important) SectionHeader("Beschreibung")
-    Column(Modifier.padding(top = if (important) Space.l else 0.dp), verticalArrangement = Arrangement.spacedBy(Space.s)) {
-        blocks.forEach { block ->
-            FreeTextCard(block, onEdit = if (viewOnly) null else ({ nav.push(Route.Area(b.id, AreaKind.Project)) }))
-        }
-    }
+/** Reihenfolge im Block „Beschreibung und Hinweise“: Beschreibung und weitere Freitexte, Hinweise und Behinderungen, Zugang. */
+private fun textRank(block: de.estrichone.core.FreeText.Block): Int = when {
+    block.important -> 1
+    block.label.contains("zugang", ignoreCase = true) -> 2
+    else -> 0
 }
 
-private fun isHint(block: de.estrichone.core.FreeText.Block) = block.important || block.label.contains("zugang", ignoreCase = true)
+/**
+ * Beschreibung und Hinweise als zusammenhängender Block nach den Kennwerten: Beschreibung, Hinweise und Behinderungen,
+ * Zugang und Besonderheiten, angeheftete Notizen; darunter bei Bedarf der Hinweis auf die fehlende Erstbegehung.
+ */
+@Composable
+private fun DescriptionAndHints(session: Session, b: Bauakte, viewOnly: Boolean) {
+    val nav = LocalNav.current
+    val schema = remember(b.id) { session.service.schema("bauakte") }
+    val blocks = remember(b) { de.estrichone.core.FreeText.blocks(b, schema).sortedBy { textRank(it) } }
+    val pinned by session.local(b.id) { session.service.notes(b.id).filter { it.isPinned } }
+    if (blocks.isNotEmpty() || pinned.isNotEmpty()) {
+        SectionHeader("Beschreibung und Hinweise")
+        Column(verticalArrangement = Arrangement.spacedBy(Space.s)) {
+            blocks.forEach { block ->
+                FreeTextCard(block, onEdit = if (viewOnly) null else ({ nav.push(Route.Area(b.id, AreaKind.Project)) }))
+            }
+            pinned.forEach { note ->
+                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(tones.infoSoft).clickable { nav.push(Route.Area(b.id, AreaKind.Notes)) }
+                    .padding(16.dp)) {
+                    Icon(Icons.Filled.PushPin, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(16.dp))
+                    Column {
+                        Text("Angeheftete Notiz", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge)
+                        Text(note.text, style = MaterialTheme.typography.bodyLarge)
+                    }
+                }
+            }
+        }
+    }
+    InitialInspectionHint(session, b)
+}
 
 @Composable
 private fun FreeTextCard(block: de.estrichone.core.FreeText.Block, onEdit: (() -> Unit)?) {
@@ -488,26 +555,6 @@ private fun FreeTextCard(block: de.estrichone.core.FreeText.Block, onEdit: (() -
 }
 
 
-@Composable
-private fun PinnedNote(session: Session, id: String) {
-    val pinned by session.local(id) { session.service.notes(id).filter { it.isPinned } }
-    if (pinned.isEmpty()) return
-    val nav = LocalNav.current
-    Column(Modifier.padding(top = Space.s), verticalArrangement = Arrangement.spacedBy(Space.s)) {
-        pinned.forEach { note ->
-            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(tones.infoSoft).clickable { nav.push(Route.Area(id, AreaKind.Notes)) }
-                .padding(16.dp)) {
-                Icon(Icons.Filled.PushPin, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
-                Spacer(Modifier.width(16.dp))
-                Column {
-                    Text("Angeheftete Notiz", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge)
-                    Text(note.text, style = MaterialTheme.typography.bodyLarge)
-                }
-            }
-        }
-    }
-}
-
 /** Leistung und Kennwerte: Estrichart, Dicke, Fläche, Termin zuerst, dazu die Räume; alle weiteren aufklappbar. */
 @Composable
 private fun KeyData(session: Session, b: Bauakte) {
@@ -516,7 +563,7 @@ private fun KeyData(session: Session, b: Bauakte) {
     val lists = remember(b.id) { session.service.valueLists() }
     val rooms by session.local(b.id) { session.service.rooms(b.id) }
     var expanded by remember(b.id) { mutableStateOf(false) }
-    // Mehrzeilige Freitexte stehen als eigene Textblöcke (FreeTexts).
+    // Mehrzeilige Freitexte stehen als eigene Textblöcke (DescriptionAndHints).
     val fields = keyDataFirst(schema?.groups?.flatMap { it.fields }.orEmpty().filter { it.type != "textarea" }.mapNotNull { field ->
         field.display(b.project[field.path.removePrefix("project.")], lists)?.let { field.label to it }
     })
@@ -560,85 +607,6 @@ private fun KeyValueRow(label: String, value: String) {
     Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(label, style = MaterialTheme.typography.bodyMedium, color = tones.textSecondary, modifier = Modifier.weight(1f))
         Text(value, style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.End, modifier = Modifier.weight(1.4f).padding(start = 8.dp))
-    }
-}
-
-/**
- * Ablauf als Fortschritt aus vorhandenen Daten: Erstbegehung, Estrich einbringen, Belegreife, Abnahme. Erledigte Schritte
- * mit Haken, der nächste offene hervorgehoben mit „Erfassen“. Ein Tipp auf einen Schritt öffnet den passenden Bereich.
- */
-@Composable
-private fun Workflow(session: Session, b: Bauakte, viewOnly: Boolean) {
-    val nav = LocalNav.current
-    val modules by session.modules.collectAsState()
-    val progress by session.local(b.id, modules) {
-        val s = session.service
-        SiteWorkflow.of(b, s.inspections(b.id), s.rooms(b.id), s.acceptances(b.id),
-            inspectionsOn = modules.isOn(AppModules.INSPECTIONS), acceptanceOn = modules.isOn(AppModules.ACCEPTANCE))
-    }
-    val next = progress.next
-    SectionHeader("Ablauf")
-    SectionCard {
-        // Fortschrittsbalken in Schritten.
-        Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(progress.summary, style = MaterialTheme.typography.labelLarge, color = tones.textSecondary, modifier = Modifier.weight(1f))
-        }
-        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            progress.steps.forEach { step ->
-                Box(Modifier.weight(1f).height(4.dp).clip(RoundedCornerShape(2.dp)).background(when {
-                    step.isDone -> tones.success
-                    step.state == SiteWorkflow.State.InProgress -> MaterialTheme.colorScheme.primary
-                    else -> tones.fillStrong
-                }))
-            }
-        }
-        progress.steps.forEachIndexed { index, step ->
-            if (index > 0) RowDivider(56.dp)
-            val isNext = step == next
-            val area = when (step.kind) {
-                SiteWorkflow.Kind.InitialInspection -> AreaKind.InitialInspection
-                SiteWorkflow.Kind.Laying -> AreaKind.Rooms
-                SiteWorkflow.Kind.Readiness, SiteWorkflow.Kind.Acceptance -> AreaKind.Protocols
-            }
-            val task = when (step.kind) {
-                SiteWorkflow.Kind.InitialInspection -> SiteTask.Inspection
-                SiteWorkflow.Kind.Laying -> SiteTask.Diary.takeIf { modules.isOn(AppModules.DIARY) }
-                SiteWorkflow.Kind.Readiness -> SiteTask.Measurement
-                SiteWorkflow.Kind.Acceptance -> SiteTask.Acceptance
-            }
-            Row(Modifier.fillMaxWidth().heightIn(min = 56.dp).clickable { nav.push(Route.Area(b.id, area)) }
-                .padding(start = 16.dp, end = 12.dp, top = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                Icon(when (step.state) {
-                    SiteWorkflow.State.Done -> Icons.Filled.CheckCircle
-                    SiteWorkflow.State.Skipped -> Icons.Filled.RemoveCircleOutline
-                    SiteWorkflow.State.InProgress -> Icons.Filled.Timelapse
-                    SiteWorkflow.State.Open -> Icons.Filled.RadioButtonUnchecked
-                }, when (step.state) {
-                    SiteWorkflow.State.Done -> "Erledigt"
-                    SiteWorkflow.State.Skipped -> "Entfällt"
-                    SiteWorkflow.State.InProgress -> "In Arbeit"
-                    SiteWorkflow.State.Open -> "Offen"
-                }, tint = when (step.state) {
-                    SiteWorkflow.State.Done -> tones.success
-                    SiteWorkflow.State.InProgress -> MaterialTheme.colorScheme.primary
-                    else -> tones.textTertiary
-                }, modifier = Modifier.size(24.dp))
-                Spacer(Modifier.width(16.dp))
-                Column(Modifier.weight(1f)) {
-                    Text(step.kind.title, style = MaterialTheme.typography.bodyLarge, fontWeight = if (isNext) FontWeight.SemiBold else FontWeight.Normal,
-                        color = if (step.isDone) tones.textSecondary else MaterialTheme.colorScheme.onSurface)
-                    Text(step.detail, style = MaterialTheme.typography.bodySmall, color = tones.textSecondary)
-                }
-                if (isNext && !viewOnly && task != null) {
-                    FilledTonalButton(onClick = { nav.captureTask = task.with(b.id) }, modifier = Modifier.heightIn(min = 40.dp),
-                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp)) {
-                        Text("Erfassen")
-                    }
-                } else {
-                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = tones.textTertiary)
-                }
-            }
-        }
     }
 }
 
@@ -797,11 +765,10 @@ private fun ContactSection(b: Bauakte, session: Session) {
     }
 }
 
-/** Beschreibung (weitere Freitexte) und Verlauf (neueste Einträge im Bautagebuch). */
+/** Verlauf: neueste Einträge im Bautagebuch. */
 @Composable
-private fun History(session: Session, b: Bauakte, viewOnly: Boolean) {
+private fun History(session: Session, b: Bauakte) {
     val nav = LocalNav.current
-    FreeTexts(session, b, viewOnly, important = false)
     val diary by session.local(b.id) { session.service.diary(b.id).sortedByDescending { it.day ?: LocalDate.MIN } }
     if (diary.isEmpty()) return
     SectionHeader("Verlauf", action = "Bautagebuch", onAction = { nav.push(Route.Area(b.id, AreaKind.Diary)) })

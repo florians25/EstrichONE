@@ -39,6 +39,9 @@ import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.OfflinePin
+import androidx.compose.material.icons.outlined.Downloading
+import androidx.compose.material.icons.outlined.CloudDownload
+import androidx.compose.material.icons.filled.EventAvailable
 import androidx.compose.material.icons.outlined.Place
 import androidx.compose.material.icons.outlined.ReportProblem
 import androidx.compose.material3.Button
@@ -78,6 +81,7 @@ import de.estrichone.android.Session
 import de.estrichone.android.support.Links
 import de.estrichone.core.AppModules
 import de.estrichone.core.Dates
+import de.estrichone.core.OfflinePack
 import de.estrichone.core.PlannedJob
 import de.estrichone.core.SiteVisit
 import de.estrichone.core.TransferStatus
@@ -173,15 +177,35 @@ fun TransferLine(bauakteId: String? = null, modifier: Modifier = Modifier) {
     }
 }
 
-/** „Auf dem Gerät verfügbar“ im Kopf der Bauakte: Daten liegen vollständig vor, Dokumente soweit geladen. */
+/**
+ * Offline-Verfügbarkeit als Symbol oben in der Bauakte (neben dem Menü): verfügbar, Dokumente werden geladen oder nur
+ * Daten. Antippen zeigt die Einzelheiten. Der Zustand steht in der Beschreibung für die Vorlesefunktion.
+ */
 @Composable
 fun OfflineAvailability(bauakteId: String, modifier: Modifier = Modifier) {
     val session = LocalSession.current
     val loaded by session.offlineFiles.collectAsState()
     val state by session.local(bauakteId, loaded) { session.offlineState(bauakteId, loaded) }
-    Row(modifier, verticalAlignment = Alignment.CenterVertically) {
-        Icon(Icons.Outlined.OfflinePin, null, tint = if (state.isComplete) tones.success else tones.textSecondary, modifier = Modifier.size(16.dp))
-        Text(state.text, Modifier.padding(start = 6.dp), style = MaterialTheme.typography.bodySmall, color = tones.textSecondary)
+    var open by remember { mutableStateOf(false) }
+    val kind = state.kind
+    IconButton(onClick = { open = true }, modifier = modifier.testTag("offlineAvailability")) {
+        Icon(
+            when (kind) {
+                OfflinePack.State.Kind.Complete -> Icons.Outlined.OfflinePin
+                OfflinePack.State.Kind.Loading -> Icons.Outlined.Downloading
+                OfflinePack.State.Kind.DataOnly -> Icons.Outlined.CloudDownload
+            },
+            "${state.title}. Einzelheiten anzeigen",
+            tint = if (kind == OfflinePack.State.Kind.Complete) tones.success else tones.textSecondary,
+        )
+    }
+    if (open) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { open = false },
+            title = { Text(state.title) },
+            text = { Text(state.detail) },
+            confirmButton = { TextButton(onClick = { open = false }) { Text("Schließen") } },
+        )
     }
 }
 
@@ -238,7 +262,15 @@ fun SiteQuickMenu(expanded: Boolean, onDismiss: () -> Unit, bauakteId: String, a
     val session = LocalSession.current
     val context = LocalContext.current
     val modules by session.modules.collectAsState()
+    val permissions by session.permissions.collectAsState()
+    val planner = modules.isOn(AppModules.PLANNING) && de.estrichone.core.DispatchDesk.PERMISSION_MANAGE in permissions
     DropdownMenu(expanded = expanded, onDismissRequest = onDismiss) {
+        // Planer: Baustelle direkt einplanen (Tag, Kolonne, Tätigkeit).
+        val site = if (planner) session.service.bauakte(bauakteId)?.takeIf { it.status != de.estrichone.core.BauakteStatus.Cancelled } else null
+        if (site != null) {
+            DropdownMenuItem(text = { Text("Einplanen") }, leadingIcon = { Icon(Icons.Filled.EventAvailable, null) },
+                onClick = { onDismiss(); nav.planRequest = site.planRequest() })
+        }
         if (address != null) {
             DropdownMenuItem(text = { Text("Route") }, leadingIcon = { Icon(Icons.Filled.Directions, null) },
                 onClick = { onDismiss(); Links.route(context, address, latitude, longitude) })

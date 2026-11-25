@@ -17,6 +17,7 @@ import de.estrichone.android.ui.Root
 import de.estrichone.android.ui.Route
 import de.estrichone.android.ui.Tab
 import de.estrichone.android.ui.WhatsNewContent
+import de.estrichone.android.ui.planRequest
 import de.estrichone.android.ui.weekPlan
 import de.estrichone.core.AppDownload
 import de.estrichone.core.AppReleaseNote
@@ -208,6 +209,22 @@ abstract class ScreenshotBase(private val device: String, private val appearance
         val session = model.session.value!!
         shot("bauakte-erfassen") {
             val nav = remember { Nav(Tab.Bauakten).also { it.set(Tab.Bauakten, listOf(Route.Bauakte(DemoData.EFH))); it.captureOpenFor = DemoData.EFH } }
+            MainScreen(model, session, nav)
+        }
+    }
+
+    /** Bauakte für Planer: „Einplanen“ öffnet das kompakte Blatt mit Tag, Kolonne (mit Auslastung), Tätigkeit und Uhrzeit. */
+    @Test
+    fun bauakteEinplanen() {
+        val model = demo()
+        val session = model.session.value!!
+        shot("bauakte-einplanen") {
+            val nav = remember {
+                Nav(Tab.Bauakten).also {
+                    it.set(Tab.Bauakten, listOf(Route.Bauakte(DemoData.EFH)))
+                    it.planRequest = session.service.bauakte(DemoData.EFH)!!.planRequest()
+                }
+            }
             MainScreen(model, session, nav)
         }
     }
@@ -491,8 +508,8 @@ class TabletLightScreenshots : ScreenshotBase("tablet", Appearance.Light)
 class TabletDarkScreenshots : ScreenshotBase("tablet", Appearance.Dark)
 
 /**
- * Lange Telefonansicht (2400 dp hoch): Heute und Bauakte vollständig, damit Ablauf, Aufgaben, Dokumentation, Kontakte und
- * Verlauf auf einem Bild prüfbar sind. Ablage: telefon-lang-<bildschirm>-hell.png
+ * Lange Telefonansicht (2400 dp hoch): Heute und Bauakte vollständig, damit Kennwerte, Beschreibung und Hinweise, Aufgaben,
+ * Dokumentation, Kontakte und Verlauf auf einem Bild prüfbar sind. Ablage: telefon-lang-<bildschirm>-hell.png
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
