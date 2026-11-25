@@ -379,6 +379,65 @@ object PlanChoices {
     }
 }
 
+/** Nächster Einsatz einer Bauakte im Tagesplan: Einsatz, Kolonne und der Plan des Tages (für „Verschieben“). */
+data class SiteAppointment(val plan: DayPlan, val stop: DayPlanStop, val crew: DayPlanCrew?) {
+    val day: String get() = plan.day
+
+    /** „Kolonne Huber: Max Huber (Leitung), Lukas Brandl“. */
+    val crewLine: String? get() = crew?.let { listOf(it.name, it.memberText).filter { part -> part.isNotBlank() }.joinToString(": ") }?.ifEmpty { null }
+}
+
+/** Schnelles Einplanen einer Bauakte vom Handy: Tag, Kolonne mit Auslastung, Tätigkeit, optional Uhrzeit. */
+object QuickPlan {
+    /** Schnellwahl des Tages (von heute aus). */
+    val quickDays: List<Pair<String, Long>> = listOf("Heute" to 0L, "Morgen" to 1L, "Übermorgen" to 2L)
+
+    /** Auslastung der Kolonne am Tag: „Frei“, „1 Einsatz“, „2 Einsätze“. */
+    fun load(crew: DayPlanCrew): String = when (crew.stops.size) {
+        0 -> "Frei"
+        1 -> "1 Einsatz"
+        else -> "${crew.stops.size} Einsätze"
+    }
+
+    /** Zusatz in der Liste der Kolonnen: Auslastung und Besetzung. */
+    fun crewDetail(crew: DayPlanCrew): String = listOf(load(crew), crew.memberText).filter { it.isNotBlank() }.joinToString(", ")
+
+    /** Vorgabe der Tätigkeit nach dem Stand der Bauakte. */
+    fun defaultActivity(status: BauakteStatus?): String = when (status) {
+        BauakteStatus.Inquiry -> "Erstbegehung"
+        BauakteStatus.Drying -> "CM-Messung und Belegreife"
+        BauakteStatus.Completed -> "Nacharbeiten"
+        else -> PlanChoices.activities.first()
+    }
+
+    /** Tätigkeiten zur Auswahl, die Vorgabe zuerst. */
+    fun activities(preferred: String): List<String> = listOf(preferred) + PlanChoices.activities.filter { it != preferred }
+
+    /** Vorbelegte Kolonne: die gewählte, sonst die eigene, sonst die mit den wenigsten Einsätzen am Tag. */
+    fun defaultCrew(plan: DayPlan, preferred: String?): String? =
+        plan.crew(preferred)?.id ?: plan.crews.firstOrNull { it.isMine }?.id ?: plan.crews.minByOrNull { it.stops.size }?.id
+
+    /** Erster Einsatz der Bauakte am Tag (nach Uhrzeit), mit seiner Kolonne. */
+    fun find(plan: DayPlan, bauakteId: String): SiteAppointment? =
+        (plan.crews.flatMap { crew -> crew.stops.map { SiteAppointment(plan, it, crew) } } + plan.withoutCrew.map { SiteAppointment(plan, it, null) })
+            .filter { it.stop.bauakteId.equals(bauakteId, ignoreCase = true) }
+            .minByOrNull { it.stop.startTime ?: "99" }
+
+    fun assign(id: String, site: PlanChoice, crewId: String, day: LocalDate, activity: String, start: LocalTime?, end: LocalTime?): PlanChange.Assign =
+        PlanChange.Assign(id, site.id, site.title, crewId, day.toString(), activity, start?.let { PlanTime.text(it) },
+            if (start != null && end != null) PlanTime.text(maxOf(end, start)) else null)
+
+    /** Bestätigung nach dem Einplanen bzw. Verschieben, mit Hinweis auf Konflikte. */
+    fun confirmation(change: PlanChange, message: String, warnings: List<String>): String {
+        val text = when (change) {
+            is PlanChange.Assign -> "Eingeplant für ${PlanChange.dayText(change.day)}"
+            is PlanChange.Move -> change.day?.let { "Verschoben auf ${PlanChange.dayText(it)}" } ?: message
+            else -> message
+        }
+        return if (warnings.isEmpty()) text else "${text.trimEnd('.')}. Bitte prüfen Sie die Konflikte in der Disposition."
+    }
+}
+
 /** Bauakte im Vorrat („Ungeplante Bauvorhaben“, `GET /planning/backlog`). */
 @Serializable
 data class BacklogEntry(
@@ -579,6 +638,18 @@ class DispatchDesk(val api: EstrichOneApi, private val backend: StorageBackend, 
         } else {
             PlanOutcome.Failed(e.message ?: "Die Änderung wurde nicht übernommen.")
         }
+    }
+
+    /**
+     * Nächster Einsatz einer Bauakte ab heute (für Planer, auch bei fremden Kolonnen): der Tag aus dem Vorrat bzw. der
+     * gerade eingeplante Tag [hintDay], der Einsatz aus dem Tagesplan. `null` ohne Verbindung oder ohne Einsatz.
+     */
+    suspend fun nextAppointment(bauakteId: String, hintDay: String? = null, today: LocalDate = LocalDate.now(Dates.zone)): SiteAppointment? = try {
+        val fromBacklog = api.planningBacklog().firstOrNull { it.bauakteId.equals(bauakteId, ignoreCase = true) }?.nextAssignment?.take(10)
+        listOfNotNull(fromBacklog, hintDay).filter { it >= today.toString() }.distinct().sorted()
+            .firstNotNullOfOrNull { day -> QuickPlan.find(api.dayPlan(day), bauakteId) }
+    } catch (e: ApiException) {
+        null
     }
 
     /** Konfliktvorschau; `null` ohne Verbindung. */

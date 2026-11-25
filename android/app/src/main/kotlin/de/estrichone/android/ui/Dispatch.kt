@@ -2,6 +2,7 @@ package de.estrichone.android.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -60,6 +61,7 @@ import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.DirectionsCar
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
@@ -119,6 +121,8 @@ import de.estrichone.android.support.Links
 import de.estrichone.core.ApiDate
 import de.estrichone.core.ApiException
 import de.estrichone.core.BacklogEntry
+import de.estrichone.core.Bauakte
+import de.estrichone.core.BauakteStatus
 import de.estrichone.core.Dates
 import de.estrichone.core.DayPlan
 import de.estrichone.core.DayPlanCrew
@@ -136,6 +140,8 @@ import de.estrichone.core.PlanOutcome
 import de.estrichone.core.PlanTime
 import de.estrichone.core.PlanningOutbox
 import de.estrichone.core.PlanningResource
+import de.estrichone.core.QuickPlan
+import de.estrichone.core.SiteAppointment
 import de.estrichone.core.RosterSwap
 import de.estrichone.core.planningBacklog
 import de.estrichone.core.planningResources
@@ -383,7 +389,7 @@ fun DispatchScreen(initialDay: String? = null, scene: String? = null) {
         val close = { sheet = null }
         when (open) {
             is DispatchSheet.Assign -> plan.crew(open.crewId)?.let { crew ->
-                AssignSheet(desk, crew, day) { change -> if (change == null) close() else perform(change) }
+                QuickPlanSheet(desk, "Baustelle zuweisen", null, null, day, crew.id) { change -> if (change == null) close() else perform(change) }
             }
             is DispatchSheet.Move -> (plan.crews.flatMap { it.stops } + plan.withoutCrew).firstOrNull { it.assignmentId == open.stopId }?.let { stop ->
                 MoveSheet(desk, plan, stop, open.crewId, day, open.timeOnly) { change -> if (change == null) close() else perform(change) }
@@ -804,23 +810,64 @@ private fun ConflictPreview(desk: DispatchDesk, change: PlanChange?) {
     }
 }
 
-/** Baustelle zuweisen: Bauvorhaben suchen (ungeplante zuerst), Tätigkeit, Uhrzeit, Konfliktprüfung. */
+/**
+ * Einplanen in einem kompakten Blatt (Bauakte, Baustellenliste und „Baustelle zuweisen“ der Disposition): Tag mit
+ * Schnellwahl, Kolonne mit Auslastung des Tages, Tätigkeit, optional Uhrzeit, Konfliktprüfung. Mit [site] ist das
+ * Bauvorhaben vorbelegt, sonst wird es zuerst gesucht (ungeplante zuerst). Ohne Verbindung gilt der zuletzt geladene
+ * Tagesplan und die Änderung wird vorgemerkt; fehlt auch der, steht dort eine klare Meldung.
+ */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun AssignSheet(desk: DispatchDesk, crew: DayPlanCrew, day: LocalDate, onDone: (PlanChange?) -> Unit) {
+private fun QuickPlanSheet(
+    desk: DispatchDesk, title: String, site: PlanChoice?, status: BauakteStatus?, initialDay: LocalDate, initialCrewId: String?,
+    onDone: (PlanChange?) -> Unit,
+) {
     val session = LocalSession.current
+    val today = remember { LocalDate.now(Dates.zone) }
+    var selected by remember { mutableStateOf(site) }
+    var day by remember { mutableStateOf(initialDay) }
+    var crewId by remember { mutableStateOf(initialCrewId) }
+    var dayState by remember { mutableStateOf<DispatchDay?>(null) }
+    var loadingDay by remember { mutableStateOf(true) }
+    val preferred = remember { QuickPlan.defaultActivity(status) }
+    var activity by remember { mutableStateOf(preferred) }
+    var timed by remember { mutableStateOf(true) }
+    var startEdited by remember { mutableStateOf(false) }
+    var start by remember { mutableStateOf(LocalTime.of(7, 0)) }
+    var hasEnd by remember { mutableStateOf(false) }
+    var end by remember { mutableStateOf(LocalTime.of(11, 0)) }
+    var picking by remember { mutableStateOf(false) }
     var search by remember { mutableStateOf("") }
     var backlog by remember { mutableStateOf<List<BacklogEntry>?>(null) }
     var offline by remember { mutableStateOf(false) }
     var choices by remember { mutableStateOf<List<PlanChoice>?>(null) }
-    var selected by remember { mutableStateOf<PlanChoice?>(null) }
-    var activity by remember { mutableStateOf(PlanChoices.activities.first()) }
-    val suggested = remember(crew) { PlanTime.suggestedStart(crew) }
-    var start by remember { mutableStateOf(suggested) }
-    var hasEnd by remember { mutableStateOf(false) }
-    var end by remember { mutableStateOf(PlanTime.suggestedEnd(suggested)) }
     val newId = remember { Ids.v7() }
+
+    // Tagesplan des gewählten Tages: erst der zuletzt geladene Stand, dann frisch vom Server.
+    LaunchedEffect(day) {
+        loadingDay = true
+        val requested = day.toString()
+        val cached = withContext(Dispatchers.IO) { desk.cached(requested) }
+        if (cached != null) dayState = cached
+        dayState = withContext(Dispatchers.IO) { desk.load(requested) }
+        loadingDay = false
+    }
+    val plan = dayState?.plan?.takeIf { it.day == day.toString() }
+    // Kolonne vorbelegen: die gewählte, sonst die eigene, sonst die mit den wenigsten Einsätzen.
+    LaunchedEffect(plan) {
+        if (plan != null) crewId = QuickPlan.defaultCrew(plan, crewId)
+    }
+    val crew = plan?.crew(crewId)
+    // Beginn nach der letzten Station der Kolonne vorschlagen, solange nichts von Hand gewählt ist.
+    LaunchedEffect(crew) {
+        if (!startEdited) {
+            val suggested = PlanTime.suggestedStart(crew)
+            start = suggested
+            end = PlanTime.suggestedEnd(suggested)
+        }
+    }
     LaunchedEffect(Unit) {
+        if (site != null) return@LaunchedEffect
         backlog = try {
             withContext(Dispatchers.IO) { desk.api.planningBacklog() }
         } catch (e: ApiException) {
@@ -828,11 +875,11 @@ private fun AssignSheet(desk: DispatchDesk, crew: DayPlanCrew, day: LocalDate, o
             emptyList()
         }
     }
-    LaunchedEffect(search, backlog, offline) {
+    LaunchedEffect(search, backlog, offline, crew?.id) {
         delay(150)
         val loaded = backlog ?: return@LaunchedEffect
         choices = if (!offline) {
-            PlanChoices.from(loaded, crew, search)
+            PlanChoices.from(loaded, crew ?: DayPlanCrew(id = ""), search)
         } else {
             val text = search.trim().lowercase()
             withContext(Dispatchers.IO) { session.service.bauakten() }
@@ -840,13 +887,15 @@ private fun AssignSheet(desk: DispatchDesk, crew: DayPlanCrew, day: LocalDate, o
                 .take(60).map { PlanChoice(it.id, listOfNotNull(it.number, it.title).joinToString(", "), it.addressLine, isFree = false) }
         }
     }
-    val change = selected?.let {
-        PlanChange.Assign(newId, it.id, it.title, crew.id, day.toString(), activity, PlanTime.text(start), if (hasEnd) PlanTime.text(maxOf(end, start)) else null)
+    val chosen = selected
+    val change: PlanChange? = if (chosen != null && crew != null && plan != null && plan.canPlan) {
+        QuickPlan.assign(newId, chosen, crew.id, day, activity, if (timed) start else null, if (timed && hasEnd) end else null)
+    } else {
+        null
     }
-    PlanSheet("Baustelle zuweisen", "Einplanen", change != null, onDismiss = { onDone(null) }, onConfirm = { onDone(change) }) {
-        Secondary("${crew.name}, ${Dates.long(day)}", Modifier.padding(start = 4.dp))
-        val chosen = selected
+    PlanSheet(title, "Einplanen", change != null, onDismiss = { onDone(null) }, onConfirm = { onDone(change) }) {
         if (chosen == null) {
+            Secondary(listOfNotNull(crew?.name, Dates.long(day)).joinToString(", "), Modifier.padding(start = 4.dp))
             OutlinedTextField(search, { search = it }, label = { Text("Bauvorhaben suchen") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
                 leadingIcon = { Icon(Icons.Filled.Search, null) })
             if (offline) Secondary("Ohne Verbindung: Bauakten auf diesem Gerät.", Modifier.padding(start = 4.dp))
@@ -868,24 +917,123 @@ private fun AssignSheet(desk: DispatchDesk, crew: DayPlanCrew, day: LocalDate, o
             }
         } else {
             SectionCard {
-                RowItem(chosen.title, subtitle = chosen.subtitle, trailing = { TextButton(onClick = { selected = null }) { Text("Ändern") } })
+                RowItem(chosen.title, subtitle = chosen.subtitle, trailing = {
+                    if (site == null) TextButton(onClick = { selected = null }) { Text("Ändern") }
+                })
+            }
+            SheetLabel("Tag")
+            val quick = QuickPlan.quickDays.map { (label, offset) -> label to today.plusDays(offset) }
+            val custom = quick.none { it.second == day }
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                quick.forEach { (label, date) -> FilterChip(selected = day == date, onClick = { day = date }, label = { Text(label) }) }
+                FilterChip(selected = custom, onClick = { picking = true }, label = { Text(if (custom) PlanChange.dayText(day.toString()) else "Datum") },
+                    leadingIcon = { Icon(Icons.Filled.CalendarMonth, null, Modifier.size(18.dp)) })
+            }
+            SheetLabel("Kolonne am ${Dates.long(day)}")
+            SectionCard {
+                if (plan == null) {
+                    if (loadingDay) {
+                        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                            CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                            Spacer(Modifier.width(10.dp))
+                            Secondary("Kolonnen werden geladen")
+                        }
+                    } else {
+                        Secondary(dayState?.message ?: "Der Tagesplan ist nicht verfügbar.", Modifier.padding(16.dp))
+                    }
+                } else if (!plan.canPlan) {
+                    Secondary(DispatchDesk.NO_PERMISSION, Modifier.padding(16.dp))
+                } else if (plan.crews.isEmpty()) {
+                    Secondary("Für diesen Tag gibt es keine Kolonne.", Modifier.padding(16.dp))
+                } else {
+                    plan.sortedCrews.forEachIndexed { index, item ->
+                        if (index > 0) RowDivider(56.dp)
+                        ChoiceRow(item.name, QuickPlan.crewDetail(item), crewId == item.id) { crewId = item.id }
+                    }
+                }
+            }
+            if (plan != null && !loadingDay && dayState?.isCurrent == false) {
+                Secondary("Keine Verbindung. Die Änderung wird vorgemerkt und bei Verbindung gesendet.", Modifier.padding(start = 4.dp))
             }
             SheetLabel("Tätigkeit")
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                PlanChoices.activities.forEach { option -> FilterChip(selected = activity == option, onClick = { activity = option }, label = { Text(option) }) }
+            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                QuickPlan.activities(preferred).forEach { option ->
+                    FilterChip(selected = activity == option, onClick = { activity = option }, label = { Text(option) })
+                }
             }
             SheetLabel("Uhrzeit")
             SectionCard {
-                TimeRow("Beginn", start) { start = it }
-                RowDivider(16.dp)
-                SwitchRow("Ende festlegen", hasEnd) { hasEnd = it }
-                if (hasEnd) {
+                SwitchRow("Uhrzeit festlegen", timed) { timed = it }
+                if (timed) {
                     RowDivider(16.dp)
-                    TimeRow("Ende", end) { end = it }
+                    TimeRow("Beginn", start) {
+                        start = it
+                        startEdited = true
+                    }
+                    RowDivider(16.dp)
+                    SwitchRow("Ende festlegen", hasEnd) { hasEnd = it }
+                    if (hasEnd) {
+                        RowDivider(16.dp)
+                        TimeRow("Ende", end) { end = it }
+                    }
                 }
             }
-            SheetLabel("Prüfung")
-            ConflictPreview(desk, change)
+            if (change != null) ConflictPreview(desk, change)
+            Button(onClick = { onDone(change) }, enabled = change != null, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text("Einplanen") }
+        }
+    }
+    if (picking) PlanDatePicker(day, today, onPick = { day = it }, onDismiss = { picking = false })
+}
+
+/** Auftrag an die Schnelldisposition außerhalb der Tagesansicht: Bauakte einplanen oder ihren nächsten Einsatz verschieben. */
+sealed interface QuickPlanRequest {
+    data class Assign(val site: PlanChoice, val status: BauakteStatus? = null) : QuickPlanRequest
+    data class Move(val appointment: SiteAppointment) : QuickPlanRequest
+}
+
+/** „Einplanen“ für diese Bauakte (Bauvorhaben vorbelegt, Tätigkeit nach dem Stand der Bauakte). */
+fun Bauakte.planRequest(): QuickPlanRequest =
+    QuickPlanRequest.Assign(PlanChoice(id, listOfNotNull(number, title).joinToString(", "), addressLine, isFree = false), status)
+
+/**
+ * Blätter „Einplanen“ und „Verschieben“ über der ganzen App (aus der Bauakte und dem Menü der Baustellenliste). Sendet
+ * über dieselben Endpunkte wie die Disposition, merkt ohne Verbindung vor und meldet das Ergebnis; [onChanged] bekommt
+ * den Tag der Änderung, damit „Nächster Termin“ neu lädt.
+ */
+@Composable
+fun QuickPlanHost(request: QuickPlanRequest?, onClose: () -> Unit, onChanged: (String?) -> Unit) {
+    val session = LocalSession.current
+    val model = LocalModel.current
+    val scope = rememberCoroutineScope()
+    val desk = remember(session) { DispatchDesk(session.api, session.store.backend) }
+    val today = remember { LocalDate.now(Dates.zone) }
+
+    fun perform(change: PlanChange, fallbackDay: String?) {
+        onClose()
+        scope.launch {
+            when (val outcome = withContext(Dispatchers.IO) { desk.perform(change) }) {
+                is PlanOutcome.Applied -> {
+                    model.message(QuickPlan.confirmation(change, outcome.message, outcome.warnings))
+                    onChanged(change.targetDay ?: fallbackDay)
+                }
+                PlanOutcome.Queued -> model.message(DispatchDesk.QUEUED)
+                is PlanOutcome.Failed -> model.message(outcome.message)
+            }
+        }
+    }
+
+    when (request) {
+        null -> Unit
+        is QuickPlanRequest.Assign -> key(request) {
+            QuickPlanSheet(desk, "Einplanen", request.site, request.status, today, null) { change ->
+                if (change == null) onClose() else perform(change, null)
+            }
+        }
+        is QuickPlanRequest.Move -> key(request) {
+            val appointment = request.appointment
+            MoveSheet(desk, appointment.plan, appointment.stop, appointment.crew?.id, ApiDate.day(appointment.day) ?: today, timeOnly = false) { change ->
+                if (change == null) onClose() else perform(change, appointment.day)
+            }
         }
     }
 }

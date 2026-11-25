@@ -127,6 +127,17 @@ class FieldWorkTests {
         assertEquals("Auf dem Gerät verfügbar, mit 3 Dokumenten", OfflinePack.state(listOf(a, b, own), mapOf(a.id to 10L, b.id to 10L)).text)
         assertEquals("Auf dem Gerät verfügbar, mit 1 Dokument", OfflinePack.state(listOf(a), emptyMap()) { true }.text)
 
+        // Symbol oben in der Bauakte: Zustand und Erklärung beim Antippen.
+        assertEquals(OfflinePack.State.Kind.Complete, OfflinePack.state(emptyList(), emptyMap()).kind)
+        assertEquals("Auf dem Gerät verfügbar", OfflinePack.state(emptyList(), emptyMap()).title)
+        assertEquals(OfflinePack.State.Kind.Loading, partial.kind)
+        assertEquals("Dokumente werden geladen", partial.title)
+        assertTrue(partial.detail.contains("2 von 3 Dokumenten"), partial.detail)
+        val dataOnly = OfflinePack.state(listOf(a, b), emptyMap())
+        assertEquals(OfflinePack.State.Kind.DataOnly, dataOnly.kind)
+        assertEquals("Nur Daten auf dem Gerät", dataOnly.title)
+        assertTrue(dataOnly.detail.contains("Die 2 Dokumente sind noch nicht geladen"), dataOnly.detail)
+
         val store = LocalStore(MemoryStorage())
         OfflinePack.remember(store, mapOf("x" to 7L))
         assertEquals(mapOf("x" to 7L), OfflinePack.loaded(store))

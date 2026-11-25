@@ -94,31 +94,6 @@ class SiteOverviewTests {
         assertEquals("Heute, 07:00", SiteList.appointmentText(job("x", today, "07:00:00"), LocalDate.parse(today)))
         assertEquals("Morgen", SiteList.appointmentText(job("x", "2026-11-24", null), LocalDate.parse(today)))
         assertEquals("Mi., 25.11., 08:00", SiteList.appointmentText(job("x", "2026-11-25", "08:00"), LocalDate.parse(today)))
-    }
-
-    @Test
-    @DisplayName("Ablauf: Erstbegehung, Einbringen, Belegreife, Abnahme aus vorhandenen Daten")
-    fun workflow() {
-        val site = Bauakte(entity(EntityTypes.BAUAKTE, "title" to "EFH", "status" to "inProgress"))
-        val rooms = listOf(Room(entity(EntityTypes.ROOM, "name" to "Bad", "status" to "laid")), Room(entity(EntityTypes.ROOM, "name" to "Flur", "status" to "planned")))
-        val initial = Inspection(entity(EntityTypes.INSPECTION, "kind" to "initialInspection", "performedAt" to "2026-11-10T08:00:00Z"))
-        val progress = SiteWorkflow.of(site, listOf(initial), rooms, emptyList())
-        assertEquals(listOf(SiteWorkflow.State.Done, SiteWorkflow.State.InProgress, SiteWorkflow.State.Open, SiteWorkflow.State.Open), progress.steps.map { it.state })
-        assertEquals("Durchgeführt am 10.11.2026", progress.steps[0].detail)
-        assertEquals("1 von 2 Räumen eingebracht", progress.steps[1].detail)
-        assertEquals(SiteWorkflow.Kind.Laying, progress.next?.kind)
-        assertEquals("1 von 4 erledigt", progress.summary)
-
-        val measured = Inspection(entity(EntityTypes.INSPECTION, "kind" to "cmMeasurement", "performedAt" to "2026-11-20T08:00:00Z",
-            "measuredCmPercent" to 1.8, "limitCmPercent" to 2.0))
-        val drying = Bauakte(entity(EntityTypes.BAUAKTE, "title" to "EFH", "status" to "drying", "initialInspectionWaived" to true))
-        val later = SiteWorkflow.of(drying, listOf(measured), emptyList(), emptyList())
-        assertEquals(SiteWorkflow.State.Skipped, later.steps[0].state)
-        assertEquals("Belegreif (1,8 CM-%)", later.steps[2].detail)
-        assertEquals(SiteWorkflow.Kind.Acceptance, later.next?.kind)
-
-        val noModules = SiteWorkflow.of(site, emptyList(), emptyList(), emptyList(), inspectionsOn = false, acceptanceOn = false)
-        assertEquals(listOf(SiteWorkflow.Kind.Laying), noModules.steps.map { it.kind })
-        assertTrue(Instant.parse("2026-11-10T08:00:00Z").isBefore(Instant.parse("2026-11-20T08:00:00Z")))
+        assertEquals("Morgen, 06:30", SiteList.appointmentText("2026-11-24", "06:30:00", LocalDate.parse(today)))
     }
 }

@@ -96,7 +96,7 @@ fun BauaktenScreen(selected: String?) {
     var creating by remember { mutableStateOf(false) }
     val all by session.local { session.service.bauakten() }
     val today = LocalDate.now(Dates.zone)
-    val plan by produceState<List<PlannedJob>>(session.cachedWeekPlan()?.assignments.orEmpty()) { value = session.weekPlan()?.assignments.orEmpty() }
+    val plan by produceState<List<PlannedJob>>(session.cachedWeekPlan()?.assignments.orEmpty(), nav.planChanged) { value = session.weekPlan()?.assignments.orEmpty() }
     val next = remember(plan) { SiteList.nextJobs(plan, today.toString()) }
     val todayIds = next.filterValues { it.day == today.toString() }.keys
     val customers by session.local { session.service.contacts().associateBy { it.id } }
@@ -193,7 +193,7 @@ fun BauakteRow(b: Bauakte, customer: de.estrichone.core.Contact?, job: PlannedJo
             .heightIn(min = 72.dp).padding(start = 16.dp, end = 12.dp, top = 12.dp, bottom = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // Langes Drücken: Route, Foto, Tagebuch, Mangel direkt aus der Liste.
+        // Langes Drücken: für Planer Einplanen, dazu Route, Foto, Tagebuch, Mangel direkt aus der Liste.
         Box { SiteQuickMenu(menu, { menu = false }, b.id, b.addressLine, b.latitude, b.longitude) }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {

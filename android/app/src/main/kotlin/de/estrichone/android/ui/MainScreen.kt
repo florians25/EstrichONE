@@ -111,6 +111,11 @@ class Nav(initialTab: Tab) {
     /** Erfassen-Blatt der Bauakte mit dieser ID (Knopf „Erfassen“ in der Bauakte). */
     var captureOpenFor by mutableStateOf<String?>(null)
     var captureTask by mutableStateOf<CaptureRequest?>(null)
+    /** Blatt „Einplanen“ bzw. „Verschieben“ der Schnelldisposition (Bauakte, Baustellenliste). */
+    var planRequest by mutableStateOf<QuickPlanRequest?>(null)
+    /** Zählt übernommene Änderungen der Planung, damit „Nächster Termin“ neu lädt; [planDay] = zuletzt geplanter Tag. */
+    var planChanged by mutableStateOf(0)
+    var planDay: String? = null
     /** Kundenansicht (Fotos, Unterschrift) im Vollbild über der ganzen App. */
     var customerView by mutableStateOf<CustomerView?>(null)
     /** Entwurf, der nach einem Abstecher (Kamera) ohne Hinweis weitergeführt wird. */
@@ -286,6 +291,10 @@ fun MainScreen(model: AppModel, session: Session, nav: Nav = remember { Nav(Tab.
       }
         nav.captureOpenFor?.let { id -> CaptureHub(bauakteId = id, onDismiss = { nav.captureOpenFor = null }) }
         nav.captureTask?.let { request -> CaptureFlow(request, onDone = { nav.captureTask = null }) }
+        QuickPlanHost(nav.planRequest, onClose = { nav.planRequest = null }) { day ->
+            nav.planDay = day
+            nav.planChanged += 1
+        }
     }
 }
 

@@ -109,88 +109,17 @@ object SiteList {
             .mapValues { (_, list) -> list.minBy { it.day + (it.startTime ?: "99") } }
 
     /** „Heute, 07:00“, „Morgen“, „Mi., 25.11., 07:00“. */
-    fun appointmentText(job: PlannedJob, today: LocalDate): String {
-        val day = ApiDate.day(job.day) ?: return job.day
+    fun appointmentText(job: PlannedJob, today: LocalDate): String = appointmentText(job.day, job.startTime, today)
+
+    /** Wie oben, aus Tag (JJJJ-MM-TT) und Beginn (für Einsätze aus dem Tagesplan der Disposition). */
+    fun appointmentText(dayText: String, startTime: String?, today: LocalDate): String {
+        val day = ApiDate.day(dayText) ?: return dayText
         val days = java.time.temporal.ChronoUnit.DAYS.between(today, day)
         val date = when (days) {
             0L -> "Heute"
             1L -> "Morgen"
             else -> "${Dates.weekdayShort(day)}, ${Dates.dayMonth(day)}"
         }
-        return listOfNotNull(date, Dates.clock(job.startTime)).joinToString(", ")
+        return listOfNotNull(date, Dates.clock(startTime)).joinToString(", ")
     }
-}
-
-/**
- * Ablauf einer Baustelle als Schritte aus vorhandenen Daten: Erstbegehung, Einbringen, Belegreife (CM-Messung), Abnahme.
- * Der erste offene Schritt ist der nächste; ihn kann man direkt erfassen.
- */
-object SiteWorkflow {
-    enum class Kind(val title: String) { InitialInspection("Erstbegehung"), Laying("Estrich einbringen"), Readiness("Belegreife"), Acceptance("Abnahme") }
-
-    enum class State { Done, InProgress, Open, Skipped }
-
-    data class Step(val kind: Kind, val state: State, val detail: String) {
-        val isDone: Boolean get() = state == State.Done || state == State.Skipped
-    }
-
-    data class Progress(val steps: List<Step>) {
-        val next: Step? get() = steps.firstOrNull { !it.isDone }
-        val done: Int get() = steps.count { it.isDone }
-        val summary: String get() = if (next == null) "Alle Schritte erledigt" else "${done} von ${steps.size} erledigt"
-    }
-
-    fun of(
-        bauakte: Bauakte, inspections: List<Inspection>, rooms: List<Room>, acceptances: List<Acceptance>,
-        inspectionsOn: Boolean = true, acceptanceOn: Boolean = true,
-    ): Progress {
-        val steps = mutableListOf<Step>()
-        if (inspectionsOn) {
-            steps += when (InitialInspection.state(bauakte, inspections)) {
-                InitialInspectionState.Done -> {
-                    val last = inspections.filter { it.isInitial }.mapNotNull { it.performedAt }.maxOrNull()
-                    Step(Kind.InitialInspection, State.Done, last?.let { "Durchgeführt am ${dateText(it)}" } ?: "Durchgeführt")
-                }
-                InitialInspectionState.Waived -> Step(Kind.InitialInspection, State.Skipped, "Nicht erforderlich")
-                InitialInspectionState.Open -> Step(Kind.InitialInspection, State.Open, "Noch nicht durchgeführt")
-            }
-        }
-        val laid = rooms.count { it.status == RoomStatus.Laid || it.status == RoomStatus.Ready }
-        val afterLaying = bauakte.status == BauakteStatus.Drying || bauakte.status == BauakteStatus.Completed
-        steps += when {
-            rooms.isNotEmpty() && laid == rooms.size -> Step(Kind.Laying, State.Done, "Alle ${rooms.size} Räume eingebracht")
-            rooms.isNotEmpty() && laid > 0 -> Step(Kind.Laying, State.InProgress, "$laid von ${rooms.size} Räumen eingebracht")
-            afterLaying -> Step(Kind.Laying, State.Done, "Eingebracht")
-            bauakte.status == BauakteStatus.InProgress -> Step(Kind.Laying, State.InProgress, "In Ausführung")
-            rooms.isNotEmpty() -> Step(Kind.Laying, State.Open, "${rooms.size} Räume geplant")
-            else -> Step(Kind.Laying, State.Open, "Noch nicht begonnen")
-        }
-        if (inspectionsOn) {
-            val measurement = inspections.filter { it.isCmMeasurement && !it.notRequired }.maxByOrNull { it.performedAt ?: Instant.MIN }
-            val ready = measurement?.let { it.isReady ?: it.measured?.let { v -> it.limit?.let { l -> v <= l } } }
-            val readyRooms = rooms.count { it.status == RoomStatus.Ready }
-            steps += when {
-                ready == true -> Step(Kind.Readiness, State.Done, "Belegreif${measurement.measured?.let { " (${percent(it)} CM-%)" } ?: ""}")
-                ready == false -> Step(Kind.Readiness, State.InProgress, "Noch nicht belegreif${measurement.measured?.let { " (${percent(it)} CM-%)" } ?: ""}")
-                rooms.isNotEmpty() && readyRooms == rooms.size -> Step(Kind.Readiness, State.Done, "Alle Räume belegreif")
-                readyRooms > 0 -> Step(Kind.Readiness, State.InProgress, "$readyRooms von ${rooms.size} Räumen belegreif")
-                bauakte.status == BauakteStatus.Completed -> Step(Kind.Readiness, State.Done, "Abgeschlossen")
-                else -> Step(Kind.Readiness, State.Open, "CM-Messung ausstehend")
-            }
-        }
-        if (acceptanceOn) {
-            val acceptance = acceptances.maxByOrNull { it.performedAt ?: Instant.MIN }
-            steps += when {
-                acceptance == null -> Step(Kind.Acceptance, if (bauakte.status == BauakteStatus.Completed) State.Done else State.Open,
-                    if (bauakte.status == BauakteStatus.Completed) "Bauakte abgeschlossen" else "Noch keine Abnahme")
-                acceptance.state == "awaitingCustomer" -> Step(Kind.Acceptance, State.InProgress, acceptance.stateLabel)
-                else -> Step(Kind.Acceptance, State.Done, acceptance.performedAt?.let { "Abgenommen am ${dateText(it)}" } ?: acceptance.stateLabel)
-            }
-        }
-        return Progress(steps)
-    }
-
-    private fun dateText(instant: Instant) = Dates.date(instant.atZone(Dates.zone).toLocalDate())
-
-    private fun percent(value: Double) = String.format(Locale.GERMANY, "%.1f", value)
 }

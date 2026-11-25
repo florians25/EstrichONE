@@ -154,6 +154,34 @@ object OfflinePack {
                 isComplete -> "Auf dem Gerät verfügbar, mit ${if (documents == 1) "1 Dokument" else "$documents Dokumenten"}"
                 else -> "Auf dem Gerät verfügbar, $documentsLoaded von $documents Dokumenten geladen"
             }
+
+        /** Zustand für das Symbol oben in der Bauakte. */
+        enum class Kind { Complete, Loading, DataOnly }
+
+        /** Alles da, Dokumente zum Teil geladen oder nur die Daten ohne Dokumente. */
+        val kind: Kind
+            get() = when {
+                isComplete -> Kind.Complete
+                documentsLoaded > 0 -> Kind.Loading
+                else -> Kind.DataOnly
+            }
+
+        /** Kurzer Zustand für Symbol und Vorlesefunktion. */
+        val title: String
+            get() = when (kind) {
+                Kind.Complete -> "Auf dem Gerät verfügbar"
+                Kind.Loading -> "Dokumente werden geladen"
+                Kind.DataOnly -> "Nur Daten auf dem Gerät"
+            }
+
+        /** Erklärung beim Antippen des Symbols. */
+        val detail: String
+            get() = when (kind) {
+                Kind.Complete -> if (documents == 0) "Die Bauakte liegt vollständig auf dem Gerät und lässt sich ohne Verbindung öffnen und bearbeiten."
+                else "Die Bauakte liegt vollständig auf dem Gerät, mit ${if (documents == 1) "1 Dokument" else "$documents Dokumenten"}. Sie lässt sich ohne Verbindung öffnen und bearbeiten."
+                Kind.Loading -> "Die Daten liegen auf dem Gerät. $documentsLoaded von $documents Dokumenten sind geladen, die übrigen folgen bei Verbindung."
+                Kind.DataOnly -> "Die Daten liegen auf dem Gerät. ${if (documents == 1) "Das Dokument ist" else "Die $documents Dokumente sind"} noch nicht geladen und nur mit Verbindung zu öffnen."
+            }
     }
 
     /** Schlüssel der geladenen Dateien mit Größe (dauerhaft in den Metadaten, damit nichts doppelt geladen wird). */
