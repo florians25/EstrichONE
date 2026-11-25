@@ -2,7 +2,8 @@ import EstrichCore
 import SwiftUI
 
 /// Bautagebuch-Eintrag: Tag, was geschah, optional Wetter, Temperatur und Anwesende. Schnell erfasst über
-/// Textbausteine für die häufigsten Ereignisse auf der Estrichbaustelle.
+/// Textbausteine für die häufigsten Ereignisse auf der Estrichbaustelle oder per Diktat. Die Eingaben werden laufend als
+/// Entwurf gesichert und nach einem Abbruch oder Neustart wieder angeboten.
 struct NewDiaryEntryView: View {
     static let phrases = [
         "Estrich eingebracht", "Randdämmstreifen gesetzt", "Folie verlegt", "Aufheizen begonnen",
@@ -10,9 +11,14 @@ struct NewDiaryEntryView: View {
     ]
 
     let bauakteId: UUID
+    /// Vorschlag für den Text (z. B. „Angekommen um 07:42 Uhr.“); ein gespeicherter Entwurf hat Vorrang.
+    var suggestedText = ""
     let onDone: () -> Void
 
     @Environment(AppModel.self) private var model
+    @Environment(\.shotScene) private var shotScene
+    @State private var keeper = DraftKeeper<DiaryDraft>(kind: DraftKind.diary)
+    @State private var restoredAt: Date?
     @State private var day = Date.now
     @State private var text = ""
     @State private var weather: DiaryWeather?
@@ -25,12 +31,16 @@ struct NewDiaryEntryView: View {
     var body: some View {
         NavigationStack {
             Form {
+                if let restoredAt {
+                    DraftRestoredNotice(savedAt: restoredAt) { discardDraft() }
+                }
                 DatePicker("Tag", selection: $day, in: ...Date.now, displayedComponents: .date)
                 Section("Was ist passiert?") {
                     TextField("z. B. Estrich im EG eingebracht, 65 mm", text: $text, axis: .vertical)
                         .lineLimit(4...12)
                         .focused($focused)
                         .accessibilityIdentifier("diaryTextField")
+                    DictationRow(text: $text)
                     // Alle Textbausteine auf einen Blick (umbrechend statt seitlich zu wischen), groß genug für Handschuhe.
                     ChipFlow(spacing: Space.s) {
                         ForEach(Self.phrases, id: \.self) { phrase in
@@ -77,8 +87,56 @@ struct NewDiaryEntryView: View {
                         .accessibilityIdentifier("saveDiaryButton")
                 }
             }
-            .task { focused = true }
+            .task {
+                await restoreDraft()
+                // Mit wiederhergestelltem Entwurf bleibt die Tastatur zu, damit der Hinweis zu sehen ist.
+                focused = restoredAt == nil && shotScene != "tagebuch-diktat"
+            }
+            .autosavesDraft(keeper, value: draft)
+            .keepsScreenAwake()
         }
+    }
+
+    private var draft: DiaryDraft {
+        DiaryDraft(day: CalendarDay.string(day), text: text, weather: weather?.rawValue,
+                   temperature: recordsTemperature ? temperature : nil, workers: workers)
+    }
+
+    private func restoreDraft() async {
+        let stored = await keeper.restore(scope: bauakteId, model: model)
+        #if DEBUG
+        if shotScene == "tagebuch-entwurf" {
+            text = "Estrich im EG eingebracht, 65 mm.\nRanddämmstreifen im Bad nachgesetzt."
+            weather = .cloudy
+            workers = 3
+            restoredAt = Date.now.addingTimeInterval(-25 * 60)
+            return
+        }
+        if shotScene != nil { return }
+        #endif
+        guard let stored, !stored.value.isEmpty else {
+            if text.isEmpty { text = suggestedText }
+            return
+        }
+        text = stored.value.text
+        day = CalendarDay.date(stored.value.day) ?? day
+        weather = stored.value.weather.flatMap(DiaryWeather.init(rawValue:))
+        if let degrees = stored.value.temperature {
+            recordsTemperature = true
+            temperature = degrees
+        }
+        workers = stored.value.workers
+        restoredAt = stored.savedAt
+    }
+
+    private func discardDraft() {
+        text = suggestedText
+        weather = nil
+        recordsTemperature = false
+        workers = 0
+        day = .now
+        restoredAt = nil
+        Task { await keeper.discardRestored() }
     }
 
     /// Textbaustein anfügen: neuer Satz bzw. neue Zeile, falls schon Text da ist.
@@ -94,6 +152,7 @@ struct NewDiaryEntryView: View {
                                                           temperatureCelsius: recordsTemperature ? temperature : nil,
                                                           workersPresent: workers == 0 ? nil : workers), to: bauakteId)
             model.active?.sync?.localChangeMade()
+            await keeper.finish()
             onDone()
         } catch {
             self.error = error.message

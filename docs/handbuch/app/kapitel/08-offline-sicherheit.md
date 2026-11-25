@@ -15,9 +15,16 @@ erfassen. Den Stand sehen Sie
 - unter **Mehr** → **Synchronisation**: „Alles übertragen“ mit dem Zeitpunkt des letzten vollständigen Abgleichs, darunter
   **Ausstehend** mit allem, was noch auf die Übertragung wartet (Fotos, Dokumente, Einträge).
 
-**Jetzt synchronisieren** stößt den Abgleich sofort an. Große Dateien wie Fotos und Videos werden einzeln übertragen;
-schlägt ein Upload fehl, versucht die App es später selbst noch einmal, oder Sie tippen auf **Fehlgeschlagene Uploads
-erneut versuchen**.
+**Jetzt synchronisieren** stößt den Abgleich sofort an. Große Dateien wie Fotos und Videos werden einzeln übertragen
+und nach einer Unterbrechung an derselben Stelle fortgesetzt. Unter **Dateien** steht je Datei, was es ist und zu welcher
+Baustelle sie gehört. Schlägt ein Upload fehl, erklärt die Zeile den Grund in Worten, und **Erneut senden** startet einen
+neuen Versuch.
+
+**Übertragungszeile:** Solange Fotos, Videos oder Dokumente noch nicht beim Server sind, zeigt eine ruhige Zeile über den
+Reitern, was wartet, z. B. „3 Fotos warten auf Übertragung. Sie liegen sicher auf dem Gerät.“ **Details** öffnet die
+Synchronisation. Bei einem Fehler wird die Zeile rot und bietet **Erneut senden** an. Kurze Übertragungen blenden die
+Zeile nicht ein. Wechseln Sie die App, nutzt EstrichONE die Hintergrundzeit, die iOS gewährt, um Begonnenes
+abzuschließen; der Rest folgt beim nächsten Öffnen.
 
 **Bitte prüfen:** Lehnt der Server eine Änderung ab, etwa weil das Büro dieselbe Angabe gleichzeitig anders geändert
 hat oder ein Recht fehlt, steht sie unter **Vom Server abgelehnt** mit dem Grund. Solche Vorgänge werden nicht erneut
@@ -30,6 +37,14 @@ Ohne Netz zeigt die App **Offline**. Sie können wie gewohnt weiterarbeiten: Bau
 Dokumente aufnehmen, Bautagebuch, Mängel, Aufgaben, Erstbegehung, CM-Messung und Abnahme erfassen, neue Bauakten und
 Kunden anlegen, Chatnachrichten schreiben und Meldungen an die IT verfassen. Alles wird auf dem Gerät gespeichert und
 übertragen, sobald wieder Verbindung besteht.
+
+**Auf dem Gerät verfügbar:** Die Daten Ihrer Bauakten (Kontakte, Hinweise, Räume, Protokolle) liegen nach dem Abgleich
+auf dem Gerät. Für die Einsätze von heute und der nächsten Tage lädt die App zusätzlich die Dokumente (Pläne,
+Lieferscheine, Protokolle; je Datei bis 30 MB) und die 40 neuesten Fotos in Bildschirmgröße vorab, damit Sie sie auf der
+Baustelle ohne Netz öffnen können. Im Kopf der Bauakte steht dann **Auf dem Gerät verfügbar**; solange noch geladen wird,
+**Wird für unterwegs geladen**. Antippen zeigt, was bereitliegt. Für jede andere Bauakte schalten Sie das über
+**Weitere Aktionen** → **Auf dem Gerät bereithalten** ein. Nicht mehr geplante Bauakten gibt die App nach einigen Tagen
+wieder frei; **Cache leeren** entfernt alles Vorabgeladene sofort.
 
 Nur mit Verbindung möglich sind Dinge, die der Server erzeugt oder prüft: **PDFs** (Bauakte, Protokolle), der
 **Änderungsverlauf**, die **Konfliktprüfung** und **Freigabe** in der Disposition, Freigabelinks für die Abnahme und

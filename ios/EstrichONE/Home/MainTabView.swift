@@ -26,6 +26,7 @@ struct MainTabView: View {
     @State private var quick = QuickActionCenter.shared
     @State private var quickCamera: Bauakte?
     @State private var quickDiary: Bauakte?
+    @State private var quickDefect: Bauakte?
     /// Schnellaktion ohne heutigen Einsatz und ohne zuletzt geöffnete Bauakte: erst die Baustelle wählen.
     @State private var quickPick: QuickAction?
     @State private var quickTodayIds: [UUID] = []
@@ -44,6 +45,7 @@ struct MainTabView: View {
         VStack(spacing: 0) {
         if let sync = model.active?.sync { UpdateAnnounceBanner(sync: sync) }
         if let sync = model.active?.sync { SystemStatusStrip(sync: sync, showsNotices: selection != .today) }
+        if let sync = model.active?.sync { TransferStrip(sync: sync) }
         TabView(selection: $selection) {
             HomeView { conversation in openChat(conversation) }
                 .tabItem { Label("Heute", systemImage: "sun.max") }
@@ -88,14 +90,19 @@ struct MainTabView: View {
         .sheet(item: $quickDiary) { bauakte in
             NewDiaryEntryView(bauakteId: bauakte.id) { quickDiary = nil }
         }
+        .sheet(item: $quickDefect) { bauakte in
+            NewWorkItemView(bauakteId: bauakte.id, initialKind: .defect) {
+                quickDefect = nil
+            }
+        }
         .sheet(item: $quickPick) { action in
-            BauakteQuickPicker(title: action == .photo ? "Foto: Baustelle wählen" : "Bautagebuch: Baustelle wählen", todayIds: quickTodayIds) { bauakte in
+            BauakteQuickPicker(title: Self.pickerTitle(action), todayIds: quickTodayIds) { bauakte in
                 quickPick = nil
                 guard let bauakte else { return }
                 Task {
                     // Erst wenn die Auswahl geschlossen ist, Kamera bzw. Formular öffnen.
                     try? await Task.sleep(for: .milliseconds(450))
-                    if action == .photo { quickCamera = bauakte } else { quickDiary = bauakte }
+                    open(action, for: bauakte)
                 }
             }
         }
@@ -104,6 +111,13 @@ struct MainTabView: View {
             unreadTickets = await TicketReadState.unreadCount(model: model)
             if let sync = model.active?.sync, sync.chat == nil { await sync.refreshChat() }
             if let inbox = try? await model.active?.client.notifications() { push.setUnread(inbox: inbox) }
+        }
+        // Nach einem vollständigen Abgleich: Dokumente und Fotos der heutigen und kommenden Einsätze vorab laden.
+        .task(id: model.active?.sync?.revision) {
+            guard let sync = model.active?.sync, sync.lastOutcome == .completed else { return }
+            let today = await TodayContext.bauakteIds(model: model)
+            // Eigener Auftrag: läuft weiter, auch wenn inzwischen etwas erfasst wird.
+            Task { await sync.offline.refresh(todayExtra: today) }
         }
         .task { push.refreshPermission() }
         // Neues APNs-Token (oder nach der Anmeldung) beim Server registrieren.
@@ -161,9 +175,14 @@ struct MainTabView: View {
             toast = "Das Bautagebuch ist in Ihrem Betrieb nicht eingeschaltet."
             return
         }
+        if action == .defect, model.active?.sync?.modules.isOn(AppModules.defects) == false {
+            toast = "Mängel sind in Ihrem Betrieb nicht eingeschaltet."
+            return
+        }
         quickTodayIds = await TodayContext.bauakteIds(model: model)
         var target: Bauakte?
-        if let id = quickTodayIds.first {
+        // Zuerst der laufende Einsatz (sonst der nächste heute), dann die übrigen Baustellen von heute.
+        if let id = await TodayContext.currentBauakteId(model: model) ?? quickTodayIds.first {
             target = try? await service.bauakte(id)
         }
         if target == nil {
@@ -173,7 +192,24 @@ struct MainTabView: View {
             quickPick = action
             return
         }
-        if action == .photo { quickCamera = target } else { quickDiary = target }
+        open(action, for: target)
+    }
+
+    private static func pickerTitle(_ action: QuickAction) -> String {
+        switch action {
+        case .photo: "Foto: Baustelle wählen"
+        case .defect: "Mangel: Baustelle wählen"
+        case .diary, .search: "Bautagebuch: Baustelle wählen"
+        }
+    }
+
+    private func open(_ action: QuickAction, for bauakte: Bauakte) {
+        switch action {
+        case .photo: quickCamera = bauakte
+        case .diary: quickDiary = bauakte
+        case .defect: quickDefect = bauakte
+        case .search: break
+        }
     }
 
     /// Screenshot-Modus: passenden Reiter wählen.

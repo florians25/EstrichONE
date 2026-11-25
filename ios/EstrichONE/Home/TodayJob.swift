@@ -100,6 +100,8 @@ struct TodayJob: Identifiable {
 struct TodayJobCard: View {
     enum Action {
         case open, photo, diary, defect, route, call, chat
+        /// Ankunft bzw. Abschluss mit Uhrzeit festhalten (als Eintrag im Bautagebuch).
+        case arrived, finished
     }
 
     let job: TodayJob
@@ -112,6 +114,8 @@ struct TodayJobCard: View {
     var canCapture = true
     /// Chat ist eingeschaltet (sonst ist „Chat“ ausgegraut).
     var chatAvailable = true
+    /// Heute festgehaltene Ankunft und Abschluss; `nil` blendet die beiden Schaltflächen aus (z. B. ohne Bautagebuch).
+    var visit: SiteVisit?
     let perform: (Action) -> Void
     @Environment(\.dynamicTypeSize) private var typeSize
 
@@ -176,6 +180,7 @@ struct TodayJobCard: View {
             }
 
             actionBar
+            if let visit, canCapture { visitBar(visit) }
 
             // Unter den Schnellaktionen: Kennzahlen, Zugang, Hinweise und der Chat der Baustelle.
             if let glance, !glance.isEmpty {
@@ -262,6 +267,28 @@ struct TodayJobCard: View {
                 .accessibilityIdentifier("todayJobOpenBauakte")
         }
         .buttonStyle(ActionTileStyle())
+    }
+
+    /// „Angekommen“ und „Fertig“ mit Uhrzeit: zwei große Schaltflächen, nach dem Festhalten mit Haken und Uhrzeit.
+    private func visitBar(_ visit: SiteVisit) -> some View {
+        HStack(spacing: Space.s) {
+            Button { perform(.arrived) } label: {
+                Label(visit.arrivedAt.map { "Angekommen \(SiteVisitLog.clock($0))" } ?? "Angekommen",
+                      systemImage: visit.arrivedAt == nil ? "mappin.and.ellipse" : "checkmark.circle.fill")
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+            .estrichButton(.secondary, size: .regular, fullWidth: true)
+            .accessibilityIdentifier("todayJobArrived")
+            Button { perform(.finished) } label: {
+                Label(visit.finishedAt.map { "Fertig \(SiteVisitLog.clock($0))" } ?? "Fertig",
+                      systemImage: visit.finishedAt == nil ? "flag.checkered" : "checkmark.circle.fill")
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+            .estrichButton(.secondary, size: .regular, fullWidth: true)
+            .accessibilityIdentifier("todayJobFinished")
+        }
     }
 
     // MARK: Bausteine

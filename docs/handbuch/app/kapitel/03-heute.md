@@ -60,6 +60,12 @@ Handschuhen und mit einer Hand. Kennzahlen, Zugang, Hinweise und der Chat der Ba
 | **Chat** | öffnet den Chat der Baustelle im Tab **Chat** (sonst die Liste) |
 | **Bauakte** | öffnet die Bauakte |
 
+**Angekommen** und **Fertig** liegen direkt darunter. Tippen Sie bei der Ankunft auf **Angekommen** und bestätigen Sie
+**Im Bautagebuch festhalten**: Die App legt den Eintrag „Angekommen um 07:42 Uhr.“ im Bautagebuch der Baustelle an, und
+die Schaltfläche zeigt danach die Uhrzeit. **Fertig** hält den Abschluss fest und schreibt die Dauer vor Ort dazu
+(„Fertig um 15:10 Uhr. Dauer vor Ort: 7 Std. 28 Min.“). Beides funktioniert ohne Netz. Die beiden Schaltflächen
+erscheinen, wenn das Bautagebuch in Ihrem Betrieb eingeschaltet ist.
+
 **Foto aufnehmen**, **Bautagebuch-Eintrag** und **Mangel melden** stehen unter **…** (**⋮**) oben rechts in der Karte.
 Auf dem iPhone geht es auch ohne Zielen: **langes Drücken** auf die Karte zeigt alle Handgriffe. Bei den weiteren
 Einsätzen bietet **Wischen nach rechts** **Foto** und **Mangel**, **Wischen nach links** **Route** und **Anrufen**.

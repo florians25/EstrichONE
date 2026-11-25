@@ -58,6 +58,13 @@ struct SchemaInspectionView: View {
     @State private var error: String?
     @State private var saving = false
     @State private var prefilled = false
+    @State private var keeper = DraftKeeper<InspectionDraft>(kind: DraftKind.inspection)
+    @State private var restoredAt: Date?
+
+    private var draft: InspectionDraft {
+        InspectionDraft(notRequired: notRequired, reason: reason, checks: checks.mapValues(\.rawValue), remarks: remarks, values: values,
+                        checkPhotos: checkPhotos, photos: photos, notes: notes)
+    }
 
     private static let general = "__general"
 
@@ -70,6 +77,9 @@ struct SchemaInspectionView: View {
             Form {
                 if let error {
                     Section { StatusMessage(kind: .error, text: error).accessibilityIdentifier("inspectionError") }
+                }
+                if let restoredAt {
+                    DraftRestoredNotice(savedAt: restoredAt) { discardDraft() }
                 }
                 Section {
                     progressHeader
@@ -101,6 +111,7 @@ struct SchemaInspectionView: View {
                     TextField("Besonderheiten, Absprachen, Maße", text: $notes, axis: .vertical)
                         .lineLimit(3...10)
                         .accessibilityIdentifier("inspectionNotesField")
+                    DictationRow(text: $notes)
                 }
                 Section {
                     Button { capture(Self.general) } label: {
@@ -130,6 +141,7 @@ struct SchemaInspectionView: View {
                 .background(.bar)
             }
             .sensoryFeedback(.error, trigger: error) { _, new in new != nil }
+            .autosavesDraft(keeper, value: draft)
             .fullScreenCover(item: Binding(get: { capturingFor.map(CaptureTarget.init) }, set: { capturingFor = $0?.id })) { target in
                 CameraView(bauakte: bauakte, allowsChangingBauakte: false, caption: caption(for: target.id)) { _ in
                     capturingFor = nil
@@ -145,6 +157,7 @@ struct SchemaInspectionView: View {
             .task {
                 lists = await model.active?.service?.valueLists() ?? ValueLists([])
                 prefill()
+                await restoreDraft()
                 if shotScene == "erstbegehung", checks.isEmpty {
                     // Screenshot-Modus: ein Teil ist schon geprüft, ein Mangel mit Bemerkung.
                     for (index, field) in checkFields.prefix(3).enumerated() {
@@ -267,6 +280,40 @@ struct SchemaInspectionView: View {
         }
     }
 
+    /// Unterbrochene Erstbegehung fortsetzen (nicht bei einer Korrektur und nicht im Screenshot-Modus).
+    private func restoreDraft() async {
+        // Eine Korrektur wird nicht als Entwurf geführt (sie beginnt immer mit den Angaben des Protokolls).
+        guard correcting == nil, shotScene == nil else { return }
+        guard let stored = await keeper.restore(scope: bauakte.id, model: model), !stored.value.isEmpty else { return }
+        let value = stored.value
+        notRequired = value.notRequired
+        reason = value.reason
+        var restored: [String: CheckResult] = [:]
+        for (key, raw) in value.checks {
+            if let result = CheckResult(rawValue: raw) { restored[key] = result }
+        }
+        checks = restored
+        remarks = value.remarks
+        values = value.values
+        checkPhotos = value.checkPhotos
+        photos = value.photos
+        notes = value.notes
+        restoredAt = stored.savedAt
+    }
+
+    private func discardDraft() {
+        notRequired = false
+        reason = ""
+        checks = [:]
+        remarks = [:]
+        values = [:]
+        checkPhotos = [:]
+        photos = []
+        notes = ""
+        restoredAt = nil
+        Task { await keeper.discardRestored() }
+    }
+
     /// Korrektur: bisherige Angaben übernehmen.
     private func prefill() {
         guard !prefilled else { return }
@@ -293,6 +340,7 @@ struct SchemaInspectionView: View {
                                                   photoFileIds: photos, remarks: notRequired ? reason : nil, notes: notes,
                                                   corrects: correcting?.id)
             model.active?.sync?.localChangeMade()
+            await keeper.finish()
             onDone()
         } catch {
             self.error = error.message

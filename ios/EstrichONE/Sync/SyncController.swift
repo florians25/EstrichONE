@@ -12,6 +12,8 @@ final class SyncController {
     let files: FileVault
     /// Kleine Vorschauen, verschlüsselt mit Größenlimit (Raster und Listen auch offline).
     let thumbs: ThumbnailDiskCache
+    /// Vorab geladene Dokumente und Fotos der heutigen und kommenden Einsätze („Auf dem Gerät verfügbar“).
+    let offline: OfflineCenter
     private let engine: SyncEngine
     private let storageRoot: URL
     private let client: AuthorizedClient
@@ -45,6 +47,9 @@ final class SyncController {
     /// Zeitpunkt der letzten Serverantwort, die Übersteuerung „auf eigene Gefahr“ und ob der Server gerade fehlt.
     private(set) var connection = ReadOnlyPolicy()
 
+    /// Was noch nicht beim Server ist, nach Art gezählt („3 Fotos warten auf Übertragung“).
+    private(set) var transfer = TransferQueue()
+
     /// Fortschritt laufender Uploads (Bytes und Anzahl Dateien), solange etwas hochgeladen wird.
     private(set) var uploadProgress: (sent: Int64, total: Int64, files: Int)?
 
@@ -64,6 +69,7 @@ final class SyncController {
         thumbs = ThumbnailDiskCache(directory: directory.appending(path: "thumbs"), key: account.dataKey)
         storageRoot = storage.root
         engine = SyncEngine(store: store, transport: APISyncTransport(client: client), files: files)
+        offline = OfflineCenter(store: store, client: client, service: BauakteService(store: store, files: files, userId: account.user.id))
         self.client = client
         // Reste abgebrochener Aufnahmen und Vorschauen (älter als ein Tag) entfernen – gespeicherte Fotos liegen nie dort.
         Task.detached(priority: .background) {
@@ -382,7 +388,10 @@ final class SyncController {
     }
 
     private func refreshUploadProgress() async {
-        let active = ((try? await store.uploads()) ?? []).filter { $0.state == .waiting || $0.state == .uploading }
+        let uploads = (try? await store.uploads()) ?? []
+        let queue = TransferQueue(uploads: uploads, operations: (try? await store.operations()) ?? [])
+        if queue != transfer { transfer = queue }
+        let active = uploads.filter { $0.state == .waiting || $0.state == .uploading }
         uploadProgress = active.isEmpty ? nil
             : (active.reduce(0) { $0 + $1.uploadedBytes }, active.reduce(0) { $0 + $1.size }, active.count)
     }
@@ -482,6 +491,7 @@ extension SyncController {
     /// hochgeladene Daten bleiben immer (sie liegen verschlüsselt in der Ablage und stehen nicht auf „hochgeladen“).
     func clearCache(thumbnails: ThumbnailLoader?) async {
         _ = try? await engine.releaseUploadedCopies()
+        await offline.clear()
         if let thumbnails { await thumbnails.clear() } else { thumbs.clear() }
         let scratchDirectories = Self.scratchDirectories
         await Task.detached(priority: .utility) {

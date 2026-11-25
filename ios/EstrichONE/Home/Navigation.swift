@@ -132,4 +132,11 @@ enum TodayContext {
         let board = await DispatchData.cached(day: day, model: model)?.board
         return board.map { board in board.sortedSites.filter { board.mySiteIds.contains($0.bauakteId) }.map(\.bauakteId) } ?? []
     }
+
+    /// Bauakte des laufenden Einsatzes (sonst des nächsten heute) aus der eigenen Planung; `nil` ohne Einsatz heute.
+    @MainActor
+    static func currentBauakteId(model: AppModel) async -> UUID? {
+        guard let store = model.active?.sync?.store, let planning = await MyPlanning(store: store).cached() else { return nil }
+        return QuickTarget.bauakteId(assignments: planning.range.assignments, today: CalendarDay.string(.now), now: .now)
+    }
 }

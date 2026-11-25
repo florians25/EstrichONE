@@ -282,9 +282,12 @@ private struct ResultChip: View {
     }
 }
 
-/// Unterschrift mit Finger oder Apple Pencil (PencilKit); liefert ein PNG oder `nil` bei Abbruch.
+/// Unterschrift mit Finger oder Apple Pencil (PencilKit); liefert ein PNG oder `nil` bei Abbruch. Mit `signerName` wird
+/// zusätzlich der Name des Unterzeichners abgefragt (er steht im Protokoll unter der Unterschrift). Die Ansicht zeigt nur
+/// Titel, Namen und Unterschriftsfeld und eignet sich so, um das Gerät dem Kunden in die Hand zu geben.
 struct SignatureView: View {
     var title = "Unterschrift des Kunden"
+    var signerName: Binding<String>?
     let onDone: (Data?) -> Void
     @State private var canvas = PKCanvasView()
     @State private var isEmpty = true
@@ -292,6 +295,21 @@ struct SignatureView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 12) {
+                if let signerName {
+                    VStack(alignment: .leading, spacing: Space.xs) {
+                        Text("Name des Unterzeichners").font(Typo.metaStrong).foregroundStyle(Theme.textSecondary)
+                        TextField("Vor- und Nachname", text: signerName)
+                            .textContentType(.name)
+                            .textInputAutocapitalization(.words)
+                            .autocorrectionDisabled()
+                            .font(Typo.body)
+                            .padding(.horizontal, Space.m)
+                            .frame(minHeight: Size.button)
+                            .background(Theme.surface, in: RoundedRectangle(cornerRadius: Radius.s, style: .continuous))
+                            .overlay(RoundedRectangle(cornerRadius: Radius.s, style: .continuous).strokeBorder(Theme.separator))
+                            .accessibilityIdentifier("signerNameField")
+                    }
+                }
                 Text("Bitte hier unterschreiben").font(.subheadline).foregroundStyle(Theme.textSecondary)
                 SignatureCanvas(canvas: canvas) { isEmpty = $0 }
                     .frame(height: 260)
@@ -301,14 +319,17 @@ struct SignatureView: View {
                         Rectangle().fill(Theme.separator).frame(height: 1).padding(.horizontal, 24).padding(.bottom, 56)
                     }
                     .accessibilityIdentifier("signatureCanvas")
-                Button("Löschen", role: .destructive) {
+                Button("Unterschrift löschen", role: .destructive) {
                     canvas.drawing = PKDrawing()
                     isEmpty = true
                 }
+                .frame(minWidth: Size.minTap, minHeight: Size.minTap)
                 .disabled(isEmpty)
                 Spacer()
             }
             .padding()
+            .background(Theme.canvas)
+            .keepsScreenAwake()
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

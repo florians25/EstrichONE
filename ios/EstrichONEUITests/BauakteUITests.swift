@@ -207,6 +207,8 @@ final class BauakteUITests: XCTestCase {
         app.type("1,6", into: "cmValueField")
         XCTAssertTrue(app.wait(for: app.element("readinessLabel"), "label == %@", "Belegreif", timeout: 5))
         app.tap("saveCmButton")
+        // Zusammenfassung vor dem Abschluss bestätigen.
+        app.tap("confirmCmButton")
         let inspections = app.staticTexts["Prüfungen (1)"]
         XCTAssertTrue(inspections.waitForExistence(timeout: 5) || app.reveal(inspections), app.debugDescription)
 
@@ -288,10 +290,13 @@ final class BauakteUITests: XCTestCase {
             app.tap("applySignatureButton")
         }
         app.tap("saveAcceptanceButton")
+        // Zusammenfassung (Kundenansicht) prüfen und abschließen.
+        XCTAssertTrue(app.text(containing: "Fuge Bad nacharbeiten").waitForExistence(timeout: 10), app.debugDescription)
+        app.tap("finishAcceptanceButton")
 
         // In der Bauakte: Protokoll mit Mangel; nach der Übertragung abgeschlossen und als PDF abgelegt.
         // (Die Liste bleibt an der Stelle der Abnahme stehen – der Kopf ist dann nicht im Bild.)
-        XCTAssertTrue(app.element("saveAcceptanceButton").waitForNonExistence(timeout: 15), app.debugDescription)
+        XCTAssertTrue(app.element("finishAcceptanceButton").waitForNonExistence(timeout: 15), app.debugDescription)
         app.tapElement(app.reveal("acceptanceLink"), "acceptanceLink")
         XCTAssertTrue(app.text(containing: "Fuge Bad nacharbeiten").waitForExistence(timeout: 10), app.debugDescription)
         let pdf = app.element("acceptancePdfButton")

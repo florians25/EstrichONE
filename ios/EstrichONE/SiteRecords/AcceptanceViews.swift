@@ -1,9 +1,11 @@
 import EstrichCore
 import SwiftUI
 
-/// Abnahmeprotokoll erfassen (VOB/B § 12): Teilnehmer, Ort, abgenommene Leistung, Ergebnis, Mängel mit Frist, Fotos,
-/// Notizen und die Unterschriften beider Seiten. Funktioniert offline; die Übertragung übernimmt die Synchronisation.
-/// Fehlt die Unterschrift des Auftraggebers, kann er später über einen Freigabelink zustimmen.
+/// Abnahmeprotokoll erfassen (VOB/B § 12) in zwei Schritten: zuerst die Angaben (Ergebnis, Teilnehmer, Leistung, Mängel
+/// mit Frist, Fotos, Notizen), dann die Zusammenfassung, die auch der Kunde sieht und in der beide Seiten unterschreiben
+/// (`AcceptanceReviewView`). Funktioniert offline; die Übertragung übernimmt die Synchronisation. Die Eingaben samt
+/// Unterschriften werden laufend als Entwurf gesichert. Fehlt die Unterschrift des Auftraggebers, kann er später über
+/// einen Freigabelink zustimmen.
 struct NewAcceptanceView: View {
     let bauakte: Bauakte
     var customerName: String?
@@ -26,6 +28,22 @@ struct NewAcceptanceView: View {
     @State private var error: String?
     @State private var saving = false
     @State private var prefilled = false
+    @State private var reviewing = false
+    @State private var keeper = DraftKeeper<AcceptanceDraft>(kind: DraftKind.acceptance)
+    @State private var restoredAt: Date?
+    @Environment(\.shotScene) private var shotScene
+
+    private var input: NewAcceptance {
+        NewAcceptance(location: location, clientName: clientName, contractorName: contractorName, scope: scope, result: result,
+                      notes: notes, photoFileIds: photoIds, defects: defects,
+                      clientSignature: clientSignature, contractorSignature: contractorSignature)
+    }
+
+    private var draft: AcceptanceDraft {
+        AcceptanceDraft(clientName: clientName, contractorName: contractorName, location: location, scope: scope, result: result?.rawValue,
+                        notes: notes, defects: defects.map { .init(title: $0.title, dueDate: $0.dueDate) }, photoIds: photoIds,
+                        clientSignature: clientSignature, contractorSignature: contractorSignature)
+    }
 
     private enum Side: String, Identifiable {
         case client, contractor
@@ -36,11 +54,14 @@ struct NewAcceptanceView: View {
     var body: some View {
         NavigationStack {
             Form {
-                if let error {
+                if let error, !reviewing {
                     Section {
                         Label(error, systemImage: "exclamationmark.triangle.fill").foregroundStyle(Theme.danger)
                             .accessibilityIdentifier("acceptanceError")
                     }
+                }
+                if let restoredAt {
+                    DraftRestoredNotice(savedAt: restoredAt) { discardDraft() }
                 }
                 Section {
                     VStack(alignment: .leading, spacing: Space.xs) {
@@ -108,6 +129,7 @@ struct NewAcceptanceView: View {
                     TextField("Absprachen, Restarbeiten, Besonderheiten", text: $notes, axis: .vertical)
                         .lineLimit(3...12)
                         .accessibilityIdentifier("acceptanceNotesField")
+                    DictationRow(text: $notes)
                 }
                 Section {
                     signatureRow(.client, data: clientSignature)
@@ -115,7 +137,7 @@ struct NewAcceptanceView: View {
                 } header: {
                     Text("Unterschriften")
                 } footer: {
-                    Text("Unterschreibt der Auftraggeber nicht vor Ort, kann er das Protokoll später über einen Freigabelink bestätigen.")
+                    Text("Unterschrieben wird am besten im nächsten Schritt in der Zusammenfassung, die Sie dem Auftraggeber zeigen. Unterschreibt er nicht vor Ort, kann er das Protokoll später über einen Freigabelink bestätigen.")
                 }
             }
             .navigationTitle("Abnahme")
@@ -124,11 +146,13 @@ struct NewAcceptanceView: View {
                 ToolbarItem(placement: .cancellationAction) { Button("Abbrechen", action: onDone) }
             }
             .safeAreaInset(edge: .bottom) {
-                Button { Task { await save() } } label: {
-                    ActionLabel("Abnahme sichern", systemImage: "checkmark", isBusy: saving)
+                Button {
+                    error = nil
+                    reviewing = true
+                } label: {
+                    ActionLabel("Weiter zur Zusammenfassung", systemImage: "doc.text.magnifyingglass", isBusy: false)
                 }
                 .primaryActionStyle()
-                .disabled(saving)
                 .accessibilityIdentifier("saveAcceptanceButton")
                 .padding(.horizontal, Space.l)
                 .padding(.top, Space.m)
@@ -149,8 +173,63 @@ struct NewAcceptanceView: View {
                     }
                 }
             }
+            .fullScreenCover(isPresented: $reviewing) {
+                AcceptanceReviewView(review: AcceptanceReview(input, bauakteTitle: bauakte.title, bauakteNumber: bauakte.number),
+                                     clientName: $clientName, clientSignature: $clientSignature, contractorSignature: $contractorSignature,
+                                     isSaving: saving, error: error, onBack: { reviewing = false }) {
+                    Task { await save() }
+                }
+            }
             .onAppear(perform: prefill)
+            .task { await restoreDraft() }
+            .autosavesDraft(keeper, value: draft)
+            .keepsScreenAwake()
         }
+    }
+
+    /// Unterbrochene Abnahme fortsetzen: Angaben, Mängel, Fotos und schon geleistete Unterschriften.
+    private func restoreDraft() async {
+        let stored = await keeper.restore(scope: bauakte.id, model: model)
+        #if DEBUG
+        if let shotScene {
+            if shotScene.hasPrefix("abnahme-") {
+                // Screenshot-Modus: ausgefülltes Protokoll in der Zusammenfassung.
+                result = .acceptedWithReservations
+                scope = "Zementestrich CT-C25-F4, 65 mm, Erdgeschoss und Obergeschoss"
+                defects = [AcceptanceDefect(title: "Fuge im Bad nacharbeiten", dueDate: CalendarDay.string(Date.now.addingTimeInterval(14 * 86_400)))]
+                notes = "Restarbeiten am Türdurchgang Küche bis Freitag."
+                reviewing = true
+            }
+            return
+        }
+        #endif
+        guard let stored, !stored.value.isEmpty else { return }
+        let value = stored.value
+        clientName = value.clientName
+        contractorName = value.contractorName
+        location = value.location
+        scope = value.scope
+        result = value.result.flatMap(AcceptanceResult.init(rawValue:))
+        notes = value.notes
+        defects = value.defects.map { AcceptanceDefect(title: $0.title, dueDate: $0.dueDate) }
+        photoIds = value.photoIds
+        clientSignature = value.clientSignature
+        contractorSignature = value.contractorSignature
+        restoredAt = stored.savedAt
+    }
+
+    private func discardDraft() {
+        prefilled = false
+        prefill()
+        scope = ""
+        result = nil
+        notes = ""
+        defects = []
+        photoIds = []
+        clientSignature = nil
+        contractorSignature = nil
+        restoredAt = nil
+        Task { await keeper.discardRestored() }
     }
 
     private var defectSection: some View {
@@ -229,12 +308,11 @@ struct NewAcceptanceView: View {
         guard let service = model.active?.service else { return }
         saving = true
         defer { saving = false }
-        let input = NewAcceptance(location: location, clientName: clientName, contractorName: contractorName, scope: scope, result: result,
-                                  notes: notes, photoFileIds: photoIds, defects: defects,
-                                  clientSignature: clientSignature, contractorSignature: contractorSignature)
         do throws(AcceptanceError) {
             try await service.addAcceptance(input, to: bauakte.id)
             model.active?.sync?.localChangeMade()
+            await keeper.finish()
+            reviewing = false
             onDone()
         } catch {
             self.error = error.message
@@ -318,6 +396,17 @@ struct AcceptanceDetailView: View {
     @State private var link: AcceptanceLink?
     @State private var linkError: String?
     @State private var requesting = false
+    @State private var sharing: SharedFile?
+    @State private var mail: MailSheet.Draft?
+    @State private var preparing = false
+    @State private var shareError: String?
+    @State private var bauakteTitle = ""
+    @State private var customerEmail: String?
+
+    private struct SharedFile: Identifiable {
+        let id = UUID()
+        let url: URL
+    }
 
     var body: some View {
         List {
@@ -359,6 +448,30 @@ struct AcceptanceDetailView: View {
                     Section {
                         Button { previewing = pdf } label: { Label("Protokoll (PDF) ansehen", systemImage: "doc.richtext") }
                             .accessibilityIdentifier("acceptancePdfButton")
+                        Button { Task { await share(pdf) } } label: { Label("Protokoll teilen", systemImage: "square.and.arrow.up") }
+                            .disabled(preparing)
+                            .accessibilityIdentifier("acceptanceShareButton")
+                        if MailSheet.isAvailable {
+                            Button { Task { await sendMail(pdf) } } label: {
+                                Label(customerEmail == nil ? "Per E-Mail senden" : "Per E-Mail an den Kunden senden", systemImage: "envelope")
+                            }
+                            .disabled(preparing)
+                            .accessibilityIdentifier("acceptanceMailButton")
+                        }
+                        if let shareError {
+                            Label(shareError, systemImage: "exclamationmark.triangle").foregroundStyle(Theme.danger)
+                        }
+                    } header: {
+                        Text("Protokoll als PDF")
+                    } footer: {
+                        Text("Das PDF liegt auch in den Dokumenten der Bauakte. Die E-Mail sehen Sie vor dem Senden im Mail-Programm.")
+                    }
+                } else if acceptance.state != .completed || acceptance.syncState != .synced {
+                    Section("Protokoll als PDF") {
+                        Text(acceptance.syncState != .synced
+                             ? "Das PDF entsteht, sobald das Protokoll übertragen ist. Es liegt bis dahin sicher auf dem Gerät."
+                             : "Das PDF entsteht, sobald beide Seiten unterschrieben haben oder der Kunde online freigegeben hat.")
+                            .foregroundStyle(Theme.textSecondary)
                     }
                 }
                 if acceptance.state != .completed, !acceptance.hasClientSignature {
@@ -371,7 +484,36 @@ struct AcceptanceDetailView: View {
         .navigationTitle("Abnahmeprotokoll")
         .navigationBarTitleDisplayMode(.inline)
         .filePreview($previewing)
+        .sheet(item: $sharing) { file in ActivitySheet(items: [file.url]) }
+        .sheet(item: $mail) { draft in
+            MailSheet(draft: draft) { mail = nil }.ignoresSafeArea()
+        }
         .task(id: model.active?.sync?.revision) { await reload() }
+    }
+
+    /// Kopie des PDF für den Teilen-Dialog (vom Gerät, sonst vom Server geladen).
+    private func temporaryCopy(_ file: FileItem) async -> URL? {
+        preparing = true
+        defer { preparing = false }
+        do throws(FilePreview.Failure) {
+            shareError = nil
+            return try await FilePreview.temporaryCopy(of: file, using: model)
+        } catch {
+            shareError = "Das PDF konnte nicht geladen werden. Bitte Verbindung prüfen und erneut versuchen."
+            return nil
+        }
+    }
+
+    private func share(_ file: FileItem) async {
+        if let url = await temporaryCopy(file) { sharing = SharedFile(url: url) }
+    }
+
+    private func sendMail(_ file: FileItem) async {
+        guard let url = await temporaryCopy(file), let data = try? Data(contentsOf: url) else { return }
+        let title = bauakteTitle.isEmpty ? "Abnahmeprotokoll" : "Abnahmeprotokoll \(bauakteTitle)"
+        mail = MailSheet.Draft(recipients: [acceptance?.customerEmail ?? customerEmail].compactMap { $0 }, subject: title,
+                               body: "Guten Tag,\n\nanbei erhalten Sie das Abnahmeprotokoll zu Ihrem Bauvorhaben.\n\nMit freundlichen Grüßen",
+                               attachment: data, attachmentName: "\(title).pdf", mimeType: "application/pdf")
     }
 
     private func signature(_ title: String, _ present: Bool) -> some View {
@@ -428,6 +570,10 @@ struct AcceptanceDetailView: View {
         defects = items.filter { acceptance?.defectWorkItemIds.contains($0.id) == true }
         if let pdfId = acceptance?.pdfFileId {
             pdf = ((try? await service.files(of: bauakteId)) ?? []).first { $0.id == pdfId }
+        }
+        if let bauakte = try? await service.bauakte(bauakteId) {
+            bauakteTitle = bauakte.title
+            if let customerId = bauakte.customerId { customerEmail = (try? await service.contact(customerId))?.email }
         }
     }
 

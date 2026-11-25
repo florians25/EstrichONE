@@ -15,6 +15,15 @@ Kunde anrufen und Route starten aus der Akte, Räume und Flächen, Beteiligte, E
 Schnellaktionen am App-Symbol sowie Kurzbefehle/Siri/Aktionstaste („Foto zur Baustelle“, „Bautagebuch“) in
 `App/QuickActions.swift`; ab iOS 18 lösen Lautstärketasten bzw. Kamerasteuerung die Serienkamera aus.
 
+**Einsatz vor Ort:** Logik in `Packages/EstrichCore/Sources/EstrichCore/Field/` (getestet in `FieldWorkTests`):
+Entwürfe (`DraftStore`), Übertragungsstatus in Worten (`TransferQueue`), Fotoserie (`PhotoSeries`), Offline-Paket
+(`OfflinePlan`, `OfflineAvailability`, `OfflineIndex`), Ankunft und Abschluss (`SiteVisitLog`), Ziel der Schnellzugriffe
+(`QuickTarget`) und die Zusammenfassung der Abnahme (`AcceptanceReview`). In der App: `Sync/OfflineCenter.swift` lädt
+Dokumente und Fotos der heutigen und kommenden Einsätze vorab, `Capture/CaptureSupport.swift` enthält Diktat
+(`DictationRow`), Entwurfssicherung (`DraftKeeper`) und „Bildschirm bleibt an“, `SiteRecords/AcceptanceReviewView.swift`
+die Zusammenfassung für den Kunden. Der Server kennt keine Felder für Ankunft und Abschluss; beides wird als Eintrag im
+Bautagebuch gespeichert.
+
 **Designsystem** (`EstrichONE/Design/`): Farben, Abstände (8-pt-Raster), Radien und Größen in `Theme.swift` (eine
 Akzentfarbe Markenblau, gedämpfte Statusfarben, hell und dunkel), Schriftstufen mit Dynamic Type in `Typography.swift`,
 Schaltflächen in `Buttons.swift` (`EstrichButtonStyle` primär/sekundär/tertiär, `ActionTileStyle`, `IconButtonStyle`,

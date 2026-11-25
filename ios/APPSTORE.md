@@ -216,7 +216,7 @@ Frage „Erfassen Sie oder Drittpartner Daten?“ → **Ja**. Für jeden Typ: *Z
 | Nutzerinhalte › Fotos oder Videos | `…PhotosorVideos` | Baustellenfotos und -videos in der Bauakte |
 | Nutzerinhalte › Kundensupport | `…CustomerSupport` | Meldungen an die IT („Problem melden“) |
 | Nutzerinhalte › Andere Nutzerinhalte | `…OtherUserContent` | Bautagebuch, Mängel, Protokolle, Unterschriften, Notizen, Chat (Texte, Fotos, Dokumente) |
-| Standort › Genauer Standort | `…PreciseLocation` | nur auf Knopfdruck: Adresse einer Baustelle, Aufnahmeort eines Fotos, Standort im Chat teilen |
+| Standort › Genauer Standort | `…PreciseLocation` | Aufnahmeort von Baustellenfotos, solange die Kamera der App geöffnet ist (abschaltbar); sonst nur auf Knopfdruck: Adresse einer Baustelle, Standort im Chat teilen |
 | Diagnose › Andere Diagnosedaten | `…OtherDiagnosticData` | nur im freiwilligen Fehlerbericht (App-Version, Speicher, Abgleichstand) |
 
 Nicht erfasst: E-Mail/Telefon des Benutzers, Finanz-, Gesundheits-, Browser-, Such-, Kaufdaten, Kontakte des Adressbuchs
@@ -273,7 +273,7 @@ Standard-Krypto zum Datenschutz.) Ändert sich das – z. B. eigene Ende-zu-Ende
 > Die App EstrichONE verarbeitet Daten ausschließlich im Auftrag Ihres Arbeitgebers bzw. Betriebs, der den
 > EstrichONE-Server selbst betreibt (Verantwortlicher im Sinne der DSGVO ist dieser Betrieb). Übertragen werden nur
 > Daten, die Sie in der App erfassen (Bauakten, Fotos, Protokolle, Meldungen), sowie Benutzer- und Gerätekennung zur
-> Anmeldung. Standortdaten nur auf Knopfdruck. Es gibt kein Tracking, keine Werbung und keine Weitergabe an Dritte;
+> Anmeldung. Standortdaten nur als Aufnahmeort von Fotos bei geöffneter Kamera (abschaltbar) und auf Knopfdruck. Es gibt kein Tracking, keine Werbung und keine Weitergabe an Dritte;
 > Pushnachrichten werden über den Apple Push Notification Service zugestellt (nur Titel, Kurztext, Link). Auf dem Gerät
 > sind alle Daten verschlüsselt. Auskunft, Berichtigung und Löschung: über Ihren Betrieb oder in der App unter
 > Mehr › „Konto löschen beantragen“. Kontakt: <Anbieter, Anschrift, E-Mail>.
