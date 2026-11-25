@@ -3,6 +3,8 @@ package de.estrichone.android.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import de.estrichone.core.SiteVisit
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -117,19 +119,10 @@ import java.time.Instant
 import java.time.LocalDate
 
 /** Zuletzt geladener Plan (ohne Netz), damit „Mein Einsatz“ sofort erscheint und nicht erst nach dem Abruf. */
-fun Session.cachedWeekPlan(): MyPlanning? =
-    runCatching { store.backend.meta("plan")?.let { EstrichOneApi.json.decodeFromString(MyPlanning.serializer(), it) } }.getOrNull()
+fun Session.cachedWeekPlan(): MyPlanning? = cachedPlan()
 
 /** Planung der nächsten 7 Tage; offline aus dem letzten Abruf (lokal gespeichert). */
-suspend fun Session.weekPlan(today: LocalDate = LocalDate.now(Dates.zone)): MyPlanning? = withContext(Dispatchers.IO) {
-    try {
-        api.myPlan(today.toString(), today.plusDays(6).toString()).also { plan ->
-            store.backend.transaction { store.backend.setMeta("plan", EstrichOneApi.json.encodeToString(MyPlanning.serializer(), plan)) }
-        }
-    } catch (e: ApiException) {
-        store.backend.meta("plan")?.let { runCatching { EstrichOneApi.json.decodeFromString(MyPlanning.serializer(), it) }.getOrNull() }
-    }
-}
+suspend fun Session.weekPlan(today: LocalDate = LocalDate.now(Dates.zone)): MyPlanning? = loadPlan(today)
 
 /**
  * Heute (gleiches Konzept wie iOS): Arbeit zuerst. Oben die Mitteilungen der Verwaltung als eine Zeile (aufklappbar,
@@ -171,6 +164,8 @@ fun HomeScreen() {
             val day = TodayOverview.plan(todays, clock)
             item(key = "status") {
                 OfflineBanner(session)
+                // Ruhiger Übertragungsstand: nur sichtbar, wenn etwas wartet oder gescheitert ist.
+                TransferLine(modifier = Modifier.padding(bottom = Space.s))
                 TeamsRolloutCard()
             }
             item(key = "notices") { NoticeSummary(session) }
@@ -296,11 +291,15 @@ private fun HomeOverflow() {
 }
 
 /** Einsatz-Zeile der Woche: Tag, Zeit, Bauvorhaben, Tätigkeit. */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 fun WeekRow(job: PlannedJob, today: LocalDate, onClick: () -> Unit) {
     val day = de.estrichone.core.ApiDate.day(job.day)
-    Row(Modifier.fillMaxWidth().heightIn(min = 56.dp).clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically) {
+    var menu by remember { mutableStateOf(false) }
+    Row(Modifier.fillMaxWidth().heightIn(min = 56.dp).combinedClickable(onClick = onClick, onLongClickLabel = "Aktionen", onLongClick = { menu = true })
+        .padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+        // Langes Drücken: Route, Foto, Tagebuch, Mangel ohne Umweg über die Bauakte.
+        Box { SiteQuickMenu(menu, { menu = false }, job.bauakteId, job.bauakteAddress) }
         Column(Modifier.width(72.dp)) {
             Text(day?.let { Dates.relativeDay(it, today) }?.substringBefore(',') ?: job.day, style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.primary)
@@ -315,13 +314,17 @@ fun WeekRow(job: PlannedJob, today: LocalDate, onClick: () -> Unit) {
 }
 
 /** Weiterer Einsatz des Tages als kompakte Zeile: Uhrzeit, Baustelle, Leistung und Adresse, rechts Route. */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 fun CompactJobRow(job: PlannedJob, session: Session, phase: TodayGlance.Phase) {
     val nav = LocalNav.current
     val context = LocalContext.current
     val bauakte by session.local(job.bauakteId) { session.service.bauakte(job.bauakteId) }
-    Row(Modifier.fillMaxWidth().heightIn(min = 64.dp).clickable(onClickLabel = "Bauakte öffnen") { nav.open(de.estrichone.core.NotificationRoute.Bauakte(job.bauakteId)) }
+    var menu by remember { mutableStateOf(false) }
+    Row(Modifier.fillMaxWidth().heightIn(min = 64.dp)
+        .combinedClickable(onClickLabel = "Bauakte öffnen", onLongClickLabel = "Aktionen", onLongClick = { menu = true }) { nav.open(de.estrichone.core.NotificationRoute.Bauakte(job.bauakteId)) }
         .padding(start = 16.dp, end = 8.dp, top = 12.dp, bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+        Box { SiteQuickMenu(menu, { menu = false }, job.bauakteId, job.bauakteAddress, bauakte?.latitude, bauakte?.longitude) }
         Column(Modifier.width(64.dp)) {
             Text(Dates.clock(job.startTime) ?: "ganztags", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold,
                 color = if (phase == TodayGlance.Phase.Finished) tones.textSecondary else MaterialTheme.colorScheme.onSurface)
@@ -365,6 +368,10 @@ fun TodayJobCard(job: PlannedJob, session: Session, phase: TodayGlance.Phase = T
     val facts = remember(bauakte) { bauakte?.let { session.keyFacts(it) }.orEmpty() }
     val open: () -> Unit = { nav.open(de.estrichone.core.NotificationRoute.Bauakte(job.bauakteId)) }
     val running = phase == TodayGlance.Phase.Running
+    // Ankunft und Abschluss dieses Einsatzes (Uhrzeiten auf dem Gerät, Vorschlag für das Bautagebuch).
+    var visit by remember(job.id, job.day) { mutableStateOf(SiteVisit.load(session.store.backend, job.id, job.day)) }
+    val setVisit: (SiteVisit) -> Unit = { next -> visit = next; SiteVisit.save(session.store.backend, job.id, job.day, next) }
+    val isToday = job.day == LocalDate.now(Dates.zone).toString()
     val border = if (running) Modifier.border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f), RoundedCornerShape(16.dp)) else Modifier
     SectionCard(border, padding = androidx.compose.foundation.layout.PaddingValues(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 8.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -384,6 +391,10 @@ fun TodayJobCard(job: PlannedJob, session: Session, phase: TodayGlance.Phase = T
                     if (modules.isOn(AppModules.DEFECTS)) {
                         DropdownMenuItem(text = { Text("Mangel melden") }, leadingIcon = { Icon(Icons.Outlined.ReportProblem, null) },
                             onClick = { menu = false; nav.captureIn(job.bauakteId, SiteTask.Defect) })
+                    }
+                    if (visit.arrived != null) {
+                        DropdownMenuItem(text = { Text("Ankunft zurücksetzen") }, leadingIcon = { Icon(Icons.Outlined.Place, null) },
+                            onClick = { menu = false; setVisit(SiteVisit()) })
                     }
                 }
             }
@@ -408,6 +419,7 @@ fun TodayJobCard(job: PlannedJob, session: Session, phase: TodayGlance.Phase = T
         job.notes?.let { JobLine(Icons.Filled.Info, it, detailLabel = "Zugang und Hinweise") }
         job.warnings.forEach { JobLine(Icons.Filled.Warning, it, color = tones.warning) }
         if (!glance.isEmpty) GlanceChips(glance, Modifier.padding(top = 8.dp, end = 8.dp))
+        if (isToday) VisitActions(job, visit, setVisit, Modifier.padding(top = 12.dp, end = 8.dp))
         HorizontalDivider(Modifier.padding(top = 12.dp, bottom = 4.dp, end = 8.dp), color = tones.separator)
         QuickActionRow(Modifier.padding(end = 8.dp)) {
             QuickAction(Icons.Filled.Directions, "Route", Modifier.weight(1f), enabled = job.bauakteAddress != null) {

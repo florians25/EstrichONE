@@ -1,5 +1,7 @@
 package de.estrichone.android.ui
 
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -181,13 +183,18 @@ fun BauaktenScreen(selected: String?) {
 }
 
 /** Kompakte Zeile: Nummer und Status oben, Bauvorhaben, Ort und Kunde, nächster Termin (heute in der Markenfarbe). */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 fun BauakteRow(b: Bauakte, customer: de.estrichone.core.Contact?, job: PlannedJob?, selected: Boolean = false, today: LocalDate = LocalDate.now(Dates.zone), onClick: () -> Unit) {
+    var menu by remember { mutableStateOf(false) }
     Row(
-        Modifier.fillMaxWidth().background(if (selected) tones.infoSoft else Color.Transparent).clickable(onClick = onClick)
+        Modifier.fillMaxWidth().background(if (selected) tones.infoSoft else Color.Transparent)
+            .combinedClickable(onClick = onClick, onLongClickLabel = "Aktionen", onLongClick = { menu = true })
             .heightIn(min = 72.dp).padding(start = 16.dp, end = 12.dp, top = 12.dp, bottom = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        // Langes Drücken: Route, Foto, Tagebuch, Mangel direkt aus der Liste.
+        Box { SiteQuickMenu(menu, { menu = false }, b.id, b.addressLine, b.latitude, b.longitude) }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(b.numberText, style = MaterialTheme.typography.labelMedium, color = tones.textSecondary)

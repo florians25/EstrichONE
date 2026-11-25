@@ -21,6 +21,8 @@ object DemoData {
     const val KITA = "0193a1b2-de00-7000-8000-0000000b0006"
     const val TICKET = "0193a1b2-de00-7000-8000-00000000c001"
     const val PDF = "0193a1b2-de00-7000-8000-00000000f001"
+    const val ACCEPTANCE_PDF = "0193a1b2-de00-7000-8000-00000000f002"
+    const val ACCEPTANCE = "0193a1b2-de00-7000-8000-000000001101"
 
     private const val SCHNEIDER = "0193a1b2-de00-7000-8000-0000000c0001"
     private const val HUBER_BAU = "0193a1b2-de00-7000-8000-0000000c0002"
@@ -140,7 +142,12 @@ object DemoData {
             "checks" to emptyMap<String, String>(), "photoFileIds" to emptyList<String>(), "version" to 1))
         result += change(EntityTypes.ACCEPTANCE, json("id" to "0193a1b2-de00-7000-8000-000000001101", "bauakteId" to KITA, "performedAt" to time(-86_400 * 34),
             "result" to "accepted", "state" to "completed", "clientName" to "Herr Bauer (Gemeinde)", "contractorName" to USER_NAME,
-            "location" to "Kindergarten Sonnenschein", "scope" to "Fließestrich EG, 410 m²", "hasClientSignature" to true, "hasContractorSignature" to true, "version" to 2))
+            "location" to "Kindergarten Sonnenschein", "scope" to "Fließestrich EG, 410 m²", "hasClientSignature" to true, "hasContractorSignature" to true,
+            "pdfFileId" to ACCEPTANCE_PDF, "version" to 2))
+        // Abnahmeprotokoll als PDF (vom Server erzeugt und unter Dokumente abgelegt): ansehen, teilen, per E-Mail an den Kunden.
+        result += change(EntityTypes.FILE, json("id" to ACCEPTANCE_PDF, "bauakteId" to KITA, "kind" to "document", "originalName" to "Abnahmeprotokoll Kindergarten.pdf",
+            "contentType" to "application/pdf", "sizeBytes" to 96_256, "sha256" to "0".repeat(64), "state" to "stored", "caption" to "Abnahme: abgenommen",
+            "category" to "acceptance", "capturedAt" to time(-86_400 * 34), "createdAt" to time(-86_400 * 34), "uploadedByUserId" to user, "version" to 1))
 
         fun item(id: String, bauakteId: String, kind: String, title: String, status: String = "open", due: Long? = null) {
             result += change(EntityTypes.WORK_ITEM, json("id" to id, "bauakteId" to bauakteId, "kind" to kind, "title" to title, "status" to status,

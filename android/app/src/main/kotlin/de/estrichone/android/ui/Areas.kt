@@ -1,5 +1,6 @@
 package de.estrichone.android.ui
 
+import androidx.compose.material.icons.outlined.Slideshow
 import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.outlined.Circle
@@ -206,6 +207,7 @@ private fun PhotosArea(id: String) {
             IconButton(onClick = { shareSelected() }, enabled = sharing == null) { Icon(Icons.Filled.Share, "Auswahl teilen") }
             IconButton(onClick = { selected = emptySet() }) { Icon(Icons.Filled.Close, "Auswahl beenden") }
         } else {
+            if (photos.any { it.isPhoto }) IconButton(onClick = { nav.customerView = CustomerView.Photos(id) }) { Icon(Icons.Outlined.Slideshow, "Kundenansicht: Fotos im Vollbild zeigen") }
             IconButton(onClick = { gallery = true }) { Icon(Icons.Filled.PhotoLibrary, "Aus Galerie") }
             IconButton(onClick = { video = true }) { Icon(Icons.Filled.Videocam, "Video aufnehmen") }
         }
@@ -265,6 +267,10 @@ fun PhotoScreen(fileId: String) {
     val bitmap by produceState<android.graphics.Bitmap?>(null, fileId) { value = session.thumbnail(f, 1600) }
     val editable = remember(f) { (f.entity.data["bauakteId"] as? JsonPrimitive)?.content?.let { session.service.canEdit(it) } ?: true }
     ScreenScaffold(f.displayName, actions = {
+        val site = f.bauakteId
+        if (f.isPhoto && site != null) {
+            IconButton(onClick = { nav.customerView = CustomerView.Photos(site, f.id) }) { Icon(Icons.Outlined.Slideshow, "Kundenansicht: im Vollbild zeigen") }
+        }
         IconButton(onClick = {
             scope.launch {
                 loading = if (f.isVideo) "Video wird vorbereitet …" else "Wird vorbereitet …"

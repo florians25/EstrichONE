@@ -59,7 +59,7 @@ class DemoServer(private val content: (String) -> ByteArray? = { null }) : Inter
         val bytes: ByteArray
         val type: String
         when (payload) {
-            is ByteArray -> { bytes = payload; type = if (path.endsWith(".pdf") || path.contains(DemoData.PDF)) "application/pdf" else "image/jpeg" }
+            is ByteArray -> { bytes = payload; type = if (path.endsWith(".pdf") || path.contains(DemoData.PDF) || path.contains(DemoData.ACCEPTANCE_PDF)) "application/pdf" else "image/jpeg" }
             null -> { bytes = ByteArray(0); type = "application/json" }
             else -> { bytes = EstrichOneApi.json.encodeToString(JsonElement.serializer(), toJson(payload)).toByteArray(); type = "application/json" }
         }

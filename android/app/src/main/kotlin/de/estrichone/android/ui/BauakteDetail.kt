@@ -210,7 +210,8 @@ fun BauakteScreen(id: String, showBack: Boolean = true) {
     // Titel oben erst nach dem Kopf; „Erfassen“ klappt beim Scrollen nach unten auf das Symbol ein.
     val scrolled by remember { androidx.compose.runtime.derivedStateOf { listState.firstVisibleItemIndex > 0 } }
     val fabExpanded by remember { androidx.compose.runtime.derivedStateOf { listState.firstVisibleItemIndex == 0 } }
-    ScreenScaffold(if (scrolled) b.title else "", showBack = showBack, floating = {
+    // Titelleiste nie leer: oben die Nummer, nach dem Scrollen das Bauvorhaben mit der Nummer darunter.
+    ScreenScaffold(if (scrolled) b.title else b.numberText, showBack = showBack, subtitle = if (scrolled) b.numberText else null, floating = {
         if (!viewOnly) {
             ExtendedFloatingActionButton(onClick = { nav.captureOpenFor = id }, expanded = fabExpanded,
                 icon = { Icon(Icons.Filled.Add, null) }, text = { Text("Erfassen") }, modifier = Modifier.testTag("bauakteCapture"))
@@ -301,11 +302,10 @@ private fun Header(b: Bauakte, session: Session, viewOnly: Boolean = false) {
     var statusMenu by remember { mutableStateOf(false) }
     Column(Modifier.padding(horizontal = 4.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(b.numberText, style = MaterialTheme.typography.labelLarge, color = tones.textSecondary)
+            Text(b.title, style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f))
             Spacer(Modifier.width(8.dp))
             SyncMark(b.syncState)
         }
-        Text(b.title, style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(top = 2.dp))
         Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             Box {
                 StatusChip(b.status, short = false, modifier = Modifier.clip(RoundedCornerShape(8.dp))
@@ -323,7 +323,10 @@ private fun Header(b: Bauakte, session: Session, viewOnly: Boolean = false) {
         }
         b.addressLine?.let { Secondary(it, Modifier.padding(top = 8.dp)) }
         if (b.status == BauakteStatus.Cancelled && b.cancellationReason != null) Secondary("Storniert: ${b.cancellationReason}", Modifier.padding(top = 4.dp))
+        // Offline: Die Bauakte liegt vollständig auf dem Gerät; Dokumente kommender Einsätze werden vorab geladen.
+        if (!viewOnly) OfflineAvailability(b.id, Modifier.padding(top = 8.dp))
     }
+    TransferLine(b.id, Modifier.padding(top = Space.m))
 }
 
 /** Ein Kontakt der Bauakte mit Rolle und Telefonnummer (für „Anrufen“ und den Abschnitt Kontakte). */

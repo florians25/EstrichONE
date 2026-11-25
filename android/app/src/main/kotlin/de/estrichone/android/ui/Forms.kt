@@ -40,7 +40,12 @@ import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.foundation.horizontalScroll
+import de.estrichone.core.Drafts
+import de.estrichone.core.PhotoSeries
+import de.estrichone.core.ProtocolCheck
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -69,6 +74,8 @@ fun FormSheet(
 ) {
     val session = LocalSession.current
     var error by remember { mutableStateOf<String?>(null) }
+    // Während der Erfassung bleibt der Bildschirm an (nasse Hände, Handschuhe: nicht ständig entsperren).
+    KeepScreenOn()
     val subtitle = remember(bauakteId) { bauakteId?.let { session.service.bauakte(it)?.let { b -> "${b.numberText}, ${b.title}" } } }
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true), containerColor = tones.canvas) {
         Column(Modifier.verticalScroll(rememberScrollState()).imePadding().padding(horizontal = 20.dp).padding(bottom = 32.dp),
@@ -86,7 +93,7 @@ fun FormSheet(
                 } catch (e: IllegalStateException) {
                     error = e.message
                 }
-            }, enabled = canSave, modifier = Modifier.fillMaxWidth().height(48.dp)) { Text(save) }
+            }, enabled = canSave, modifier = Modifier.fillMaxWidth().height(56.dp)) { Text(save, style = MaterialTheme.typography.titleMedium) }
         }
     }
 }
@@ -120,15 +127,22 @@ private fun weatherIcon(w: DiaryWeather) = when (w) {
 /** Bautagebuch für heute: Wetter, Temperatur, Personen, Arbeitszeit, Kolonne, Text (wie DiaryViews auf iOS). */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun DiarySheet(bauakteId: String, onDismiss: () -> Unit) {
+fun DiarySheet(bauakteId: String, onDismiss: () -> Unit, prefill: Map<String, String> = emptyMap()) {
     val session = LocalSession.current
     val model = LocalModel.current
-    var weather by remember { mutableStateOf<DiaryWeather?>(null) }
-    var temperature by remember { mutableStateOf("") }
-    var workers by remember { mutableStateOf("") }
-    var start by remember { mutableStateOf("") }
-    var end by remember { mutableStateOf("") }
-    var text by remember { mutableStateOf("") }
+    // Entwurf: bei jeder Eingabe gesichert, nach Abbruch oder Neustart wieder da. Vorgaben (Ankunft, Abschluss) füllen Lücken.
+    var generation by remember { mutableIntStateOf(0) }
+    val draft = rememberDraft(Drafts.DIARY, bauakteId, generation)
+    fun initial(key: String) = draft?.get(key) ?: prefill[key].takeIf { generation == 0 } ?: ""
+    var weather by remember(generation) { mutableStateOf(DiaryWeather.entries.firstOrNull { it.raw == draft?.get("weather") }) }
+    var temperature by remember(generation) { mutableStateOf(initial("temperature")) }
+    var workers by remember(generation) { mutableStateOf(initial("workers")) }
+    var start by remember(generation) { mutableStateOf(initial("start")) }
+    var end by remember(generation) { mutableStateOf(initial("end")) }
+    var text by remember(generation) { mutableStateOf(initial("text")) }
+    // Vorgaben allein (Uhrzeiten aus Ankunft und Abschluss) sind kein Entwurf.
+    DraftAutosave(Drafts.DIARY, bauakteId, if (text.isBlank() && temperature.isBlank() && workers.isBlank() && weather == null) emptyMap() else mapOf(
+        "weather" to (weather?.raw ?: ""), "temperature" to temperature, "workers" to workers, "start" to start, "end" to end, "text" to text))
     val day = remember { LocalDate.now(Dates.zone) }
     // Fotos von heute zu dieser Baustelle (wie auf iOS am Tagebucheintrag).
     val todaysPhotos = remember { session.service.photos(bauakteId).filter { it.time?.atZone(Dates.zone)?.toLocalDate() == day && it.isPhoto } }
@@ -137,8 +151,10 @@ fun DiarySheet(bauakteId: String, onDismiss: () -> Unit) {
         session.service.addDiary(bauakteId, day, text, weather, temperature.toIntOrNull(), workers.toIntOrNull(),
             start.takeIf { it.length == 5 }?.let { "$it:00" }, end.takeIf { it.length == 5 }?.let { "$it:00" },
             photoFileIds = if (attachPhotos) todaysPhotos.map { it.id } else emptyList())
+        session.drafts.clear(Drafts.DIARY, bauakteId)
         model.message("Bautagebuch gespeichert.")
     }) {
+        if (draft != null) DraftNotice { session.drafts.clear(Drafts.DIARY, bauakteId); generation++ }
         Text("Wetter", style = MaterialTheme.typography.titleSmall)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             DiaryWeather.entries.forEach { w ->
@@ -182,18 +198,33 @@ fun TimeField(value: String, onChange: (String) -> Unit, label: String, modifier
 fun CmSheet(bauakteId: String, onDismiss: () -> Unit) {
     val session = LocalSession.current
     val model = LocalModel.current
-    var location by remember { mutableStateOf("") }
-    var binder by remember { mutableStateOf(ScreedBinder.Cement) }
-    var heated by remember { mutableStateOf(true) }
-    var thickness by remember { mutableStateOf("") }
-    var measured by remember { mutableStateOf("") }
+    var generation by remember { mutableIntStateOf(0) }
+    val draft = rememberDraft(Drafts.CM, bauakteId, generation)
+    var location by remember(generation) { mutableStateOf(draft?.get("location") ?: "") }
+    var binder by remember(generation) { mutableStateOf(ScreedBinder.entries.firstOrNull { it.raw == draft?.get("binder") } ?: ScreedBinder.Cement) }
+    var heated by remember(generation) { mutableStateOf(draft?.get("heated") != "false") }
+    var thickness by remember(generation) { mutableStateOf(draft?.get("thickness") ?: "") }
+    var measured by remember(generation) { mutableStateOf(draft?.get("measured") ?: "") }
     val limit = cmLimit(binder, heated)
     val value = measured.toDecimal()
-    FormSheet("CM-Messung", bauakteId, onDismiss, canSave = location.isNotBlank() && value != null, onSave = {
+    // Voreinstellungen allein sind kein Entwurf: erst sichern, wenn etwas eingegeben wurde.
+    DraftAutosave(Drafts.CM, bauakteId, if (location.isBlank() && thickness.isBlank() && measured.isBlank()) emptyMap() else mapOf(
+        "location" to location, "binder" to binder.raw, "heated" to heated.toString(), "thickness" to thickness, "measured" to measured))
+    val missing = ProtocolCheck.cm(location, value)
+    val rooms = remember { PhotoSeries.areas(session.service.rooms(bauakteId)) }
+    FormSheet("CM-Messung", bauakteId, onDismiss, save = "Messung abschließen", canSave = missing.isEmpty(), onSave = {
         session.service.addCmMeasurement(bauakteId, location, binder, heated, thickness.toIntOrNull(), value ?: -1.0)
+        session.drafts.clear(Drafts.CM, bauakteId)
         model.message(if ((value ?: 99.0) <= limit) "Gespeichert: belegreif." else "Gespeichert: noch nicht belegreif.")
     }) {
-        OutlinedTextField(location, { location = it }, label = { Text("Messort (Raum)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+        if (draft != null) DraftNotice { session.drafts.clear(Drafts.CM, bauakteId); generation++ }
+        OutlinedTextField(location, { location = it }, label = { Text("Messort (Raum)") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
+            trailingIcon = { DictationButton { location = appendDictation(location, it) } })
+        if (rooms.isNotEmpty() && location.isBlank()) {
+            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                rooms.take(8).forEach { room -> FilterChip(selected = false, onClick = { location = room }, label = { Text(room) }) }
+            }
+        }
         SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
             ScreedBinder.entries.forEachIndexed { index, b ->
                 SegmentedButton(selected = binder == b, onClick = { binder = b }, shape = SegmentedButtonDefaults.itemShape(index, 2)) {
@@ -216,6 +247,7 @@ fun CmSheet(bauakteId: String, onDismiss: () -> Unit) {
             Icons.Filled.CalendarMonth, if (ready) tones.success else if (value == null) tones.info else tones.warning,
             if (ready) tones.successSoft else if (value == null) tones.infoSoft else tones.warningSoft,
         )
+        MissingList(missing)
     }
 }
 
@@ -225,15 +257,23 @@ fun CmSheet(bauakteId: String, onDismiss: () -> Unit) {
 fun TaskSheet(bauakteId: String?, initialKind: WorkItemKind, onDismiss: () -> Unit) {
     val session = LocalSession.current
     val model = LocalModel.current
-    var kind by remember { mutableStateOf(initialKind) }
-    var title by remember { mutableStateOf("") }
-    var description by remember { mutableStateOf("") }
-    var due by remember { mutableStateOf<LocalDate?>(if (initialKind == WorkItemKind.Defect) null else null) }
+    // Mangel und Aufgabe haben getrennte Entwürfe: Wer einen Mangel meldet, bekommt keinen halben Aufgabentext vorgesetzt.
+    val form = "${Drafts.TASK}-${initialKind.raw}"
+    var generation by remember { mutableIntStateOf(0) }
+    val draft = rememberDraft(form, bauakteId, generation)
+    var kind by remember(generation) { mutableStateOf(initialKind) }
+    var title by remember(generation) { mutableStateOf(draft?.get("title") ?: "") }
+    var description by remember(generation) { mutableStateOf(draft?.get("description") ?: "") }
+    var due by remember(generation) { mutableStateOf(draft?.get("due")?.let { runCatching { LocalDate.parse(it) }.getOrNull() }) }
     var picking by remember { mutableStateOf(false) }
+    DraftAutosave(form, bauakteId, if (title.isBlank() && description.isBlank()) emptyMap() else mapOf(
+        "title" to title, "description" to description, "due" to (due?.toString() ?: "")))
     FormSheet(if (kind == WorkItemKind.Defect) "Mangel melden" else "Neue Aufgabe", bauakteId, onDismiss, canSave = title.isNotBlank(), onSave = {
         session.service.addTask(bauakteId, kind, title, description, due)
+        session.drafts.clear(form, bauakteId)
         model.message(if (kind == WorkItemKind.Defect) "Mangel gespeichert." else "Aufgabe gespeichert.")
     }) {
+        if (draft != null) DraftNotice { session.drafts.clear(form, bauakteId); generation++ }
         SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
             listOf(WorkItemKind.Task, WorkItemKind.Defect).forEachIndexed { index, k ->
                 SegmentedButton(selected = kind == k, onClick = { kind = k }, shape = SegmentedButtonDefaults.itemShape(index, 2)) {
@@ -267,9 +307,16 @@ fun TaskSheet(bauakteId: String?, initialKind: WorkItemKind, onDismiss: () -> Un
 @Composable
 fun NoteSheet(bauakteId: String, onDismiss: () -> Unit) {
     val session = LocalSession.current
-    var text by remember { mutableStateOf("") }
-    var pinned by remember { mutableStateOf(false) }
-    FormSheet("Notiz", bauakteId, onDismiss, canSave = text.isNotBlank(), onSave = { session.service.addNote(bauakteId, text, pinned) }) {
+    var generation by remember { mutableIntStateOf(0) }
+    val draft = rememberDraft(Drafts.NOTE, bauakteId, generation)
+    var text by remember(generation) { mutableStateOf(draft?.get("text") ?: "") }
+    var pinned by remember(generation) { mutableStateOf(draft?.get("pinned") == "true") }
+    DraftAutosave(Drafts.NOTE, bauakteId, if (text.isBlank()) emptyMap() else mapOf("text" to text, "pinned" to pinned.toString()))
+    FormSheet("Notiz", bauakteId, onDismiss, canSave = text.isNotBlank(), onSave = {
+        session.service.addNote(bauakteId, text, pinned)
+        session.drafts.clear(Drafts.NOTE, bauakteId)
+    }) {
+        if (draft != null) DraftNotice { session.drafts.clear(Drafts.NOTE, bauakteId); generation++ }
         DictationField(text, { text = it }, "Notiz", minLines = 4)
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {

@@ -90,6 +90,21 @@ object Links {
         return start(context, chooser)
     }
 
+    /** Datei als Anhang einer E-Mail an [address] (Mail-App wählen); Betreff und Text sind vorbelegt. */
+    fun mailFile(context: Context, address: String?, subject: String, text: String, bytes: ByteArray, name: String, mime: String): Boolean {
+        clearShared(context)
+        val uri = cacheFile(context, bytes, name)
+        val send = Intent(Intent.ACTION_SEND).setType(mime).putExtra(Intent.EXTRA_STREAM, uri).putExtra(Intent.EXTRA_SUBJECT, subject).putExtra(Intent.EXTRA_TEXT, text)
+        if (!address.isNullOrBlank()) send.putExtra(Intent.EXTRA_EMAIL, arrayOf(address))
+        send.clipData = ClipData.newRawUri(name, uri)
+        send.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        return start(context, Intent.createChooser(send, "Per E-Mail senden").addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION))
+    }
+
+    /** Text teilen (z. B. den Freigabelink einer Abnahme). */
+    fun shareText(context: Context, text: String, subject: String? = null): Boolean =
+        start(context, Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, text).putExtra(Intent.EXTRA_SUBJECT, subject), "Teilen"))
+
     /** Gemeinsamer Typ: gleich → dieser, gleiche Hauptart → „video/\*“, sonst „\*\/\*“. */
     fun commonMime(types: List<String>): String {
         val distinct = types.map { it.lowercase() }.distinct()

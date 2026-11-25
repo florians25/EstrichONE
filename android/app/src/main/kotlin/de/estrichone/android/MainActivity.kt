@@ -19,6 +19,7 @@ import de.estrichone.android.ui.Appearance
 import de.estrichone.android.ui.EstrichTheme
 import de.estrichone.android.ui.Root
 import de.estrichone.android.ui.VolumeShutter
+import de.estrichone.core.QuickShortcut
 
 /** Einzige Activity: Compose-Oberfläche, App-Sperre per BiometricPrompt, Lautstärketaste als Kamera-Auslöser. */
 class MainActivity : FragmentActivity() {
@@ -60,8 +61,20 @@ class MainActivity : FragmentActivity() {
         handleNotification(intent)
     }
 
-    /** Angetippte Mitteilung: Ziel merken, die Hauptansicht öffnet es nach dem Entsperren. */
+    /** Angetippte Mitteilung bzw. Schnellzugriff des App-Symbols: Ziel merken, die Hauptansicht öffnet es nach dem Entsperren. */
     private fun handleNotification(intent: android.content.Intent?) {
+        when (intent?.action) {
+            ACTION_PHOTO -> QuickShortcut.PHOTO
+            ACTION_DIARY -> QuickShortcut.DIARY
+            ACTION_DEFECT -> QuickShortcut.DEFECT
+            ACTION_SYNC -> ACTION_SYNC
+            else -> null
+        }?.let { action ->
+            model.openAction(action)
+            // Nicht bei jeder Konfigurationsänderung erneut öffnen.
+            intent?.action = android.content.Intent.ACTION_MAIN
+            return
+        }
         val (route, id) = NotificationTarget.from(intent) ?: return
         model.openFromNotification(route, id)
         // Nicht bei jeder Konfigurationsänderung erneut öffnen.
@@ -101,6 +114,14 @@ class MainActivity : FragmentActivity() {
             return true
         }
         return super.onKeyDown(keyCode, event)
+    }
+
+    companion object {
+        /** Schnellzugriffe (res/xml/shortcuts.xml) und Mitteilung „Übertragung prüfen“. */
+        const val ACTION_PHOTO = "de.estrichone.android.shortcut.PHOTO"
+        const val ACTION_DIARY = "de.estrichone.android.shortcut.DIARY"
+        const val ACTION_DEFECT = "de.estrichone.android.shortcut.DEFECT"
+        const val ACTION_SYNC = "de.estrichone.android.action.SYNC"
     }
 
     /** Entsperren mit Fingerabdruck/Gesicht (Klasse 3) bzw. Gerätecode. */

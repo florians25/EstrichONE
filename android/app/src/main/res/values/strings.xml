@@ -1,4 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">EstrichONE</string>
+    <string name="shortcut_photo_short">Foto</string>
+    <string name="shortcut_photo_long">Foto zur heutigen Baustelle</string>
+    <string name="shortcut_diary_short">Tagebuch</string>
+    <string name="shortcut_diary_long">Bautagebuch schreiben</string>
+    <string name="shortcut_defect_short">Mangel</string>
+    <string name="shortcut_defect_long">Mangel melden</string>
 </resources>

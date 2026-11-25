@@ -100,7 +100,19 @@ import de.estrichone.android.Session
 import de.estrichone.android.support.Images
 import de.estrichone.android.support.Links
 import de.estrichone.android.support.Videos
+import de.estrichone.android.support.DeviceLocation
 import de.estrichone.core.AppModules
+import de.estrichone.core.PhotoKind
+import de.estrichone.core.PhotoSeries
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.material.icons.outlined.MeetingRoom
+import androidx.compose.material.icons.outlined.Place
+import androidx.compose.ui.semantics.Role
+import kotlinx.coroutines.delay
 import de.estrichone.core.Bauakte
 import de.estrichone.core.Dates
 import de.estrichone.core.CameraShots
@@ -142,7 +154,8 @@ enum class SiteTask(val title: String, val icon: ImageVector) {
     }
 }
 
-data class CaptureRequest(val task: SiteTask, val bauakteId: String?)
+/** [prefill]: Vorgaben für das Formular (z. B. Beginn und Ende des Tagebuchs aus Ankunft und Abschluss). */
+data class CaptureRequest(val task: SiteTask, val bauakteId: String?, val prefill: Map<String, String> = emptyMap())
 
 /** Aktionsblatt „Erfassen“ der Bauakte (Knopf „Erfassen“ unten in der Bauakte); ohne Bauakte wird zuerst die Baustelle gewählt. */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -248,7 +261,7 @@ fun CaptureFlow(request: CaptureRequest, onDone: () -> Unit) {
         SiteTask.Gallery -> GalleryImport(id, onDone)
         SiteTask.Video -> VideoCapture(id, onDone)
         SiteTask.Upload -> DocumentImport(id, onDone)
-        SiteTask.Diary -> DiarySheet(id, onDone)
+        SiteTask.Diary -> DiarySheet(id, onDone, request.prefill)
         SiteTask.Measurement -> CmSheet(id, onDone)
         SiteTask.Defect -> TaskSheet(id, WorkItemKind.Defect, onDone)
         SiteTask.Task -> TaskSheet(id, WorkItemKind.Task, onDone)
@@ -392,6 +405,33 @@ fun CameraScreen(bauakteId: String, scan: Boolean) {
     var naming by remember { mutableStateOf(false) }
     var gallery by remember { mutableStateOf(false) }
     val bauakte = remember { session.service.bauakte(bauakteId) }
+    // Serie: Art und Bereich vorab wählen, sie gelten für alle folgenden Fotos (heute gemerkt je Bauakte).
+    val backend = session.store.backend
+    val today = remember { LocalDate.now(Dates.zone).toString() }
+    var series by remember {
+        mutableStateOf(backend.meta("photo_series:$bauakteId")?.takeIf { it.startsWith("$today|") }?.let { PhotoSeries.decode(it.removePrefix("$today|")) } ?: PhotoSeries())
+    }
+    fun keep(next: PhotoSeries) {
+        series = next
+        backend.transaction { backend.setMeta("photo_series:$bauakteId", "$today|${next.encode()}") }
+    }
+    var pickingArea by remember { mutableStateOf(false) }
+    // Standort an Fotos: nur auf Wunsch (einmal einschalten, bleibt gemerkt) und nur während die Kamera offen ist.
+    var locationOn by remember { mutableStateOf(backend.meta("photo_location") == "on" && DeviceLocation.granted(context)) }
+    var position by remember { mutableStateOf<android.location.Location?>(null) }
+    val locationPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
+        locationOn = result.values.any { it }
+        backend.transaction { backend.setMeta("photo_location", if (locationOn) "on" else "off") }
+        if (!locationOn) model.message("Ohne Freigabe werden Fotos ohne Standort gespeichert.")
+    }
+    LaunchedEffect(locationOn) {
+        position = null
+        while (locationOn) {
+            DeviceLocation.current(context)?.let { position = it }
+            delay(60_000)
+        }
+    }
+    KeepScreenOn()
 
     LaunchedEffect(Unit) { if (!granted) permission.launch(Manifest.permission.CAMERA) }
 
@@ -405,13 +445,18 @@ fun CameraScreen(bauakteId: String, scan: Boolean) {
                 val raw = ByteArray(buffer.remaining()).also { buffer.get(it) }
                 val rotation = image.imageInfo.rotationDegrees
                 image.close()
+                // Art, Bereich und Standort im Augenblick der Aufnahme festhalten (die Auswahl kann sich danach ändern).
+                val caption = series.caption
+                val place = position.takeIf { locationOn }
                 // Im Bereich der Sitzung, nicht der Ansicht: Wer direkt nach dem Auslösen „Fertig“ oder „Zurück“ tippt,
                 // verliert das Foto nicht (vorher brach das Schließen das Verkleinern und Speichern ab).
                 session.scope.launch {
                     try {
                         val jpeg = withContext(Dispatchers.Default) { Images.preparePhoto(raw, rotation) }
                         Images.decode(jpeg, 200)?.let { shots.add(0, it) }
-                        if (scan) pages.add(jpeg) else withContext(Dispatchers.IO) { session.service.addFile(bauakteId, "photo", jpeg, "Foto.jpg", "image/jpeg") }
+                        if (scan) pages.add(jpeg) else withContext(Dispatchers.IO) {
+                            session.service.addFile(bauakteId, "photo", jpeg, "Foto.jpg", "image/jpeg", caption = caption, latitude = place?.latitude, longitude = place?.longitude)
+                        }
                         savedCount++
                     } catch (e: Exception) {
                         model.message("Das Foto konnte nicht gespeichert werden: ${e.message}")
@@ -482,6 +527,30 @@ fun CameraScreen(bauakteId: String, scan: Boolean) {
             Text(if (scan) "${pages.size} Seiten" else "$savedCount Fotos", color = Color.White, style = MaterialTheme.typography.labelLarge,
                 modifier = Modifier.clip(RoundedCornerShape(50)).background(Color.Black.copy(alpha = 0.5f)).padding(horizontal = 12.dp, vertical = 6.dp))
         }
+        if (!scan) {
+            // Art und Bereich der Serie: große Flächen (48 dp), mit Handschuhen bedienbar; die Wahl bleibt für die folgenden Fotos.
+            Column(Modifier.fillMaxWidth().windowInsetsPadding(WindowInsets.statusBars).padding(top = 64.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    PhotoKind.entries.forEach { kind ->
+                        CameraChip(kind.label, selected = series.kind == kind) { keep(series.copy(kind = if (series.kind == kind) null else kind)) }
+                    }
+                }
+                Row(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    CameraChip(series.area ?: "Raum oder Bereich", selected = series.area != null, icon = Icons.Outlined.MeetingRoom) { pickingArea = true }
+                    CameraChip(if (locationOn) "Standort an" else "Standort aus", selected = locationOn, icon = Icons.Outlined.Place) {
+                        if (locationOn) {
+                            locationOn = false
+                            backend.transaction { backend.setMeta("photo_location", "off") }
+                        } else if (DeviceLocation.granted(context)) {
+                            locationOn = true
+                            backend.transaction { backend.setMeta("photo_location", "on") }
+                        } else {
+                            locationPermission.launch(DeviceLocation.permissions)
+                        }
+                    }
+                }
+            }
+        }
         Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().background(Color.Black.copy(alpha = 0.55f))
             .windowInsetsPadding(WindowInsets.navigationBars).padding(vertical = 16.dp)) {
             LazyRow(Modifier.height(64.dp).padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -506,11 +575,17 @@ fun CameraScreen(bauakteId: String, scan: Boolean) {
                     }
                 }
             }
-            Text("Auslösen auch mit der Lautstärketaste", color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.bodySmall,
+            Text(if (scan) "Auslösen auch mit der Lautstärketaste" else listOfNotNull(series.caption, "Auslösen auch mit der Lautstärketaste").joinToString(". "), color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.bodySmall,
                 textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
         }
     }
     if (gallery) GalleryImport(bauakteId) { gallery = false }
+    if (pickingArea) {
+        AreaSheet(series.area, remember { PhotoSeries.areas(session.service.rooms(bauakteId)) }, onDismiss = { pickingArea = false }) { area ->
+            keep(series.copy(area = area))
+            pickingArea = false
+        }
+    }
     if (naming) {
         CategorySheet("Scan ${Dates.date(LocalDate.now(Dates.zone))}", onDismiss = { naming = false }) { caption, category ->
             scope.launch {
@@ -519,6 +594,49 @@ fun CameraScreen(bauakteId: String, scan: Boolean) {
                 model.message("PDF mit ${pages.size} Seiten gespeichert. Es wird übertragen, sobald eine Verbindung besteht.")
                 naming = false
                 nav.back()
+            }
+        }
+    }
+}
+
+/** Kapsel über dem Kamerabild: mindestens 48 dp hoch, gewählt in Weiß mit dunkler Schrift (auch in der Sonne gut zu erkennen). */
+@Composable
+private fun CameraChip(text: String, selected: Boolean, icon: ImageVector? = null, onClick: () -> Unit) {
+    Row(
+        Modifier.heightIn(min = 48.dp).clip(RoundedCornerShape(50)).background(if (selected) Color.White else Color.Black.copy(alpha = 0.6f))
+            .border(1.dp, Color.White.copy(alpha = if (selected) 0f else 0.7f), RoundedCornerShape(50))
+            .selectable(selected = selected, role = Role.Button, onClick = onClick).padding(horizontal = 16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (icon != null) {
+            Icon(icon, null, tint = if (selected) Color.Black else Color.White, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(6.dp))
+        }
+        Text(text, color = if (selected) Color.Black else Color.White, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, maxLines = 1)
+    }
+}
+
+/** Raum oder Bereich der Fotoserie: Räume der Bauakte zur Auswahl oder freier Text (mit Diktat). */
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@Composable
+private fun AreaSheet(current: String?, rooms: List<String>, onDismiss: () -> Unit, onPick: (String?) -> Unit) {
+    var text by remember { mutableStateOf(current ?: "") }
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true), containerColor = tones.canvas) {
+        Column(Modifier.padding(horizontal = 20.dp).padding(bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text("Raum oder Bereich", style = MaterialTheme.typography.headlineSmall)
+            Secondary("Gilt für die folgenden Fotos und steht in ihrer Beschriftung.")
+            androidx.compose.material3.OutlinedTextField(text, { text = it }, label = { Text("Bereich") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
+                trailingIcon = { DictationButton { text = appendDictation(text, it) } })
+            if (rooms.isNotEmpty()) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    rooms.forEach { room ->
+                        androidx.compose.material3.FilterChip(selected = text == room, onClick = { onPick(room) }, label = { Text(room) }, modifier = Modifier.heightIn(min = 48.dp))
+                    }
+                }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                androidx.compose.material3.OutlinedButton(onClick = { onPick(null) }, modifier = Modifier.weight(1f).height(56.dp)) { Text("Ohne Bereich") }
+                Button(onClick = { onPick(text.trim().ifEmpty { null }) }, modifier = Modifier.weight(1f).height(56.dp)) { Text("Übernehmen") }
             }
         }
     }
@@ -533,14 +651,15 @@ fun CategorySheet(initialCaption: String, onDismiss: () -> Unit, onSave: (String
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = tones.canvas) {
         Column(Modifier.padding(horizontal = 20.dp).padding(bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("Dokument ablegen", style = MaterialTheme.typography.headlineSmall)
-            androidx.compose.material3.OutlinedTextField(caption, { caption = it }, label = { Text("Bezeichnung") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+            androidx.compose.material3.OutlinedTextField(caption, { caption = it }, label = { Text("Bezeichnung") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
+                trailingIcon = { DictationButton { caption = appendDictation(caption, it) } })
             Text("Art", style = MaterialTheme.typography.titleSmall)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 DocumentCategory.entries.forEach { c ->
                     androidx.compose.material3.FilterChip(selected = category == c, onClick = { category = c }, label = { Text(c.title) })
                 }
             }
-            Button(onClick = { onSave(caption.trim(), category) }, modifier = Modifier.fillMaxWidth().height(48.dp)) { Text("Speichern") }
+            Button(onClick = { onSave(caption.trim(), category) }, modifier = Modifier.fillMaxWidth().height(56.dp)) { Text("Speichern") }
         }
     }
 }

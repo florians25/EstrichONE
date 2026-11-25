@@ -212,6 +212,95 @@ abstract class ScreenshotBase(private val device: String, private val appearance
         }
     }
 
+    // Baustelle und Kunde vor Ort: Übertragungsstand, Serienfotos, geführte Abnahme, Kundenansicht, Entwürfe, Ankunft.
+
+    /** Ein Foto, das der Server abgelehnt hat, und zwei, die noch warten (der Abgleich der Sitzung ist dafür angehalten). */
+    private fun transfer(model: AppModel) {
+        val session = model.session.value!!
+        val failed = session.service.addFile(DemoData.EFH, "photo", byteArrayOf(1), "Foto.jpg", "image/jpeg", caption = "Nachher, Bad EG")
+        session.service.addFile(DemoData.EFH, "photo", byteArrayOf(2), "Foto.jpg", "image/jpeg", caption = "Nachher, Wohnen EG")
+        session.service.addFile(DemoData.EFH, "photo", byteArrayOf(3), "Foto.jpg", "image/jpeg", caption = "Nachher, Flur EG")
+        session.store.updateUpload(failed, de.estrichone.core.UploadState.Failed, 0, "FILE_TOO_LARGE")
+        session.close()
+    }
+
+    @Test
+    fun uebertragungHeute() = scene("uebertragung-heute", Tab.Today, ::transfer) { emptyList() }
+
+    @Test
+    fun uebertragungSynchronisation() = scene("uebertragung-synchronisation", Tab.Today, ::transfer) { listOf(Route.Sync) }
+
+    @Test
+    fun kameraSerie() = scene("kamera-serie", Tab.Bauakten, { model ->
+        val backend = model.session.value!!.store.backend
+        val today = java.time.LocalDate.now(de.estrichone.core.Dates.zone)
+        backend.setMeta("photo_series:${DemoData.EFH}", "$today|${de.estrichone.core.PhotoSeries(de.estrichone.core.PhotoKind.After, "Bad EG").encode()}")
+    }) { listOf(Route.Bauakte(DemoData.EFH), Route.Camera(DemoData.EFH)) }
+
+    private fun acceptance(name: String, step: Int) {
+        de.estrichone.android.ui.FieldPreset.acceptanceStep = step
+        try {
+            main(name, Tab.Bauakten, listOf(Route.Bauakte(DemoData.EFH), Route.Acceptance(DemoData.EFH, null)))
+        } finally {
+            de.estrichone.android.ui.FieldPreset.acceptanceStep = null
+        }
+    }
+
+    @Test
+    fun abnahmeSchritt1() = acceptance("abnahme-1-leistung", 0)
+
+    @Test
+    fun abnahmeSchritt2() = acceptance("abnahme-2-unterschriften", 1)
+
+    @Test
+    fun abnahmeSchritt3() = acceptance("abnahme-3-zusammenfassung", 2)
+
+    @Test
+    fun abnahmeProtokoll() = main("abnahme-protokoll", Tab.Bauakten, listOf(Route.Bauakte(DemoData.KITA), Route.Acceptance(DemoData.KITA, DemoData.ACCEPTANCE)))
+
+    @Test
+    fun erstbegehungNeu() = main("erstbegehung-neu", Tab.Bauakten, listOf(Route.Bauakte(DemoData.ISARPARK), Route.Inspection(DemoData.ISARPARK, null)))
+
+    private fun customerView(name: String, view: de.estrichone.android.ui.CustomerView) {
+        val model = demo()
+        val session = model.session.value!!
+        shot(name) {
+            val nav = remember { Nav(Tab.Bauakten).also { it.set(Tab.Bauakten, listOf(Route.Bauakte(DemoData.EFH))); it.customerView = view } }
+            MainScreen(model, session, nav)
+        }
+    }
+
+    @Test
+    fun kundenansichtUnterschrift() = customerView("kundenansicht-unterschrift", de.estrichone.android.ui.CustomerView.Signature("Abnahmeprotokoll", listOf(
+        "Bauvorhaben" to "Neubau EFH Schneider\nAm Sonnenhang 12, 84028 Landshut", "Datum" to "Heute", "Ergebnis" to "Abgenommen",
+        "Umfang der Leistung" to "Zementestrich CT-C25-F4, 65 mm, 142,5 m² auf Fußbodenheizung"), "Familie Schneider") { _, _ -> })
+
+    @Test
+    fun kundenansichtFotos() = customerView("kundenansicht-fotos", de.estrichone.android.ui.CustomerView.Photos(DemoData.EFH))
+
+    /** Entwurf des Bautagebuchs nach einem Abbruch: beim Öffnen wieder da. */
+    @Test
+    fun tagebuchEntwurf() {
+        val model = demo()
+        val session = model.session.value!!
+        session.drafts.save(de.estrichone.core.Drafts.DIARY, DemoData.EFH, mapOf("text" to "Estrich im EG eingebracht, Randstreifen gesetzt.", "workers" to "4",
+            "start" to "07:00", "weather" to "cloudy", "temperature" to "8"))
+        shot("tagebuch-entwurf") {
+            val nav = remember { Nav(Tab.Bauakten).also { it.set(Tab.Bauakten, listOf(Route.Bauakte(DemoData.EFH))); it.captureTask = de.estrichone.android.ui.SiteTask.Diary.with(DemoData.EFH) } }
+            MainScreen(model, session, nav)
+        }
+    }
+
+    /** Heute: am laufenden Einsatz ist die Ankunft gemerkt, „Fertig“ schließt ab. */
+    @Test
+    fun heuteAngekommen() = scene("heute-angekommen", Tab.Today, { model ->
+        val session = model.session.value!!
+        val today = java.time.LocalDate.now(de.estrichone.core.Dates.zone).toString()
+        kotlinx.coroutines.runBlocking { session.weekPlan() }?.assignments.orEmpty().filter { it.day == today }.forEach {
+            de.estrichone.core.SiteVisit.save(session.store.backend, it.id, it.day, de.estrichone.core.SiteVisit(arrived = "07:05"))
+        }
+    }) { emptyList() }
+
     @Test
     fun benachrichtigungen() = inbox("benachrichtigungen")
 

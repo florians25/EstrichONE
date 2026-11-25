@@ -1,5 +1,8 @@
 package de.estrichone.android.ui
 
+import androidx.compose.material.icons.filled.CloudUpload
+import de.estrichone.core.TransferStatus
+import de.estrichone.core.retryUpload
 import android.os.Build
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -251,6 +254,7 @@ fun SyncScreen() {
     val scope = rememberCoroutineScope()
     val status by session.status.collectAsState()
     val rejected by session.local { session.store.rejected() }
+    val transfer by session.local { TransferStatus.of(session.store) }
     ScreenScaffold("Synchronisation") { padding ->
         LazyColumn(contentPadding = padding.content(), modifier = Modifier.readable()) {
             item {
@@ -267,6 +271,7 @@ fun SyncScreen() {
                                 status.summary.isSettled -> "Alles übertragen"
                                 else -> "Änderungen ausstehend"
                             }, style = MaterialTheme.typography.titleMedium)
+                            (transfer.failedText ?: transfer.waitingText)?.let { Text("$it.", style = MaterialTheme.typography.bodyMedium) }
                             Secondary(status.summary.lastSuccessfulSync?.let { "Letzter Abgleich ${Dates.ago(java.time.Instant.ofEpochMilli(it))}" } ?: "Noch kein Abgleich")
                         }
                     }
@@ -287,8 +292,39 @@ fun SyncScreen() {
                             iconBackground = tones.dangerSoft, subtitle = "Werden erst nach erneutem Versuch übertragen.", trailing = {
                                 TextButton(onClick = {
                                     if (session.store.retryFailedUploads() > 0) scope.launch { session.synchronize() }
-                                }, enabled = !status.running) { Text("Erneut versuchen") }
+                                }, enabled = !status.running) { Text("Alle erneut senden") }
                             })
+                    }
+                }
+            }
+            // Was wartet und was gescheitert ist, Datei für Datei: mit verständlichem Grund und „Erneut senden“.
+            if (transfer.failed.isNotEmpty()) {
+                item { GroupLabel("Nicht übertragen") }
+                item {
+                    SectionCard {
+                        transfer.failed.forEachIndexed { index, file ->
+                            if (index > 0) RowDivider()
+                            RowItem("${file.kindLabel}: ${file.name}", icon = Icons.Filled.ErrorOutline, iconTint = tones.danger, iconBackground = tones.dangerSoft,
+                                subtitle = listOfNotNull(file.bauakteId?.let { session.service.bauakte(it)?.title }, TransferStatus.failureText(file.errorCode)).joinToString(". "),
+                                trailing = {
+                                    if (file.canRetry) TextButton(onClick = { if (session.store.retryUpload(file.fileId)) scope.launch { session.synchronize() } },
+                                        enabled = !status.running, modifier = Modifier.heightIn(min = 48.dp)) { Text("Erneut senden") }
+                                })
+                        }
+                    }
+                }
+            }
+            if (transfer.waiting.isNotEmpty()) {
+                item { GroupLabel("Wartet auf Übertragung") }
+                item {
+                    SectionCard {
+                        transfer.waiting.take(20).forEachIndexed { index, file ->
+                            if (index > 0) RowDivider()
+                            RowItem("${file.kindLabel}: ${file.name}", icon = Icons.Filled.CloudUpload, iconTint = tones.textSecondary, iconBackground = tones.fill,
+                                subtitle = listOfNotNull(file.bauakteId?.let { session.service.bauakte(it)?.title },
+                                    if (file.uploadedBytes in 1 until file.size) "${file.uploadedBytes * 100 / file.size} % gesendet" else null).joinToString(", ").ifEmpty { null })
+                        }
+                        if (transfer.waiting.size > 20) { RowDivider(); RowItem("und ${transfer.waiting.size - 20} weitere") }
                     }
                 }
             }
@@ -305,7 +341,7 @@ fun SyncScreen() {
                 }
             }
             item {
-                Secondary("Erfasste Daten werden verschlüsselt auf dem Gerät gespeichert und automatisch übertragen: nach jeder Änderung, alle 2 Minuten und im Hintergrund.",
+                Secondary("Erfasste Daten werden verschlüsselt auf dem Gerät gespeichert und automatisch übertragen: nach jeder Änderung, alle 2 Minuten und im Hintergrund, auch wenn die App geschlossen ist. Bauakten der Einsätze der nächsten 7 Tage werden mit ihren Dokumenten vorab geladen.",
                     Modifier.padding(16.dp))
             }
             (status.outcome as? SyncOutcome.Failed)?.let { failed -> item { Banner(failed.error.message ?: "Fehler", Icons.Filled.ErrorOutline, tones.danger, tones.dangerSoft) } }

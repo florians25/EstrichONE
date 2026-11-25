@@ -111,6 +111,10 @@ class Nav(initialTab: Tab) {
     /** Erfassen-Blatt der Bauakte mit dieser ID (Knopf „Erfassen“ in der Bauakte). */
     var captureOpenFor by mutableStateOf<String?>(null)
     var captureTask by mutableStateOf<CaptureRequest?>(null)
+    /** Kundenansicht (Fotos, Unterschrift) im Vollbild über der ganzen App. */
+    var customerView by mutableStateOf<CustomerView?>(null)
+    /** Entwurf, der nach einem Abstecher (Kamera) ohne Hinweis weitergeführt wird. */
+    var resumedDraft: String? = null
     var snackbar = SnackbarHostState()
 
     fun stack(tab: Tab = this.tab): List<Route> = stacks[tab] ?: emptyList()
@@ -149,10 +153,10 @@ class Nav(initialTab: Tab) {
      * Erfassen aus „Heute“: Bauakte öffnen und dort erfassen (Foto: Kamera der Bauakte, sonst das Formular),
      * damit Zurück in der Bauakte landet.
      */
-    fun captureIn(bauakteId: String, task: SiteTask) {
+    fun captureIn(bauakteId: String, task: SiteTask, prefill: Map<String, String> = emptyMap()) {
         tab = Tab.Bauakten
         stacks[Tab.Bauakten] = listOfNotNull(Route.Bauakte(bauakteId), if (task == SiteTask.Photo) Route.Camera(bauakteId) else null)
-        if (task != SiteTask.Photo) captureTask = task.with(bauakteId)
+        if (task != SiteTask.Photo) captureTask = CaptureRequest(task, bauakteId, prefill)
     }
 
     /** Ziel einer Benachrichtigung bzw. eines Links öffnen. */
@@ -208,6 +212,28 @@ fun MainScreen(model: AppModel, session: Session, nav: Nav = remember { Nav(Tab.
             model.routeOpened()
         }
     }
+    // Schnellzugriff des App-Symbols (Foto, Tagebuch, Mangel): in die Bauakte des laufenden bzw. nächsten Einsatzes von heute;
+    // ohne Einsatz wird die Baustelle gewählt. „Synchronisation“ kommt aus der Mitteilung „Übertragung prüfen“.
+    val action by model.pendingAction.collectAsState()
+    LaunchedEffect(action) {
+        val current = action ?: return@LaunchedEffect
+        model.actionOpened()
+        nav.captureOpenFor = null
+        nav.customerView = null
+        if (current == de.estrichone.android.MainActivity.ACTION_SYNC) {
+            nav.set(Tab.Today, listOf(Route.Sync))
+            return@LaunchedEffect
+        }
+        val task = when (current) {
+            de.estrichone.core.QuickShortcut.DIARY -> SiteTask.Diary
+            de.estrichone.core.QuickShortcut.DEFECT -> SiteTask.Defect
+            else -> SiteTask.Photo
+        }
+        if (!task.isAvailable(session.modules.value)) return@LaunchedEffect
+        val target = de.estrichone.core.QuickShortcut.target(session.cachedPlan(), java.time.LocalDate.now(de.estrichone.core.Dates.zone), Live.clock())
+            ?.takeIf { session.service.bauakte(it) != null && session.service.canEdit(it) }
+        if (target != null) nav.captureIn(target, task) else nav.captureTask = task.with(null)
+    }
     BackHandler(enabled = nav.stack().isNotEmpty()) { nav.back() }
 
     CompositionLocalProvider(LocalNav provides nav, LocalSession provides session, LocalModel provides model) {
@@ -253,6 +279,8 @@ fun MainScreen(model: AppModel, session: Session, nav: Nav = remember { Nav(Tab.
                 SnackbarHost(nav.snackbar, Modifier.align(androidx.compose.ui.Alignment.BottomCenter).padding(16.dp))
             }
         }
+        // Kundenansicht: Vollbild über Inhalt und Navigation, damit beim Zeigen des Geräts nichts Internes zu sehen ist.
+        nav.customerView?.let { view -> CustomerViewOverlay(view) { nav.customerView = null } }
         // Update-Ablauf: Wartungsbildschirm über allem (auch über die Navigation).
         UpdateMaintenanceOverlay(session)
       }
