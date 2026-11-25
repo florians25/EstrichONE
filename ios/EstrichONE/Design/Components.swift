@@ -393,7 +393,8 @@ struct Callout: View {
                     Button(actionTitle, action: action)
                         .font(Typo.subheadStrong)
                         .foregroundStyle(Theme.accent)
-                        .frame(minHeight: 32)
+                        .frame(minHeight: Size.minTap)
+                        .contentShape(Rectangle())
                 }
             }
             Spacer(minLength: 0)

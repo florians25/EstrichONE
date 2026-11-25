@@ -236,7 +236,7 @@ struct MoreView: View {
     /// Screenshot-Modus: Unterseite öffnen.
     private func applyShotScene() {
         switch shotScene {
-        case "sync": route = .sync
+        case "sync", "sync-warteschlange": route = .sync
         case "sicherheit": route = .security
         case "mehr-zuruecksetzen", "mehr-speicher": route = .device
         case let scene? where scene.hasPrefix("postfach"): route = .inbox

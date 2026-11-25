@@ -18,7 +18,7 @@ Für **jeden** der folgenden Datentypen gleich beantworten:
 | Nutzerinhalte | Andere Nutzerinhalte | `…OtherUserContent` | Bautagebuch, Mängel, Protokolle, Unterschriften, Notizen, Chat (Texte, Dokumente) |
 | Kennungen | Nutzer-ID | `…UserID` | Benutzerkonto beim Server |
 | Kennungen | Geräte-ID | `…DeviceID` | Geräteregistrierung (Gerätesperre, Poolgeräte), keine Werbe-ID |
-| Standort | Genauer Standort | `…PreciseLocation` | nur auf Knopfdruck: Adresse einer Baustelle, Aufnahmeort eines Fotos, Standort im Chat teilen |
+| Standort | Genauer Standort | `…PreciseLocation` | Aufnahmeort von Baustellenfotos, solange die Kamera der App geöffnet ist (abschaltbar); sonst nur auf Knopfdruck: Adresse einer Baustelle, Standort im Chat teilen |
 | Diagnose | Andere Diagnosedaten | `…OtherDiagnosticData` | nur im freiwilligen Fehlerbericht (App-Version, Speicher, Abgleichstand) |
 
 **Nicht** anhaken: E-Mail-Adresse, Telefonnummer, physische Adresse, Gesundheit, Fitness, Finanzinfos, Kontakte,

@@ -101,11 +101,21 @@ struct NewWorkItemView: View {
     @State private var assignee: UUID?
     @State private var people: [DirectoryUser] = []
     @State private var error: String?
+    @State private var keeper = DraftKeeper<WorkItemDraft>(kind: DraftKind.workItem)
+    @State private var restoredAt: Date?
     @FocusState private var titleFocused: Bool
 
     var body: some View {
         NavigationStack {
             Form {
+                if let restoredAt {
+                    DraftRestoredNotice(savedAt: restoredAt) {
+                        title = ""
+                        details = ""
+                        self.restoredAt = nil
+                        Task { await keeper.discardRestored() }
+                    }
+                }
                 Picker("Art", selection: $kind) {
                     ForEach(WorkItemKind.allCases, id: \.self) { Text($0.title).tag($0) }
                 }
@@ -118,6 +128,8 @@ struct NewWorkItemView: View {
                         .accessibilityIdentifier("workItemTitleField")
                     TextField("Details (optional)", text: $details, axis: .vertical)
                         .lineLimit(2...6)
+                    // Diktiert wird die Beschreibung; der Titel bleibt kurz.
+                    DictationRow(text: $details, title: "Details diktieren")
                 }
 
                 // Frist mit einem Tipp – die häufigsten Fristen als Kapseln, ein eigenes Datum nur bei Bedarf.
@@ -166,9 +178,18 @@ struct NewWorkItemView: View {
             .task {
                 kind = initialKind
                 assignee = model.active?.user.id
-                titleFocused = true
+                // Entwurf vom letzten Mal (gleiche Bauakte, gleiche Art) wieder anbieten.
+                if let stored = await keeper.restore(scope: bauakteId, model: model), !stored.value.isEmpty,
+                   stored.value.kind == initialKind.rawValue {
+                    title = stored.value.title
+                    details = stored.value.details
+                    restoredAt = stored.savedAt
+                }
+                titleFocused = restoredAt == nil
                 people = await DirectoryCache.load(model)
             }
+            .autosavesDraft(keeper, value: WorkItemDraft(kind: kind.rawValue, title: title, details: details))
+            .keepsScreenAwake()
         }
     }
 
@@ -179,6 +200,7 @@ struct NewWorkItemView: View {
                                                       dueDate: due.date(custom: dueDate).map { CalendarDay.string($0) },
                                                       assigneeUserId: assignee, bauakteId: bauakteId))
             model.active?.sync?.localChangeMade()
+            await keeper.finish()
             onDone()
         } catch {
             self.error = error.message

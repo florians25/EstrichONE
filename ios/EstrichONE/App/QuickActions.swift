@@ -4,28 +4,31 @@ import SwiftUI
 import UIKit
 
 /// Schnellzugriffe von außen: App-Symbol lange drücken (Schnellaktionen), Kurzbefehle, Siri und die Aktionstaste.
-/// „Foto“ und „Bautagebuch“ gelten der aktuellen Bauakte: dem heutigen Einsatz, sonst der zuletzt geöffneten Bauakte,
-/// sonst wird die Baustelle gewählt. Die Kamera zeigt die Bauakte oben an und lässt sie dort wechseln. Gesperrt oder
+/// „Foto“, „Bautagebuch“ und „Mangel“ gelten der aktuellen Bauakte: dem laufenden Einsatz von heute (sonst dem nächsten
+/// heute), sonst der zuletzt geöffneten Bauakte, sonst wird die Baustelle gewählt. Die Kamera zeigt die Bauakte oben an und lässt sie dort wechseln. Gesperrt oder
 /// abgemeldet wartet die Aktion, bis die App wieder offen ist.
 enum QuickAction: String, CaseIterable, Identifiable, Sendable {
     case photo = "de.estrichone.quick.photo"
     case diary = "de.estrichone.quick.diary"
+    case defect = "de.estrichone.quick.defect"
     case search = "de.estrichone.quick.search"
 
     var id: String { rawValue }
 
     var title: String {
         switch self {
-        case .photo: "Foto zur Baustelle"
+        case .photo: "Foto zur heutigen Baustelle"
         case .diary: "Bautagebuch"
+        case .defect: "Mangel melden"
         case .search: "Baustelle suchen"
         }
     }
 
     var subtitle: String? {
         switch self {
-        case .photo: "Heutiger Einsatz oder zuletzt geöffnet"
+        case .photo: "Laufender Einsatz oder zuletzt geöffnet"
         case .diary: "Eintrag für heute"
+        case .defect: "Mit Frist, zum laufenden Einsatz"
         case .search: nil
         }
     }
@@ -34,6 +37,7 @@ enum QuickAction: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .photo: "camera"
         case .diary: "book"
+        case .defect: "exclamationmark.triangle"
         case .search: "magnifyingglass"
         }
     }
@@ -95,11 +99,24 @@ struct SiteDiaryIntent: AppIntent {
     }
 }
 
+struct SiteDefectIntent: AppIntent {
+    static let title: LocalizedStringResource = "Mangel melden"
+    static let openAppWhenRun = true
+
+    @MainActor
+    func perform() async throws -> some IntentResult {
+        QuickActionCenter.shared.pending = .defect
+        return .result()
+    }
+}
+
 struct EstrichShortcuts: AppShortcutsProvider {
     static var appShortcuts: [AppShortcut] {
         AppShortcut(intent: SitePhotoIntent(), phrases: ["Foto mit \(.applicationName)", "Baustellenfoto mit \(.applicationName)"],
                     shortTitle: "Foto zur Baustelle", systemImageName: "camera")
         AppShortcut(intent: SiteDiaryIntent(), phrases: ["Bautagebuch in \(.applicationName)", "Tagebuch mit \(.applicationName)"],
                     shortTitle: "Bautagebuch", systemImageName: "book")
+        AppShortcut(intent: SiteDefectIntent(), phrases: ["Mangel melden mit \(.applicationName)", "Mangel in \(.applicationName)"],
+                    shortTitle: "Mangel melden", systemImageName: "exclamationmark.triangle")
     }
 }

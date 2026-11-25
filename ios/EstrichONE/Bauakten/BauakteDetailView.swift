@@ -53,6 +53,8 @@ struct BauakteDetailView: View {
     /// Zuständige Person und weitere Beteiligte (online geladen).
     @State private var responsibleName: String?
     @State private var memberNames: [String] = []
+    /// Stand auf dem Gerät („Auf dem Gerät verfügbar“): Daten, Dokumente und Fotos für die Arbeit ohne Netz.
+    @State private var availability: OfflineAvailability?
 
     var body: some View {
         Group {
@@ -132,6 +134,9 @@ struct BauakteDetailView: View {
         .navigationTitle(showsNavigationTitle ? (content?.bauakte.title ?? "Bauakte") : "")
         .navigationBarTitleDisplayMode(.inline)
         .task(id: model.active?.sync?.revision) { await reload() }
+        .task(id: model.active?.sync?.offline.revision) {
+            availability = await model.active?.sync?.offline.availability(of: bauakteId)
+        }
         .task {
             try? await model.active?.service?.markOpened(bauakteId)
             // Recht „Bauakte bearbeiten“ und Einstellung „Hinweis Erstbegehung fehlt“ einmal frisch laden (danach zwischengespeichert).
@@ -222,6 +227,9 @@ struct BauakteDetailView: View {
             .font(Typo.subhead)
             .foregroundStyle(bauakte.addressLine == nil ? Theme.warning : Theme.textSecondary)
             .accessibilityIdentifier("bauakteAddress")
+            if let availability {
+                OfflineAvailabilityLine(availability: availability)
+            }
             let today = !content.todayAssignments.isEmpty
             let priority = bauakte.project.priority.flatMap { $0 == .high || $0 == .urgent ? $0 : nil }
             if today || priority != nil {
@@ -974,6 +982,17 @@ struct BauakteDetailView: View {
                 Button("Verlauf", systemImage: "clock.arrow.circlepath") { show(.notes) }
             }
             }
+            if let offline = model.active?.sync?.offline, !offline.planned.contains(bauakteId) {
+                // Einsätze der nächsten Tage werden von selbst geladen; alle anderen Bauakten auf Wunsch.
+                Section {
+                    let pinned = offline.pinned.contains(bauakteId)
+                    Button(pinned ? "Nicht mehr bereithalten" : "Auf dem Gerät bereithalten",
+                           systemImage: pinned ? "arrow.down.circle.fill" : "arrow.down.circle") {
+                        Task { await offline.setPinned(bauakteId, !pinned) }
+                    }
+                    .accessibilityIdentifier("pinOfflineButton")
+                }
+            }
             if isMember {
                 Section {
                     Button(BauakteViewOnly.leave, systemImage: "person.badge.minus", role: .destructive) { Task { await leave() } }
@@ -1069,13 +1088,14 @@ struct BauakteDetailView: View {
         } else if action == nil {
             switch scene {
             case "erstbegehung": action = .inspection
-            case "abnahme": action = .acceptance
-            case "tagebuch-neu": action = .diary
+            case "abnahme", "abnahme-pruefen", "abnahme-unterschrift": action = .acceptance
+            case "tagebuch-neu", "tagebuch-diktat", "tagebuch-entwurf": action = .diary
+            case "kamera-serie": action = .photo
             case "mangel-neu": action = .defect
             case "basisdaten-neu": action = .project
             case "kamera": action = .photo
             case "bauakte-erfassen": capturing = true
-            case "foto-vorschau":
+            case "foto-vorschau", "foto-kunde":
                 if viewing == nil, let photo = content?.photos.first(where: \.isPhoto) { viewing = photo }
             default: break
             }

@@ -31,6 +31,10 @@ struct HomeView: View {
     @State private var cameraFor: Bauakte?
     @State private var diaryFor: Bauakte?
     @State private var defectFor: Bauakte?
+    /// Heute festgehaltene Ankunft und Abschluss je Baustelle (auf dem Gerät gemerkt).
+    @State private var visits: [UUID: SiteVisit] = [:]
+    /// Vorschlag, Ankunft bzw. Abschluss als Eintrag im Bautagebuch festzuhalten.
+    @State private var visitProposal: VisitProposal?
     @State private var toast: String?
     @State private var push = PushCenter.shared
     /// Kennzahlen der heutigen Baustellen (lokal).
@@ -159,6 +163,14 @@ struct HomeView: View {
             }
             .sheet(item: $defectFor) { bauakte in
                 NewWorkItemView(bauakteId: bauakte.id, initialKind: .defect) { defectFor = nil }
+            }
+            .confirmationDialog(visitProposal?.title ?? "", isPresented: Binding(get: { visitProposal != nil }, set: { if !$0 { visitProposal = nil } }),
+                                titleVisibility: .visible, presenting: visitProposal) { proposal in
+                Button("Im Bautagebuch festhalten") { Task { await log(proposal) } }
+                    .accessibilityIdentifier("confirmVisitButton")
+                Button("Abbrechen", role: .cancel) {}
+            } message: { proposal in
+                Text("\(proposal.siteTitle): Die Uhrzeit wird als Eintrag im Bautagebuch gespeichert und mit der Bauakte übertragen.")
             }
             .toast($toast)
         }
@@ -301,7 +313,11 @@ struct HomeView: View {
         guard let sync = model.active?.sync else { return ("icloud.slash", "Nicht verbunden", false) }
         if sync.isRunning { return ("arrow.triangle.2.circlepath", "Wird abgeglichen", false) }
         if sync.maintenanceMessage != nil { return ("wrench.and.screwdriver", "Wartung", false) }
-        if sync.isOffline { return ("icloud.slash", "Offline", false) }
+        if sync.isOffline {
+            // Offline: sagen, was sicher auf dem Gerät wartet („Offline, 3 Fotos warten“).
+            let waiting = sync.transfer.summary.map { "Offline, \($0) \(sync.transfer.waitingCount == 1 ? "wartet" : "warten")" }
+            return ("icloud.slash", waiting ?? "Offline", false)
+        }
         if sync.summary?.hasProblems == true { return ("exclamationmark.icloud", "Bitte prüfen", true) }
         if let summary = sync.summary, !summary.isSettled { return ("icloud.and.arrow.up", "Wird übertragen", false) }
         return ("checkmark.icloud", "Alles übertragen", false)
@@ -360,8 +376,10 @@ struct HomeView: View {
 
     private func jobCard(_ job: TodayJob) -> some View {
         let canCapture = bauakten[job.bauakteId] != nil
+        // Ankunft und Abschluss werden im Bautagebuch festgehalten: nur mit eingeschaltetem Bautagebuch.
+        let visit = modules.isOn(AppModules.diary) ? (visits[job.bauakteId] ?? SiteVisit(day: CalendarDay.string(.now))) : nil
         return TodayJobCard(job: job, glance: glances[job.bauakteId], extras: extras[job.bauakteId], distance: distance(to: job),
-                            phase: phase(of: job), canCapture: canCapture, chatAvailable: chatAvailable) { action in
+                            phase: phase(of: job), canCapture: canCapture, chatAvailable: chatAvailable, visit: visit) { action in
             perform(action, for: job)
         }
         .listRowInsets(EdgeInsets())
@@ -419,7 +437,34 @@ struct HomeView: View {
         case .route: if let url = job.route { openURL(url) }
         case .call: if let url = job.phone { openURL(url) }
         case .chat: openChat(extras[job.bauakteId]?.chat?.id)
+        case .arrived, .finished:
+            guard let bauakte else { return }
+            if model.active?.sync?.isReadOnly == true {
+                toast = "Nur Ansicht: Erfassen ist gerade gesperrt."
+                return
+            }
+            let time = Date.now
+            let arrival = action == .arrived
+            let text = arrival ? SiteVisitLog.arrivalText(at: time)
+                               : SiteVisitLog.finishText(at: time, arrivedAt: visits[bauakte.id]?.arrivedAt)
+            visitProposal = VisitProposal(bauakteId: bauakte.id, siteTitle: bauakte.title, isArrival: arrival, time: time, text: text)
         }
+    }
+
+    /// Ankunft bzw. Abschluss: Eintrag im Bautagebuch anlegen (zuerst auf dem Gerät) und die Uhrzeit für „Heute“ merken.
+    private func log(_ proposal: VisitProposal) async {
+        guard let service = model.active?.service, let store = model.active?.sync?.store else { return }
+        do throws(SiteRecordError) {
+            try await service.addDiaryEntry(NewDiaryEntry(day: CalendarDay.string(proposal.time), text: proposal.text), to: proposal.bauakteId)
+        } catch {
+            toast = error.message
+            return
+        }
+        let visitStore = SiteVisitStore(store: store)
+        visits[proposal.bauakteId] = proposal.isArrival ? await visitStore.markArrived(proposal.bauakteId, at: proposal.time)
+                                                        : await visitStore.markFinished(proposal.bauakteId, at: proposal.time)
+        model.active?.sync?.localChangeMade()
+        toast = "Im Bautagebuch festgehalten"
     }
 
     /// Abgleich in einer Zeile: Symbol und kurzer Text, bei Problemen rot. Alter Planungsstand mit Uhrzeit.
@@ -653,6 +698,13 @@ struct HomeView: View {
                                    today: today)
         }
         glances = sites
+        if let store = model.active?.sync?.store {
+            var known: [UUID: SiteVisit] = [:]
+            for id in Set(jobs.map(\.bauakteId)) {
+                known[id] = await SiteVisitStore(store: store).visit(of: id, day: today)
+            }
+            visits = known
+        }
 
         // Leistung, Zugang und angeheftete Notizen der heutigen Baustellen; Chat aus der zuletzt geladenen Liste.
         var siteExtras: [UUID: TodaySiteExtras] = [:]
@@ -672,4 +724,17 @@ struct HomeView: View {
     static func firstName(_ name: String) -> String {
         name.split(separator: " ").first.map(String.init) ?? name
     }
+}
+
+/// Vorschlag für einen Eintrag im Bautagebuch zu Ankunft oder Abschluss.
+struct VisitProposal: Equatable {
+    let bauakteId: UUID
+    let siteTitle: String
+    let isArrival: Bool
+    let time: Date
+    /// Text des Eintrags („Angekommen um 07:42 Uhr.“).
+    let text: String
+
+    /// Titel der Rückfrage, ohne den Punkt am Ende.
+    var title: String { text.hasSuffix(".") ? String(text.dropLast()) : text }
 }

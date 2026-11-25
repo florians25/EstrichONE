@@ -9,11 +9,20 @@ struct NewNoteView: View {
     @Environment(AppModel.self) private var model
     @State private var text = ""
     @State private var error: String?
+    @State private var keeper = DraftKeeper<NoteDraft>(kind: DraftKind.note)
+    @State private var restoredAt: Date?
     @FocusState private var focused: Bool
 
     var body: some View {
         NavigationStack {
             Form {
+                if let restoredAt {
+                    DraftRestoredNotice(savedAt: restoredAt) {
+                        text = ""
+                        self.restoredAt = nil
+                        Task { await keeper.discardRestored() }
+                    }
+                }
                 Section {
                     TextField("Zum Beispiel: Schlüssel liegt beim Nachbarn, Haus Nr. 3", text: $text, axis: .vertical)
                         .lineLimit(6...16)
@@ -21,6 +30,7 @@ struct NewNoteView: View {
                         .focused($focused)
                         .accessibilityLabel("Notiz")
                         .accessibilityIdentifier("noteTextField")
+                    DictationRow(text: $text)
                 } footer: {
                     Text("Für alle Beteiligten der Bauakte sichtbar. Zeilenumbrüche bleiben erhalten, Telefonnummern und Links sind antippbar.")
                 }
@@ -38,7 +48,15 @@ struct NewNoteView: View {
                         .accessibilityIdentifier("saveNoteButton")
                 }
             }
-            .task { focused = true }
+            .task {
+                if let stored = await keeper.restore(scope: bauakteId, model: model), !stored.value.isEmpty {
+                    text = stored.value.text
+                    restoredAt = stored.savedAt
+                }
+                focused = restoredAt == nil
+            }
+            .autosavesDraft(keeper, value: NoteDraft(text: text))
+            .keepsScreenAwake()
         }
     }
 
@@ -47,6 +65,7 @@ struct NewNoteView: View {
         do throws(BauakteError) {
             try await service.addNote(text, to: bauakteId)
             model.active?.sync?.localChangeMade()
+            await keeper.finish()
             onDone()
         } catch {
             self.error = error.message

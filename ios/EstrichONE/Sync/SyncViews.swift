@@ -1,45 +1,69 @@
 import EstrichCore
 import SwiftUI
 
-/// Deckende Statuszeile (nie auf Glas, 07): unauffällig, wenn alles übertragen ist; deutlich bei Offline und Fehlern.
-struct SyncStatusBar: View {
+/// Ruhige Zeile über allen Reitern, solange Fotos, Videos oder Dokumente noch nicht beim Server sind
+/// („3 Fotos warten auf Übertragung“), und deutlich bei Fehlern, mit „Erneut senden“. Reine Einträge (Bautagebuch,
+/// Mängel) sind in Sekunden übertragen und zeigen nur das Symbol an ihrer Zeile. Kurze Übertragungen blenden die Zeile
+/// gar nicht erst ein. „Details“ öffnet die Seite „Synchronisation“.
+struct TransferStrip: View {
     let sync: SyncController
 
-    var body: some View {
-        if let line = statusLine {
-            NavigationLink {
-                SyncView(sync: sync)
-            } label: {
-                Label {
-                    Text(line.text).font(.callout.weight(.medium)).fixedSize(horizontal: false, vertical: true)
-                } icon: {
-                    Image(systemName: line.symbol)
-                }
-                .foregroundStyle(line.color)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 10)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(line.background)
-            }
-            .buttonStyle(.plain)
-            .accessibilityIdentifier("syncStatusBar")
-        }
+    @State private var shown: Line?
+    @State private var showsDetails = false
+
+    struct Line: Equatable {
+        let text: String
+        let symbol: String
+        let isProblem: Bool
+        /// Fehlgeschlagene Dateien lassen sich hier direkt erneut senden.
+        let canRetry: Bool
     }
 
-    private var statusLine: (text: String, symbol: String, color: Color, background: Color)? {
-        let summary = sync.summary
-        if summary?.hasProblems == true {
-            return ("Problem bei der Übertragung. Für Details antippen.", "exclamationmark.triangle.fill", Theme.danger, Theme.dangerSoft)
+    /// Was jetzt zu zeigen wäre; `nil`, wenn alles übertragen ist.
+    static func line(queue: TransferQueue, isRunning: Bool, isOffline: Bool) -> Line? {
+        if let problem = queue.problemText {
+            return Line(text: "\(problem).", symbol: "exclamationmark.triangle.fill", isProblem: true, canRetry: queue.failedFiles > 0)
         }
-        if let message = sync.maintenanceMessage {
-            return ("Wartung: \(message) Änderungen bleiben auf dem Gerät und werden danach übertragen.", "wrench.and.screwdriver.fill",
-                    Theme.warning, Theme.warningSoft)
+        guard queue.photos + queue.videos + queue.documents > 0 else { return nil }
+        if isOffline, let text = queue.waitingText {
+            return Line(text: "\(text). Sie liegen sicher auf dem Gerät.", symbol: "arrow.up.circle", isProblem: false, canRetry: false)
         }
-        if sync.isOffline {
-            return ("Keine Verbindung. Änderungen werden gespeichert.", "wifi.slash", Theme.textSecondary, Theme.canvas)
+        guard let text = isRunning ? queue.sendingText : queue.waitingText else { return nil }
+        return Line(text: "\(text).", symbol: "arrow.up.circle", isProblem: false, canRetry: false)
+    }
+
+    var body: some View {
+        let candidate = Self.line(queue: sync.transfer, isRunning: sync.isRunning, isOffline: sync.isOffline)
+        Group {
+            if let shown {
+                StripRow(tone: shown.isProblem ? .danger : .neutral, symbol: shown.symbol, text: shown.text,
+                         actionTitle: shown.canRetry ? "Erneut senden" : "Details") {
+                    if shown.canRetry {
+                        Task { await sync.retryUploads() }
+                    } else {
+                        showsDetails = true
+                    }
+                }
+                .accessibilityIdentifier("transferStrip")
+            }
         }
-        // Laufende Übertragung zeigt nur das Symbol im Kopf bzw. an den Einträgen – keine eigene Textzeile.
-        return nil
+        .task(id: candidate) {
+            // Probleme und das Ende sofort; eine neue Übertragung erst, wenn sie länger als einen Moment dauert.
+            if candidate == nil || candidate?.isProblem == true || shown != nil {
+                shown = candidate
+            } else {
+                try? await Task.sleep(for: .seconds(3))
+                if !Task.isCancelled { shown = candidate }
+            }
+        }
+        .sheet(isPresented: $showsDetails) {
+            NavigationStack {
+                SyncView(sync: sync)
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) { Button("Fertig") { showsDetails = false } }
+                    }
+            }
+        }
     }
 }
 
@@ -49,6 +73,8 @@ struct SyncView: View {
 
     @State private var operations: [OutboxOperation] = []
     @State private var uploads: [PendingUpload] = []
+    /// Was eine wartende Datei ist und zu welcher Baustelle sie gehört.
+    @State private var fileInfo: [UUID: (title: String, site: String?)] = [:]
     @State private var conflicts: [(entityType: EntityType, entityId: UUID, conflict: FieldConflict)] = []
 
     var body: some View {
@@ -143,30 +169,24 @@ struct SyncView: View {
             if !openUploads.isEmpty {
                 Section {
                     ForEach(openUploads, id: \.fileId) { upload in
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text(upload.state == .failed ? "Upload fehlgeschlagen" : "Datei wird übertragen")
-                                .foregroundStyle(upload.state == .failed ? Theme.danger : .primary)
-                            ProgressView(value: Double(upload.uploadedBytes), total: Double(max(upload.size, 1)))
-                            Text("\(ByteCountFormatter.string(fromByteCount: upload.uploadedBytes, countStyle: .file)) von \(ByteCountFormatter.string(fromByteCount: upload.size, countStyle: .file))")
-                                .font(.footnote).foregroundStyle(Theme.textSecondary)
-                        }
+                        uploadRow(upload)
                     }
-                } header: {
-                    Text("Dateien")
-                } footer: {
-                    if openUploads.contains(where: { $0.state == .failed }) {
+                    if openUploads.contains(where: { $0.state == .failed && UploadFailure.canRetry(code: $0.errorCode) }) {
                         Button {
                             Task {
                                 await sync.retryUploads()
                                 await reload()
                             }
                         } label: {
-                            Label("Fehlgeschlagene Uploads erneut versuchen", systemImage: "arrow.clockwise")
+                            Label("Erneut senden", systemImage: "arrow.clockwise")
                         }
-                        .estrichButton(.secondary)
+                        .estrichButton(.secondary, size: .regular, fullWidth: true)
                         .accessibilityIdentifier("retryUploadsButton")
-                        .padding(.top, 6)
                     }
+                } header: {
+                    Text("Dateien (\(openUploads.count))")
+                } footer: {
+                    Text("Fotos, Videos und Dokumente liegen verschlüsselt auf dem Gerät, bis sie vollständig beim Server sind. Die Übertragung wird automatisch fortgesetzt, auch nach einem Neustart der App.")
                 }
             }
         }
@@ -198,7 +218,8 @@ struct SyncView: View {
         }
         if let summary = sync.summary, !summary.isSettled {
             let count = summary.pendingOperations + summary.pendingUploads
-            return ("icloud.and.arrow.up", count == 1 ? "1 Änderung wartet" : "\(count) Änderungen warten", last, Theme.accent)
+            let title = sync.transfer.waitingText ?? (count == 1 ? "1 Änderung wartet" : "\(count) Änderungen warten")
+            return ("icloud.and.arrow.up", title, last, Theme.accent)
         }
         return ("checkmark.icloud.fill", "Alles übertragen", last, Theme.success)
     }
@@ -234,9 +255,70 @@ struct SyncView: View {
         .padding(.vertical, Space.s)
     }
 
+    /// Datei in der Warteschlange: was es ist und zu welcher Baustelle, Fortschritt bzw. verständlicher Fehler.
+    private func uploadRow(_ upload: PendingUpload) -> some View {
+        let info = fileInfo[upload.fileId]
+        let failed = upload.state == .failed
+        return VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .firstTextBaseline, spacing: Space.s) {
+                Image(systemName: failed ? "exclamationmark.triangle.fill" : Self.symbol(for: upload))
+                    .foregroundStyle(failed ? Theme.danger : Theme.accent)
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(info?.title ?? Self.kindTitle(for: upload)).font(Typo.bodyStrong).foregroundStyle(Theme.textPrimary)
+                    if let site = info?.site {
+                        Text(site).font(Typo.subhead).foregroundStyle(Theme.textSecondary).lineLimit(1)
+                    }
+                }
+            }
+            if failed {
+                Text(UploadFailure.message(code: upload.errorCode))
+                    .font(Typo.subhead)
+                    .foregroundStyle(Theme.danger)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else {
+                ProgressView(value: Double(upload.uploadedBytes), total: Double(max(upload.size, 1)))
+                Text(upload.state == .uploading
+                     ? "\(ByteCountFormatter.string(fromByteCount: upload.uploadedBytes, countStyle: .file)) von \(ByteCountFormatter.string(fromByteCount: upload.size, countStyle: .file))"
+                     : "Wartet auf Übertragung, \(ByteCountFormatter.string(fromByteCount: upload.size, countStyle: .file))")
+                    .font(Typo.meta).foregroundStyle(Theme.textSecondary)
+            }
+        }
+        .padding(.vertical, Space.xxs)
+        .accessibilityElement(children: .combine)
+    }
+
+    private static func symbol(for upload: PendingUpload) -> String {
+        switch TransferQueue.kind(ofContentType: upload.contentType) {
+        case .photo: "photo"
+        case .video: "video"
+        case .document: "doc"
+        }
+    }
+
+    private static func kindTitle(for upload: PendingUpload) -> String {
+        switch TransferQueue.kind(ofContentType: upload.contentType) {
+        case .photo: "Foto"
+        case .video: "Video"
+        case .document: "Dokument"
+        }
+    }
+
     private func reload() async {
         operations = (try? await sync.store.operations()) ?? []
         uploads = (try? await sync.store.uploads()) ?? []
+        var info: [UUID: (title: String, site: String?)] = [:]
+        for upload in uploads where upload.state != .done {
+            guard let entity = try? await sync.store.entity(.file, upload.fileId) else { continue }
+            let file = FileItem(entity)
+            var site: String?
+            if let bauakteId = file.bauakteId, let bauakte = try? await sync.store.entity(.bauakte, bauakteId) {
+                site = Bauakte(bauakte).title
+            }
+            let kind = Self.kindTitle(for: upload)
+            info[upload.fileId] = (file.caption.map { "\(kind): \($0)" } ?? kind, site)
+        }
+        fileInfo = info
         conflicts = (try? await sync.store.conflicts()) ?? []
         await sync.refreshSummary()
     }

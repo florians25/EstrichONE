@@ -96,7 +96,7 @@ enum OfflineDuration {
 }
 
 /// Eine Zeile der Statusleiste: volle Breite, getönte Fläche, feine Trennlinie unten.
-private struct StripRow: View {
+struct StripRow: View {
     let tone: Callout.Tone
     let symbol: String
     let text: String
@@ -115,14 +115,20 @@ private struct StripRow: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading)
             if let actionTitle, let action {
-                Button(actionTitle, action: action)
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(Theme.accent)
-                    .padding(.horizontal, Space.s + 2)
-                    .padding(.vertical, 5)
-                    .background(Theme.surface, in: Capsule())
-                    .fixedSize()
-                    .contentShape(Capsule())
+                // Sichtbar eine kleine Kapsel, getroffen wird eine Fläche von mindestens 44 pt (Handschuhe).
+                Button(action: action) {
+                    Text(actionTitle)
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(Theme.accent)
+                        .padding(.horizontal, Space.s + 2)
+                        .padding(.vertical, 5)
+                        .background(Theme.surface, in: Capsule())
+                        .fixedSize()
+                        .frame(minWidth: Size.minTap, minHeight: Size.minTap)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .padding(.vertical, -Space.s)
             }
         }
         .padding(.horizontal, Space.l)

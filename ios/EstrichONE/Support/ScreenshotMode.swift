@@ -82,10 +82,17 @@ final class ScreenshotDirector {
         // Keine weiteren Abgleiche während der Aufnahmen: der Stand bleibt ruhig.
         model()?.active?.sync?.stop()
         try? await Task.sleep(for: .milliseconds(800))
+        // Vorab geladene Dokumente und Fotos („Auf dem Gerät verfügbar“) abwarten, höchstens ein paar Sekunden.
+        var offlineWaited = 0
+        while offlineWaited < 60, let offline = model()?.active?.sync?.offline, offline.revision == 0 || offline.isLoading {
+            try? await Task.sleep(for: .milliseconds(100))
+            offlineWaited += 1
+        }
         for scene in scenes {
             // „…-quer“: gleicher Bildschirm im Querformat (iPad; gedreht wird der Simulator vom Skript).
             let base = scene.hasSuffix("-quer") ? String(scene.dropLast(5)) : scene
             prepare(base, model: model())
+            if base == "uebertragung" || base == "sync-warteschlange" { await queueSamples(model: model()) }
             current = base
             try? await Task.sleep(for: .milliseconds(Self.settleMilliseconds(scene)))
             writeOrientation()
@@ -136,6 +143,22 @@ final class ScreenshotDirector {
         }
     }
 
+    /// „uebertragung“, „sync-warteschlange“: ohne Verbindung warten drei Fotos und ein Tagebucheintrag auf dem Gerät.
+    private var queuedSamples = false
+
+    private func queueSamples(model: AppModel?) async {
+        guard let sync = model?.active?.sync, let service = model?.active?.service else { return }
+        if !queuedSamples, let bauakte = ((try? await service.bauakten()) ?? []).first(where: { $0.status == .inProgress }) {
+            queuedSamples = true
+            for caption in ["Einbau, Bad OG", "Einbau, Flur EG", "Nachher, Küche"] {
+                _ = try? await service.addPhoto(UITestSupport.samplePhoto(), to: bauakte.id, capturedAt: .now, caption: caption)
+            }
+            _ = try? await service.addDiaryEntry(NewDiaryEntry(day: CalendarDay.string(.now), text: "Estrich im EG eingebracht."), to: bauakte.id)
+        }
+        sync.simulateOutage(minutes: 1)
+        await sync.refreshSummary()
+    }
+
     private static func updateNotices(_ scene: String) -> SystemNotices? {
         let (phase, left): (String, Double) = switch scene {
         case "update": ("update", 38)
@@ -169,7 +192,10 @@ final class ScreenshotDirector {
     /// Blätter und Seitenwechsel brauchen etwas länger, bis alles steht.
     private static func settleMilliseconds(_ scene: String) -> Int {
         if scene.hasPrefix("postfach") { return scene.hasSuffix("detail") ? 3600 : 3200 }
-        let sheets = ["hinweis-detail", "bauakte-erfassen", "neu-", "erstbegehung", "abnahme", "foto-", "tagebuch-neu", "mangel-neu", "raum", "basisdaten-neu", "kontakt-neu", "dispo-", "abwesenheit-", "tankbeleg"]
+        // Übertragungszeile erscheint erst nach einem Moment (kurze Übertragungen blenden sie nicht ein).
+        if scene == "uebertragung" || scene == "sync-warteschlange" { return 5200 }
+        if scene == "abnahme-unterschrift" { return 3800 }
+        let sheets = ["hinweis-detail", "bauakte-erfassen", "neu-", "erstbegehung", "abnahme", "foto-", "tagebuch-", "kamera", "mangel-neu", "raum", "basisdaten-neu", "kontakt-neu", "dispo-", "abwesenheit-", "tankbeleg"]
         if scene.hasSuffix("-quer") { return 3200 }
         // Unterhaltung: Verlauf lädt nach dem Öffnen (sonst stand teils noch die Ladeanzeige im Bild).
         if scene.hasPrefix("chat-verlauf") { return 4200 }

@@ -14,6 +14,10 @@ struct NewCmMeasurementView: View {
     @State private var measuredText = ""
     @State private var remarks = ""
     @State private var error: String?
+    @State private var keeper = DraftKeeper<CmDraft>(kind: DraftKind.cmMeasurement)
+    @State private var restoredAt: Date?
+    /// Zusammenfassung vor dem Sichern (Messwert, Grenzwert, Belegreife).
+    @State private var confirming = false
 
     private var measured: Double? {
         Double(measuredText.replacingOccurrences(of: ",", with: ".").trimmingCharacters(in: .whitespaces))
@@ -22,6 +26,15 @@ struct NewCmMeasurementView: View {
     var body: some View {
         NavigationStack {
             Form {
+                if let restoredAt {
+                    DraftRestoredNotice(savedAt: restoredAt) {
+                        location = ""
+                        measuredText = ""
+                        remarks = ""
+                        self.restoredAt = nil
+                        Task { await keeper.discardRestored() }
+                    }
+                }
                 Section {
                     TextField("Messort, z. B. Bad OG", text: $location)
                         .accessibilityIdentifier("cmLocationField")
@@ -49,6 +62,7 @@ struct NewCmMeasurementView: View {
                 }
                 Section("Bemerkung (optional)") {
                     TextField("z. B. Messung nach 28 Tagen", text: $remarks, axis: .vertical)
+                    DictationRow(text: $remarks)
                 }
                 if let error {
                     Text(error).foregroundStyle(Theme.danger)
@@ -59,12 +73,45 @@ struct NewCmMeasurementView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Abbrechen", action: onDone) }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Sichern") { Task { await save() } }
+                    Button("Sichern") { confirming = true }
                         .disabled(measured == nil || location.trimmingCharacters(in: .whitespaces).isEmpty)
                         .accessibilityIdentifier("saveCmButton")
                 }
             }
+            // Zusammenfassung vor dem Abschluss: Messwert gegen Grenzwert, in Worten.
+            .confirmationDialog(summaryTitle, isPresented: $confirming, titleVisibility: .visible) {
+                Button("Messung sichern") { Task { await save() } }
+                    .accessibilityIdentifier("confirmCmButton")
+                Button("Weiter bearbeiten", role: .cancel) {}
+            } message: {
+                Text(summaryText)
+            }
+            .task {
+                if let stored = await keeper.restore(scope: bauakteId, model: model), !stored.value.isEmpty {
+                    location = stored.value.location
+                    binder = ScreedBinderKind(rawValue: stored.value.binder) ?? binder
+                    heated = stored.value.heated
+                    thickness = stored.value.thickness
+                    measuredText = stored.value.measured
+                    remarks = stored.value.remarks
+                    restoredAt = stored.savedAt
+                }
+            }
+            .autosavesDraft(keeper, value: CmDraft(location: location, binder: binder.rawValue, heated: heated, thickness: thickness,
+                                                   measured: measuredText, remarks: remarks))
+            .keepsScreenAwake()
         }
+    }
+
+    private var summaryTitle: String {
+        guard let measured else { return "Messung sichern?" }
+        return measured <= binder.limit(heated: heated) ? "Belegreif" : "Noch nicht belegreif"
+    }
+
+    private var summaryText: String {
+        let limit = binder.limit(heated: heated)
+        let value = measured.map { $0.formatted(.number.precision(.fractionLength(1...2))) } ?? "?"
+        return "\(location.trimmingCharacters(in: .whitespaces)): \(value) CM-% bei einem Grenzwert von \(limit.formatted(.number.precision(.fractionLength(1)))) CM-%. \(binder.title), \(heated ? "beheizt" : "unbeheizt"), \(thickness) mm."
     }
 
     private func save() async {
@@ -73,6 +120,7 @@ struct NewCmMeasurementView: View {
             try await service.addCmMeasurement(to: bauakteId, location: location, binder: binder, heated: heated, thicknessMm: thickness,
                                                measuredCmPercent: measured, remarks: remarks)
             model.active?.sync?.localChangeMade()
+            await keeper.finish()
             onDone()
         } catch {
             self.error = error.message
@@ -332,6 +380,7 @@ struct InitialInspectionView: View {
             TextField("Freie Notizen: Besonderheiten, Absprachen mit dem Kunden, Maße, Zugang …", text: $notes, axis: .vertical)
                 .lineLimit(5...30)
                 .accessibilityIdentifier("inspectionNotesField")
+            DictationRow(text: $notes)
         } header: {
             Text("Notizen")
         } footer: {

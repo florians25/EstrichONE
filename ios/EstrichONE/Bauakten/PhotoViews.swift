@@ -87,6 +87,8 @@ struct PhotoThumbnail: View {
 }
 
 /// Großansicht mit Blättern, Beschriftung, Teilen und Verwerfen (nur noch nicht übertragene eigene Aufnahmen).
+/// „Kundenansicht“ zeigt nur noch die Fotos bildschirmfüllend: ohne Beschriftung, Aufnahmezeit, Werkzeuge und Zähler,
+/// zum Zeigen des Geräts beim Kunden. Blättern und Vergrößern bleiben möglich, der Bildschirm bleibt an.
 struct PhotoViewer: View {
     let photos: [FileItem]
     let onChange: () -> Void
@@ -101,6 +103,9 @@ struct PhotoViewer: View {
     /// Recht `files.delete`: auch übertragene Fotos löschen.
     @State private var canDeleteTransferred = false
     @State private var images: [UUID: UIImage] = [:]
+    /// Kundenansicht: nur die Fotos, keine internen Angaben.
+    @State private var presenting = false
+    @Environment(\.shotScene) private var shotScene
 
     init(photos: [FileItem], selection: UUID, onChange: @escaping () -> Void) {
         self.photos = photos
@@ -121,7 +126,7 @@ struct PhotoViewer: View {
             .tabViewStyle(.page(indexDisplayMode: photos.count > 1 ? .automatic : .never))
             .background(Color.black.ignoresSafeArea())
             .safeAreaInset(edge: .bottom) {
-                if let current {
+                if let current, !presenting {
                     VStack(alignment: .leading, spacing: 8) {
                         HStack {
                             Text(captions[current.id] ?? current.caption ?? "Ohne Beschriftung")
@@ -179,6 +184,13 @@ struct PhotoViewer: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Fertig") { dismiss() }.accessibilityIdentifier("closePhotoViewer")
                 }
+                ToolbarItem(placement: .topBarLeading) {
+                    Button { withAnimation { presenting = true } } label: {
+                        Label("Kundenansicht", systemImage: "person.crop.rectangle")
+                    }
+                    .accessibilityHint("Zeigt nur die Fotos, ohne interne Angaben")
+                    .accessibilityIdentifier("customerViewButton")
+                }
                 ToolbarItem(placement: .principal) {
                     if let index = photos.firstIndex(where: { $0.id == selection }), photos.count > 1 {
                         Text("\(index + 1) von \(photos.count)").font(.subheadline.weight(.semibold)).foregroundStyle(.white)
@@ -188,6 +200,26 @@ struct PhotoViewer: View {
             .toolbarBackground(.black, for: .navigationBar)
             .toolbarColorScheme(.dark, for: .navigationBar)
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar(presenting ? .hidden : .visible, for: .navigationBar)
+            .statusBarHidden(presenting)
+            .overlay(alignment: .topTrailing) {
+                if presenting {
+                    Button { withAnimation { presenting = false } } label: {
+                        Label("Kundenansicht beenden", systemImage: "xmark")
+                            .labelStyle(.iconOnly)
+                            .frame(width: 24, height: 24)
+                    }
+                    .overlayControlStyle()
+                    .tint(.white)
+                    .padding()
+                    .accessibilityLabel("Kundenansicht beenden")
+                    .accessibilityIdentifier("endCustomerViewButton")
+                }
+            }
+            .keepsScreenAwake()
+            .task {
+                if shotScene == "foto-kunde" { presenting = true }
+            }
             .alert("Beschriftung", isPresented: $editingCaption) {
                 TextField("z. B. Bad OG, Randdämmstreifen", text: $captionDraft)
                 Button("Sichern") { Task { await saveCaption() } }

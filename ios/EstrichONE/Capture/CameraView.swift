@@ -1,11 +1,14 @@
 @preconcurrency import AVFoundation
 import AVKit
 import EstrichCore
+import CoreLocation
 import PhotosUI
 import SwiftUI
 
-/// Serienaufnahme für eine Bauakte (09, W-2): Auslöser, Zähler, „Fertig (n)“. Oben die Zuordnung (antippen, um die
-/// Bauakte zu wechseln) und eine Beschriftung, die für alle folgenden Fotos gilt (z. B. „Bad OG“). Ab iOS 18 lösen auch
+/// Serienaufnahme für eine Bauakte (09, W-2): Die Kamera bleibt offen, Auslöser, Zähler, „Fertig (n)“. Oben die Zuordnung
+/// (antippen, um die Bauakte zu wechseln), der Raum oder Bereich und eine Beschriftung; über dem Auslöser die Art der
+/// Fotos (Vorher, Einbau, Nachher, Mangel). Alles gilt für die folgenden Fotos der Serie, bis es geändert wird, und steht
+/// als Beschriftung am Foto. Aufnahmezeit und, wenn erlaubt, der Standort werden mitgespeichert; der Bildschirm bleibt an. Ab iOS 18 lösen auch
 /// die Lautstärketasten bzw. die Kamerasteuerung aus – mit Handschuhen sicherer als der Bildschirm. Ohne Netz zeigt ein
 /// Hinweis, dass die Fotos sicher auf dem Gerät bleiben.
 /// Glas nur auf den Bedienelementen über dem Kamerabild (07, Abschnitt 1).
@@ -16,6 +19,17 @@ struct CameraView: View {
 
     @Environment(AppModel.self) private var model
     @State private var bauakte: Bauakte
+    /// Art der Fotos und Raum bzw. Bereich für die laufende Serie.
+    @State private var phase: PhotoPhase?
+    @State private var room = ""
+    @State private var roomDraft = ""
+    @State private var editingRoom = false
+    @State private var roomSuggestions: [String] = []
+    /// Standort als Aufnahmeort speichern (abschaltbar, die Wahl bleibt erhalten).
+    @SwiftUI.AppStorage("photoLocationEnabled") private var storesLocation = true
+    @State private var locator = LocationProvider()
+    @State private var location: CLLocation?
+    @Environment(\.shotScene) private var shotScene
     @State private var caption = ""
     @State private var captionDraft = ""
     @State private var editingCaption = false
@@ -67,6 +81,12 @@ struct CameraView: View {
             controls
         }
         .task { await startCamera() }
+        .task(id: "\(bauakte.id)|\(storesLocation)") {
+            await loadSeries()
+            await trackLocation()
+        }
+        .onChange(of: series) { _, new in rememberSeries(new) }
+        .keepsScreenAwake()
         .onDisappear { camera.stop() }
         .onChange(of: pending) { closeIfSettled() }
         .onChange(of: pickerItems) { _, items in
@@ -100,6 +120,34 @@ struct CameraView: View {
                     .accessibilityLabel("Bauakte: \(bauakte.title). Antippen zum Wechseln")
                     .accessibilityIdentifier("cameraTargetButton")
 
+                    // Aus einem Protokoll heraus (Erstbegehung, Abnahme) gibt das Formular die Beschriftung vor.
+                    if allowsChangingBauakte {
+                    Menu {
+                        ForEach(roomSuggestions, id: \.self) { name in
+                            Button(name) { room = name }
+                        }
+                        Button("Anderer Bereich …", systemImage: "pencil") {
+                            roomDraft = room
+                            editingRoom = true
+                        }
+                        if !room.isEmpty {
+                            Button("Ohne Raum", systemImage: "xmark", role: .destructive) { room = "" }
+                        }
+                    } label: {
+                        Label(room.isEmpty ? "Raum oder Bereich" : room, systemImage: room.isEmpty ? "square.dashed" : "square.split.bottomrightquarter.fill")
+                            .lineLimit(1)
+                            .font(.subheadline.weight(.semibold))
+                            .labelStyle(TightLabelStyle())
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 14)
+                            .frame(minHeight: Size.minTap)
+                            .background(.black.opacity(0.5), in: Capsule())
+                            .overlay(Capsule().strokeBorder(.white.opacity(0.2)))
+                            .contentShape(Capsule())
+                    }
+                    .accessibilityIdentifier("roomButton")
+                    }
+
                     Button {
                         captionDraft = caption
                         editingCaption = true
@@ -122,6 +170,7 @@ struct CameraView: View {
                     }
                 }
                 Spacer()
+                VStack(alignment: .trailing, spacing: 8) {
                 Button {
                     finish()
                 } label: {
@@ -137,6 +186,17 @@ struct CameraView: View {
                 .estrichButton(count == 0 && pending.count == 0 ? .secondary : .accent)
                 .disabled(pending.isClosing)
                 .accessibilityIdentifier("cameraDoneButton")
+
+                Button { storesLocation.toggle() } label: {
+                    Image(systemName: storesLocation ? (location == nil ? "location" : "location.fill") : "location.slash")
+                        .frame(width: 24, height: 24)
+                }
+                .overlayControlStyle()
+                .tint(.white)
+                .accessibilityLabel(storesLocation ? "Standort wird als Aufnahmeort gespeichert. Antippen zum Ausschalten"
+                                                   : "Standort wird nicht gespeichert. Antippen zum Einschalten")
+                .accessibilityIdentifier("cameraLocationButton")
+                }
             }
             .padding(.horizontal)
             .padding(.top, 8)
@@ -145,6 +205,35 @@ struct CameraView: View {
 
             if let errorMessage {
                 StatusMessage(kind: .error, text: errorMessage).padding(.horizontal)
+            }
+
+            // Art der Fotos: mit dem Daumen erreichbar, eine Auswahl gilt für die ganze Serie.
+            if allowsChangingBauakte {
+            HStack(spacing: 8) {
+                ForEach(PhotoPhase.allCases) { option in
+                    Button {
+                        phase = phase == option ? nil : option
+                    } label: {
+                        Text(option.title)
+                            .font(.subheadline.weight(.semibold))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                            .foregroundStyle(phase == option ? Color.black : Color.white)
+                            .frame(maxWidth: .infinity, minHeight: Size.minTap)
+                            .background(phase == option ? Color.white : Color.black.opacity(0.55), in: Capsule())
+                            .overlay(Capsule().strokeBorder(.white.opacity(phase == option ? 0 : 0.35)))
+                            .contentShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityAddTraits(phase == option ? .isSelected : [])
+                    .accessibilityIdentifier("photoPhase-\(option.rawValue)")
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.bottom, 14)
+            .sensoryFeedback(.selection, trigger: phase)
+            .accessibilityElement(children: .contain)
+            .accessibilityLabel("Art der Fotos")
             }
 
             HStack(alignment: .center) {
@@ -220,12 +309,70 @@ struct CameraView: View {
         } message: {
             Text("Gilt für alle folgenden Fotos dieser Serie.")
         }
+        .alert("Raum oder Bereich", isPresented: $editingRoom) {
+            TextField("z. B. Bad OG, Flur, Garage", text: $roomDraft)
+                .accessibilityIdentifier("roomField")
+            Button("Übernehmen") { room = roomDraft.trimmingCharacters(in: .whitespaces) }
+            Button("Abbrechen", role: .cancel) {}
+        } message: {
+            Text("Gilt für alle folgenden Fotos dieser Serie.")
+        }
         .sheet(isPresented: $choosingBauakte) {
             BauaktePickerView(selected: bauakte.id) { chosen in
                 bauakte = chosen
                 choosingBauakte = false
             }
         }
+    }
+
+    /// Vorgaben der Serie; ihre Beschriftung steht an jedem Foto („Einbau, Bad OG, Randdämmstreifen“).
+    private var series: PhotoSeries { PhotoSeries(phase: phase, room: room, note: caption) }
+
+    /// Räume der Bauakte als Vorschläge; Art und Raum der letzten Serie dieser Bauakte (bis zu zwölf Stunden) übernehmen.
+    private func loadSeries() async {
+        guard let service = model.active?.service, let store = model.active?.sync?.store else { return }
+        let rooms = (try? await service.rooms(of: bauakte.id)) ?? []
+        roomSuggestions = PhotoSeries.roomSuggestions(rooms.map { (name: $0.name, floor: $0.floor) })
+        #if DEBUG
+        if shotScene == "kamera-serie" {
+            phase = .installation
+            room = roomSuggestions.first ?? "Bad OG"
+            return
+        }
+        #endif
+        guard allowsChangingBauakte, shotScene == nil, phase == nil, room.isEmpty,
+              let stored = await DraftStore(store: store).load(PhotoSeries.self, kind: DraftKind.photoSeries, scope: bauakte.id, maxAge: 12 * 3600)
+        else { return }
+        phase = stored.value.phase
+        room = stored.value.room
+    }
+
+    private func rememberSeries(_ value: PhotoSeries) {
+        guard allowsChangingBauakte, shotScene == nil, let store = model.active?.sync?.store else { return }
+        let id = bauakte.id
+        // Die Beschriftung gehört zum Aufrufer (z. B. Prüfpunkt der Erstbegehung) und wird nicht gemerkt.
+        Task { await DraftStore(store: store).save(PhotoSeries(phase: value.phase, room: value.room), kind: DraftKind.photoSeries, scope: id) }
+    }
+
+    /// Standort für die Fotos: beim Öffnen bestimmen und alle zwei Minuten auffrischen, solange die Kamera offen ist.
+    /// Nur wenn eingeschaltet; die Erlaubnis erfragt das System beim ersten Mal. Ohne Erlaubnis bleiben die Fotos ohne Ort.
+    private func trackLocation() async {
+        guard storesLocation, shotScene == nil, !Self.isUITest else {
+            location = nil
+            return
+        }
+        while !Task.isCancelled {
+            if let fresh = try? await locator.currentLocation() { location = fresh }
+            try? await Task.sleep(for: .seconds(120))
+        }
+    }
+
+    private static var isUITest: Bool {
+        #if DEBUG
+        UITestSupport.isActive
+        #else
+        false
+        #endif
     }
 
     private func startCamera() async {
@@ -260,7 +407,9 @@ struct CameraView: View {
         guard let service = model.active?.service else { return }
         do {
             let prepared = await Task.detached(priority: .userInitiated) { PhotoCompressor.prepare(data) }.value
-            try await service.addPhoto(prepared, to: bauakte.id, capturedAt: .now, caption: caption.isEmpty ? nil : caption)
+            let place = storesLocation ? location : nil
+            try await service.addPhoto(prepared, to: bauakte.id, capturedAt: .now, latitude: place?.coordinate.latitude,
+                                       longitude: place?.coordinate.longitude, caption: series.caption)
             count += 1
             lastThumbnail = await Task.detached { UIImage(data: data)?.preparingThumbnail(of: CGSize(width: 120, height: 120)) }.value
             errorMessage = nil
