@@ -63,11 +63,55 @@ Fotos und Dokumente im Chat bleiben sichtbar. Fotos zur Baustelle erfassen Sie i
 Die Anmeldung ist wie unter iOS an das Gerät gebunden: Der Geräteschlüssel liegt im Android Keystore (wo vorhanden im
 Sicherheitschip StrongBox), die Anmeldung wird verschlüsselt gespeichert und nicht in ein Cloud-Backup übernommen.
 
+## Auf der Baustelle und beim Kunden
+
+**Ohne Netz arbeiten.** Die Bauakten Ihrer Einsätze von heute und der nächsten sechs Tage lädt die App vorab vollständig:
+Daten, Kontakte, Hinweise und Protokolle kommen mit dem Abgleich, dazu die Dokumente (Pläne, Aufträge, bis 25 MB je Datei)
+und die Vorschaubilder der neuesten Fotos. Im Kopf der Bauakte steht **Auf dem Gerät verfügbar** mit dem Stand der
+Dokumente. Was zu keinem kommenden Einsatz mehr gehört, entfernt die App wieder. Eigene Aufnahmen sind davon nie betroffen.
+
+**Übertragung.** Alles Erfasste liegt zuerst verschlüsselt auf dem Gerät. Wartet etwas, zeigen **Heute** und die Bauakte
+eine ruhige Zeile, zum Beispiel „3 Fotos warten auf Übertragung“. Die App sendet automatisch: nach jeder Änderung, alle
+zwei Minuten und im Hintergrund, auch wenn sie geschlossen wurde. Lehnt der Server eine Datei ab, wird die Zeile rot und
+Android zeigt die Mitteilung **Übertragung prüfen**. Unter **Synchronisation** stehen die Dateien einzeln mit dem Grund,
+**Erneut senden** wiederholt den Versuch.
+
+**Serienfotos.** Die Kamera bleibt für mehrere Aufnahmen offen. Oben wählen Sie die Art (Vorher, Einbau, Nachher, Mangel,
+Detail) und den Raum oder Bereich, vorgeschlagen werden die Räume der Bauakte. Die Wahl gilt für alle folgenden Fotos und
+steht in ihrer Beschriftung. **Standort an** speichert die Position mit, die Uhrzeit wird immer gespeichert. Fotos werden
+für das Mobilfunknetz verkleinert (längste Kante 2560 Pixel). Ausgelöst wird auch mit der Lautstärketaste.
+
+**Schnellzugriffe.** Langes Drücken auf das App-Symbol bietet **Foto**, **Tagebuch** und **Mangel**. Die App öffnet
+dafür die Bauakte des laufenden bzw. nächsten Einsatzes von heute. Ohne Einsatz wählen Sie die Baustelle. Langes Drücken
+auf einen Einsatz oder eine Baustelle in den Listen bietet Route, Foto, Bautagebuch und Mangel.
+
+**Angekommen und Fertig.** Am Einsatz von heute merkt **Angekommen** die Uhrzeit, **Fertig** ebenso und öffnet das
+Bautagebuch mit Beginn, Ende und einem Textvorschlag. Die Uhrzeiten bleiben auf dem Gerät, bis Sie den Eintrag speichern.
+
+**Entwürfe.** Bautagebuch, Mangel, Aufgabe, Notiz, CM-Messung, Erstbegehung und Abnahme sichern Ihre Eingaben laufend.
+Nach einem Abbruch, einem Anruf oder einem Neustart der App steht beim Öffnen **Entwurf wiederhergestellt**,
+**Verwerfen** beginnt neu. Während der Erfassung bleibt der Bildschirm an. Diktieren können Sie in allen Textfeldern
+mit dem Mikrofon.
+
+**Abnahme mit dem Kunden.** Die Abnahme führt in drei Schritten: Leistung, Ergebnis, Vorbehalte und Fotos, dann die
+Unterschriften, zuletzt die Zusammenfassung mit dem, was noch fehlt. **Kunde unterschreibt** öffnet die Kundenansicht:
+Der Kunde sieht nur das Protokoll, trägt seinen Namen ein und unterschreibt mit dem Finger. Nach dem Abschluss erstellt
+der Server das Protokoll als PDF. In der Abnahme stehen dann **Protokoll ansehen**, **Teilen** und **An Kunden** (E-Mail
+mit dem PDF im Anhang). Fehlt die Unterschrift des Kunden, schickt **Freigabelink an den Kunden senden** ihm einen
+befristeten Link. Die Erstbegehung zeigt vor dem Abschluss ebenfalls eine Zusammenfassung und verlangt, dass jeder
+Prüfpunkt bewertet ist, das Protokoll gibt es danach als PDF zum Ansehen und Teilen.
+
+**Kundenansicht für Fotos.** In den Fotos der Bauakte öffnet das Symbol **Kundenansicht** die Bilder im Vollbild zum
+Durchblättern, ohne Navigation, Beschriftungen und Aktionen. So zeigen Sie dem Kunden das Gerät, ohne dass Internes zu
+sehen ist.
+
 ## Unterschiede zur App für iPhone und iPad
 
 - Pushnachrichten kommen noch nicht über Google: Die App fragt das Postfach im Hintergrund ab und zeigt Mitteilungen.
 - Im Chat fehlen Gruppen anlegen, Weiterleiten, Anheften, Suche und der Ausgang ohne Verbindung.
 - Einrichtung per QR-Code, Fotos je Prüfpunkt der Erstbegehung und der Verlauf der Bauakte fehlen noch.
+- Ankunft und Abschluss eines Einsatzes werden nicht an den Server gemeldet, sondern für das Bautagebuch vorgeschlagen.
+- Listenzeilen bieten ihre Aktionen über langes Drücken, nicht über Wischen.
 - Videos nimmt die Kamera-App des Geräts auf, gescannte Seiten werden nicht automatisch zugeschnitten.
 
 ## Installieren und aktualisieren

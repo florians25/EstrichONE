@@ -62,6 +62,10 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- Schnellzugriffe (langes Drücken auf das App-Symbol): Foto, Tagebuch, Mangel zur heutigen Baustelle. -->
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
         </activity>
 
         <receiver

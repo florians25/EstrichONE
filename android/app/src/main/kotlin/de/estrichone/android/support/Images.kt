@@ -91,7 +91,7 @@ object Images {
     /** Inhalt einer Beispieldatei: ruhige Motive ohne Text bzw. ein Lieferschein als PDF. */
     fun demoContent(id: String): ByteArray? = synchronized(cache) {
         cache[id]?.let { return it }
-        val result = if (id == DemoData.PDF) demoPdf() else DemoData.photos.firstOrNull { it.id == id }?.let { jpeg(demoPhoto(it.motif), 80) }
+        val result = if (id == DemoData.PDF || id == DemoData.ACCEPTANCE_PDF) demoPdf() else DemoData.photos.firstOrNull { it.id == id }?.let { jpeg(demoPhoto(it.motif), 80) }
         result?.also { cache[id] = it }
     }
 

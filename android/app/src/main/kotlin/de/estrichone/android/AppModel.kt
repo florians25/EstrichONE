@@ -171,6 +171,18 @@ class AppModel(private val context: Context, private val platform: Platform = Pl
         }
     }
 
+    /** Schnellzugriff des App-Symbols (Foto, Tagebuch, Mangel) bzw. „Synchronisation“ aus einer Mitteilung; öffnet die Hauptansicht. */
+    private val _pendingAction = MutableStateFlow<String?>(null)
+    val pendingAction: StateFlow<String?> = _pendingAction
+
+    fun openAction(action: String) {
+        _pendingAction.value = action
+    }
+
+    fun actionOpened() {
+        _pendingAction.value = null
+    }
+
     private var api: EstrichOneApi? = null
     private var poolPin: String? = null
 

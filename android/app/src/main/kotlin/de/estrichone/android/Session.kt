@@ -13,6 +13,11 @@ import de.estrichone.core.FileItem
 import de.estrichone.core.FileVault
 import de.estrichone.core.HealthBanner
 import de.estrichone.core.LocalStore
+import de.estrichone.core.Dates
+import de.estrichone.core.Drafts
+import de.estrichone.core.MyPlanning
+import de.estrichone.core.OfflinePack
+import de.estrichone.core.myPlan
 import de.estrichone.core.SyncEngine
 import de.estrichone.core.SyncOutcome
 import de.estrichone.core.SyncSummary
@@ -136,6 +141,14 @@ class Session(
 
     val isDemo: Boolean get() = demo != null
 
+    /** Entwürfe der Erfassung: bei jeder Eingabe gesichert, nach Abbruch oder Neustart wieder da. */
+    val drafts = Drafts(store.backend)
+
+    /** Vorab geladene Dokumente und Vorschaubilder der Bauakten kommender Einsätze (Schlüssel mit Größe). */
+    private val _offlineFiles = MutableStateFlow(OfflinePack.loaded(store))
+    val offlineFiles: StateFlow<Map<String, Long>> = _offlineFiles
+    private val prefetchLock = Mutex()
+
     /** Zuletzt geladene Online-Daten je Seite (Urlaub, Aufgaben …): beim Wiederöffnen sofort sichtbar, ohne Ladekreis. */
     val memo = java.util.concurrent.ConcurrentHashMap<String, Any>()
 
@@ -166,8 +179,73 @@ class Session(
         if (outcome == SyncOutcome.Completed) firstRun = false
         _status.value = SyncStatus(false, outcome, store.summary())
         withContext(Dispatchers.IO) { refreshExtras() }
+        // Bauakten der heutigen und kommenden Einsätze: Dokumente und Vorschaubilder nachladen, ohne den Abgleich aufzuhalten.
+        if (outcome == SyncOutcome.Completed) scope.launch { prefetchUpcoming() }
         outcome
     }
+
+    /** Zuletzt geladener Plan (ohne Netz), damit „Mein Einsatz“ sofort erscheint und nicht erst nach dem Abruf. */
+    fun cachedPlan(): MyPlanning? =
+        runCatching { store.backend.meta("plan")?.let { EstrichOneApi.json.decodeFromString(MyPlanning.serializer(), it) } }.getOrNull()
+
+    /** Planung der nächsten 7 Tage; offline aus dem letzten Abruf (lokal gespeichert). */
+    suspend fun loadPlan(today: java.time.LocalDate = java.time.LocalDate.now(Dates.zone)): MyPlanning? = withContext(Dispatchers.IO) {
+        try {
+            api.myPlan(today.toString(), today.plusDays(6).toString()).also { plan ->
+                store.backend.transaction { store.backend.setMeta("plan", EstrichOneApi.json.encodeToString(MyPlanning.serializer(), plan)) }
+            }
+        } catch (e: ApiException) {
+            cachedPlan()
+        }
+    }
+
+    /**
+     * Bauakten der Einsätze von heute bis in 6 Tagen offline bereitstellen: Die Daten bringt der Abgleich mit, hier kommen
+     * Dokumente (Pläne, Aufträge) und Vorschaubilder der Fotos dazu. Was zu keinem kommenden Einsatz mehr gehört, wird entfernt.
+     * Eigene Aufnahmen sind davon nie betroffen: Entfernt wird nur, was hier geladen wurde.
+     */
+    suspend fun prefetchUpcoming() {
+        if (!prefetchLock.tryLock()) return
+        try {
+            withContext(Dispatchers.IO) {
+                val plan = loadPlan()
+                val wanted = OfflinePack.targets(plan, java.time.LocalDate.now(Dates.zone)).flatMap { id ->
+                    // Eigene Dateien liegen als Original auf dem Gerät, solange sie in der Upload-Liste stehen.
+                    OfflinePack.wanted(service.files(id)).filter { it.preview || store.upload(it.fileId) == null }
+                }
+                var loaded = OfflinePack.loaded(store)
+                val todo = OfflinePack.plan(wanted, loaded)
+                if (todo.evict.isNotEmpty()) {
+                    todo.evict.forEach { files.remove(it) }
+                    loaded = loaded - todo.evict.toSet()
+                    OfflinePack.remember(store, loaded)
+                    _offlineFiles.value = loaded
+                }
+                for (item in todo.load) {
+                    val bytes = try {
+                        api.bytes("files/${item.fileId}/content", if (item.preview) mapOf("variant" to "thumb") else emptyMap())
+                    } catch (e: ApiException) {
+                        // Ohne Netz später weiter; einzelne fehlende Dateien halten die übrigen nicht auf.
+                        if (e.isOffline || e.isMaintenance) break else continue
+                    }
+                    if (bytes == null) continue
+                    files.write(item.key, bytes)
+                    loaded = loaded + (item.key to bytes.size.toLong())
+                    OfflinePack.remember(store, loaded)
+                    _offlineFiles.value = loaded
+                }
+            }
+        } catch (e: Exception) {
+            // Vorabladen ist Zugabe: Fehler (voller Speicher, Abbruch) dürfen die Arbeit nie stören.
+            if (e is kotlinx.coroutines.CancellationException) throw e
+        } finally {
+            prefetchLock.unlock()
+        }
+    }
+
+    /** Stand „Auf dem Gerät verfügbar“ einer Bauakte (Dokumente geladen bzw. als eigene Aufnahme vorhanden). */
+    fun offlineState(bauakteId: String, loaded: Map<String, Long> = _offlineFiles.value): OfflinePack.State =
+        OfflinePack.state(service.files(bauakteId), loaded) { store.upload(it) != null }
 
     fun synchronizeNow() {
         scope.launch { synchronize() }
@@ -285,9 +363,11 @@ class Session(
         thumbnails.get(key)?.let { return it }
         val bitmap = withContext(Dispatchers.IO) {
             val local = service.localContent(file.id)
-            val data = local ?: if (file.isStoredOnServer) {
+            // Vorab geladene Vorschau: für kleine Ansichten sofort, für große als Ersatz ohne Netz.
+            val preview = if (local == null && file.isPhoto && OfflinePack.previewKey(file.id) in _offlineFiles.value) files.read(OfflinePack.previewKey(file.id)) else null
+            val data = local ?: preview?.takeIf { size <= 600 } ?: if (file.isStoredOnServer) {
                 runCatching { api.bytes("files/${file.id}/content", mapOf("variant" to if (size > 600) "display" else "thumb")) }.getOrNull()
-                    ?: runCatching { api.bytes("files/${file.id}/content") }.getOrNull()
+                    ?: runCatching { api.bytes("files/${file.id}/content") }.getOrNull() ?: preview
             } else {
                 null
             }

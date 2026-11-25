@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Schnellzugriffe des App-Symbols: führen in die Bauakte des laufenden bzw. nächsten Einsatzes von heute (QuickShortcut im Kern). -->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="photo"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_photo"
+        android:shortcutShortLabel="@string/shortcut_photo_short"
+        android:shortcutLongLabel="@string/shortcut_photo_long">
+        <intent
+            android:action="de.estrichone.android.shortcut.PHOTO"
+            android:targetPackage="de.estrichone.android"
+            android:targetClass="de.estrichone.android.MainActivity" />
+    </shortcut>
+    <shortcut
+        android:shortcutId="diary"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_diary"
+        android:shortcutShortLabel="@string/shortcut_diary_short"
+        android:shortcutLongLabel="@string/shortcut_diary_long">
+        <intent
+            android:action="de.estrichone.android.shortcut.DIARY"
+            android:targetPackage="de.estrichone.android"
+            android:targetClass="de.estrichone.android.MainActivity" />
+    </shortcut>
+    <shortcut
+        android:shortcutId="defect"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_defect"
+        android:shortcutShortLabel="@string/shortcut_defect_short"
+        android:shortcutLongLabel="@string/shortcut_defect_long">
+        <intent
+            android:action="de.estrichone.android.shortcut.DEFECT"
+            android:targetPackage="de.estrichone.android"
+            android:targetClass="de.estrichone.android.MainActivity" />
+    </shortcut>
+</shortcuts>

@@ -41,9 +41,23 @@ Legende: ✅ umgesetzt · 🟡 teilweise (siehe Bemerkung) · ❌ fehlt noch
 | Schnellaktionen der Hauptkarte: Route, Anrufen, Chat, Bauakte; Foto, Tagebuch, Mangel im Menü „⋮“ | ✅ | ✅ | |
 | Weitere Einsätze heute als kompakte Zeilen mit Route | ✅ | ✅ | |
 | Offene Aufgaben (drei, mit Bauakte) bzw. Aufgaben und Freigaben | ✅ | ✅ | |
-| Morgen bzw. Demnächst mit Meine Woche und Wer fährt wohin, Zuletzt geöffnet | ✅ | ✅ | iOS zusätzlich Wischen/langes Drücken für Foto, Tagebuch, Route |
+| Morgen bzw. Demnächst mit Meine Woche und Wer fährt wohin, Zuletzt geöffnet | ✅ | ✅ | Android: langes Drücken auf Einsatz- und Baustellenzeilen für Route, Foto, Tagebuch, Mangel; Wischen nur iOS |
 | Laden: graue Platzhalterzeilen statt Drehkreisel (Listen, Bauakte) | ✅ | ✅ | |
 | „Foto“ und „Tagebuch“ im Einsatz öffnen die Bauakte und erfassen dort (Zurück führt in die Bauakte) | ✅ | ✅ | ab 1.0.32 |
+
+## Baustelle und Kunde vor Ort (ab 1.0.37)
+
+| Funktion | Android | Bemerkung |
+|---|---|---|
+| Bauakten der Einsätze von heute bis in 6 Tagen vorab laden (Dokumente bis 25 MB, Vorschaubilder der Fotos), „Auf dem Gerät verfügbar“ im Kopf | ✅ | `OfflinePack` im Kern; höchstens 400 MB, Überholtes wird entfernt |
+| Übertragungsstand in Worten („3 Fotos warten auf Übertragung“) auf Heute und in der Bauakte | ✅ | `TransferStatus` im Kern |
+| Fehlgeschlagene Uploads einzeln mit Grund und „Erneut senden“, Mitteilung „Übertragung prüfen“ | ✅ | |
+| Upload im Hintergrund auch nach Beenden der App | ✅ | WorkManager stellt die Sitzung wieder her (nicht auf Poolgeräten: dort braucht es die PIN) |
+| Entwürfe für Tagebuch, Mangel, Aufgabe, Notiz, CM-Messung, Erstbegehung, Abnahme | ✅ | `Drafts` im Kern, in der verschlüsselten Datenbank; Unterschriften nur bis zum Neustart |
+| Bildschirm bleibt während Erfassung, Kamera und Kundenansicht an | ✅ | |
+| App-Shortcuts Foto, Tagebuch, Mangel zur Bauakte des laufenden Einsatzes | ✅ | `QuickShortcut` im Kern |
+| Angekommen und Fertig am Einsatz | 🟡 | Uhrzeiten auf dem Gerät, Vorschlag für das Bautagebuch; der Server hat kein Feld dafür |
+| Kundenansicht: Fotos im Vollbild, Protokoll mit Unterschrift ohne interne Angaben | ✅ | |
 
 ## Mehr
 
@@ -73,10 +87,10 @@ Legende: ✅ umgesetzt · 🟡 teilweise (siehe Bemerkung) · ❌ fehlt noch
 | Dokumente nach Art, öffnen, scannen, hochladen | ✅ | ✅ | |
 | Aufgaben und Mängel (Fälligkeit, abhaken) | ✅ | ✅ | |
 | Bautagebuch (Wetter, Temperatur, Personen, Zeiten, Text, Diktat) | ✅ | ✅ | Fotos des Tages werden angehängt |
-| Erstbegehung nach Schema (Prüfpunkte, Bemerkungen, Messwerte) | ✅ | ✅ | Fotos je Prüfpunkt fehlen noch |
+| Erstbegehung nach Schema (Prüfpunkte, Bemerkungen, Messwerte) | ✅ | ✅ | Zusammenfassung und Pflichtprüfung vor dem Abschluss, Fotos des Tages am Protokoll, PDF ansehen und teilen; Fotos je Prüfpunkt fehlen noch |
 | Erstbegehung nicht erforderlich (Hinweiskarte, Protokolle, Rückgängig, offline) | ✅ | ✅ | |
 | CM-Messung mit Belegreife | ✅ | ✅ | |
-| Abnahme mit Unterschriften Kunde/Auftragnehmer | ✅ | ✅ | Freigabelink per E-Mail an den Kunden fehlt |
+| Abnahme mit Unterschriften Kunde/Auftragnehmer | ✅ | ✅ | geführt in drei Schritten mit Zusammenfassung; Kunde unterschreibt in der Kundenansicht; PDF ansehen, teilen, per E-Mail senden; Freigabelink an den Kunden (`acceptances/{id}/customer-link`) |
 | Räume und Flächen (Summen, Stand, bearbeiten) | ✅ | ✅ | |
 | Kontakte und Beteiligte | ✅ | ✅ | |
 | Bauakte als PDF | ✅ | ✅ | nur mit Verbindung |
@@ -93,7 +107,8 @@ Legende: ✅ umgesetzt · 🟡 teilweise (siehe Bemerkung) · ❌ fehlt noch
 | Galerie | ✅ | ✅ Photo Picker | ohne Speicherberechtigung |
 | Video | ✅ eigene Ansicht | 🟡 | Kamera-App des Geräts |
 | Dokument scannen zu PDF | ✅ mit Kantenerkennung | 🟡 | Seiten fotografieren → PDF, ohne automatisches Zuschneiden |
-| Standort an Fotos | ✅ | ❌ | |
+| Standort an Fotos | ✅ | ✅ | auf Wunsch (Kapsel „Standort“ in der Kamera), ohne Google-Dienste |
+| Serienfotos mit Art (Vorher, Einbau, Nachher, Mangel, Detail) und Raum bzw. Bereich, für die Serie gemerkt | siehe iOS | ✅ | `PhotoSeries` im Kern, steht in der Beschriftung |
 
 ## Kunden
 
@@ -156,7 +171,7 @@ Legende: ✅ umgesetzt · 🟡 teilweise (siehe Bemerkung) · ❌ fehlt noch
 ## Offen (Reihenfolge nach Nutzen auf der Baustelle)
 
 1. Chat-Ausgang offline und Echtzeit (SSE), Gruppen anlegen
-2. Fotos an Prüfpunkten, Standort an Fotos
-3. Disposition/Kolonnenplan für Planer
+2. Fotos an Prüfpunkten
+3. Ankunft und Abschluss am Einsatz an den Server melden (braucht ein Feld bzw. einen Endpunkt in der Planung)
 4. QR-Code bei der Einrichtung
 5. FCM, sobald der Server Android-Push anbietet
