@@ -75,6 +75,48 @@ struct DayPlanTests {
         #expect(DispatchSummary.text(empty) == "Noch keine Einsätze geplant")
     }
 
+    @Test("Einplanen aus der Bauakte: Vorgaben für Tätigkeit, Kolonne und Uhrzeit, Auslastung, nächster Einsatz, Bestätigung")
+    func quickPlan() throws {
+        let plan = try JSONCoding.decoder.decode(DayPlan.self, from: Data(Self.json.utf8))
+        let huber = try #require(plan.crew(UUID(uuidString: Self.crew)!))
+        let kaya = try #require(plan.crew(UUID(uuidString: Self.other)!))
+        #expect(QuickPlan.defaultActivity(for: .inquiry) == "Erstbegehung")
+        #expect(QuickPlan.defaultActivity(for: .planned) == "Estrich einbringen" && QuickPlan.defaultActivity(for: nil) == "Estrich einbringen")
+        #expect(QuickPlan.defaultActivity(for: .drying) == "CM-Messung und Belegreife")
+        #expect(QuickPlan.defaultActivity(for: .completed) == "Nacharbeiten")
+        #expect(QuickPlan.activities.contains(QuickPlan.defaultActivity(for: .drying)))
+        #expect(QuickPlan.loadText(kaya.stops.count) == "frei" && QuickPlan.loadText(1) == "1 Einsatz")
+        #expect(QuickPlan.loadText(huber.stops.count) == "2 Einsätze")
+        // Beginn nach der letzten Station, ohne Station 07:00.
+        #expect(QuickPlan.suggestedStart(for: huber) == "11:00:00" && QuickPlan.suggestedStart(for: kaya) == "07:00:00")
+        #expect(QuickPlan.suggestedStart(for: nil) == "07:00:00")
+        // Vorbelegung: gewünschte Kolonne, sonst die eigene; unbekannte Kolonne zählt nicht.
+        #expect(QuickPlan.preselectedCrew(in: plan, wanted: huber.id) == huber.id)
+        #expect(QuickPlan.preselectedCrew(in: plan, wanted: nil) == kaya.id)
+        #expect(QuickPlan.preselectedCrew(in: plan, wanted: UUID.v7()) == kaya.id)
+        let single = try JSONCoding.decoder.decode(DayPlan.self, from: Data("""
+            {"day":"2026-11-02","crews":[{"id":"\(Self.crew)","name":"A","stops":[]}]}
+            """.utf8))
+        #expect(QuickPlan.preselectedCrew(in: single, wanted: nil) == huber.id)
+        let none = try JSONCoding.decoder.decode(DayPlan.self, from: Data("""
+            {"day":"2026-11-02","crews":[{"id":"\(Self.crew)","name":"A","stops":[]},{"id":"\(Self.other)","name":"B","stops":[]}]}
+            """.utf8))
+        #expect(QuickPlan.preselectedCrew(in: none, wanted: nil) == nil)
+        // Nächster Einsatz der Bauakte am Tag mit Kolonne (Grundlage für „Verschieben“).
+        let planned = try #require(QuickPlan.planned(UUID(uuidString: "01a00000-0000-7000-8000-0000000000b2")!, in: plan))
+        #expect(planned.day == "2026-11-02" && planned.stop.title == "EFH Müller" && planned.crew?.name == "Kolonne Huber")
+        #expect(QuickPlan.planned(UUID.v7(), in: plan) == nil)
+        #expect(QuickPlan.confirmation(day: "2026-11-02", today: "2026-11-02", start: "07:30:00", crewName: "Kolonne Huber")
+                == "Eingeplant: Heute, 07:30, Kolonne Huber")
+        #expect(QuickPlan.confirmation(day: "2026-11-03", today: "2026-11-02", start: nil, crewName: "Kolonne Kaya")
+                == "Eingeplant: Morgen, Kolonne Kaya")
+        // Ohne Verbindung für einen noch nie geladenen Tag: nur die Kolonnen, ohne Einsätze und Abwesenheiten.
+        let bare = plan.crewsOnly(day: "2026-11-09")
+        #expect(bare.day == "2026-11-09" && bare.crews.map(\.name) == plan.crews.map(\.name) && bare.stopCount == 0)
+        #expect(bare.release == nil && bare.crews.allSatisfy { $0.absent.isEmpty && $0.warnings.isEmpty })
+        #expect(bare.crew(kaya.id)?.isMine == true)
+    }
+
     private func makeClient(_ transport: RoutingTransport) -> AuthorizedClient {
         AuthorizedClient(api: APIClient(server: Samples.server, transport: transport), session: StoredSession(Samples.tokens()), keys: nil,
                          persist: { _ in }, ended: { _ in })

@@ -49,6 +49,10 @@ struct BauaktenListView: View {
     @State private var inspectFor: Bauakte?
     /// Nicht zugeteilte Bauakten vom Server (nur online, nur ansehen) – bei Suche und „Alle im Betrieb“.
     @State private var others: [RemoteBauakte] = []
+    /// Recht zur Planung (`planning.manage`, zuletzt bekannter Stand): „Einplanen“ beim Wischen und im Kontextmenü.
+    @State private var canPlan = false
+    @State private var planFor: Bauakte?
+    @State private var toast: String?
 
     private static let groups: [BauakteStatus] = [.inProgress, .drying, .planned, .inquiry]
 
@@ -97,6 +101,18 @@ struct BauaktenListView: View {
         .sheet(item: $inspectFor) { bauakte in
             InspectionEntryView(bauakte: bauakte) { inspectFor = nil }
         }
+        .sheet(item: $planFor) { bauakte in
+            QuickPlanSheet(target: QuickPlanSheet.Target(bauakte)) { result in
+                planFor = nil
+                guard let result else { return }
+                Task {
+                    let outcome = await QuickPlanRunner.perform(result.change, confirmation: result.confirmation, model: model)
+                    toast = outcome.message
+                    if outcome.sent { await reload() }
+                }
+            }
+        }
+        .toast($toast)
         .task(id: "\(search)|\(scope.rawValue)|\(model.active?.sync?.revision ?? 0)") { await reload() }
     }
 
@@ -274,6 +290,10 @@ struct BauaktenListView: View {
                     .tint(Theme.accentFill)
             }
             .swipeActions(edge: .trailing) {
+                if plans(bauakte) {
+                    Button { planFor = bauakte } label: { Label("Einplanen", systemImage: "calendar.badge.plus") }
+                        .tint(Theme.accentFill)
+                }
                 if let url = MapsLink.url(for: bauakte) {
                     Button { openURL(url) } label: { Label("Route", systemImage: "arrow.triangle.turn.up.right.diamond") }
                         .tint(Theme.textSecondary)
@@ -282,6 +302,9 @@ struct BauaktenListView: View {
             .contextMenu {
                 Button("Öffnen", systemImage: "folder") { open(bauakte.id) }
                 Button("Foto aufnehmen", systemImage: "camera") { captureFor = bauakte }
+                if plans(bauakte) {
+                    Button("Einplanen", systemImage: "calendar.badge.plus") { planFor = bauakte }
+                }
                 if let url = MapsLink.url(for: bauakte) {
                     Button("Route starten", systemImage: "arrow.triangle.turn.up.right.diamond") { openURL(url) }
                 }
@@ -290,6 +313,11 @@ struct BauaktenListView: View {
                 }
             }
         }
+    }
+
+    /// „Einplanen“ nur für die Planung und nicht für stornierte Bauakten.
+    private func plans(_ bauakte: Bauakte) -> Bool {
+        canPlan && bauakte.status != .cancelled
     }
 
     private func open(_ id: UUID) {
@@ -312,6 +340,9 @@ struct BauaktenListView: View {
         let contacts = (try? await service.contacts()) ?? []
         customers = Dictionary(contacts.map { ($0.id, $0.name) }, uniquingKeysWith: { first, _ in first })
         if let store = model.active?.sync?.store {
+            let granted = await MyPermissions(store: store).cached()
+            let modules: AppModules = model.active?.sync?.modules ?? .allOn
+            canPlan = modules.isOn(AppModules.planning) && granted.contains("planning.manage")
             let day = CalendarDay.string(.now)
             let planned = (await MyPlanning(store: store).cached())?.range.assignments
                 .filter { $0.day >= day }

@@ -17,6 +17,7 @@ struct CaptureFlowTests {
         #expect(ShotRoute.tab(for: "chat") == .chat)
         #expect(ShotRoute.tab(for: "chat-verlauf") == .chat)
         #expect(ShotRoute.tab(for: "bauakte-erfassen") == .bauakten)
+        #expect(ShotRoute.tab(for: "bauakte-einplanen") == .bauakten)
         #expect(ShotRoute.tab(for: "heute-unten") == .today)
         #expect(ShotRoute.tab(for: "mehr") == .more)
         // Bezeichner der Einträge im Blatt „Erfassen“ (Oberflächentests).

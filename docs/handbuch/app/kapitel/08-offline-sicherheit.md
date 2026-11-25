@@ -41,8 +41,8 @@ Kunden anlegen, Chatnachrichten schreiben und Meldungen an die IT verfassen. All
 **Auf dem Gerät verfügbar:** Die Daten Ihrer Bauakten (Kontakte, Hinweise, Räume, Protokolle) liegen nach dem Abgleich
 auf dem Gerät. Für die Einsätze von heute und der nächsten Tage lädt die App zusätzlich die Dokumente (Pläne,
 Lieferscheine, Protokolle; je Datei bis 30 MB) und die 40 neuesten Fotos in Bildschirmgröße vorab, damit Sie sie auf der
-Baustelle ohne Netz öffnen können. Im Kopf der Bauakte steht dann **Auf dem Gerät verfügbar**; solange noch geladen wird,
-**Wird für unterwegs geladen**. Antippen zeigt, was bereitliegt. Für jede andere Bauakte schalten Sie das über
+Baustelle ohne Netz öffnen können. Oben in der Leiste der Bauakte zeigt ein Wolkensymbol den Stand: mit Haken **Auf dem Gerät
+verfügbar**, mit Pfeil **Wird für unterwegs geladen**. Antippen zeigt, was bereitliegt. Für jede andere Bauakte schalten Sie das über
 **Weitere Aktionen** → **Auf dem Gerät bereithalten** ein. Nicht mehr geplante Bauakten gibt die App nach einigen Tagen
 wieder frei; **Cache leeren** entfernt alles Vorabgeladene sofort.
 

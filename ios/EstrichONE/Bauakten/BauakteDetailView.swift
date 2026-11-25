@@ -2,10 +2,10 @@ import EstrichCore
 import QuickLook
 import SwiftUI
 
-/// Bauakte, das Herzstück, nach dem Arbeitsablauf aufgebaut: Kopf (Nummer, Titel, Status, Adresse) mit Aktionsleiste
-/// (Route, Anrufen, Chat, Foto, Teams), heute bzw. nächster Termin, Hinweise, Leistung und Kennwerte, Ablauf als
-/// Fortschritt mit Erfassen des nächsten Schritts, offene Aufgaben und Mängel, Fotos und Dokumentation, Kontakte,
-/// Beschreibung und Verlauf. Erfasst wird über „+“ oben rechts (alle Erfassungen an einer Stelle), nichts verdeckt Inhalt.
+/// Bauakte, das Herzstück: Kopf (Nummer, Titel, Status, Adresse) mit Aktionsleiste (Route, Anrufen, Chat, Foto, Teams),
+/// heute bzw. nächster Termin (für die Planung mit „Einplanen“ und „Verschieben“), Leistung und Kennwerte, Beschreibung
+/// und Hinweise, offene Aufgaben und Mängel, Fotos und Dokumentation, Kontakte, Verlauf. Erfasst wird über „+“ oben
+/// rechts (alle Erfassungen an einer Stelle); daneben zeigt ein Symbol den Stand auf dem Gerät. Nichts verdeckt Inhalt.
 /// Breite Darstellung (iPad quer): Übersicht links, gewählter Bereich rechts. Alles offline aus der lokalen Ablage.
 struct BauakteDetailView: View {
     let bauakteId: UUID
@@ -53,8 +53,21 @@ struct BauakteDetailView: View {
     /// Zuständige Person und weitere Beteiligte (online geladen).
     @State private var responsibleName: String?
     @State private var memberNames: [String] = []
-    /// Stand auf dem Gerät („Auf dem Gerät verfügbar“): Daten, Dokumente und Fotos für die Arbeit ohne Netz.
+    /// Stand auf dem Gerät (Symbol in der Navigationsleiste): Daten, Dokumente und Fotos für die Arbeit ohne Netz.
     @State private var availability: OfflineAvailability?
+    @State private var showsAvailability = false
+    /// Recht zur Planung (`planning.manage`, zuletzt bekannter Stand): „Einplanen“ und „Verschieben“.
+    @State private var canPlan = false
+    /// Nächster Einsatz der Bauakte aus dem Tagesplan (nur für die Planung, online geladen) und der Plan dieses Tages.
+    @State private var nextPlanned: QuickPlan.Planned?
+    @State private var nextPlan: DayPlan?
+    /// Blatt „Einplanen“ bzw. „Verschieben“.
+    @State private var planning: PlanningSheet?
+
+    private enum PlanningSheet: String, Identifiable {
+        case plan, move
+        var id: String { rawValue }
+    }
 
     var body: some View {
         Group {
@@ -86,7 +99,11 @@ struct BauakteDetailView: View {
                 }
                 .fullScreenCover(item: $playing) { file in VideoPreview(file: file) }
                 .toolbar {
-                    // „+“ öffnet „Erfassen“ (alles an einer Stelle), „…“ enthält PDF, Bearbeiten, Verlauf und Teams.
+                    // Stand auf dem Gerät als Symbol; „+“ öffnet „Erfassen“ (alles an einer Stelle), „…“ enthält PDF,
+                    // Bearbeiten, Verlauf und Teams.
+                    if let availability {
+                        ToolbarItem(placement: .primaryAction) { OfflineAvailabilityButton(availability: availability, showsDetail: $showsAvailability) }
+                    }
                     if !content.viewOnly {
                         ToolbarItem(placement: .primaryAction) {
                             Button { capturing = true } label: { Label("Erfassen", systemImage: "plus") }
@@ -99,10 +116,12 @@ struct BauakteDetailView: View {
                 .sheet(isPresented: $capturing) {
                     BauakteCaptureSheet(bauakte: content.bauakte, pick: { startCapture($0) }) { capturing = false }
                 }
+                .sheet(item: $planning) { which in planningSheet(which, content: content) }
                 .task(id: bauakteId) {
                     await loadChat()
                     await loadTeams()
                     await loadMembership()
+                    await loadPlanned()
                 }
                 .alert("Bauakte stornieren?", isPresented: $cancelling) {
                     TextField("Grund (Pflicht)", text: $cancelReason)
@@ -144,6 +163,7 @@ struct BauakteDetailView: View {
                 _ = await MyPermissions(store: store).load(using: model.active?.client)
                 _ = await InspectionHintSetting(store: store).load(using: model.active?.client)
                 await reload()
+                if !canPlan { await loadPlanned() }
             }
             // Namen für Verfasser und Zuständige; danach neu anzeigen.
             if !(await DirectoryCache.load(model)).isEmpty { await reload() }
@@ -164,9 +184,9 @@ struct BauakteDetailView: View {
 
     // MARK: Übersicht
 
-    /// Standardliste nach dem Arbeitsablauf: 1. Kopf mit Aktionsleiste, 2. heute bzw. nächster Termin, 3. Hinweise und
-    /// angeheftete Notizen, 4. Leistung und Kennwerte, 5. Ablauf als Fortschritt, 6. offene Aufgaben und Mängel,
-    /// 7. Fotos und Dokumentation, 8. Kontakte, 9. Beschreibung und Verlauf. Erfasst wird über „+“ oben rechts.
+    /// Reihenfolge: 1. Kopf mit Aktionsleiste, 2. heute bzw. nächster Termin, 3. Leistung und Kennwerte, 4. Beschreibung
+    /// und Hinweise, 5. offene Aufgaben und Mängel, 6. Fotos und Dokumentation, 7. Kontakte, 8. Verlauf. Erfasst wird
+    /// über „+“ oben rechts.
     private func overview(_ content: BauakteContent, wide: Bool) -> some View {
         ScrollViewReader { proxy in
             List {
@@ -177,9 +197,8 @@ struct BauakteDetailView: View {
                 }
                 highlights(content)
                 appointment(content)
-                siteNotes(content)
                 keyData(content, wide: wide)
-                workflow(content, wide: wide)
+                siteNotes(content)
                 openPoints(content, wide: wide)
                 documentation(content, wide: wide)
                 contacts(content, wide: wide)
@@ -188,8 +207,9 @@ struct BauakteDetailView: View {
             .listStyle(.insetGrouped)
             .listSectionSpacing(.compact)
             .scrolledPastHeader($showsNavigationTitle)
+            .offlineAvailabilityDetail(availability, isPresented: $showsAvailability)
             .task(id: loaded) {
-                // Screenshot-Modus: Mitte (Kennwerte, Ablauf) bzw. unten (Dokumentation, Kontakte, Verlauf).
+                // Screenshot-Modus: Mitte (Kennwerte, Beschreibung und Hinweise) bzw. unten (Dokumentation, Kontakte, Verlauf).
                 guard loaded, let target = shotScene == "bauakte-unten" ? "documentation" : shotScene == "bauakte-mitte" ? "keyData" : nil else { return }
                 try? await Task.sleep(for: .milliseconds(300))
                 proxy.scrollTo(target, anchor: .top)
@@ -227,9 +247,6 @@ struct BauakteDetailView: View {
             .font(Typo.subhead)
             .foregroundStyle(bauakte.addressLine == nil ? Theme.warning : Theme.textSecondary)
             .accessibilityIdentifier("bauakteAddress")
-            if let availability {
-                OfflineAvailabilityLine(availability: availability)
-            }
             let today = !content.todayAssignments.isEmpty
             let priority = bauakte.project.priority.flatMap { $0 == .high || $0 == .urgent ? $0 : nil }
             if today || priority != nil {
@@ -351,26 +368,50 @@ struct BauakteDetailView: View {
 
     // MARK: Heute bzw. nächster Termin
 
+    /// Nächster Termin für die Anzeige: der eigene Einsatz oder, für die Planung, der Einsatz aus dem Tagesplan.
+    private struct NextAppointment {
+        let day: String
+        let start: String?
+        let activity: String
+        let crewName: String?
+        let team: [String]
+        let resources: [String]
+    }
+
+    private func nextAppointment(_ content: BauakteContent) -> NextAppointment? {
+        let mine = content.assignments.first.map {
+            NextAppointment(day: $0.day, start: $0.startText, activity: $0.activity, crewName: $0.crewName, team: $0.people.map(\.name),
+                            resources: $0.resources.map(\.name))
+        }
+        let planned = nextPlanned.map {
+            NextAppointment(day: $0.day, start: $0.stop.startText, activity: $0.stop.activity, crewName: $0.crew?.name,
+                            team: $0.stop.people.map(\.name), resources: $0.stop.resources.map(\.name))
+        }
+        guard let mine else { return planned }
+        guard let planned else { return mine }
+        return (planned.day, planned.start ?? "") < (mine.day, mine.start ?? "") ? planned : mine
+    }
+
     @ViewBuilder
     private func appointment(_ content: BauakteContent) -> some View {
         let today = CalendarDay.string(.now)
-        if let next = content.assignments.first {
-            let team = next.people.map(\.name)
-            let resources = next.resources.map(\.name)
+        let plans = canPlan && content.bauakte.status != .cancelled
+        if let next = nextAppointment(content) {
             Section {
                 VStack(alignment: .leading, spacing: Space.s) {
                     HStack(alignment: .firstTextBaseline, spacing: Space.s) {
-                        Text(TodayGlance.appointmentText(day: next.day, start: next.startText.map { "ab \($0)" }, detail: nil, today: today))
+                        Text(TodayGlance.appointmentText(day: next.day, start: next.start.map { "ab \($0)" }, detail: nil, today: today))
                             .font(Typo.headline.monospacedDigit())
                             .foregroundStyle(next.day == today ? Theme.accent : Theme.textPrimary)
                         Spacer(minLength: 0)
                     }
                     appointmentLine("hammer", next.activity, detail: content.bauakte.project.keyFactsText, strong: true)
-                    if next.crewName != nil || !team.isEmpty {
-                        appointmentLine("person.3", next.crewName ?? team.joined(separator: ", "), detail: next.crewName == nil || team.isEmpty ? nil : team.joined(separator: ", "))
+                    if next.crewName != nil || !next.team.isEmpty {
+                        appointmentLine("person.3", next.crewName ?? next.team.joined(separator: ", "),
+                                        detail: next.crewName == nil || next.team.isEmpty ? nil : next.team.joined(separator: ", "))
                     }
-                    if !resources.isEmpty {
-                        appointmentLine("truck.box", resources.joined(separator: ", "))
+                    if !next.resources.isEmpty {
+                        appointmentLine("truck.box", next.resources.joined(separator: ", "))
                     }
                 }
                 .padding(.vertical, Space.xs)
@@ -382,6 +423,7 @@ struct BauakteDetailView: View {
                         .font(Typo.subhead)
                         .foregroundStyle(Theme.textSecondary)
                 }
+                if plans { planButtons(moving: nextPlanned != nil) }
             } header: {
                 Text(next.day == today ? "Heute auf der Baustelle" : "Nächster Termin")
             }
@@ -389,8 +431,82 @@ struct BauakteDetailView: View {
             Section("Nächster Termin") {
                 appointmentLine("calendar", "Geplant: \(period)", detail: "Ausführungszeitraum")
                     .padding(.vertical, Space.xxs)
+                if plans { planButtons(moving: false) }
+            }
+        } else if plans {
+            Section("Nächster Termin") {
+                appointmentLine("calendar.badge.clock", "Noch nicht eingeplant")
+                    .padding(.vertical, Space.xxs)
+                planButtons(moving: false)
             }
         }
+    }
+
+    /// Für die Planung: „Einplanen“ und, wenn schon ein Einsatz steht, „Verschieben“ des nächsten Einsatzes.
+    private func planButtons(moving: Bool) -> some View {
+        HStack(spacing: Space.s) {
+            Button("Einplanen") { planning = .plan }
+                .estrichButton(.secondary)
+                .accessibilityIdentifier("planBauakteButton")
+            if moving {
+                Button("Verschieben") { planning = .move }
+                    .estrichButton(.secondary)
+                    .accessibilityLabel("Nächsten Einsatz verschieben")
+                    .accessibilityIdentifier("moveAssignmentButton")
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.vertical, Space.xxs)
+    }
+
+    @ViewBuilder
+    private func planningSheet(_ which: PlanningSheet, content: BauakteContent) -> some View {
+        switch which {
+        case .plan:
+            QuickPlanSheet(target: QuickPlanSheet.Target(content.bauakte)) { result in
+                planning = nil
+                if let result { Task { await applyPlan(result.change, confirmation: result.confirmation) } }
+            }
+        case .move:
+            if let nextPlanned, let nextPlan, let date = CalendarDay.date(nextPlanned.day) {
+                MoveStopSheet(stop: nextPlanned.stop, crewId: nextPlanned.crew?.id, day: date, plan: nextPlan) { change in
+                    planning = nil
+                    if let change { Task { await applyPlan(change, confirmation: "Verschoben") } }
+                }
+            }
+        }
+    }
+
+    /// Einplanen bzw. Verschieben senden (ohne Verbindung vormerken), danach „Nächster Termin“ neu laden.
+    private func applyPlan(_ change: PlanChange, confirmation: String) async {
+        let outcome = await QuickPlanRunner.perform(change, confirmation: confirmation, model: model)
+        toast = outcome.message
+        guard outcome.sent else { return }
+        await reload()
+        await loadPlanned(fallback: change.day)
+    }
+
+    /// Für die Planung: nächsten Einsatz der Bauakte aus dem Tagesplan laden (online; ohne Verbindung bleibt der letzte Stand).
+    private func loadPlanned(fallback: String? = nil) async {
+        guard let active = model.active, let store = active.sync?.store else { return }
+        let granted = await MyPermissions(store: store).cached()
+        canPlan = modules.isOn(AppModules.planning) && granted.contains("planning.manage")
+        guard canPlan else {
+            nextPlanned = nil
+            return
+        }
+        let today = CalendarDay.string(.now)
+        let entries = try? await active.client.backlog()
+        let backlog = entries?.first { $0.bauakteId == bauakteId }?.nextAssignment.map { String($0.prefix(10)) }
+        let candidates = [content?.assignments.first?.day, backlog, fallback].compactMap { $0 }.filter { $0 >= today }
+        guard let day = candidates.min() else {
+            // Online ohne Einsatz: nichts geplant. Ohne Verbindung bleibt der letzte Stand stehen.
+            if entries != nil { nextPlanned = nil }
+            return
+        }
+        guard let plan = try? await active.client.dayPlan(day) else { return }
+        nextPlan = plan
+        nextPlanned = QuickPlan.planned(bauakteId, in: plan)
     }
 
     private func appointmentLine(_ symbol: String, _ text: String, detail: String? = nil, strong: Bool = false) -> some View {
@@ -425,14 +541,19 @@ struct BauakteDetailView: View {
         var tint: Color = Theme.accent
     }
 
-    /// Was oft per Freitext erfasst wird: angeheftete Notizen, Zugang und Besonderheiten, Hinweise und Behinderungen (und
-    /// weitere mehrzeilige Felder des Büros), Hinweise der Disposition für heute. Die Beschreibung steht weiter unten.
+    /// Ein zusammenhängender Block direkt nach den Kennwerten: Beschreibung, Hinweise und Behinderungen, Zugang und
+    /// Besonderheiten (und weitere mehrzeilige Felder des Büros), angeheftete Notizen, Hinweise der Disposition für heute.
     private func siteNoteItems(_ content: BauakteContent) -> [SiteNote] {
-        var list: [SiteNote] = content.pinnedNotes.compactMap { note in
-            FreeText.clean(note.text).map { SiteNote(id: "pin-\(note.id)", title: "Angeheftete Notiz", text: $0, symbol: "pin.fill") }
+        var list: [SiteNote] = []
+        let description = FreeText.clean(content.bauakte.description)
+        if let description {
+            list.append(SiteNote(id: "description", title: "Beschreibung", text: description, symbol: "doc.text", tint: Theme.textSecondary))
         }
-        list += ProjectSection.freeTexts(content.bauakte, schema: schema).map {
+        list += ProjectSection.freeTexts(content.bauakte, schema: schema).filter { $0.text != description }.map {
             SiteNote(id: "field-\($0.id)", title: $0.title, text: $0.text, symbol: $0.symbol)
+        }
+        list += content.pinnedNotes.compactMap { note in
+            FreeText.clean(note.text).map { SiteNote(id: "pin-\(note.id)", title: "Angeheftete Notiz", text: $0, symbol: "pin.fill") }
         }
         var seen = Set<String>()
         for assignment in content.todayAssignments {
@@ -454,7 +575,7 @@ struct BauakteDetailView: View {
                 }
             } header: {
                 HStack {
-                    Text("Hinweise zur Baustelle")
+                    Text("Beschreibung und Hinweise")
                     Spacer()
                     if !content.viewOnly {
                         Button("Bearbeiten") { action = .project }
@@ -565,129 +686,6 @@ struct BauakteDetailView: View {
         }
     }
 
-    // MARK: Ablauf
-
-    private func workflowModel(_ content: BauakteContent) -> BauakteWorkflow {
-        let totals = RoomTotals(content.rooms)
-        let glance = SiteGlance(items: [], rooms: content.rooms, inspections: content.inspections, diary: [], today: CalendarDay.string(.now))
-        var measured: Bool?
-        var readinessText: String?
-        switch glance.readiness {
-        case .ready?: measured = true; readinessText = glance.readiness?.text
-        case .notReady?: measured = false; readinessText = glance.readiness?.text
-        case .rooms?: readinessText = glance.readiness?.text
-        default: break
-        }
-        let inspection = content.initialInspection
-        return BauakteWorkflow(.init(
-            status: content.bauakte.status, initialInspection: inspection.status,
-            inspectionAppointment: inspection.appointment.map(InitialInspectionOverview.appointmentText),
-            roomCount: totals.count, roomsLaid: totals.laid, roomsReady: totals.ready,
-            lastMeasurementReady: measured, readinessText: readinessText,
-            acceptanceCount: content.acceptances.count, acceptanceResult: content.acceptances.first?.result.title,
-            showsInspections: modules.isOn(AppModules.inspections), showsAcceptance: modules.isOn(AppModules.acceptance)))
-    }
-
-    /// Ablauf als Fortschritt: je Schritt erledigt, nicht erforderlich oder offen; der nächste mit „Erfassen“.
-    private func workflow(_ content: BauakteContent, wide: Bool) -> some View {
-        let flow = workflowModel(content)
-        return Section {
-            ForEach(Array(flow.steps.enumerated()), id: \.element.id) { index, step in
-                workflowRow(step, number: index + 1, content: content, wide: wide)
-                    .id(index == 0 ? "workflow" : step.id)
-            }
-        } header: {
-            HStack {
-                Text("Ablauf")
-                Spacer()
-                Text(flow.progressText)
-                    .font(Typo.meta.monospacedDigit())
-                    .textCase(nil)
-            }
-        }
-        .accessibilityIdentifier("workflowSection")
-    }
-
-    private func workflowArea(_ kind: BauakteWorkflow.StepKind) -> BauakteArea {
-        switch kind {
-        case .initialInspection: .initialInspection
-        case .laying: .rooms
-        case .readiness, .acceptance: .protocols
-        }
-    }
-
-    /// Erfassen für den nächsten Schritt (Einbringen läuft über die Räume).
-    private func workflowAction(_ kind: BauakteWorkflow.StepKind) -> BauakteAction? {
-        switch kind {
-        case .initialInspection: .inspection
-        case .laying: nil
-        case .readiness: .measurement
-        case .acceptance: .acceptance
-        }
-    }
-
-    private func workflowRow(_ step: BauakteWorkflow.Step, number: Int, content: BauakteContent, wide: Bool) -> some View {
-        let target = workflowArea(step.kind)
-        return HStack(spacing: Space.m) {
-            Button { select(target, wide: wide) } label: {
-                HStack(spacing: Space.m) {
-                    stepMarker(step.state, number: number)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(step.title)
-                            .font(step.state == .next ? Typo.bodyStrong : Typo.body)
-                            .foregroundStyle(step.state == .open ? Theme.textSecondary : Theme.textPrimary)
-                        Text(step.detail)
-                            .font(Typo.subhead)
-                            .foregroundStyle(Theme.textSecondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                }
-                .frame(minHeight: Size.minTap)
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityElement(children: .combine)
-            .accessibilityValue(step.state == .done ? "erledigt" : step.state == .skipped ? "nicht erforderlich" : step.state == .next ? "als Nächstes" : "offen")
-            .accessibilityIdentifier("area-\(target.rawValue)")
-            if step.state == .next, !content.viewOnly {
-                if let next = workflowAction(step.kind) {
-                    Button("Erfassen") { action = next }
-                        .estrichButton(.secondary)
-                        .accessibilityLabel("\(step.title) erfassen")
-                        .accessibilityIdentifier("workflowNextAction")
-                } else {
-                    Button("Räume") { select(.rooms, wide: wide) }
-                        .estrichButton(.secondary)
-                        .accessibilityIdentifier("workflowNextAction")
-                }
-            } else {
-                Chevron()
-            }
-        }
-        .listRowBackground(step.state == .next ? Theme.accentSoft : nil)
-    }
-
-    /// Kreis je Schritt: Haken (erledigt, grün), Strich (nicht erforderlich), Nummer (nächster in Akzentfarbe, offen grau).
-    private func stepMarker(_ state: BauakteWorkflow.State, number: Int) -> some View {
-        ZStack {
-            switch state {
-            case .done:
-                Image(systemName: "checkmark.circle.fill").font(.title2).foregroundStyle(Theme.success)
-            case .skipped:
-                Image(systemName: "minus.circle.fill").font(.title2).foregroundStyle(Theme.textTertiary)
-            case .next:
-                Circle().fill(Theme.accentFill).frame(width: 26, height: 26)
-                Text("\(number)").font(Typo.labelStrong.monospacedDigit()).foregroundStyle(Theme.onAccent)
-            case .open:
-                Circle().strokeBorder(Theme.textTertiary, lineWidth: 1.5).frame(width: 26, height: 26)
-                Text("\(number)").font(Typo.labelStrong.monospacedDigit()).foregroundStyle(Theme.textSecondary)
-            }
-        }
-        .frame(width: 28, height: 28)
-        .accessibilityHidden(true)
-    }
-
     // MARK: Offene Aufgaben und Mängel
 
     @ViewBuilder
@@ -771,6 +769,7 @@ struct BauakteDetailView: View {
             areaRow(.media, content: content, wide: wide)
                 .id("documentation")
             if BauakteArea.diary.isAvailable(modules) { areaRow(.diary, content: content, wide: wide) }
+            if BauakteArea.initialInspection.isAvailable(modules) { areaRow(.initialInspection, content: content, wide: wide) }
             if BauakteArea.protocols.isAvailable(modules) { areaRow(.protocols, content: content, wide: wide) }
         } header: {
             Text("Fotos und Dokumentation")
@@ -873,17 +872,14 @@ struct BauakteDetailView: View {
         }
     }
 
-    // MARK: Beschreibung und Verlauf
+    // MARK: Verlauf
 
     private func history(_ content: BauakteContent, wide: Bool) -> some View {
         Section {
-            if let description = FreeText.clean(content.bauakte.description) {
-                FreeTextBlock(title: "Beschreibung", text: description, symbol: "doc.text", tint: Theme.textSecondary)
-            }
             areaRow(.notes, content: content, wide: wide)
                 .id("areas")
         } header: {
-            Text("Beschreibung und Verlauf")
+            Text("Verlauf")
         } footer: {
             footer(content)
         }
@@ -981,6 +977,16 @@ struct BauakteDetailView: View {
                 Button("Basisdaten bearbeiten", systemImage: "pencil") { action = .project }
                 Button("Verlauf", systemImage: "clock.arrow.circlepath") { show(.notes) }
             }
+            }
+            if canPlan, bauakte.status != .cancelled {
+                Section {
+                    Button("Einplanen", systemImage: "calendar.badge.plus") { planning = .plan }
+                        .accessibilityIdentifier("planBauakteMenuItem")
+                    if nextPlanned != nil {
+                        Button("Nächsten Einsatz verschieben", systemImage: "arrow.right.circle") { planning = .move }
+                            .accessibilityIdentifier("moveAssignmentMenuItem")
+                    }
+                }
             }
             if let offline = model.active?.sync?.offline, !offline.planned.contains(bauakteId) {
                 // Einsätze der nächsten Tage werden von selbst geladen; alle anderen Bauakten auf Wunsch.
@@ -1095,6 +1101,7 @@ struct BauakteDetailView: View {
             case "basisdaten-neu": action = .project
             case "kamera": action = .photo
             case "bauakte-erfassen": capturing = true
+            case "bauakte-einplanen": if planning == nil { planning = .plan }
             case "foto-vorschau", "foto-kunde":
                 if viewing == nil, let photo = content?.photos.first(where: \.isPhoto) { viewing = photo }
             default: break

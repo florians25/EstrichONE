@@ -53,10 +53,11 @@ es an derselben Adresse schon eine Bauakte, weist die App darauf hin und bietet 
 ## Die Bauakte im Überblick
 
 ![Bauakte oben](bilder/iphone-bauakte.jpg "Kopf mit Stand und Adresse, Aktionsleiste, nächster Termin")
-![Bauakte Mitte](bilder/iphone-bauakte-mitte.jpg "Leistung und Kennwerte, Ablauf mit dem nächsten Schritt")
-![Bauakte unten](bilder/iphone-bauakte-unten.jpg "Fotos und Dokumentation, Kontakte, Beschreibung und Verlauf")
+![Bauakte Mitte](bilder/iphone-bauakte-mitte.jpg "Leistung und Kennwerte, Beschreibung und Hinweise")
+![Bauakte unten](bilder/iphone-bauakte-unten.jpg "Fotos und Dokumentation, Kontakte, Verlauf")
 
-Die Bauakte ist nach dem Arbeitsablauf aufgebaut. Von oben nach unten:
+Die Bauakte ist nach dem Arbeitsablauf aufgebaut. Ganz oben in der Leiste zeigt ein kleines **Wolkensymbol** den
+Stand auf dem Gerät (verfügbar, wird geladen, nur Daten); Antippen zeigt die Einzelheiten. Von oben nach unten:
 
 1. **Kopf**: Nummer, **Stand** als farbige Kennzeichnung (antippen zum Ändern, Abschnitt 4.16), Bauvorhaben und
    **Adresse**, bei Bedarf **Heute im Einsatz** und eine hohe Priorität. Darunter die **Aktionsleiste**: **Route**,
@@ -64,23 +65,42 @@ Die Bauakte ist nach dem Arbeitsablauf aufgebaut. Von oben nach unten:
    **Chat** (Chat der Baustelle im Tab **Chat**), **Foto** und, wenn verknüpft, **Teams**.
 2. Hinweise nur bei Bedarf: Erstbegehung fehlt, Warnungen aus der Planung, storniert, nur ansehen.
 3. **Heute auf der Baustelle** bzw. **Nächster Termin**: Tag und Uhrzeit, Tätigkeit mit Leistung, Kolonne mit
-   Besetzung, Fahrzeuge und Geräte. Ohne Einsatz der geplante Ausführungszeitraum.
-4. **Hinweise zur Baustelle**: was oft als Freitext erfasst wird, als gut lesbare Textblöcke mit Überschrift:
-   angeheftete Notizen, **Zugang und Besonderheiten**, **Hinweise und Behinderungen** (und weitere mehrzeilige Felder
-   Ihres Betriebs) und der Hinweis der Disposition für heute. Zeilenumbrüche bleiben erhalten, Telefonnummern,
-   E-Mail-Adressen und Links lassen sich antippen, lange Texte öffnet **Mehr anzeigen**. **Bearbeiten** ändert sie.
-5. **Leistung und Kennwerte**: die vier wichtigsten Kennwerte, zuerst **Estrichart**, **Dicke**, **Fläche** und
+   Besetzung, Fahrzeuge und Geräte. Ohne Einsatz der geplante Ausführungszeitraum. Wer planen darf, findet hier
+   **Einplanen** und **Verschieben** (Abschnitt „Aus der Bauakte einplanen“).
+4. **Leistung und Kennwerte**: die vier wichtigsten Kennwerte, zuerst **Estrichart**, **Dicke**, **Fläche** und
    **Termin** (soweit erfasst), dazu **Räume & Flächen** mit Fortschritt und **Alle Basisdaten**.
-6. **Ablauf**: die Schritte **Erstbegehung**, **Estrich einbringen**, **Belegreife** und **Abnahme** mit Stand
-   (Haken: erledigt, Strich: nicht erforderlich, Nummer: offen) und rechts „2 von 4 erledigt“. Der nächste offene
-   Schritt ist blau hinterlegt und hat die Schaltfläche **Erfassen** (Erstbegehung, CM-Messung bzw. Abnahme; beim
-   Einbringen **Räume**). Ein Tipp auf einen Schritt öffnet den passenden Bereich.
-7. **Offene Aufgaben und Mängel**: die drei wichtigsten, Mängel zuerst; **Alle anzeigen** öffnet den Bereich.
-8. **Fotos und Dokumentation**: die neuesten Fotos, darunter **Fotos & Dokumente**, **Bautagebuch** und **Abnahme &
-   Messungen** mit Kurzinfo.
-9. **Kontakte**: Kunde, Ansprechpartner vor Ort, Bauleiter und Zuständige im Betrieb als kompakte Zeilen; das
+5. **Beschreibung und Hinweise**: direkt nach den Kennwerten als gut lesbare Textblöcke mit Überschrift: die
+   **Beschreibung**, **Hinweise und Behinderungen**, **Zugang und Besonderheiten** (und weitere mehrzeilige Felder
+   Ihres Betriebs), angeheftete Notizen und der Hinweis der Disposition für heute. Zeilenumbrüche bleiben erhalten,
+   Telefonnummern, E-Mail-Adressen und Links lassen sich antippen, lange Texte öffnet **Mehr anzeigen**.
+   **Bearbeiten** ändert sie.
+6. **Offene Aufgaben und Mängel**: die drei wichtigsten, Mängel zuerst; **Alle anzeigen** öffnet den Bereich.
+7. **Fotos und Dokumentation**: die neuesten Fotos, darunter **Fotos & Dokumente**, **Bautagebuch**, **Erstbegehung**
+   und **Abnahme & Messungen** mit Kurzinfo.
+8. **Kontakte**: Kunde, Ansprechpartner vor Ort, Bauleiter und Zuständige im Betrieb als kompakte Zeilen; das
    Telefonsymbol rechts ruft an. **Alle Kontakte** öffnet den Bereich.
-10. **Beschreibung und Verlauf**: die Beschreibung der Baustelle und **Notizen & Verlauf** (letzte Aktivität).
+9. **Verlauf**: **Notizen & Verlauf** (letzte Aktivität).
+
+Erstbegehung, CM-Messung und Abnahme erfassen Sie über **„+“** oder in den Bereichen unter **Fotos und
+Dokumentation**; den Fortschritt der Räume zeigt **Räume & Flächen**.
+
+### Aus der Bauakte einplanen
+
+![Einplanen](bilder/iphone-bauakte-einplanen.jpg "Einplanen: Tag, Kolonne mit Auslastung, Tätigkeit und Uhrzeit"){rechts}
+
+Mit dem Recht zur **Planung** planen Sie eine Baustelle direkt aus der Bauakte ein:
+
+1. Tippen Sie unter **Nächster Termin** auf **Einplanen** (auch unter **Weitere Aktionen**).
+2. Wählen Sie den **Tag**: **Heute**, **Morgen**, **Übermorgen** oder ein Datum.
+3. Wählen Sie die **Kolonne**. Unter jedem Namen steht die Auslastung des Tages, z. B. „2 Einsätze“ oder „frei“.
+4. Die **Tätigkeit** ist nach dem Stand der Bauakte vorbelegt, die **Uhrzeit** schließt an den letzten Einsatz der
+   Kolonne an. Beides lässt sich ändern; die Uhrzeit können Sie auch weglassen.
+5. Unter **Prüfung** sehen Sie Konflikte. Tippen Sie auf **Einplanen**.
+
+Die App bestätigt den Einsatz, und **Nächster Termin** zeigt ihn sofort. Steht schon ein Einsatz, verlegt
+**Verschieben** den nächsten Einsatz auf einen anderen Tag, eine andere Kolonne oder Uhrzeit. In der Liste
+**Baustellen** erreichen Sie **Einplanen** durch Wischen nach links oder langes Drücken. Ohne Verbindung merkt die App
+die Änderung vor und sendet sie beim nächsten Öffnen der **Disposition**.
 
 Erfasst wird über **„+“** oben rechts: Es öffnet die Auswahl aller Erfassungen (Abschnitt „Erfassen in der Bauakte“).
 **Foto** in der Aktionsleiste öffnet sofort die Kamera, die Aufnahme landet in dieser Bauakte. Unter **Weitere
@@ -196,7 +216,7 @@ zusätzlich unter **Meine Aufgaben** (Kapitel 3).
 
 **Notiz schreiben** legt eine kurze Notiz an, die alle in der Bauakte sehen, z. B. „Schlüssel beim Nachbarn
 (Nr. 5)“. Das Feld ist mehrzeilig, Zeilenumbrüche bleiben erhalten. Notizen, die im Büro **angeheftet** wurden,
-stehen in der Übersicht unter **Hinweise zur Baustelle** und auf der Heute-Seite in der Karte des Einsatzes. Der **Änderungsverlauf**
+stehen in der Übersicht unter **Beschreibung und Hinweise** und auf der Heute-Seite in der Karte des Einsatzes. Der **Änderungsverlauf**
 in **Notizen & Verlauf** zeigt, wer was wann geändert hat; er ist nur mit Verbindung zum Server verfügbar.
 
 ## Erstbegehung
