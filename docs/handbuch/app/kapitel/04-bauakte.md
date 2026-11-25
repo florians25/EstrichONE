@@ -96,24 +96,38 @@ gespeichert und übertragen“.
 
 1. Tippen Sie in der Bauakte in der Aktionsleiste auf **Foto** (auf der Heute-Seite: **…** in der Karte des Einsatzes
    → **Foto aufnehmen**).
-2. Geben Sie optional eine **Beschriftung** ein, z. B. „Randdämmung Bad OG“. Sie gilt für alle folgenden Fotos dieser
-   Serie.
+2. Wählen Sie vor der Serie, was Sie fotografieren: über dem Auslöser die **Art** (**Vorher**, **Einbau**, **Nachher**,
+   **Mangel**), oben links **Raum oder Bereich** (die Räume der Bauakte stehen zur Auswahl, **Anderer Bereich …** nimmt
+   freien Text) und optional eine **Beschriftung**, z. B. „Randdämmstreifen“. Die Auswahl gilt für alle folgenden Fotos,
+   bis Sie sie ändern, und steht als Beschriftung an jedem Foto („Einbau, Bad OG, Randdämmstreifen“). Art und Raum der
+   letzten Serie merkt sich die App je Bauakte für denselben Arbeitstag.
 3. Fotografieren Sie beliebig viele Bilder hintereinander, die Kamera bleibt offen, der Zähler unten rechts zählt mit.
+   Der Bildschirm bleibt dabei an.
    Ab iOS 18 lösen auch die **Lautstärketasten** (bzw. die Kamerasteuerung) aus, mit Handschuhen sicherer als der
    Bildschirm. Mit **Aus Fotos auswählen** übernehmen Sie Bilder aus der Fotomediathek.
 4. Tippen Sie auf **Fertig**.
+
+**Aufnahmezeit und Standort:** Jedes Foto trägt die Aufnahmezeit. Solange die Kamera geöffnet ist, speichert die App
+außerdem den Standort als Aufnahmeort, wenn Sie das beim ersten Mal erlauben. Mit dem **Standort-Symbol** oben rechts in
+der Kamera schalten Sie das aus und wieder ein; die Wahl bleibt erhalten.
 
 Ohne Netz zeigt die Kamera „Offline. Fotos bleiben auf dem Gerät.“. Die Fotos werden verkleinert (längste Kante
 3000 Pixel, JPEG; Aufnahmezeit und Ort bleiben erhalten) und verschlüsselt auf dem Gerät abgelegt, bis sie übertragen
 sind. In der Fotomediathek landet nichts.
 
-**Schneller zur Kamera:** App-Symbol lange drücken → **Foto zur Baustelle** (bzw. **Bautagebuch**, **Baustelle
-suchen**). Dasselbe gibt es als Kurzbefehl, per Siri („Foto mit EstrichONE“) und (auf iPhones mit Aktionstaste) über
-**Einstellungen** → **Aktionstaste** → **Kurzbefehl**. Gemeint ist immer der heutige Einsatz, sonst die zuletzt geöffnete
-Bauakte, sonst wählen Sie die Baustelle; oben in der Kamera lässt sie sich wechseln.
+**Schneller zur Kamera:** App-Symbol lange drücken → **Foto zur heutigen Baustelle** (bzw. **Bautagebuch**, **Mangel
+melden**, **Baustelle suchen**). Dasselbe gibt es als Kurzbefehl, per Siri („Foto mit EstrichONE“, „Mangel melden mit
+EstrichONE“) und (auf iPhones mit Aktionstaste) über **Einstellungen** → **Aktionstaste** → **Kurzbefehl**. Gemeint ist
+immer der laufende Einsatz von heute, sonst der nächste heute, sonst die zuletzt geöffnete Bauakte, sonst wählen Sie die
+Baustelle; oben in der Kamera lässt sie sich wechseln.
+
 In **Fotos & Dokumente** tippen Sie ein Foto an, um es groß zu sehen (Doppeltippen vergrößert). Dort können Sie es
 **beschriften** oder **löschen**, ein bereits übertragenes Foto wird dann auch im Büro gelöscht, ein noch nicht
 übertragenes nur auf diesem Gerät.
+
+**Kundenansicht:** Möchten Sie dem Kunden Fotos auf dem Gerät zeigen, tippen Sie in der Großansicht oben links auf
+**Kundenansicht**. Die App zeigt dann nur noch die Fotos bildschirmfüllend, ohne Beschriftung, Aufnahmezeit und
+Werkzeuge. Blättern und Vergrößern bleiben möglich; das **X** oben rechts beendet die Ansicht.
 
 ## Videos aufnehmen
 
@@ -151,6 +165,17 @@ Das Bautagebuch hält fest, was auf der Baustelle passiert ist. Tippen Sie auf *
 - **Wetter und Anwesende** (optional): Wetter, Temperatur und anwesende Personen.
 
 Tippen Sie auf **Sichern**. Die Einträge stehen nach Tagen sortiert in der Bauakte und im Büro.
+
+**Diktieren:** Unter dem Textfeld steht **Diktieren**. Tippen Sie darauf und sprechen Sie; der erkannte Text wird an den
+vorhandenen angehängt und bleibt bearbeitbar. **Diktat beenden** stoppt die Erkennung. Sie läuft, wo das Gerät es kann,
+auf dem Gerät; Tonaufnahmen werden nie gespeichert oder gesendet. Dieselbe Schaltfläche gibt es bei Mängeln und Aufgaben
+(Details), Notizen, der Bemerkung der CM-Messung sowie den Notizen von Erstbegehung und Abnahme.
+
+**Entwürfe:** Was Sie in ein Formular eingeben, sichert die App laufend als Entwurf, auch wenn Sie abbrechen, ein Anruf
+dazwischenkommt oder die App beendet wird. Beim nächsten Öffnen desselben Formulars in derselben Bauakte steht oben
+„Entwurf von heute, 07:42 Uhr wiederhergestellt.“ mit **Verwerfen**. Das gilt für Bautagebuch, Mangel und Aufgabe, Notiz,
+CM-Messung, Erstbegehung und Abnahme (einschließlich schon geleisteter Unterschriften). Entwürfe bleiben zwei Wochen
+erhalten und liegen verschlüsselt auf dem Gerät.
 
 ## Mängel und Aufgaben
 
@@ -209,7 +234,8 @@ Mit der **CM-Messung** halten Sie die Restfeuchte des Estrichs fest und sehen so
 3. Tragen Sie den **Messort** (z. B. „Bad OG“) und den **Messwert** in CM-% ein, optional eine Bemerkung und Fotos
    (z. B. vom Messgerät).
 
-Die App vergleicht den Wert mit dem Grenzwert und zeigt **Belegreif** oder **Noch nicht belegreif**:
+Die App vergleicht den Wert mit dem Grenzwert und zeigt **Belegreif** oder **Noch nicht belegreif**. Vor dem Sichern
+fasst sie Messort, Messwert, Grenzwert und Estrich noch einmal zusammen; mit **Messung sichern** schließen Sie ab.
 
 | Estrichart | unbeheizt | beheizt |
 |---|---|---|
@@ -234,13 +260,25 @@ Verbindung:
 4. Bei Vorbehalten erfassen Sie die **Mängel** mit **Mangel hinzufügen**. Jeder Mangel wird als **Aufgabe mit Frist** in
    der Bauakte angelegt.
 5. Nehmen Sie Fotos auf und ergänzen Sie **Notizen** (Absprachen, Restarbeiten).
-6. Unter **Unterschriften** unterschreiben **Auftraggeber** und **Auftragnehmer** mit dem Finger auf dem Bildschirm.
-7. Tippen Sie auf **Abnahme sichern**.
+6. Tippen Sie auf **Weiter zur Zusammenfassung**. Die Zusammenfassung zeigt bildschirmfüllend nur das Protokoll:
+   Bauvorhaben, Leistung, Ergebnis, Mängel mit Frist und Notizen. Reiter, Statuszeilen und andere Bauakten sind nicht zu
+   sehen, sodass Sie das Gerät dem Auftraggeber zeigen oder in die Hand geben können.
+7. Unter **Unterschriften** tippt der **Auftraggeber** auf **Hier unterschreiben**, trägt den **Namen des
+   Unterzeichners** ein und unterschreibt mit dem Finger. Der **Auftragnehmer** unterschreibt darunter.
+8. Fehlt eine Pflichtangabe (das Ergebnis, bei Vorbehalt oder Verweigerung mindestens ein Mangel oder eine Notiz), steht
+   das unter **Vor dem Abschluss noch nötig**; mit **Bearbeiten** kehren Sie zu den Angaben zurück. Tippen Sie zum
+   Schluss auf **Abnahme abschließen**.
 
 **Freigabe durch den Kunden:** Unterschreibt der Auftraggeber nicht vor Ort, erstellen Sie nach der Übertragung einen
 **Freigabelink**, optional mit **Freigabelink per E-Mail senden** an die E-Mail des Kunden. Der Kunde sieht das
 Protokoll ohne Anmeldung und kann es freigeben oder mit Begründung ablehnen; der Link ist befristet. Die Bauakte zeigt
-danach „Online freigegeben von …“. Mit **Protokoll (PDF) ansehen** öffnen Sie das fertige Protokoll.
+danach „Online freigegeben von …“.
+
+**Protokoll als PDF:** Sobald das Protokoll übertragen und von beiden Seiten unterschrieben oder online freigegeben ist,
+erzeugt der Server das PDF. Im Protokoll stehen dann **Protokoll (PDF) ansehen**, **Protokoll teilen** (Teilen-Dialog des
+Systems, z. B. AirDrop, Drucken, Nachrichten) und, wenn auf dem Gerät ein Mail-Konto eingerichtet ist, **Per E-Mail an den
+Kunden senden**. Die E-Mail öffnet sich mit dem PDF im Anhang und der Adresse des Kunden im Mail-Programm; Sie senden sie
+selbst ab.
 
 ## Räume und Flächen
 
