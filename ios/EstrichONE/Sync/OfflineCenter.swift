@@ -59,9 +59,12 @@ final class OfflineCenter {
 
         var current = await loadedIndex()
         let today = CalendarDay.string(.now)
-        let assignments = (await MyPlanning(store: store).cached())?.range.assignments ?? []
+        // Planung frisch vom Server (heute und die nächsten sechs Tage); ohne Verbindung der zuletzt geladene Stand.
+        let assignments = (await MyPlanning(store: store).load(using: client))?.range.assignments ?? []
         let ids = OfflinePlan.bauakteIds(assignments: assignments, today: today, todayExtra: todayExtra, pinned: current.pinned)
         if Set(ids) != planned { planned = Set(ids) }
+        // Noch keine Planung bekannt: beim nächsten Abgleich gleich wieder nachsehen.
+        if ids.isEmpty { lastRun = nil }
         current.markPlanned(ids, at: .now)
 
         // Aufräumen: Kopien von Bauakten, die seit einigen Tagen nicht mehr geplant sind.

@@ -124,7 +124,7 @@ struct AcceptanceReviewView: View {
                 .background(.bar)
             }
             .sheet(item: $signing) { side in
-                SignatureView(title: side == .client ? "Unterschrift Auftraggeber" : "Unterschrift Auftragnehmer",
+                SignatureView(title: side == .client ? "Auftraggeber" : "Auftragnehmer",
                               signerName: side == .client ? $clientName : nil) { png in
                     signing = nil
                     guard let png else { return }

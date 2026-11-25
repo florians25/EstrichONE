@@ -314,9 +314,9 @@ struct HomeView: View {
         if sync.isRunning { return ("arrow.triangle.2.circlepath", "Wird abgeglichen", false) }
         if sync.maintenanceMessage != nil { return ("wrench.and.screwdriver", "Wartung", false) }
         if sync.isOffline {
-            // Offline: sagen, was sicher auf dem Gerät wartet („Offline, 3 Fotos warten“).
-            let waiting = sync.transfer.summary.map { "Offline, \($0) \(sync.transfer.waitingCount == 1 ? "wartet" : "warten")" }
-            return ("icloud.slash", waiting ?? "Offline", false)
+            // Offline: sagen, wie viel sicher auf dem Gerät wartet; die Zeile über den Reitern nennt es im Einzelnen.
+            let count = sync.transfer.waitingCount
+            return ("icloud.slash", count == 0 ? "Offline" : (count == 1 ? "Offline, 1 wartet" : "Offline, \(count) warten"), false)
         }
         if sync.summary?.hasProblems == true { return ("exclamationmark.icloud", "Bitte prüfen", true) }
         if let summary = sync.summary, !summary.isSettled { return ("icloud.and.arrow.up", "Wird übertragen", false) }

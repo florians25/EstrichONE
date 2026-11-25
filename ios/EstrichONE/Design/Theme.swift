@@ -33,14 +33,14 @@ enum Theme {
     /// Nebentext mit hohem Kontrast (7 : 1 hell, 9 : 1 dunkel).
     static let textSecondary = Color.dynamic(light: 0x4A5361, dark: 0xAEB5C0)
     /// Beschriftungen und Hinweise (≥ 4,5 : 1).
-    static let textTertiary = Color.dynamic(light: 0x667080, dark: 0x8C939E)
+    static let textTertiary = Color.dynamic(light: 0x626C7B, dark: 0x8C939E)
 
     // MARK: Akzent (Markenblau)
 
     /// Schrift, Symbole und Steuerelemente in Akzentfarbe.
     static let accent = Color.dynamic(light: 0x0062CC, dark: 0x4DA3FF)
     /// Gefüllte Hauptschaltfläche (weiße Schrift).
-    static let accentFill = Color.dynamic(light: 0x0062CC, dark: 0x1F7AE6)
+    static let accentFill = Color.dynamic(light: 0x0062CC, dark: 0x1A6FD6)
     static let accentPressed = Color.dynamic(light: 0x004FA6, dark: 0x1767C4)
     /// Zart getönte Fläche für Nebenaktionen und Symbole.
     static let accentSoft = Color.dynamic(light: 0xE7F0FC, dark: 0x18283C)

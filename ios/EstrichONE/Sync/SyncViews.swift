@@ -34,7 +34,8 @@ struct TransferStrip: View {
 
     var body: some View {
         let candidate = Self.line(queue: sync.transfer, isRunning: sync.isRunning, isOffline: sync.isOffline)
-        Group {
+        // Auch leer eine echte Ansicht, damit die Beobachtung unten läuft.
+        VStack(spacing: 0) {
             if let shown {
                 StripRow(tone: shown.isProblem ? .danger : .neutral, symbol: shown.symbol, text: shown.text,
                          actionTitle: shown.canRetry ? "Erneut senden" : "Details") {
