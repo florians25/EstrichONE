@@ -60,6 +60,7 @@ internal sealed class LexwareDirectory : IDisposable
         _state = null;
         _customerVouchers.Clear();
         _voucherTexts.Clear();
+        _documents.Clear();
     }
 
     private readonly System.Collections.Concurrent.ConcurrentDictionary<string, (DateTimeOffset LoadedAt, IReadOnlyList<LexwareVoucher> Vouchers)> _customerVouchers = new();
@@ -92,12 +93,52 @@ internal sealed class LexwareDirectory : IDisposable
         return text;
     }
 
-    public void Dispose() => _gate.Dispose();
+    /// <summary>Ein Änderungsabgleich zur selben Zeit (Hintergrunddienst und Aufrufe aus der Oberfläche).</summary>
+    public SemaphoreSlim SyncGate { get; } = new(1, 1);
+
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, (DateTimeOffset LoadedAt, LexwareDocument Document)> _documents = new();
+
+    /// <summary>Beleg-PDF, kurz im Arbeitsspeicher gehalten (höchstens acht Belege); nichts davon wird dauerhaft gespeichert.</summary>
+    public async Task<LexwareDocument> DocumentAsync(string key, DateTimeOffset now, TimeSpan maxAge, Func<Task<LexwareDocument>> load)
+    {
+        foreach (var (old, entry) in _documents)
+        {
+            if (now - entry.LoadedAt >= maxAge)
+            {
+                _documents.TryRemove(old, out _);
+            }
+        }
+
+        if (_documents.TryGetValue(key, out var cached))
+        {
+            return cached.Document;
+        }
+
+        var document = await load();
+        if (maxAge > TimeSpan.Zero)
+        {
+            foreach (var oldest in _documents.OrderBy(d => d.Value.LoadedAt).Take(Math.Max(0, _documents.Count - 7)).ToList())
+            {
+                _documents.TryRemove(oldest.Key, out _);
+            }
+
+            _documents[key] = (now, document);
+        }
+
+        return document;
+    }
+
+    public void Dispose()
+    {
+        _gate.Dispose();
+        SyncGate.Dispose();
+    }
 }
 
 /// <summary>
 /// Fachlogik der Lexware-Office-Anbindung: Einstellungen, Kontaktverknüpfung mit Dublettenprüfung und die lesende Anzeige
-/// der Belege (Rechnungen, Angebote) mit Statusabgleich. Belege werden nie angelegt oder geändert.
+/// der Belege (Rechnungen, Angebote) mit Statusabgleich und PDF. Belege werden nie angelegt oder geändert. Den Abgleich
+/// späterer Änderungen an Kunden führt <see cref="LexwareChangeSyncService"/>.
 /// </summary>
 public sealed class LexwareService(
     EstrichOneDbContext db, LexwareClient client, IDataProtectionProvider protection, IOptions<LexwareOptions> options, TimeProvider clock,
@@ -109,6 +150,9 @@ public sealed class LexwareService(
     public const string KeyHelpUrl = "https://app.lexware.de/addons/public-api";
 
     private LexwareDirectory Directory => services.GetRequiredService<LexwareDirectory>();
+
+    /// <summary>Ein Änderungsabgleich zur selben Zeit je Server.</summary>
+    public SemaphoreSlim SyncGate => Directory.SyncGate;
 
     public EstrichOneDbContext Db => db;
 
@@ -386,6 +430,14 @@ public sealed class LexwareService(
         var connection = Connection(row);
         return Directory.VouchersAsync($"{Stamp(row)}|{lexwareContactId}", clock.GetUtcNow(), Options.StatusCacheDuration, refresh,
             () => client.ListVouchersAsync(connection, lexwareContactId, null, 100, cancellationToken));
+    }
+
+    /// <summary>PDF eines Belegs aus Lexware Office (nur lesend, kurz im Arbeitsspeicher gehalten).</summary>
+    public Task<LexwareDocument> VoucherDocumentAsync(LexwareSettingsRow row, string type, string lexwareId, CancellationToken cancellationToken)
+    {
+        var connection = Connection(row);
+        return Directory.DocumentAsync($"{Stamp(row)}|{type}|{lexwareId}", clock.GetUtcNow(), Options.DocumentCacheDuration,
+            () => client.GetVoucherDocumentAsync(connection, type, lexwareId, cancellationToken));
     }
 
     /// <summary>

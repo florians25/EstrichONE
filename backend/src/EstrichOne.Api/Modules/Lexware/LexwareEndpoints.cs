@@ -28,15 +28,17 @@ public sealed record LexwareStatusResponse(bool Enabled, bool Configured, bool C
 public sealed record LexwareSettingsResponse(
     bool ModuleEnabled, bool HasApiKey, string BaseUrl, bool CustomBaseUrl, string? OrganizationName,
     DateTimeOffset? LastTestAt, bool? LastTestOk, string? LastTestError, int LinkedCustomers, int LinkedInvoices, string KeyHelpUrl, long Version,
-    bool NewCustomersSync = true);
+    bool NewCustomersSync = true, LexwareChangeSync ChangeSync = LexwareChangeSync.Both, DateTimeOffset? LastChangeSyncAt = null,
+    string? LastChangeSyncError = null, int CustomersWithDeviations = 0);
 
 /// <param name="ApiKey">Neuer Schlüssel; <c>null</c> oder leer lässt den gespeicherten unverändert.</param>
 /// <param name="ClearApiKey">Gespeicherten Schlüssel entfernen.</param>
 /// <param name="BaseUrl">Leer = Vorgabe <c>https://api.lexware.io</c>.</param>
 /// <param name="NewCustomersSync">Neue Kunden standardmäßig mit Lexware Office abgleichen; ohne Angabe unverändert.</param>
+/// <param name="ChangeSync">Richtung des Änderungsabgleichs verknüpfter Kunden; ohne Angabe unverändert.</param>
 public sealed record SaveLexwareSettingsRequest(
     [property: MaxLength(500)] string? ApiKey = null, bool ClearApiKey = false, [property: MaxLength(LexwareSettingsRow.MaxUrl)] string? BaseUrl = null,
-    long? Version = null, bool? NewCustomersSync = null);
+    long? Version = null, bool? NewCustomersSync = null, LexwareChangeSync? ChangeSync = null);
 
 public sealed record LexwareTestResponse(bool Ok, string? OrganizationName, string? Error, DateTimeOffset At);
 
@@ -61,9 +63,34 @@ public sealed record LexwareCustomerCandidate(LexwareCustomerSummary Customer, i
 public sealed record LexwareContactLinkResponse(
     string LexwareContactId, string? Name, string? Number, string Url, LexwareLinkOrigin Origin, DateTimeOffset LinkedAt);
 
+/// <summary>Abweichung in einem abgeglichenen Feld mit den Werten beider Seiten.</summary>
+/// <param name="Field"><c>name</c>, <c>salutation</c>, <c>street</c>, <c>postalCode</c>, <c>city</c>, <c>email</c>, <c>phone</c> oder <c>vatId</c>.</param>
+public sealed record LexwareDeviationField(string Field, string Label, string? EstrichOne, string? Lexware);
+
+/// <summary>Stand des Änderungsabgleichs einer Verknüpfung.</summary>
+/// <param name="State">
+/// <c>synced</c> (abgeglichen), <c>deviations</c> (offene Abweichungen), <c>pending</c> (Abgleich steht aus), <c>error</c>
+/// (letzter Abgleich fehlgeschlagen), <c>missing</c> bzw. <c>archived</c> (Kontakt in Lexware Office nicht mehr vorhanden
+/// bzw. archiviert), <c>disabled</c> („Mit Lexware Office abgleichen“ aus), <c>paused</c> (Kunde archiviert), <c>off</c>
+/// (Änderungsabgleich in den Einstellungen aus).
+/// </param>
+/// <param name="SyncedAt">Zeitpunkt des letzten erfolgreichen Abgleichs.</param>
+public sealed record LexwareSyncState(string State, DateTimeOffset? SyncedAt, IReadOnlyList<LexwareDeviationField> Deviations, string? Error);
+
 /// <summary>Verknüpfungsstatus eines Kunden.</summary>
 /// <param name="SyncEnabled">„Mit Lexware Office abgleichen“ ist für den Kunden eingeschaltet (sonst bleibt er nur in EstrichONE).</param>
-public sealed record CustomerLexwareResponse(Guid ContactId, LexwareContactLinkResponse? Link, bool CanEdit, bool SyncEnabled = false);
+/// <param name="Sync">Stand des Änderungsabgleichs; nur bei verknüpften Kunden.</param>
+public sealed record CustomerLexwareResponse(Guid ContactId, LexwareContactLinkResponse? Link, bool CanEdit, bool SyncEnabled = false, LexwareSyncState? Sync = null);
+
+/// <summary>Entscheidung zu Abweichungen: <c>estrichOne</c> oder <c>lexware</c>, für alle Felder oder je Feld.</summary>
+/// <param name="Source">Für alle offenen Abweichungen dieselbe Seite übernehmen.</param>
+/// <param name="Fields">Je Feld die Seite, deren Wert übernommen wird; nicht genannte Felder bleiben offen.</param>
+public sealed record ResolveLexwareDeviationsRequest([property: MaxLength(20)] string? Source = null, IReadOnlyDictionary<string, string>? Fields = null);
+
+/// <summary>Kunde mit offenen Abweichungen zum verknüpften Lexware-Kontakt.</summary>
+public sealed record LexwareDeviationItem(
+    LexwareCustomerSummary Customer, string LexwareContactId, string? LexwareName, string LexwareUrl, IReadOnlyList<LexwareDeviationField> Fields,
+    DateTimeOffset? SyncedAt);
 
 public sealed record SetLexwareSyncRequest(bool Enabled);
 
@@ -90,7 +117,8 @@ public sealed record ImportLexwareContactRequest(bool CreateAnyway = false);
 /// <param name="Imported">Kunde angelegt und verknüpft. Sonst stehen in <paramref name="Candidates"/> die möglichen Dubletten zur Entscheidung.</param>
 public sealed record ImportLexwareContactResponse(bool Imported, Guid? ContactId, string? CustomerNumber, IReadOnlyList<LexwareCustomerCandidate> Candidates);
 
-public sealed record LexwareLinkedPair(LexwareCustomerSummary Customer, LexwareContactSummary? Lexware, bool MissingInLexware);
+/// <param name="Sync">Stand des Änderungsabgleichs dieser Verknüpfung.</param>
+public sealed record LexwareLinkedPair(LexwareCustomerSummary Customer, LexwareContactSummary? Lexware, bool MissingInLexware, LexwareSyncState? Sync = null);
 
 /// <param name="Unique">Eindeutiger Treffer: auf beiden Seiten genau ein Gegenstück mit gleicher E-Mail-Adresse oder gleicher Kundennummer.</param>
 public sealed record LexwareSuggestion(
@@ -105,12 +133,15 @@ public sealed record LexwareInternalDuplicate(
 /// <summary>Abgleichübersicht Kunden: Zähler über alle Einträge, Listen auf je 500 Zeilen begrenzt (<paramref name="Truncated"/>).</summary>
 /// <param name="OnlyEstrichOne">Kunden mit eingeschaltetem Abgleich, die in Lexware Office noch fehlen.</param>
 /// <param name="Excluded">Kunden, die bewusst nur in EstrichONE bleiben („Mit Lexware Office abgleichen“ aus, nicht verknüpft).</param>
+/// <param name="Deviations">Verknüpfte Kunden mit offenen Abweichungen (beide Seiten haben ein Feld unterschiedlich; der Nutzer entscheidet).</param>
+/// <param name="ChangeSyncError">Der Änderungsabgleich beim Aktualisieren ist fehlgeschlagen; die Übersicht zeigt den gespeicherten Stand.</param>
 public sealed record LexwareReconciliationResponse(
     DateTimeOffset LoadedAt, int Linked, int OnlyEstrichOne, int OnlyLexware, int PossibleDuplicates, int UniqueMatches,
     IReadOnlyList<LexwareLinkedPair> LinkedItems, IReadOnlyList<LexwareCustomerSummary> OnlyEstrichOneItems,
     IReadOnlyList<LexwareContactSummary> OnlyLexwareItems, IReadOnlyList<LexwareSuggestion> Suggestions,
     IReadOnlyList<LexwareInternalDuplicate> InternalDuplicates, bool Truncated, int Excluded = 0,
-    IReadOnlyList<LexwareCustomerSummary>? ExcludedItems = null);
+    IReadOnlyList<LexwareCustomerSummary>? ExcludedItems = null, int Deviations = 0, IReadOnlyList<LexwareDeviationItem>? DeviationItems = null,
+    LexwareChangeSync ChangeSync = LexwareChangeSync.Both, string? ChangeSyncError = null);
 
 public sealed record LexwareLinkPair(Guid ContactId, [property: Required, MaxLength(100)] string LexwareContactId);
 
@@ -156,8 +187,9 @@ public sealed record AssignLexwareVoucherRequest([property: Required, MaxLength(
 
 /// <summary>
 /// Lexware Office: Einstellungen (nur mit <c>settings.integrations</c>), Kundenverknüpfung mit beidseitiger
-/// Dublettenprüfung und die Anzeige von Rechnungen und Angeboten an Kunde und Bauakte. Belege werden nur gelesen und in
-/// EstrichONE Bauakten zugeordnet; angelegt oder geändert werden sie ausschließlich in Lexware Office.
+/// Dublettenprüfung, Abgleich späterer Änderungen an verknüpften Kunden und die Anzeige von Rechnungen und Angeboten an
+/// Kunde und Bauakte (Liste, Status, PDF). Belege werden nur gelesen und in EstrichONE Bauakten zugeordnet; angelegt oder
+/// geändert werden sie ausschließlich in Lexware Office.
 /// </summary>
 internal static class LexwareEndpoints
 {
@@ -218,6 +250,22 @@ internal static class LexwareEndpoints
         customers.MapPut("/sync", SetSyncAsync).WithName("SetCustomerLexwareSync")
             .WithSummary("„Mit Lexware Office abgleichen“ für den Kunden ein- oder ausschalten (eine bestehende Verknüpfung bleibt, bis sie gelöst wird)")
             .ProducesProblem(StatusCodes.Status404NotFound).RequirePermission(Permissions.InvoicesAssign);
+        customers.MapPost("/sync/run", RunSyncAsync).WithName("RunCustomerLexwareSync")
+            .WithSummary("Änderungsabgleich für diesen Kunden jetzt ausführen (liest den Lexware-Kontakt frisch)")
+            .ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status409Conflict)
+            .ProducesProblem(StatusCodes.Status424FailedDependency).ProducesProblem(StatusCodes.Status503ServiceUnavailable)
+            .RequirePermission(Permissions.InvoicesAssign);
+        customers.MapPost("/sync/resolve", ResolveSyncAsync).WithName("ResolveCustomerLexwareDeviations")
+            .WithSummary("Abweichungen entscheiden: je Feld oder gesamt EstrichONE oder Lexware übernehmen (Lexware übernehmen verlangt zusätzlich contacts.edit)")
+            .ProducesProblem(StatusCodes.Status403Forbidden).ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status409Conflict)
+            .ProducesProblem(StatusCodes.Status422UnprocessableEntity).ProducesProblem(StatusCodes.Status424FailedDependency)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable).RequirePermission(Permissions.InvoicesAssign);
+        customers.MapGet("/vouchers/{lexwareId}/document", CustomerVoucherDocumentAsync).WithName("GetCustomerLexwareVoucherDocument")
+            .WithSummary("Beleg des verknüpften Lexware-Kontakts als PDF (nur lesend durchgereicht; download=true als Anhang). Für Entwürfe gibt es kein PDF")
+            .Produces<FileContentHttpResult>(StatusCodes.Status200OK, "application/pdf")
+            .ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status409Conflict)
+            .ProducesProblem(StatusCodes.Status424FailedDependency).ProducesProblem(StatusCodes.Status503ServiceUnavailable)
+            .RequirePermission(Permissions.InvoicesRead);
         customers.MapDelete("/link", UnlinkCustomerAsync).WithName("UnlinkCustomerFromLexware")
             .WithSummary("Verknüpfung lösen (in Lexware Office wird nichts gelöscht)").ProducesProblem(StatusCodes.Status404NotFound)
             .RequirePermission(Permissions.InvoicesAssign);
@@ -252,6 +300,12 @@ internal static class LexwareEndpoints
             .ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status409Conflict)
             .ProducesProblem(StatusCodes.Status424FailedDependency).ProducesProblem(StatusCodes.Status503ServiceUnavailable)
             .RequirePermission(Permissions.InvoicesAssign);
+        bauakte.MapGet("/vouchers/{linkId:guid}/document", BauakteVoucherDocumentAsync).WithName("GetBauakteLexwareVoucherDocument")
+            .WithSummary("Der Bauakte zugeordneter Beleg als PDF (nur lesend durchgereicht; download=true als Anhang). Für Entwürfe gibt es kein PDF")
+            .Produces<FileContentHttpResult>(StatusCodes.Status200OK, "application/pdf")
+            .ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status409Conflict)
+            .ProducesProblem(StatusCodes.Status424FailedDependency).ProducesProblem(StatusCodes.Status503ServiceUnavailable)
+            .RequirePermission(Permissions.InvoicesRead);
         bauakte.MapDelete("/vouchers/{linkId:guid}", UnassignVoucherAsync).WithName("UnassignLexwareVoucher")
             .WithSummary("Zuordnung des Belegs zur Bauakte lösen (in Lexware Office ändert sich nichts)")
             .ProducesProblem(StatusCodes.Status404NotFound).RequirePermission(Permissions.InvoicesAssign);
@@ -286,7 +340,9 @@ internal static class LexwareEndpoints
         return new LexwareSettingsResponse((await system.GetAsync(cancellationToken)).Modules.IsEnabled(AppModules.Lexware), row.Configured, baseUrl,
             !string.IsNullOrWhiteSpace(row.BaseUrl), row.OrganizationName, row.LastTestAt, row.LastTestOk,
             row.LastTestError, await db.Set<LexwareContactLink>().CountAsync(cancellationToken),
-            await db.Set<LexwareVoucherLink>().CountAsync(cancellationToken), LexwareService.KeyHelpUrl, row.Version, row.NewCustomersSync);
+            await db.Set<LexwareVoucherLink>().CountAsync(cancellationToken), LexwareService.KeyHelpUrl, row.Version, row.NewCustomersSync, row.ChangeSync,
+            row.LastChangeSyncAt, row.LastChangeSyncError,
+            row.ChangeSync == LexwareChangeSync.Off ? 0 : await db.Set<LexwareContactLink>().CountAsync(l => l.DeviationCount > 0, cancellationToken));
     }
 
     private static async Task<Ok<LexwareSettingsResponse>> GetSettingsAsync(LexwareService lexware, ISystemSettings system, CancellationToken cancellationToken) =>
@@ -332,6 +388,17 @@ internal static class LexwareEndpoints
 
         row.BaseUrl = baseUrl;
         row.NewCustomersSync = request.NewCustomersSync ?? row.NewCustomersSync;
+        var changeSync = request.ChangeSync ?? row.ChangeSync;
+        if (!Enum.IsDefined(changeSync))
+        {
+            return TypedResults.Problem(statusCode: StatusCodes.Status422UnprocessableEntity, title: Tag,
+                detail: "Die Richtung des Änderungsabgleichs ist unbekannt.", extensions: Code("LEXWARE_INVALID_CHANGE_SYNC"));
+        }
+
+        // Aus heißt: Es gilt kein abgeglichener Stand mehr. Beim Wiedereinschalten werden vorhandene Unterschiede als
+        // Abweichungen gezeigt und nicht still übernommen.
+        var forget = changeSync == LexwareChangeSync.Off && row.ChangeSync != LexwareChangeSync.Off;
+        row.ChangeSync = changeSync;
         if (connectionChanged)
         {
             row.LastTestAt = null;
@@ -346,8 +413,14 @@ internal static class LexwareEndpoints
         audit.Record("lexware.settings_changed", currentUser.UserId, "settings", "lexware", new Dictionary<string, string?>
         {
             ["apiKey"] = keyChange, ["baseUrl"] = baseUrl ?? LexwareOptions.DefaultBaseUrl, ["newCustomersSync"] = row.NewCustomersSync ? "ja" : "nein",
+            ["changeSync"] = row.ChangeSync.ToString(),
         });
         await lexware.Db.SaveChangesAsync(cancellationToken);
+        if (forget)
+        {
+            await LexwareChangeSyncService.ForgetAsync(lexware.Db.Set<LexwareContactLink>(), cancellationToken);
+        }
+
         return TypedResults.Ok(await ToResponseAsync(lexware, system, row, cancellationToken));
     }
 
@@ -411,11 +484,130 @@ internal static class LexwareEndpoints
             return CustomerNotFound();
         }
 
+        return TypedResults.Ok(await CustomerResponseAsync(lexware, contactId, await permissions.HasAsync(Permissions.InvoicesAssign, cancellationToken),
+            cancellationToken));
+    }
+
+    private static async Task<CustomerLexwareResponse> CustomerResponseAsync(LexwareService lexware, Guid contactId, bool canAssign,
+        CancellationToken cancellationToken)
+    {
+        var db = lexware.Db;
         var row = await lexware.SettingsAsync(cancellationToken);
         var link = await db.Set<LexwareContactLink>().AsNoTracking().SingleOrDefaultAsync(l => l.ContactId == contactId, cancellationToken);
-        var sync = await db.Set<Contact>().Where(c => c.Id == contactId).Select(c => c.LexwareSync).SingleAsync(cancellationToken);
-        return TypedResults.Ok(new CustomerLexwareResponse(contactId, link is null ? null : ToResponse(lexware, row, link),
-            row.Configured && await permissions.HasAsync(Permissions.InvoicesAssign, cancellationToken), sync));
+        var contact = await db.Set<Contact>().AsNoTracking().SingleAsync(c => c.Id == contactId, cancellationToken);
+        return new CustomerLexwareResponse(contactId, link is null ? null : ToResponse(lexware, row, link), row.Configured && canAssign, contact.LexwareSync,
+            link is null ? null : SyncState(row, link, contact));
+    }
+
+    private static List<LexwareDeviationField> DeviationFields(LexwareContactLink link) =>
+        LexwareContactSync.Deviations(link.Deviations).Select(d => new LexwareDeviationField(d.Field, LexwareSyncFields.Label(d.Field), d.EstrichOne, d.Lexware))
+            .ToList();
+
+    /// <summary>Stand des Änderungsabgleichs für die Anzeige am Kunden und in der Abgleichübersicht.</summary>
+    private static LexwareSyncState SyncState(LexwareSettingsRow row, LexwareContactLink link, Contact contact)
+    {
+        if (row.ChangeSync == LexwareChangeSync.Off)
+        {
+            return new LexwareSyncState("off", link.SyncedAt, [], null);
+        }
+
+        if (!contact.LexwareSync || contact.ArchivedAt is not null || contact.AnonymizedAt is not null)
+        {
+            return new LexwareSyncState(contact.LexwareSync ? "paused" : "disabled", link.SyncedAt, [], null);
+        }
+
+        if (link.RemoteState is { } remote)
+        {
+            return new LexwareSyncState(remote, link.SyncedAt, [], null);
+        }
+
+        if (link.SyncError is not null)
+        {
+            return new LexwareSyncState("error", link.SyncedAt, DeviationFields(link), link.SyncError);
+        }
+
+        var deviations = DeviationFields(link);
+        return new LexwareSyncState(deviations.Count > 0 ? "deviations" : link.SyncedAt is null || link.LocalVersion != contact.Version ? "pending" : "synced",
+            link.SyncedAt, deviations, null);
+    }
+
+    private static async Task<Results<Ok<CustomerLexwareResponse>, ProblemHttpResult>> RunSyncAsync(Guid contactId, LexwareService lexware,
+        LexwareChangeSyncService changes, ICurrentUser currentUser, CancellationToken cancellationToken) =>
+        await SyncNowAsync(contactId, lexware, changes, currentUser, null, cancellationToken);
+
+    private static async Task<Results<Ok<CustomerLexwareResponse>, ProblemHttpResult>> ResolveSyncAsync(Guid contactId, ResolveLexwareDeviationsRequest request,
+        LexwareService lexware, LexwareChangeSyncService changes, IUserPermissions permissions, ICurrentUser currentUser, CancellationToken cancellationToken)
+    {
+        static bool Side(string? value) => value is LexwareContactSync.EstrichOne or LexwareContactSync.Lexware;
+        var choices = new Dictionary<string, string>(StringComparer.Ordinal);
+        if (request.Source is not null)
+        {
+            foreach (var field in LexwareSyncFields.All)
+            {
+                choices[field] = request.Source;
+            }
+        }
+
+        foreach (var (field, source) in request.Fields ?? new Dictionary<string, string>())
+        {
+            choices[field] = source;
+        }
+
+        if (choices.Count == 0 || choices.Any(c => !LexwareSyncFields.All.Contains(c.Key) || !Side(c.Value)))
+        {
+            return TypedResults.Problem(statusCode: StatusCodes.Status422UnprocessableEntity, title: Tag,
+                detail: "Bitte wählen Sie je Feld, ob der Wert aus EstrichONE oder aus Lexware Office übernommen wird.", extensions: Code("LEXWARE_INVALID_CHOICE"));
+        }
+
+        if (choices.ContainsValue(LexwareContactSync.Lexware) && !await permissions.HasAsync(Permissions.ContactsEdit, cancellationToken))
+        {
+            return TypedResults.Problem(statusCode: StatusCodes.Status403Forbidden, title: "Nicht erlaubt",
+                detail: "Um Werte aus Lexware Office in den Kunden zu übernehmen, benötigen Sie zusätzlich das Recht, Kunden zu bearbeiten.",
+                extensions: Code("PERMISSION_DENIED"));
+        }
+
+        return await SyncNowAsync(contactId, lexware, changes, currentUser, choices, cancellationToken);
+    }
+
+    private static async Task<Results<Ok<CustomerLexwareResponse>, ProblemHttpResult>> SyncNowAsync(Guid contactId, LexwareService lexware,
+        LexwareChangeSyncService changes, ICurrentUser currentUser, IReadOnlyDictionary<string, string>? choices, CancellationToken cancellationToken)
+    {
+        var db = lexware.Db;
+        if (await db.Set<Contact>().AsNoTracking().SingleOrDefaultAsync(c => c.Id == contactId, cancellationToken) is not { } contact)
+        {
+            return CustomerNotFound();
+        }
+
+        if (!await db.Set<LexwareContactLink>().AnyAsync(l => l.ContactId == contactId, cancellationToken))
+        {
+            return TypedResults.Problem(statusCode: StatusCodes.Status404NotFound, title: "Nicht verknüpft",
+                detail: "Dieser Kunde ist nicht mit Lexware Office verknüpft.", extensions: Code("LEXWARE_NOT_LINKED"));
+        }
+
+        if ((await lexware.SettingsAsync(cancellationToken)).ChangeSync == LexwareChangeSync.Off)
+        {
+            return Problem(new LexwareException("CHANGE_SYNC_OFF",
+                "Der Änderungsabgleich ist in den Einstellungen von Lexware Office ausgeschaltet."));
+        }
+
+        if (!LexwareChangeSyncService.Eligible(contact))
+        {
+            return Problem(contact.LexwareSync
+                ? new LexwareException("SYNC_PAUSED", $"Der Kunde „{contact.Name}“ ist archiviert. Archivierte Kunden werden nicht abgeglichen.")
+                : LexwareService.SyncDisabled(contact.Name));
+        }
+
+        try
+        {
+            await changes.SyncCustomerAsync(contactId, null, currentUser.UserId, choices, cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return Problem(new LexwareException("CUSTOMER_CHANGED", "Der Kunde wurde gerade an anderer Stelle geändert. Bitte versuchen Sie es erneut."));
+        }
+
+        db.ChangeTracker.Clear();
+        return TypedResults.Ok(await CustomerResponseAsync(lexware, contactId, true, cancellationToken));
     }
 
     private static List<LexwareContactCandidate> Candidates(LexwareService lexware, LexwareSettingsRow row, Contact contact,
@@ -768,10 +960,19 @@ internal static class LexwareEndpoints
     }
 
     private static async Task<Results<Ok<LexwareReconciliationResponse>, ProblemHttpResult>> ReconciliationAsync(LexwareService lexware,
-        CancellationToken cancellationToken, [FromQuery] bool refresh = false)
+        LexwareChangeSyncService changes, CancellationToken cancellationToken, [FromQuery] bool refresh = false)
     {
-        var data = await ReconcileAsync(lexware, refresh, cancellationToken);
+        string? changeError = null;
+        if (refresh)
+        {
+            // „Aktualisieren“ lädt die Kontaktliste neu und gleicht danach die Änderungen aller Verknüpfungen ab.
+            await lexware.ContactsAsync(await lexware.SettingsAsync(cancellationToken), refresh: true, cancellationToken);
+            changeError = (await changes.RunAsync(full: true, cancellationToken)).Error;
+        }
+
+        var data = await ReconcileAsync(lexware, refresh: false, cancellationToken);
         var row = data.Row;
+        var syncLinks = await lexware.Db.Set<LexwareContactLink>().AsNoTracking().ToDictionaryAsync(l => l.ContactId, cancellationToken);
         var remoteById = data.Remote.ToDictionary(c => c.Id, StringComparer.Ordinal);
         var names = data.Customers.ToDictionary(c => c.Id, c => c.Name);
         var owners = data.Links.Where(l => names.ContainsKey(l.Key)).ToDictionary(l => l.Value, l => (l.Key, names[l.Key]), StringComparer.Ordinal);
@@ -782,7 +983,16 @@ internal static class LexwareEndpoints
             .Select(c =>
             {
                 var remote = remoteById.GetValueOrDefault(data.Links[c.Id]);
-                return new LexwareLinkedPair(Summary(c, data.Links[c.Id]), remote is null ? null : Remote(remote), remote is null);
+                var link = syncLinks.GetValueOrDefault(c.Id);
+                return new LexwareLinkedPair(Summary(c, data.Links[c.Id]), remote is null ? null : Remote(remote), remote is null || link?.RemoteState is not null,
+                    link is null ? null : SyncState(row, link, c));
+            }).ToList();
+        var deviations = data.Customers.Where(c => syncLinks.TryGetValue(c.Id, out var link) && SyncState(row, link, c).State == "deviations")
+            .OrderBy(c => c.Name, StringComparer.OrdinalIgnoreCase).Select(c =>
+            {
+                var link = syncLinks[c.Id];
+                return new LexwareDeviationItem(Summary(c, link.LexwareContactId), link.LexwareContactId, link.LexwareName,
+                    lexware.ContactUrl(row, link.LexwareContactId), DeviationFields(link), link.SyncedAt);
             }).ToList();
         var onlyLocal = data.Customers.Where(c => !data.Links.ContainsKey(c.Id) && c.ArchivedAt is null && c.LexwareSync)
             .OrderBy(c => c.Name, StringComparer.OrdinalIgnoreCase).Select(c => Summary(c, null)).ToList();
@@ -805,11 +1015,11 @@ internal static class LexwareEndpoints
         var within = withinLocal.Concat(withinRemote).OrderByDescending(d => d.Score).ThenBy(d => d.FirstName, StringComparer.OrdinalIgnoreCase).ToList();
 
         var truncated = linked.Count > ListLimit || onlyLocal.Count > ListLimit || excluded.Count > ListLimit * 4 || onlyRemote.Count > ListLimit || suggestions.Count > ListLimit
-            || within.Count > ListLimit;
+            || within.Count > ListLimit || deviations.Count > ListLimit;
         return TypedResults.Ok(new LexwareReconciliationResponse(data.LoadedAt, linked.Count, onlyLocal.Count, onlyRemote.Count,
             suggestions.Count + within.Count, suggestions.Count(s => s.Unique), linked.Take(ListLimit).ToList(), onlyLocal.Take(ListLimit).ToList(),
             onlyRemote.Take(ListLimit).ToList(), suggestions.Take(ListLimit).ToList(), within.Take(ListLimit).ToList(), truncated, excluded.Count,
-            excluded.Take(ListLimit * 4).ToList()));
+            excluded.Take(ListLimit * 4).ToList(), deviations.Count, deviations.Take(ListLimit).ToList(), row.ChangeSync, changeError));
     }
 
     private static async Task<Results<Ok<LinkUniqueLexwareResponse>, ProblemHttpResult>> LinkUniqueAsync(LinkUniqueLexwareRequest request,
@@ -1040,6 +1250,96 @@ internal static class LexwareEndpoints
         return TypedResults.NoContent();
     }
 
+    // ---------- Beleg als PDF ----------
+
+    private static readonly LexwareException DraftWithoutDocument = new("NO_DOCUMENT", "Für Entwürfe stellt Lexware Office kein PDF bereit.");
+
+    /// <summary>PDF durchreichen: zur Anzeige im Browser oder mit <paramref name="download"/> als Anhang. Gespeichert wird es nicht.</summary>
+    private static FileContentHttpResult Pdf(HttpContext http, LexwareDocument document, string type, string? number, bool download)
+    {
+        var kind = type switch
+        {
+            LexwareVoucherTypes.Invoice => "Rechnung",
+            LexwareVoucherTypes.Quotation => "Angebot",
+            LexwareVoucherTypes.CreditNote => "Gutschrift",
+            LexwareVoucherTypes.OrderConfirmation => "Auftragsbestaetigung",
+            _ => "Beleg",
+        };
+        var safe = new string((number ?? string.Empty).Where(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '_').ToArray());
+        var name = safe.Length > 0 ? $"{kind}-{safe}.pdf" : $"{kind}.pdf";
+        http.Response.Headers.CacheControl = "private, no-store";
+        if (download)
+        {
+            return TypedResults.File(document.Content, "application/pdf", name);
+        }
+
+        http.Response.Headers.ContentDisposition = $"inline; filename=\"{name}\"";
+        return TypedResults.File(document.Content, "application/pdf");
+    }
+
+    private static async Task<Results<FileContentHttpResult, ProblemHttpResult>> CustomerVoucherDocumentAsync(Guid contactId, string lexwareId,
+        LexwareService lexware, HttpContext http, CancellationToken cancellationToken, [FromQuery] bool download = false)
+    {
+        var db = lexware.Db;
+        if (!await db.Set<Contact>().AnyAsync(c => c.Id == contactId, cancellationToken))
+        {
+            return CustomerNotFound();
+        }
+
+        var lexwareContactId = await db.Set<LexwareContactLink>().AsNoTracking().Where(l => l.ContactId == contactId).Select(l => l.LexwareContactId)
+            .FirstOrDefaultAsync(cancellationToken);
+        var row = await lexware.SettingsAsync(cancellationToken);
+
+        // Nur Belege des verknüpften Kontakts: Der Beleg muss in dessen Belegliste stehen (bei Bedarf einmal neu geladen).
+        LexwareVoucher? voucher = null;
+        if (lexwareContactId is not null)
+        {
+            voucher = (await lexware.ContactVouchersAsync(row, lexwareContactId, refresh: false, cancellationToken)).Vouchers.FirstOrDefault(v => v.Id == lexwareId);
+            if (voucher is null || voucher.Status == "draft")
+            {
+                voucher = (await lexware.ContactVouchersAsync(row, lexwareContactId, refresh: true, cancellationToken)).Vouchers.FirstOrDefault(v => v.Id == lexwareId);
+            }
+        }
+
+        if (voucher is null)
+        {
+            return TypedResults.Problem(statusCode: StatusCodes.Status404NotFound, title: "Nicht gefunden",
+                detail: "Dieser Beleg gehört nicht zu diesem Kunden.", extensions: Code("LEXWARE_VOUCHER_NOT_FOUND"));
+        }
+
+        if (voucher.Status == "draft")
+        {
+            return Problem(DraftWithoutDocument);
+        }
+
+        return Pdf(http, await lexware.VoucherDocumentAsync(row, voucher.Type, voucher.Id, cancellationToken), voucher.Type, voucher.Number, download);
+    }
+
+    private static async Task<Results<FileContentHttpResult, ProblemHttpResult>> BauakteVoucherDocumentAsync(Guid id, Guid linkId, LexwareService lexware,
+        IBauakteAccess access, HttpContext http, CancellationToken cancellationToken, [FromQuery] bool download = false)
+    {
+        var db = lexware.Db;
+        if (!await access.CanReadAsync(id, cancellationToken)
+            || await db.Set<LexwareVoucherLink>().SingleOrDefaultAsync(l => l.Id == linkId && l.BauakteId == id, cancellationToken) is not { } link)
+        {
+            return TypedResults.Problem(statusCode: StatusCodes.Status404NotFound, title: "Nicht gefunden",
+                detail: "Dieser Beleg ist der Bauakte nicht zugeordnet.", extensions: Code("LEXWARE_NOT_LINKED"));
+        }
+
+        var row = await lexware.SettingsAsync(cancellationToken);
+        if (link.Status == "draft")
+        {
+            // Der gespeicherte Stand kann veraltet sein: einmal frisch prüfen, bevor es „kein PDF“ heißt.
+            await lexware.SyncAsync(row, [link], force: true, cancellationToken);
+            if (link.Status == "draft")
+            {
+                return Problem(DraftWithoutDocument);
+            }
+        }
+
+        return Pdf(http, await lexware.VoucherDocumentAsync(row, link.VoucherType, link.LexwareId, cancellationToken), link.VoucherType, link.Number, download);
+    }
+
     // ---------- Fehler ----------
 
     private static Dictionary<string, object?> Code(string code) => new() { ["code"] = code };
@@ -1053,7 +1353,9 @@ internal static class LexwareEndpoints
         var (status, title) = exception.Code switch
         {
             "NOT_CONFIGURED" or "KEY_UNREADABLE" => (StatusCodes.Status409Conflict, "Lexware Office ist nicht eingerichtet"),
-            "ALREADY_LINKED" or "NOT_A_CUSTOMER" or "ANONYMIZED" or "SYNC_DISABLED" => (StatusCodes.Status409Conflict, Tag),
+            "ALREADY_LINKED" or "NOT_A_CUSTOMER" or "ANONYMIZED" or "SYNC_DISABLED" or "SYNC_PAUSED" or "CHANGE_SYNC_OFF" or "CUSTOMER_CHANGED" =>
+                (StatusCodes.Status409Conflict, Tag),
+            "NO_DOCUMENT" or "DOCUMENT_TOO_LARGE" => (StatusCodes.Status409Conflict, "Kein PDF verfügbar"),
             "INVALID_BASE_URL" or "UNKNOWN_VOUCHER_TYPE" => (StatusCodes.Status422UnprocessableEntity, Tag),
             "OFFLINE" or "TIMEOUT" or "UNAVAILABLE" or "RATE_LIMITED" => (StatusCodes.Status503ServiceUnavailable, "Lexware Office ist nicht erreichbar"),
             _ => (StatusCodes.Status424FailedDependency, "Lexware Office hat die Anfrage abgelehnt"),

@@ -21,6 +21,13 @@ public sealed class LexwareSettingsRow : IVersionedEntity
     /// <summary>Neue Kunden standardmäßig mit Lexware Office abgleichen (Vorgabe für <c>Contact.LexwareSync</c>).</summary>
     public bool NewCustomersSync { get; set; } = true;
 
+    /// <summary>Richtung, in der spätere Änderungen an verknüpften Kunden abgeglichen werden.</summary>
+    public LexwareChangeSync ChangeSync { get; set; } = LexwareChangeSync.Both;
+
+    /// <summary>Letzter vollständiger Änderungsabgleich und sein Fehler (vom Hintergrunddienst ohne Versionswechsel geschrieben).</summary>
+    public DateTimeOffset? LastChangeSyncAt { get; set; }
+    public string? LastChangeSyncError { get; set; }
+
     public string? OrganizationId { get; set; }
     public string? OrganizationName { get; set; }
     public DateTimeOffset? LastTestAt { get; set; }
@@ -61,6 +68,37 @@ public sealed class LexwareContactLink
     public LexwareLinkOrigin Origin { get; set; }
     public Guid LinkedByUserId { get; set; }
     public DateTimeOffset LinkedAt { get; set; }
+
+    /// <summary>
+    /// Zuletzt abgeglichener Stand der Felder (<see cref="LexwareSyncFields"/>) als JSON; leer, solange noch kein
+    /// Änderungsabgleich lief. Gegen ihn wird erkannt, welche Seite ein Feld geändert hat.
+    /// </summary>
+    public string? SyncedFields { get; set; }
+
+    /// <summary><c>version</c> und <c>updatedDate</c> des Lexware-Kontakts beim letzten Abgleich.</summary>
+    public int? LexwareVersion { get; set; }
+    public DateTimeOffset? LexwareUpdatedAt { get; set; }
+
+    /// <summary>Version des Kunden beim letzten Abgleich; weicht sie ab, wurde der Kunde in EstrichONE geändert.</summary>
+    public long? LocalVersion { get; set; }
+
+    /// <summary>Zeitpunkt des letzten erfolgreichen Abgleichs.</summary>
+    public DateTimeOffset? SyncedAt { get; set; }
+
+    /// <summary>Offene Abweichungen (<see cref="LexwareFieldDeviation"/>) als JSON und ihre Anzahl.</summary>
+    public string? Deviations { get; set; }
+    public int DeviationCount { get; set; }
+
+    /// <summary>Zustand des Lexware-Kontakts: leer = vorhanden, sonst <see cref="RemoteMissing"/> oder <see cref="RemoteArchived"/>.</summary>
+    public string? RemoteState { get; set; }
+
+    /// <summary>Fehler des letzten Abgleichs, Zahl der Fehlversuche und frühester nächster Versuch.</summary>
+    public string? SyncError { get; set; }
+    public int SyncAttempts { get; set; }
+    public DateTimeOffset? NextSyncAt { get; set; }
+
+    public const string RemoteMissing = "missing";
+    public const string RemoteArchived = "archived";
 }
 
 /// <summary>
@@ -107,6 +145,8 @@ internal sealed class LexwareSettingsRowConfiguration : IEntityTypeConfiguration
         builder.Property(s => s.OrganizationId).HasMaxLength(100);
         builder.Property(s => s.OrganizationName).HasMaxLength(LexwareContactLink.MaxName);
         builder.Property(s => s.LastTestError).HasMaxLength(2000);
+        builder.Property(s => s.ChangeSync).HasConversion<string>().HasMaxLength(20).HasDefaultValue(LexwareChangeSync.Both);
+        builder.Property(s => s.LastChangeSyncError).HasMaxLength(2000);
         builder.Ignore(s => s.Configured);
     }
 }
@@ -124,6 +164,10 @@ internal sealed class LexwareContactLinkConfiguration : IEntityTypeConfiguration
         builder.Property(l => l.LexwareName).HasMaxLength(LexwareContactLink.MaxName);
         builder.Property(l => l.LexwareNumber).HasMaxLength(50);
         builder.Property(l => l.Origin).HasConversion<string>().HasMaxLength(30);
+        builder.Property(l => l.RemoteState).HasMaxLength(20);
+        builder.Property(l => l.SyncError).HasMaxLength(2000);
+        builder.Property(l => l.DeviationCount).HasDefaultValue(0);
+        builder.Property(l => l.SyncAttempts).HasDefaultValue(0);
     }
 }
 
