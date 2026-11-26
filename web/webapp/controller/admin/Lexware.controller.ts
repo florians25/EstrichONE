@@ -9,10 +9,11 @@ import { dateTime } from "../../util/format";
 import { session } from "../../util/session";
 import type { RouteMatch } from "../../util/router";
 import {
-	lastTestText, matchLabel, placeText, reconciliationFigures, uniquePairs, type LexwareContactSummary, type LexwareCustomerSummary,
-	type LexwareInternalDuplicate, type LexwareLinkedPair, type LexwareReconciliation, type LexwareSettings, type LexwareSuggestion, type LexwareTestResponse,
+	changeSyncHelp, changeSyncOptions, changeSyncStand, changeSyncState, deviationValue, lastTestText, matchLabel, placeText, reconciliationFigures, uniquePairs,
+	type DeviationSource, type LexwareContactSummary, type LexwareCustomerSummary, type LexwareDeviationItem, type LexwareInternalDuplicate, type LexwareLinkedPair,
+	type LexwareReconciliation, type LexwareSettings, type LexwareSuggestion, type LexwareTestResponse,
 } from "../../util/lexware";
-import { importLexwareContact, openCustomerLinkDialog, openExternal } from "../../util/lexwareDialogs";
+import { importLexwareContact, openCustomerLinkDialog, openDeviationDialog, openExternal, resolveAllDeviations } from "../../util/lexwareDialogs";
 
 const numberText = (number: string | null) => (number ? `Kundennummer ${number}` : "ohne Kundennummer");
 const sideText = (c: LexwareCustomerSummary | LexwareContactSummary | null) => (c ? [numberText(c.customerNumber), placeText(c), c.email].filter(Boolean).join(", ") : "");
@@ -23,11 +24,15 @@ export default class Lexware extends BaseController {
 		this.local({
 			s: null, loaded: false, busy: false, apiKey: "", baseUrl: "", lastTestText: "", tab: "connection",
 			rec: null, recBusy: false, recStand: "", figures: [], list: "suggestions", suggestions: [], internal: [], onlyEstrichOne: [], onlyLexware: [], linked: [], excluded: [], excludedSelected: 0,
+			deviations: [], changeSyncOptions, changeSyncHelp: "", changeSyncStand: { text: "", state: "None" },
 		});
+		// Die Erläuterung folgt der Auswahl, noch vor dem Speichern.
+		this.model().bindProperty("/s/changeSync").attachChange(() => this.model().setProperty("/changeSyncHelp", changeSyncHelp(this.model().getProperty("/s/changeSync") as string)));
 	}
 
 	onRouteMatched(match: RouteMatch): void {
 		const tab = match.query.get("reiter") === "kunden" ? "customers" : "connection";
+		if (match.query.get("liste") === "abweichungen") this.model().setProperty("/list", "deviations");
 		this.model().setProperty("/tab", tab);
 		void this.load().then(() => {
 			// Der Reiter „Kundenabgleich“ wird erst mit geladenen Einstellungen sichtbar: danach erneut auswählen.
@@ -60,11 +65,17 @@ export default class Lexware extends BaseController {
 		m.setProperty("/apiKey", "");
 		m.setProperty("/baseUrl", s.customBaseUrl ? s.baseUrl : "");
 		m.setProperty("/lastTestText", lastTestText(s, dateTime));
+		m.setProperty("/changeSyncHelp", changeSyncHelp(s.changeSync));
+		m.setProperty("/changeSyncStand", changeSyncStand(s, dateTime));
 		this.statusLine([
 			!s.moduleEnabled && { text: "Das Modul ist ausgeschaltet. Kunde und Bauakte zeigen keine Lexware-Abschnitte.", level: "info" },
 			s.moduleEnabled && !s.hasApiKey && { text: "Es ist noch kein API-Schlüssel hinterlegt.", level: "warning" },
 			s.lastTestOk === false && { text: "Der letzte Verbindungstest ist fehlgeschlagen (Einzelheiten unter „Verbindung“).", level: "error" },
 			s.hasApiKey && s.lastTestAt === null && { text: "Die Verbindung wurde noch nicht getestet.", level: "info" },
+			s.customersWithDeviations > 0 && {
+				text: `${s.customersWithDeviations === 1 ? "Bei einem verknüpften Kunden" : `Bei ${s.customersWithDeviations} verknüpften Kunden`} gibt es Abweichungen zu Lexware Office (Reiter „Kundenabgleich“).`,
+				level: "warning",
+			},
 		], !s.hasApiKey ? "Nicht eingerichtet."
 			: `Verbunden${s.organizationName ? ` mit ${s.organizationName}` : ""}, ${s.linkedCustomers} ${s.linkedCustomers === 1 ? "Kunde" : "Kunden"} verknüpft, `
 				+ `${s.linkedInvoices} ${s.linkedInvoices === 1 ? "Beleg" : "Belege"} Bauakten zugeordnet`);
@@ -75,7 +86,7 @@ export default class Lexware extends BaseController {
 		const s = m.getProperty("/s") as LexwareSettings;
 		const saved = await this.run(() => put<LexwareSettings>("settings/integrations/lexware", {
 			apiKey: String(m.getProperty("/apiKey") ?? "").trim() || null, baseUrl: String(m.getProperty("/baseUrl") ?? "").trim() || null,
-			version: s.version, newCustomersSync: s.newCustomersSync === true,
+			version: s.version, newCustomersSync: s.newCustomersSync === true, changeSync: s.changeSync,
 		}));
 		if (saved) {
 			this.apply(saved);
@@ -150,7 +161,42 @@ export default class Lexware extends BaseController {
 		m.setProperty("/excluded", (r.excludedItems ?? []).map((c) => ({ ...c, numberText: numberText(c.customerNumber), place: placeText(c) })));
 		m.setProperty("/excludedSelected", 0);
 		(this.byId("lexwareExcluded") as Table | undefined)?.removeSelections(true);
-		m.setProperty("/linked", r.linkedItems.map((p: LexwareLinkedPair) => ({ ...p, customerText: sideText(p.customer), lexwareText: sideText(p.lexware) })));
+		m.setProperty("/linked", r.linkedItems.map((p: LexwareLinkedPair) => {
+			const change = changeSyncState(p.sync, dateTime);
+			const quiet = p.sync?.state === "off" || p.sync?.state === "paused";
+			return {
+				...p, customerText: sideText(p.customer), lexwareText: sideText(p.lexware), changeText: quiet ? "" : change.text, changeState: change.state, changeHint: change.hint,
+				missingText: p.sync?.state === "archived" ? "In Lexware Office archiviert" : p.sync?.state === "missing" ? "In Lexware Office nicht mehr vorhanden"
+					: "In Lexware Office nicht mehr vorhanden oder archiviert",
+			};
+		}));
+		m.setProperty("/deviations", (r.deviationItems ?? []).map((d: LexwareDeviationItem) => ({
+			...d, customerText: numberText(d.customer.customerNumber),
+			rows: d.fields.map((f) => ({ ...f, estrichOneText: deviationValue(f.estrichOne), lexwareText: deviationValue(f.lexware) })),
+		})));
+		// Offene Abweichungen zuerst zeigen, solange der Nutzer noch keine Liste gewählt hat.
+		if (!this.listChosen && (r.deviations ?? 0) > 0) m.setProperty("/list", "deviations");
+		this.listChosen = true;
+	}
+
+	private listChosen = false;
+
+	async onResolve(e: Event): Promise<void> {
+		const d = this.row<LexwareDeviationItem>(e);
+		if (await openDeviationDialog({ id: d.customer.id, name: d.customer.name }, d.fields)) await this.loadReconciliation(false);
+	}
+
+	private async takeAll(e: Event, source: DeviationSource): Promise<void> {
+		const d = this.row<LexwareDeviationItem>(e);
+		if (await resolveAllDeviations({ id: d.customer.id, name: d.customer.name }, source)) await this.loadReconciliation(false);
+	}
+
+	onTakeLocal(e: Event): void {
+		void this.takeAll(e, "estrichOne");
+	}
+
+	onTakeRemote(e: Event): void {
+		void this.takeAll(e, "lexware");
 	}
 
 	onRefresh(): void {

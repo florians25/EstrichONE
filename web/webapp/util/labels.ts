@@ -195,6 +195,7 @@ export const auditTexts: Record<string, string> = {
 	"lexware.contact_unlinked": "Verknüpfung mit Lexware Office gelöst", "lexware.contacts_linked_bulk": "Eindeutige Treffer mit Lexware Office verknüpft",
 	"lexware.voucher_assigned": "Beleg aus Lexware Office der Bauakte zugeordnet", "lexware.voucher_unassigned": "Zuordnung des Belegs gelöst", "lexware.sync_changed": "Abgleich mit Lexware Office für Kunden umgestellt",
 	"lexware.sync_enabled_bulk": "Abgleich mit Lexware Office für mehrere Kunden eingeschaltet",
+	"lexware.contact_synced": "Kundendaten mit Lexware Office abgeglichen",
 };
 export const auditGroups = [
 	{ key: "auth.", text: "Anmeldung und Sitzungen" }, { key: "bauakte.", text: "Bauakten" }, { key: "users.", text: "Benutzer" },

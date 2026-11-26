@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   assignedText, createAnywayQuestion, dueLabel, euro, lastTestText, lexwareVisible, linkText, matchLabel, placeText, reconciliationFigures, syncFieldVisible,
   syncInitial, syncStateText, uniquePairs, voucherNumber, voucherStatus, voucherSummary, voucherTypeText, type LexwareReconciliation,
+  changeSyncHelp, changeSyncOptions, changeSyncStand, changeSyncState, deviationSummary, deviationValue, pdfAvailable, PDF_DRAFT_HINT, resolveRequest,
+  voucherPdfPath, voucherTitle, type LexwareSyncState,
 } from '../webapp/util/lexware';
 import { adminAreas, matchesArea } from '../webapp/util/adminCatalog';
 import { routes } from '../webapp/util/routes';
@@ -69,11 +71,14 @@ describe('Lexware Office: Belege (nur Anzeige)', () => {
     const { readFileSync } = await import('node:fs');
     const dialogs = readFileSync(`${process.cwd()}/webapp/util/lexwareDialogs.ts`, 'utf8');
     expect(dialogs).not.toMatch(/openInvoiceDialog|Rechnung erstellen|Entwurf in Lexware anlegen/);
-    // Schreibende Aufrufe der Oberfläche betreffen nur Kunden (verknüpfen, anlegen, übernehmen) und die Zuordnung zur Bauakte.
+    // Schreibende Aufrufe der Oberfläche betreffen nur Kunden (verknüpfen, anlegen, übernehmen, Abweichungen entscheiden) und die Zuordnung zur Bauakte.
     const posts = [...dialogs.matchAll(/post<[^>]+>\(`([^`]+)`/g)].map((m) => m[1].replace(/\$\{[^}]+\}/g, ':id'));
     expect([...new Set(posts)].sort()).toEqual([
       'bauakten/:id/lexware/vouchers/assign', 'lexware/contacts/:id/import', 'lexware/customers/:id/create', 'lexware/customers/:id/link',
+      'lexware/customers/:id/sync/resolve',
     ]);
+    // Das Beleg-PDF wird nur gelesen.
+    expect(dialogs).toMatch(/getBlob\(voucher\.path\)/);
   });
 });
 
@@ -107,8 +112,8 @@ describe('Lexware Office: Kunden und Dublettenprüfung', () => {
         { customer: { ...customer, id: 'c2' }, lexware: { ...lexware, id: 'l2' }, score: 55, reasons: ['gleicher Name'], strong: false, unique: false },
       ],
     };
-    expect(reconciliationFigures(rec).map((f) => `${f.label}=${f.value}`)).toEqual(['Verknüpft=12', 'Mögliche Dubletten=3', 'Nur in EstrichONE=30', 'Nur in EstrichONE (bewusst)=4', 'Nur in Lexware=7']);
-    expect(reconciliationFigures(rec)[1]).toMatchObject({ state: 'Warning', hint: '1 davon eindeutig' });
+    expect(reconciliationFigures(rec).map((f) => `${f.label}=${f.value}`)).toEqual(['Verknüpft=12', 'Abweichungen=0', 'Mögliche Dubletten=3', 'Nur in EstrichONE=30', 'Nur in EstrichONE (bewusst)=4', 'Nur in Lexware=7']);
+    expect(reconciliationFigures(rec)[2]).toMatchObject({ state: 'Warning', hint: '1 davon eindeutig' });
     expect(uniquePairs(rec)).toEqual([{ contactId: 'c1', lexwareContactId: 'l1' }]);
     expect(reconciliationFigures(null)).toEqual([]);
     expect(uniquePairs(null)).toEqual([]);
@@ -172,7 +177,82 @@ describe('Lexware Office: Einstellungen, Modul und Rechte', () => {
 
   it('Protokolltexte vorhanden und ohne Gedankenstriche oder Trennpunkte', () => {
     const texts = Object.entries(auditTexts).filter(([key]) => key.startsWith('lexware.'));
-    expect(texts.length).toBe(10);
+    expect(texts.length).toBe(11);
+    expect(auditTexts['lexware.contact_synced']).toBe('Kundendaten mit Lexware Office abgeglichen');
     for (const [, text] of texts) expect(text).not.toMatch(/[–—·]/);
+  });
+});
+
+describe('Lexware Office: Änderungsabgleich verknüpfter Kunden', () => {
+  const at = (iso: string) => `am ${iso.slice(0, 10)}`;
+  const sync = (state: string, extra: Partial<LexwareSyncState> = {}): LexwareSyncState => ({ state, syncedAt: '2026-11-26T10:00:00Z', deviations: [], error: null, ...extra });
+  const street = { field: 'street', label: 'Straße', estrichOne: 'Altweg 1', lexware: 'Neuweg 2' };
+  const phone = { field: 'phone', label: 'Telefon', estrichOne: null, lexware: '08031 1111' };
+
+  it('Richtungen: vier Möglichkeiten, Vorgabe beide, mit Erläuterung', () => {
+    expect(changeSyncOptions.map((o) => o.key)).toEqual(['both', 'toLexware', 'fromLexware', 'off']);
+    expect(changeSyncOptions[0].text).toBe('Beide Richtungen');
+    expect(changeSyncHelp('both')).toContain('entscheiden Sie im Kundenabgleich');
+    expect(changeSyncHelp('toLexware')).toContain('nicht von selbst übernommen');
+    expect(changeSyncHelp('fromLexware')).toContain('nicht von selbst übertragen');
+    expect(changeSyncHelp('off')).toContain('nicht abgeglichen');
+  });
+
+  it('Stand des letzten Abgleichs in den Einstellungen', () => {
+    expect(changeSyncStand({ changeSync: 'off', lastChangeSyncAt: null, lastChangeSyncError: 'x' }, at).text).toBe('');
+    expect(changeSyncStand({ changeSync: 'both', lastChangeSyncAt: null, lastChangeSyncError: null }, at).text).toContain('in Kürze');
+    expect(changeSyncStand({ changeSync: 'both', lastChangeSyncAt: '2026-11-26T10:00:00Z', lastChangeSyncError: null }, at))
+      .toEqual({ text: 'Letzter vollständiger Änderungsabgleich: am 2026-11-26', state: 'None' });
+    expect(changeSyncStand({ changeSync: 'both', lastChangeSyncAt: '2026-11-26T10:00:00Z', lastChangeSyncError: 'nicht erreichbar' }, at))
+      .toMatchObject({ state: 'Error', text: 'Der letzte Änderungsabgleich ist fehlgeschlagen: nicht erreichbar' });
+  });
+
+  it('Stand am Kunden: abgeglichen, Abweichungen, ausstehend, Fehler, Kontakt fehlt oder archiviert', () => {
+    expect(changeSyncState(null, at).text).toBe('');
+    expect(changeSyncState(sync('synced'), at)).toMatchObject({ text: 'Abgeglichen', state: 'Success', hint: 'Letzter Abgleich: am 2026-11-26' });
+    expect(changeSyncState(sync('deviations', { deviations: [street] }), at)).toMatchObject({ text: '1 Abweichung offen', state: 'Warning' });
+    const two = changeSyncState(sync('deviations', { deviations: [street, phone] }), at);
+    expect(two.text).toBe('2 Abweichungen offen');
+    expect(two.hint).toContain('Es wurde nichts überschrieben.');
+    expect(changeSyncState(sync('pending', { syncedAt: null }), at)).toMatchObject({ text: 'Abgleich steht aus', state: 'Information' });
+    expect(changeSyncState(sync('pending', { syncedAt: null }), at).hint).toContain('Noch nicht abgeglichen');
+    expect(changeSyncState(sync('error', { error: 'Lexware Office hat die Angaben nicht angenommen.' }), at).hint).toContain('nicht angenommen');
+    expect(changeSyncState(sync('missing'), at)).toMatchObject({ text: 'Kontakt in Lexware Office nicht mehr vorhanden', state: 'Error' });
+    expect(changeSyncState(sync('archived'), at)).toMatchObject({ text: 'Kontakt in Lexware Office archiviert', state: 'Warning' });
+    expect(changeSyncState(sync('paused'), at).text).toBe('Abgleich ruht');
+    expect(changeSyncState(sync('off'), at).text).toBe('Änderungsabgleich ausgeschaltet');
+    expect(changeSyncState(sync('disabled'), at).text).toBe('');
+  });
+
+  it('Abweichungen: beide Werte, leere Werte benannt, Entscheidung je Feld', () => {
+    expect(deviationValue(null)).toBe('(leer)');
+    expect(deviationValue('  ')).toBe('(leer)');
+    expect(deviationSummary([street, phone])).toBe('Straße: Altweg 1 / Neuweg 2; Telefon: (leer) / 08031 1111');
+    expect(resolveRequest({ street: 'estrichOne', phone: '', city: 'lexware', email: undefined })).toEqual({ fields: { street: 'estrichOne', city: 'lexware' } });
+    expect(resolveRequest({ street: '', phone: undefined })).toBeNull();
+  });
+
+  it('Abgleichübersicht zählt die Abweichungen', () => {
+    const base = { linked: 3, possibleDuplicates: 0, uniqueMatches: 0, onlyEstrichOne: 0, onlyLexware: 0, excluded: 0 } as unknown as LexwareReconciliation;
+    const tile = (r: LexwareReconciliation) => reconciliationFigures(r).find((f) => f.key === 'deviations');
+    expect(tile({ ...base, deviations: 2, changeSync: 'both' })).toMatchObject({ label: 'Abweichungen', value: '2', state: 'Warning' });
+    expect(tile({ ...base, deviations: 0, changeSync: 'off' })).toMatchObject({ value: '0', state: 'None', hint: 'Änderungsabgleich ausgeschaltet' });
+    expect(tile(base)).toMatchObject({ value: '0' });
+  });
+});
+
+describe('Lexware Office: Beleg als PDF', () => {
+  it('nicht für Entwürfe, mit klarem Hinweis', () => {
+    expect(pdfAvailable({ status: 'draft' })).toBe(false);
+    expect(pdfAvailable({ status: 'open' })).toBe(true);
+    expect(pdfAvailable({ status: 'voided' })).toBe(true);
+    expect(PDF_DRAFT_HINT).toBe('Für Entwürfe stellt Lexware Office kein PDF bereit.');
+  });
+
+  it('Adresse am Kunden und an der Bauakte, Titel der Anzeige', () => {
+    expect(voucherPdfPath({ customerId: 'k1', lexwareId: 'a/b' })).toBe('lexware/customers/k1/vouchers/a%2Fb/document');
+    expect(voucherPdfPath({ bauakteId: 'b1', linkId: 'l1' })).toBe('bauakten/b1/lexware/vouchers/l1/document');
+    expect(voucherTitle({ type: 'invoice', number: 'RE1042' })).toBe('Rechnung RE1042');
+    expect(voucherTitle({ type: 'quotation', number: null })).toBe('Angebot');
   });
 });

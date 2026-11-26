@@ -26,7 +26,7 @@
 				<Column hAlign="End" width="8rem" minScreenWidth="Desktop" demandPopin="true"><Text text="Netto"/></Column>
 				<Column hAlign="End" width="8rem"><Text text="Brutto"/></Column>
 				<Column width="9rem"><Text text="Status"/></Column>
-				<Column hAlign="End" width="14rem"/>
+				<Column hAlign="End" width="22rem"/>
 			</columns>
 			<items>
 				<ColumnListItem>
@@ -43,7 +43,9 @@
 						<ObjectStatus text="{inv>statusText}" state="{inv>statusState}" icon="{inv>statusIcon}" inverted="true"/>
 						<ObjectStatus text="{inv>syncError}" state="Warning" visible="{= !!${inv>syncError} }"/>
 					</VBox>
-					<HBox justifyContent="End" renderType="Bare">
+					<HBox justifyContent="End" renderType="Bare" wrap="Wrap">
+						<Button text="PDF anzeigen" icon="sap-icon://pdf-attachment" type="Transparent" press=".onPdf" enabled="{inv>pdf}" tooltip="{inv>pdfHint}"/>
+						<Button icon="sap-icon://download" type="Transparent" press=".onDownload" enabled="{inv>pdf}" tooltip="{= ${inv>pdf} ? 'PDF herunterladen' : ${inv>pdfHint} }"/>
 						<Button text="In Lexware öffnen" icon="sap-icon://action" type="Transparent" press=".onOpen"/>
 						<Button icon="sap-icon://broken-link" type="Transparent" tooltip="Zuordnung zur Bauakte lösen (der Beleg bleibt in Lexware Office unverändert)" press=".onUnassign"
 							visible="{= ${inv>/canAssign} === true }"/>
@@ -52,6 +54,6 @@
 			</items>
 		</Table>
 		<Text id="invoiceSummary" text="{inv>/summary}" class="sapUiTinyMarginTop" visible="{= !!${inv>/summary} }"/>
-		<Text text="Rechnungen und Angebote werden ausschließlich in Lexware Office erstellt und bearbeitet. EstrichONE zeigt Nummer, Betrag und Status und führt Sie zum Beleg." class="eoHelpText sapUiTinyMarginTop"/>
+		<Text text="Rechnungen und Angebote werden ausschließlich in Lexware Office erstellt und bearbeitet. EstrichONE zeigt Nummer, Betrag und Status, zeigt den Beleg als PDF an und führt Sie zum Beleg. Für Entwürfe stellt Lexware Office kein PDF bereit." class="eoHelpText sapUiTinyMarginTop"/>
 	</VBox>
 </mvc:View>

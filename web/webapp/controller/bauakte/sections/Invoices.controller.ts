@@ -4,12 +4,15 @@ import type Event from "sap/ui/base/Event";
 import type Control from "sap/ui/core/Control";
 import { del, get } from "../../../util/api";
 import { date } from "../../../util/format";
-import { euro, voucherNumber, voucherStatus, voucherSummary, voucherTypeText, type BauakteLexware, type LexwareVoucher } from "../../../util/lexware";
-import { openAssignVoucherDialog, openExternal } from "../../../util/lexwareDialogs";
+import {
+	euro, pdfAvailable, PDF_DRAFT_HINT, voucherNumber, voucherPdfPath, voucherStatus, voucherSummary, voucherTitle, voucherTypeText, type BauakteLexware,
+	type LexwareVoucher,
+} from "../../../util/lexware";
+import { downloadVoucherPdf, openAssignVoucherDialog, openExternal, openVoucherPdf, type VoucherPdf } from "../../../util/lexwareDialogs";
 
 /**
- * Rechnungen und Angebote der Bauakte aus Lexware Office (nur Anzeige): Art, Nummer, Datum, Betrag und Status, „In Lexware
- * öffnen“ und die Zuordnung vorhandener Belege. Erstellt und bearbeitet werden Belege ausschließlich in Lexware Office.
+ * Rechnungen und Angebote der Bauakte aus Lexware Office (nur Anzeige): Art, Nummer, Datum, Betrag und Status, der Beleg
+ * als PDF, „In Lexware öffnen“ und die Zuordnung vorhandener Belege. Erstellt und bearbeitet werden Belege ausschließlich in Lexware Office.
  * @namespace estrichone.controller.bauakte.sections
  */
 export default class Invoices extends SectionBase {
@@ -37,6 +40,7 @@ export default class Invoices extends SectionBase {
 			return {
 				...v, typeText: voucherTypeText(v.type), numberText: voucherNumber(v), dateText: date(v.voucherDate), dueText: date(v.dueDate),
 				netText: euro(v.netAmount, v.currency), grossText: euro(v.grossAmount, v.currency), statusText: status.text, statusState: status.state, statusIcon: status.icon,
+				pdf: pdfAvailable(v), pdfHint: pdfAvailable(v) ? "Beleg als PDF anzeigen" : PDF_DRAFT_HINT,
 			};
 		}));
 	}
@@ -58,6 +62,19 @@ export default class Invoices extends SectionBase {
 
 	onOpen(e: Event): void {
 		openExternal(this.row(e).url);
+	}
+
+	private pdf(e: Event): VoucherPdf {
+		const v = this.row(e);
+		return { path: voucherPdfPath({ bauakteId: this.bauakteId, linkId: v.id }), title: voucherTitle(v), lexwareUrl: v.url };
+	}
+
+	onPdf(e: Event): void {
+		void openVoucherPdf(this.pdf(e));
+	}
+
+	onDownload(e: Event): void {
+		void downloadVoucherPdf(this.pdf(e));
 	}
 
 	async onUnassign(e: Event): Promise<void> {

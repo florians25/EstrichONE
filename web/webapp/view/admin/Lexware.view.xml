@@ -22,7 +22,7 @@
 								<MessageStrip id="lexwareTestResult" visible="{= !!${view>/lastTestText} }" type="{= ${view>/s/lastTestOk} ? 'Success' : 'Error' }" showIcon="true"
 									text="{view>/lastTestText}" class="sapUiSmallMarginBottom"/>
 								<MessageStrip type="Information" showIcon="true" class="sapUiSmallMarginBottom" id="lexwareKeyHint"
-									text="Den API-Schlüssel erzeugen Sie in Lexware Office unter Einstellungen › Erweiterungen › Public API. Die Public API ist im Tarif XL enthalten. An Lexware Office gehen nur die Daten der Kunden, die Sie dort anlegen. Rechnungen und Angebote liest EstrichONE nur; es legt in Lexware Office keine Belege an und ändert keine.">
+									text="Den API-Schlüssel erzeugen Sie in Lexware Office unter Einstellungen › Erweiterungen › Public API. Die Public API ist im Tarif XL enthalten. An Lexware Office gehen nur die Daten der Kunden, die Sie dort anlegen oder verknüpfen. Rechnungen und Angebote liest EstrichONE nur; es legt in Lexware Office keine Belege an und ändert keine.">
 									<link><Link text="Schlüssel in Lexware Office erzeugen" href="{view>/s/keyHelpUrl}" target="_blank"/></link>
 								</MessageStrip>
 							</VBox>
@@ -55,6 +55,15 @@
 									<Switch id="lxNewSync" state="{view>/s/newCustomersSync}" customTextOn=" " customTextOff=" "/>
 									<Text text="Vorgabe für den Schalter „Mit Lexware Office abgleichen“ bei neuen Kunden in Web und Apps. Je Kunde lässt sich der Schalter ändern. Kunden, die es vor dem Einschalten des Moduls schon gab, bleiben zunächst nur in EstrichONE; den Abgleich schalten Sie im Kundenabgleich für ausgewählte Kunden ein. Übertragen wird erst, wenn Sie einen Kunden verknüpfen oder anlegen."/>
 								</VBox>
+								<Label text="Änderungen an verknüpften Kunden abgleichen" labelFor="lxChangeSync"/>
+								<VBox>
+									<Select id="lxChangeSync" selectedKey="{view>/s/changeSync}" items="{view>/changeSyncOptions}" width="24rem">
+										<core:Item key="{view>key}" text="{view>text}"/>
+									</Select>
+									<Text id="lxChangeSyncHelp" text="{view>/changeSyncHelp}"/>
+									<Text text="Abgeglichen werden Name, Anrede, Rechnungsanschrift, E-Mail-Adresse, Telefon und USt-ID bei verknüpften Kunden mit eingeschaltetem Abgleich. Kundennummern werden nie überschrieben. Beim ersten Abgleich überschreibt EstrichONE nichts: Vorhandene Unterschiede erscheinen im Kundenabgleich unter „Abweichungen“."/>
+									<ObjectStatus id="lxChangeSyncStand" text="{view>/changeSyncStand/text}" state="{view>/changeSyncStand/state}" visible="{= !!${view>/changeSyncStand/text} }"/>
+								</VBox>
 								<core:Title text="Erweitert"/>
 								<Label text="Basis-URL der API" labelFor="lxUrl"/>
 								<VBox>
@@ -65,7 +74,7 @@
 						</IconTabFilter>
 						<IconTabFilter key="customers" text="Kundenabgleich" visible="{= ${view>/s/moduleEnabled} === true &amp;&amp; ${view>/s/hasApiKey} === true }">
 							<VBox class="sapUiSmallMargin" busy="{view>/recBusy}" busyIndicatorDelay="0">
-								<Text text="Kunden gibt es in EstrichONE und in Lexware Office. Hier sehen Sie, was zusammengehört und was fehlt. EstrichONE führt nichts automatisch zusammen und löscht nichts; jede Verknüpfung und jede Neuanlage bestätigen Sie selbst."
+								<Text text="Kunden gibt es in EstrichONE und in Lexware Office. Hier sehen Sie, was zusammengehört, was fehlt und wo verknüpfte Kunden unterschiedliche Angaben haben. EstrichONE führt nichts automatisch zusammen und löscht nichts; jede Verknüpfung und jede Neuanlage bestätigen Sie selbst."
 									class="sapUiSmallMarginBottom"/>
 								<FlexBox id="lexwareFigures" class="eoKpiBar sapUiSmallMarginBottom" items="{view>/figures}" wrap="Wrap" renderType="Bare">
 									<VBox class="eoKpiItem" renderType="Bare">
@@ -76,8 +85,11 @@
 								</FlexBox>
 								<MessageStrip text="Die Listen zeigen jeweils die ersten 500 Einträge. Die Zähler gelten für alle Einträge." type="Information" showIcon="true"
 									visible="{= ${view>/rec/truncated} === true }" class="sapUiSmallMarginBottom"/>
+								<MessageStrip id="lexwareChangeError" type="Warning" showIcon="true" class="sapUiSmallMarginBottom" visible="{= !!${view>/rec/changeSyncError} }"
+									text="{= 'Die Änderungen konnten nicht mit Lexware Office abgeglichen werden. Angezeigt wird der zuletzt gespeicherte Stand. ' + ${view>/rec/changeSyncError} }"/>
 								<SegmentedButton id="lexwareList" selectedKey="{view>/list}" width="100%">
 									<items>
+										<SegmentedButtonItem key="deviations" text="{= 'Abweichungen (' + (${view>/rec/deviations} || 0) + ')' }"/>
 										<SegmentedButtonItem key="suggestions" text="{= 'Mögliche Dubletten (' + (${view>/rec/possibleDuplicates} || 0) + ')' }"/>
 										<SegmentedButtonItem key="onlyEstrichOne" text="{= 'Nur in EstrichONE (' + (${view>/rec/onlyEstrichOne} || 0) + ')' }"/>
 										<SegmentedButtonItem key="excluded" text="{= 'Bewusst nur in EstrichONE (' + (${view>/rec/excluded} || 0) + ')' }"/>
@@ -91,8 +103,43 @@
 									<Button id="lexwareLinkUnique" text="{= 'Eindeutige Treffer verknüpfen (' + (${view>/rec/uniqueMatches} || 0) + ')' }" icon="sap-icon://chain-link"
 										press=".onLinkUnique" enabled="{= ${view>/rec/uniqueMatches} > 0 }"
 										tooltip="Genau ein Gegenstück mit gleicher E-Mail-Adresse oder gleicher Kundennummer. Vor dem Verknüpfen sehen Sie eine Vorschau."/>
-									<Button id="lexwareRefresh" text="Aktualisieren" icon="sap-icon://refresh" press=".onRefresh" tooltip="Kontaktliste neu aus Lexware Office laden"/>
+									<Button id="lexwareRefresh" text="Aktualisieren" icon="sap-icon://refresh" press=".onRefresh"
+										tooltip="Kontaktliste neu aus Lexware Office laden und Änderungen an verknüpften Kunden abgleichen"/>
 								</OverflowToolbar>
+
+								<Table id="lexwareDeviations" items="{view>/deviations}" visible="{= ${view>/list} === 'deviations' }" popinLayout="GridSmall" contextualWidth="Auto"
+									growing="true" growingThreshold="50"
+									noDataText="{= ${view>/rec/changeSync} === 'off' ? 'Der Änderungsabgleich ist ausgeschaltet (Reiter „Verbindung“).' : 'Es gibt keine offenen Abweichungen zwischen verknüpften Kunden und ihren Kontakten in Lexware Office.' }">
+									<headerToolbar><Toolbar><Title text="Verknüpfte Kunden mit unterschiedlichen Angaben: Es wurde nichts überschrieben, Sie entscheiden" level="H3" wrapping="true"/></Toolbar></headerToolbar>
+									<columns>
+										<Column width="18rem"><Text text="Kunde"/></Column>
+										<Column><Text text="Feld: EstrichONE und Lexware Office"/></Column>
+										<Column width="26rem" hAlign="End" minScreenWidth="Desktop" demandPopin="true"/>
+									</columns>
+									<items>
+										<ColumnListItem vAlign="Top">
+											<VBox>
+												<Link text="{view>customer/name}" press=".onOpenCustomer" wrapping="true"/>
+												<Text text="{view>customerText}" class="eoMuted"/>
+												<Link text="{= 'Kontakt in Lexware: ' + (${view>lexwareName} || 'öffnen') }" href="{view>lexwareUrl}" target="_blank" wrapping="true"/>
+											</VBox>
+											<VBox items="{path: 'view>rows', templateShareable: false}">
+												<HBox renderType="Bare" wrap="Wrap" class="eoDeviationRow">
+													<Text text="{view>label}" width="8rem" class="eoStrong"/>
+													<Text text="{view>estrichOneText}" width="15rem" wrapping="true"/>
+													<Text text="{view>lexwareText}" width="15rem" wrapping="true"/>
+												</HBox>
+											</VBox>
+											<HBox justifyContent="End" renderType="Bare" wrap="Wrap">
+												<Button text="Je Feld entscheiden" icon="sap-icon://compare" press=".onResolve"/>
+												<Button text="EstrichONE übernehmen" type="Transparent" press=".onTakeLocal"
+													tooltip="Alle abweichenden Angaben aus EstrichONE nach Lexware Office übernehmen"/>
+												<Button text="Lexware übernehmen" type="Transparent" press=".onTakeRemote"
+													tooltip="Alle abweichenden Angaben aus Lexware Office nach EstrichONE übernehmen"/>
+											</HBox>
+										</ColumnListItem>
+									</items>
+								</Table>
 
 								<Table id="lexwareSuggestions" items="{view>/suggestions}" visible="{= ${view>/list} === 'suggestions' }" popinLayout="GridSmall" contextualWidth="Auto"
 									noDataText="Die Prüfung hat keine möglichen Dubletten zwischen EstrichONE und Lexware Office gefunden.">
@@ -197,8 +244,10 @@
 											<VBox>
 												<Link text="{view>lexware/name}" href="{view>lexware/url}" target="_blank" wrapping="true" visible="{= !${view>missingInLexware} }"/>
 												<Text text="{view>lexwareText}" class="eoMuted" visible="{= !${view>missingInLexware} }"/>
-												<ObjectStatus text="In Lexware Office nicht mehr vorhanden oder archiviert" state="Warning" icon="sap-icon://alert" visible="{view>missingInLexware}"/>
+												<ObjectStatus text="{view>missingText}" state="Warning" icon="sap-icon://alert" visible="{view>missingInLexware}"/>
 												<ObjectStatus text="Abgleich ausgeschaltet, Verknüpfung besteht noch" state="Warning" visible="{= ${view>customer/syncEnabled} === false }"/>
+												<ObjectStatus text="{view>changeText}" state="{view>changeState}" tooltip="{view>changeHint}"
+													visible="{= !!${view>changeText} &amp;&amp; !${view>missingInLexware} }"/>
 											</VBox>
 											<Button text="Verknüpfung lösen" type="Transparent" press=".onUnlink"/>
 										</ColumnListItem>

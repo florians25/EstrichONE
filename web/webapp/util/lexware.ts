@@ -28,6 +28,22 @@ export interface LexwareSettings {
 	keyHelpUrl: string;
 	version: number;
 	newCustomersSync: boolean;
+	/** Richtung des Änderungsabgleichs verknüpfter Kunden. */
+	changeSync: ChangeSync;
+	lastChangeSyncAt: string | null;
+	lastChangeSyncError: string | null;
+	customersWithDeviations: number;
+}
+
+export type ChangeSync = "both" | "toLexware" | "fromLexware" | "off";
+export type DeviationSource = "estrichOne" | "lexware";
+/** Abweichung in einem abgeglichenen Feld mit den Werten beider Seiten. */
+export interface LexwareDeviationField { field: string; label: string; estrichOne: string | null; lexware: string | null }
+export type SyncStateKey = "synced" | "deviations" | "pending" | "error" | "missing" | "archived" | "disabled" | "paused" | "off";
+/** Stand des Änderungsabgleichs einer Verknüpfung. */
+export interface LexwareSyncState { state: SyncStateKey | string; syncedAt: string | null; deviations: LexwareDeviationField[]; error: string | null }
+export interface LexwareDeviationItem {
+	customer: LexwareCustomerSummary; lexwareContactId: string; lexwareName: string | null; lexwareUrl: string; fields: LexwareDeviationField[]; syncedAt: string | null;
 }
 
 export interface LexwareTestResponse { ok: boolean; organizationName: string | null; error: string | null; at: string }
@@ -68,13 +84,13 @@ export interface LexwareCustomerCandidate extends Match { customer: LexwareCusto
 
 export type LexwareLinkOrigin = "linked" | "createdInLexware" | "importedFromLexware";
 export interface LexwareContactLink { lexwareContactId: string; name: string | null; number: string | null; url: string; origin: LexwareLinkOrigin; linkedAt: string }
-export interface CustomerLexware { contactId: string; link: LexwareContactLink | null; canEdit: boolean; syncEnabled: boolean }
+export interface CustomerLexware { contactId: string; link: LexwareContactLink | null; canEdit: boolean; syncEnabled: boolean; sync?: LexwareSyncState | null }
 export interface LexwareCandidates { candidates: LexwareContactCandidate[]; loadedAt: string | null }
 export interface CreateLexwareContactResponse { created: boolean; link: LexwareContactLink | null; candidates: LexwareContactCandidate[] }
 export interface ImportLexwareContactResponse { imported: boolean; contactId: string | null; customerNumber: string | null; candidates: LexwareCustomerCandidate[] }
 export interface LexwareContactList { items: LexwareContactSummary[]; page: number; pageSize: number; total: number; loadedAt: string }
 
-export interface LexwareLinkedPair { customer: LexwareCustomerSummary; lexware: LexwareContactSummary | null; missingInLexware: boolean }
+export interface LexwareLinkedPair { customer: LexwareCustomerSummary; lexware: LexwareContactSummary | null; missingInLexware: boolean; sync?: LexwareSyncState | null }
 export interface LexwareSuggestion extends Match { customer: LexwareCustomerSummary; lexware: LexwareContactSummary; unique: boolean }
 export interface LexwareInternalDuplicate {
 	system: "estrichOne" | "lexware";
@@ -89,6 +105,9 @@ export interface LexwareReconciliation {
 	suggestions: LexwareSuggestion[]; internalDuplicates: LexwareInternalDuplicate[]; truncated: boolean;
 	/** Kunden, die bewusst nur in EstrichONE bleiben („Mit Lexware Office abgleichen“ aus). */
 	excluded: number; excludedItems: LexwareCustomerSummary[];
+	/** Verknüpfte Kunden mit offenen Abweichungen (beide Seiten haben ein Feld unterschiedlich). */
+	deviations?: number; deviationItems?: LexwareDeviationItem[];
+	changeSync?: ChangeSync; changeSyncError?: string | null;
 }
 
 export type VoucherType = "invoice" | "quotation" | "creditnote" | "orderconfirmation";
@@ -255,6 +274,8 @@ export function reconciliationFigures(r: LexwareReconciliation | null): { key: s
 	if (!r) return [];
 	return [
 		{ key: "linked", label: "Verknüpft", value: String(r.linked), state: "Success", hint: "Kunde und Lexware-Kontakt gehören zusammen" },
+		{ key: "deviations", label: "Abweichungen", value: String(r.deviations ?? 0), state: (r.deviations ?? 0) > 0 ? "Warning" : "None",
+			hint: r.changeSync === "off" ? "Änderungsabgleich ausgeschaltet" : "Unterschiedliche Angaben, Sie entscheiden" },
 		{ key: "suggestions", label: "Mögliche Dubletten", value: String(r.possibleDuplicates), state: r.possibleDuplicates > 0 ? "Warning" : "None",
 			hint: r.uniqueMatches > 0 ? `${r.uniqueMatches} davon eindeutig` : "Vor dem Anlegen prüfen" },
 		{ key: "onlyEstrichOne", label: "Nur in EstrichONE", value: String(r.onlyEstrichOne), state: "None", hint: "Abgleich an, noch kein Kontakt in Lexware Office" },
@@ -278,4 +299,90 @@ export function lastTestText(s: Pick<LexwareSettings, "lastTestAt" | "lastTestOk
 /** Abschnitte in Kunde und Bauakte nur mit eingeschaltetem Modul und Leserecht. */
 export function lexwareVisible(modules: Record<string, boolean | undefined>, permissions: Record<string, boolean | undefined>): boolean {
 	return modules.lexware === true && permissions["invoices.read"] === true;
+}
+
+// ---------- Änderungsabgleich verknüpfter Kunden ----------
+
+/** Richtungen des Änderungsabgleichs für die Auswahl in den Einstellungen. */
+export const changeSyncOptions: { key: ChangeSync; text: string }[] = [
+	{ key: "both", text: "Beide Richtungen" },
+	{ key: "toLexware", text: "Nur von EstrichONE nach Lexware Office" },
+	{ key: "fromLexware", text: "Nur von Lexware Office nach EstrichONE" },
+	{ key: "off", text: "Aus" },
+];
+
+/** Erläuterung zur gewählten Richtung. */
+export function changeSyncHelp(direction: ChangeSync | string | null | undefined): string {
+	switch (direction) {
+		case "toLexware": return "Änderungen an verknüpften Kunden in EstrichONE gehen nach Lexware Office. Änderungen aus Lexware Office erscheinen als Abweichung und werden nicht von selbst übernommen.";
+		case "fromLexware": return "Änderungen am Kontakt in Lexware Office kommen nach EstrichONE. Änderungen aus EstrichONE erscheinen als Abweichung und werden nicht von selbst übertragen.";
+		case "off": return "Spätere Änderungen werden nicht abgeglichen. Verknüpfungen und Belege bleiben unverändert sichtbar.";
+		default: return "Ändert nur eine Seite ein Feld, wird die Änderung auf der anderen Seite übernommen. Ändern beide Seiten dasselbe Feld unterschiedlich, entscheiden Sie im Kundenabgleich.";
+	}
+}
+
+/** Stand des letzten vollständigen Änderungsabgleichs für die Einstellungen. */
+export function changeSyncStand(s: Pick<LexwareSettings, "changeSync" | "lastChangeSyncAt" | "lastChangeSyncError">, at: (iso: string) => string): { text: string; state: State } {
+	if (s.changeSync === "off") return { text: "", state: "None" };
+	if (s.lastChangeSyncError) return { text: `Der letzte Änderungsabgleich ist fehlgeschlagen: ${s.lastChangeSyncError}`, state: "Error" };
+	return s.lastChangeSyncAt ? { text: `Letzter vollständiger Änderungsabgleich: ${at(s.lastChangeSyncAt)}`, state: "None" }
+		: { text: "Der erste Änderungsabgleich läuft in Kürze im Hintergrund.", state: "None" };
+}
+
+/** Stand des Änderungsabgleichs als Text und Farbe (Kunde, Abgleichübersicht). */
+export function changeSyncState(sync: LexwareSyncState | null | undefined, at: (iso: string) => string): { text: string; state: State; icon: string; hint: string } {
+	if (!sync) return { text: "", state: "None", icon: "", hint: "" };
+	const last = sync.syncedAt ? `Letzter Abgleich: ${at(sync.syncedAt)}` : "Noch nicht abgeglichen";
+	const count = sync.deviations.length;
+	switch (sync.state) {
+		case "synced": return { text: "Abgeglichen", state: "Success", icon: "sap-icon://sys-enter-2", hint: last };
+		case "deviations": return { text: count === 1 ? "1 Abweichung offen" : `${count} Abweichungen offen`, state: "Warning", icon: "sap-icon://alert",
+			hint: `${last}. Beide Seiten haben unterschiedliche Angaben. Es wurde nichts überschrieben.` };
+		case "pending": return { text: "Abgleich steht aus", state: "Information", icon: "sap-icon://pending", hint: `${last}. Der Abgleich läuft in Kürze im Hintergrund.` };
+		case "error": return { text: "Abgleich fehlgeschlagen", state: "Error", icon: "sap-icon://error", hint: `${last}. ${sync.error ?? ""}`.trim() };
+		case "missing": return { text: "Kontakt in Lexware Office nicht mehr vorhanden", state: "Error", icon: "sap-icon://alert",
+			hint: "Der verknüpfte Kontakt wurde in Lexware Office gelöscht. Lösen Sie die Verknüpfung und verknüpfen Sie den Kunden bei Bedarf neu." };
+		case "archived": return { text: "Kontakt in Lexware Office archiviert", state: "Warning", icon: "sap-icon://alert",
+			hint: "Der verknüpfte Kontakt ist in Lexware Office archiviert. Solange er archiviert ist, wird nichts abgeglichen." };
+		case "paused": return { text: "Abgleich ruht", state: "None", icon: "", hint: "Archivierte Kunden werden nicht abgeglichen. Der Kontakt in Lexware Office bleibt unverändert." };
+		case "off": return { text: "Änderungsabgleich ausgeschaltet", state: "None", icon: "", hint: "Der Änderungsabgleich ist in den Einstellungen von Lexware Office ausgeschaltet." };
+		default: return { text: "", state: "None", icon: "", hint: "" };
+	}
+}
+
+/** Wert einer Abweichung für die Anzeige. */
+export function deviationValue(value: string | null | undefined): string {
+	return value?.trim() ? value : "(leer)";
+}
+
+/** Abweichungen in einer Zeile, z. B. „Straße: Altweg 1 / Neuweg 2“. */
+export function deviationSummary(fields: LexwareDeviationField[]): string {
+	return fields.map((f) => `${f.label}: ${deviationValue(f.estrichOne)} / ${deviationValue(f.lexware)}`).join("; ");
+}
+
+/** Auswahl im Dialog als Anfrage: nur entschiedene Felder; ohne Entscheidung nichts. */
+export function resolveRequest(choices: Record<string, DeviationSource | "" | undefined>): { fields: Record<string, DeviationSource> } | null {
+	const fields = Object.fromEntries(Object.entries(choices).filter(([, source]) => source === "estrichOne" || source === "lexware")) as Record<string, DeviationSource>;
+	return Object.keys(fields).length > 0 ? { fields } : null;
+}
+
+// ---------- Beleg als PDF ----------
+
+/** Für Entwürfe stellt Lexware Office kein PDF bereit. */
+export function pdfAvailable(voucher: { status: string }): boolean {
+	return voucher.status !== "draft";
+}
+
+export const PDF_DRAFT_HINT = "Für Entwürfe stellt Lexware Office kein PDF bereit.";
+
+/** Adresse des Beleg-PDFs: am Kunden über die Lexware-ID, an der Bauakte über die Zuordnung. */
+export function voucherPdfPath(owner: { customerId: string; lexwareId: string } | { bauakteId: string; linkId: string }): string {
+	return "customerId" in owner
+		? `lexware/customers/${owner.customerId}/vouchers/${encodeURIComponent(owner.lexwareId)}/document`
+		: `bauakten/${owner.bauakteId}/lexware/vouchers/${owner.linkId}/document`;
+}
+
+/** Titel der PDF-Anzeige, z. B. „Rechnung RE1042“. */
+export function voucherTitle(v: { type: string; number: string | null }): string {
+	return v.number ? `${voucherTypeText(v.type)} ${v.number}` : voucherTypeText(v.type);
 }

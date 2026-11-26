@@ -3,9 +3,10 @@ import { randomUUID } from 'node:crypto';
 
 /**
  * Nachgebildete Public API von Lexware Office für die Ende-zu-Ende-Tests (kein echter Aufruf, kein echter Schlüssel):
- * Profil, Kontakte (Liste mit Filtern, Abruf, Anlage), Belege (Rechnungen, Angebote, Gutschriften, Auftragsbestätigungen:
- * nur Abruf) und Belegliste. Schreibende Aufrufe für Belege gibt es nicht (404), denn EstrichONE legt keine Belege an. Der
- * Zustand liegt im Speicher und lässt sich im Test ändern (z. B. eine Rechnung in Lexware „abschließen“).
+ * Profil, Kontakte (Liste mit Filtern, Abruf, Anlage, Ändern mit `version`, sonst 409), Belege (Rechnungen, Angebote,
+ * Gutschriften, Auftragsbestätigungen: nur Abruf), Belegliste und das Beleg-PDF (`/file` sowie `/document` mit `/v1/files`;
+ * für Entwürfe 406). Schreibende Aufrufe für Belege gibt es nicht (404), denn EstrichONE legt keine Belege an. Der Zustand
+ * liegt im Speicher und lässt sich im Test ändern (z. B. eine Rechnung in Lexware „abschließen“, einen Kontakt bearbeiten).
  */
 export const STUB_KEY = 'e2e-schluessel-nicht-echt';
 
@@ -15,11 +16,37 @@ export interface StubContact {
   name: string; company?: boolean; email?: string; phone?: string; street?: string; zip?: string; city?: string;
 }
 
+/** Kleines, gültiges PDF mit einer Seite und den angegebenen Zeilen (für die Anzeige im Test). */
+export function simplePdf(lines: string[]): Buffer {
+  const text = (value: string) => value.replace(/[\\()]/g, (c) => `\\${c}`).replace(/[^\x20-\x7e]/g, '?');
+  const content = ['BT', '/F1 18 Tf', '72 770 Td', ...lines.flatMap((line, index) => [index === 1 ? '/F1 11 Tf' : '', index > 0 ? '0 -24 Td' : '', `(${text(line)}) Tj`]), 'ET']
+    .filter(Boolean).join('\n');
+  const objects = [
+    '<< /Type /Catalog /Pages 2 0 R >>',
+    '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>',
+    `<< /Length ${content.length} >>\nstream\n${content}\nendstream`,
+    '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
+  ];
+  let pdf = '%PDF-1.4\n';
+  const offsets: number[] = [];
+  objects.forEach((object, index) => {
+    offsets.push(pdf.length);
+    pdf += `${index + 1} 0 obj\n${object}\nendobj\n`;
+  });
+  const xref = pdf.length;
+  pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n${offsets.map((o) => `${String(o).padStart(10, '0')} 00000 n \n`).join('')}`;
+  pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
+  return Buffer.from(pdf, 'latin1');
+}
+
 export class LexwareStub {
   readonly contacts = new Map<string, Json>();
   readonly vouchers = new Map<string, Json>();
   readonly calls: { method: string; path: string }[] = [];
   companyName = 'Estrichbau E2E GmbH';
+  /** Kennt die nachgebildete API den Pfad `/file`? Sonst nur den älteren Weg über `/document`. */
+  fileRoute = true;
   private server: Server | null = null;
   private customerNumber = 10000;
 
@@ -41,7 +68,10 @@ export class LexwareStub {
 
   addContact(c: StubContact): string {
     const id = randomUUID();
-    const contact: Json = { id, version: 1, archived: false, roles: { customer: { number: ++this.customerNumber } } };
+    const contact: Json = {
+      id, organizationId: 'aa93e8a8-2aa3-470b-b914-caad8a255dd8', version: 1, archived: false, createdDate: '2026-01-10T09:00:00.000+01:00',
+      updatedDate: '2026-01-10T09:00:00.000+01:00', roles: { customer: { number: ++this.customerNumber } }, note: 'Stammkunde',
+    };
     if (c.company === false) {
       const space = c.name.lastIndexOf(' ');
       contact.person = { salutation: 'Herr', firstName: space > 0 ? c.name.slice(0, space) : null, lastName: space > 0 ? c.name.slice(space + 1) : c.name };
@@ -78,6 +108,23 @@ export class LexwareStub {
     if (values.status) voucher.voucherStatus = values.status;
     if (values.number) voucher.voucherNumber = values.number;
     if (values.dueDate) voucher[voucher.voucherType === 'quotation' ? 'expirationDate' : 'dueDate'] = `${values.dueDate}T00:00:00.000+01:00`;
+  }
+
+  /** Wie eine Änderung am Kontakt in Lexware Office: Version und Änderungszeitpunkt steigen. */
+  edit(id: string, change: (contact: Json) => void): void {
+    const contact = this.contacts.get(id);
+    if (!contact) return;
+    change(contact);
+    contact.version = Number(contact.version ?? 0) + 1;
+    contact.updatedDate = new Date().toISOString();
+  }
+
+  /** Rechnungsanschrift eines Kontakts (zum Prüfen und Ändern im Test). */
+  billing(id: string): Json {
+    const contact = this.contacts.get(id)!;
+    const addresses = (contact.addresses ??= {}) as Json;
+    const billing = (addresses.billing ??= [{ countryCode: 'DE' }]) as Json[];
+    return billing[0];
   }
 
   private static name(contact: Json): string {
@@ -117,7 +164,7 @@ export class LexwareStub {
     }
     if (method === 'POST' && path === '/v1/contacts') {
       const id = randomUUID();
-      this.contacts.set(id, { ...body, id, roles: { customer: { number: ++this.customerNumber } } });
+      this.contacts.set(id, { ...body, id, version: 1, archived: false, roles: { customer: { number: ++this.customerNumber } } });
       return send(200, { id, resourceUri: `${this.url}/v1/contacts/${id}`, version: 1 });
     }
     if (method === 'GET' && path.startsWith('/v1/contacts/')) {
@@ -125,8 +172,42 @@ export class LexwareStub {
       return contact ? send(200, contact) : send(404, { status: 404, error: 'Not Found' });
     }
 
+    if (method === 'PUT' && path.startsWith('/v1/contacts/')) {
+      const id = path.slice('/v1/contacts/'.length);
+      const stored = this.contacts.get(id);
+      if (!stored) return send(404, { status: 404, error: 'Not Found' });
+      if (body.version !== stored.version) return send(409, { status: 409, message: 'Resource was modified' });
+      // Wie die echte API: Der gesendete Kontakt ersetzt den gespeicherten; ID, Organisation und Zeitpunkte führt der Server.
+      const next: Json = {
+        ...body, id, organizationId: stored.organizationId, createdDate: stored.createdDate, archived: stored.archived, version: Number(stored.version) + 1,
+        updatedDate: new Date().toISOString(),
+      };
+      this.contacts.set(id, next);
+      return send(200, { id, resourceUri: `${this.url}${path}`, createdDate: next.createdDate, updatedDate: next.updatedDate, version: next.version });
+    }
+
     const segments: Record<string, string> = { invoices: 'invoice', quotations: 'quotation', 'credit-notes': 'creditnote', 'order-confirmations': 'orderconfirmation' };
     const parts = path.split('/').filter(Boolean);
+    const pdf = (id: string) => {
+      const voucher = this.vouchers.get(id)!;
+      const kind: Record<string, string> = { invoice: 'Rechnung', quotation: 'Angebot', creditnote: 'Gutschrift', orderconfirmation: 'Auftragsbestaetigung' };
+      const content = simplePdf([
+        `${kind[String(voucher.voucherType)]} ${String(voucher.voucherNumber ?? '')}`.trim(), String((voucher.address as Json).name ?? ''),
+        `Datum: ${String(voucher.voucherDate).slice(0, 10)}`, `Gesamtbetrag: ${String((voucher.totalPrice as Json).totalGrossAmount)} EUR`,
+        'Nachgebildeter Beleg aus dem Test, kein echtes Dokument.',
+      ]);
+      response.writeHead(200, { 'Content-Type': 'application/pdf', 'Content-Length': content.length });
+      response.end(content);
+    };
+    if (method === 'GET' && parts.length === 4 && segments[parts[1]] && (parts[3] === 'file' || parts[3] === 'document')) {
+      const voucher = this.vouchers.get(parts[2]);
+      if ((parts[3] === 'file' && !this.fileRoute) || !voucher || voucher.voucherType !== segments[parts[1]]) return send(404, { status: 404, error: 'Not Found' });
+      if (voucher.voucherStatus === 'draft') return send(406, { status: 406, message: 'No document for drafts' });
+      return parts[3] === 'file' ? pdf(parts[2]) : send(200, { documentFileId: `file-${parts[2]}` });
+    }
+    if (method === 'GET' && parts.length === 3 && parts[1] === 'files' && parts[2].startsWith('file-') && this.vouchers.has(parts[2].slice(5))) {
+      return pdf(parts[2].slice(5));
+    }
     if (method === 'GET' && parts.length === 3 && segments[parts[1]]) {
       const voucher = this.vouchers.get(parts[2]);
       return voucher && voucher.voucherType === segments[parts[1]] ? send(200, voucher) : send(404, { status: 404, error: 'Not Found' });
