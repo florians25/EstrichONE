@@ -66,7 +66,8 @@ export default class Lexware extends BaseController {
 			s.lastTestOk === false && { text: "Der letzte Verbindungstest ist fehlgeschlagen (Einzelheiten unter „Verbindung“).", level: "error" },
 			s.hasApiKey && s.lastTestAt === null && { text: "Die Verbindung wurde noch nicht getestet.", level: "info" },
 		], !s.hasApiKey ? "Nicht eingerichtet."
-			: `Verbunden${s.organizationName ? ` mit ${s.organizationName}` : ""}, ${s.linkedCustomers} Kunden verknüpft, ${s.linkedInvoices} Belege Bauakten zugeordnet`);
+			: `Verbunden${s.organizationName ? ` mit ${s.organizationName}` : ""}, ${s.linkedCustomers} ${s.linkedCustomers === 1 ? "Kunde" : "Kunden"} verknüpft, `
+				+ `${s.linkedInvoices} ${s.linkedInvoices === 1 ? "Beleg" : "Belege"} Bauakten zugeordnet`);
 	}
 
 	private async save(): Promise<LexwareSettings | undefined> {
