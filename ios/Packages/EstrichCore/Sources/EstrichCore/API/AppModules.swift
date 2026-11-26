@@ -21,6 +21,9 @@ public struct AppModules: Codable, Sendable, Equatable {
     public static let helpdesk = "helpdesk"
     public static let feedback = "feedback"
     public static let fuel = "fuel"
+    public static let lexware = "lexware"
+    /// Kein Modul: Vorgabe „Mit Lexware Office abgleichen“ für neue Kunden, zusammen mit den Schaltern gespeichert.
+    static let lexwareSyncDefaultKey = "lexwareSyncDefault"
 
     /// Schalter je Modul (Schlüssel wie auf dem Server).
     public var states: [String: Bool]
@@ -31,6 +34,12 @@ public struct AppModules: Codable, Sendable, Equatable {
     public static let allOn = AppModules()
 
     public func isOn(_ key: String) -> Bool { states[key] ?? true }
+
+    /// Lexware Office ist nur an, wenn der Server es ausdrücklich meldet (ältere Server kennen das Modul nicht).
+    public var lexwareOn: Bool { states[Self.lexware] == true }
+
+    /// Vorbelegung des Schalters „Mit Lexware Office abgleichen“ bei neuen Kunden.
+    public var lexwareSyncDefault: Bool { lexwareOn && states[Self.lexwareSyncDefaultKey] == true }
 
     /// Mindestens eines der Module ist an (z. B. Aufgaben oder Mängel).
     public func anyOn(_ keys: String...) -> Bool { keys.contains { isOn($0) } }
@@ -43,12 +52,20 @@ public struct AppModules: Codable, Sendable, Equatable {
             let core: Bool?
         }
         let modules: [Module]
+        /// Vorgabe für neue Kunden (fehlt bei älteren Servern).
+        let lexwareSyncDefault: Bool?
+
+        /// Schalter je Modul; Kernmodule sind immer an. Dazu die Vorgabe für neue Kunden.
+        var states: [String: Bool] {
+            var result = Dictionary(modules.map { ($0.key, $0.core == true || $0.enabled) }, uniquingKeysWith: { _, last in last })
+            result[AppModules.lexwareSyncDefaultKey] = lexwareSyncDefault == true
+            return result
+        }
     }
 
     /// Zustand aus der Serverantwort (`GET settings/modules`); Kernmodule sind immer an.
     public static func decode(_ data: Data) throws -> AppModules {
-        let response = try JSONDecoder().decode(Response.self, from: data)
-        return AppModules(states: Dictionary(response.modules.map { ($0.key, $0.core == true || $0.enabled) }, uniquingKeysWith: { _, last in last }))
+        AppModules(states: try JSONDecoder().decode(Response.self, from: data).states)
     }
 }
 
@@ -69,8 +86,7 @@ public struct ModuleSettingsStore: Sendable {
     /// Vom Server laden und zwischenspeichern; ohne Verbindung (oder bei älteren Servern) der letzte Stand.
     public func load(using client: AuthorizedClient?) async -> AppModules {
         if let client, let response: AppModules.Response = try? await client.get("settings/modules") {
-            let modules = AppModules(states: Dictionary(response.modules.map { ($0.key, $0.core == true || $0.enabled) },
-                                                        uniquingKeysWith: { _, last in last }))
+            let modules = AppModules(states: response.states)
             if let data = try? JSONEncoder().encode(modules), let text = String(data: data, encoding: .utf8) {
                 try? await store.setMeta(Self.metaKey, text)
             }

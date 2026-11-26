@@ -470,6 +470,12 @@ struct CustomerCardView: View {
             if let billing = contact.billingAddress?.line { addressRow("Rechnung", billing) }
             if let delivery = contact.deliveryAddress?.line { addressRow("Lieferung", delivery) }
         }
+        if (model.active?.sync?.modules ?? .allOn).lexwareOn {
+            Section("Lexware Office") {
+                LabeledContent("Abgleich", value: contact.lexwareSync ? "wird abgeglichen" : "bleibt nur in EstrichONE")
+                    .accessibilityIdentifier("customerLexwareSync")
+            }
+        }
         if contact.website != nil || contact.notes != nil {
             Section("Weitere Angaben") {
                 if let website = contact.website, let url = URL(string: website.hasPrefix("http") ? website : "https://\(website)") {
@@ -637,6 +643,21 @@ struct CustomerEditView: View {
     @State private var error: String?
     @State private var saving = false
 
+    private var modules: AppModules { model.active?.sync?.modules ?? .allOn }
+
+    /// Nur mit eingeschaltetem Modul Lexware Office: aus = der Kunde bleibt nur in EstrichONE.
+    @ViewBuilder
+    private var lexwareSection: some View {
+        if modules.lexwareOn {
+            Section {
+                Toggle("Mit Lexware Office abgleichen", isOn: Binding(get: { edit.lexwareSync ?? false }, set: { edit.lexwareSync = $0 }))
+                    .accessibilityIdentifier("customerEditLexwareSync")
+            } footer: {
+                Text("Aus: Der Kunde bleibt nur in EstrichONE und wird nicht nach Lexware Office übertragen.")
+            }
+        }
+    }
+
     var body: some View {
         NavigationStack {
             Form {
@@ -713,6 +734,7 @@ struct CustomerEditView: View {
                     TextField("Website", text: $edit.website).keyboardType(.URL).textInputAutocapitalization(.never)
                     TextField("Notiz", text: $edit.notes, axis: .vertical).lineLimit(2...6)
                 }
+                lexwareSection
             }
             .navigationTitle(contact == nil ? "Neuer Kunde" : "Kunde bearbeiten")
             .navigationBarTitleDisplayMode(.inline)
@@ -727,6 +749,8 @@ struct CustomerEditView: View {
                 guard !loaded else { return }
                 loaded = true
                 if let contact { edit = CustomerEdit(contact) }
+                // Neuer Kunde: Vorgabe aus den Lexware-Einstellungen. Ohne Modul bleibt das Feld leer und wird nicht gesendet.
+                if contact == nil { edit.lexwareSync = modules.lexwareOn ? modules.lexwareSyncDefault : nil }
             }
             .task(id: "\(edit.name)|\(edit.phones.first?.number ?? "")|\(edit.emails.first?.address ?? "")|\(edit.city)") {
                 await checkDuplicates()

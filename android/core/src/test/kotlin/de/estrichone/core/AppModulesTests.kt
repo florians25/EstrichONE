@@ -32,6 +32,27 @@ class AppModulesTests {
     }
 
     @Test
+    @DisplayName("Lexware Office: nur an, wenn der Server es meldet; Vorgabe für neue Kunden übersteht den Zwischenspeicher")
+    fun lexware() {
+        fun parse(enabled: Boolean, extra: String) = AppModules.parse(EstrichOneApi.json.decodeFromString(JsonElement.serializer(),
+            """{"version":1,$extra"modules":[{"key":"lexware","area":"office","title":"Lexware Office","description":"","enabled":$enabled,"core":false,"requires":[],"requiredBy":[]}]}"""))
+        assertFalse(AppModules.ALL_ON.lexwareOn, "älterer Server ohne das Modul: aus")
+        assertFalse(AppModules.ALL_ON.lexwareSyncDefault)
+        assertFalse(AppModules.parse(EstrichOneApi.json.decodeFromString(JsonElement.serializer(), response)).lexwareOn)
+        val on = parse(true, """"lexwareSyncDefault":true,""")
+        assertTrue(on.lexwareOn)
+        assertTrue(on.lexwareSyncDefault)
+        assertFalse(parse(true, """"lexwareSyncDefault":false,""").lexwareSyncDefault)
+        assertFalse(parse(true, "").lexwareSyncDefault, "Feld fehlt: keine Vorgabe")
+        val off = parse(false, """"lexwareSyncDefault":true,""")
+        assertFalse(off.lexwareOn)
+        assertFalse(off.lexwareSyncDefault, "Modul aus: keine Vorgabe")
+        val restored = AppModules.decode(on.encode())
+        assertEquals(on, restored)
+        assertTrue(restored.lexwareSyncDefault)
+    }
+
+    @Test
     @DisplayName("Module: Zwischenspeicher für den Offline-Betrieb")
     fun cache() {
         val modules = AppModules(mapOf(AppModules.PLANNING to false, AppModules.MACHINES to false, AppModules.MATERIALS to true))

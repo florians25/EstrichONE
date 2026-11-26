@@ -139,6 +139,9 @@ data class Contact(val entity: LocalEntity) {
     val website: String? = d.str("website")
     val preferredChannel: String? = d.str("preferredChannel")
 
+    /** „Mit Lexware Office abgleichen“; aus = der Kunde bleibt nur in EstrichONE (wirksam bei eingeschaltetem Modul). */
+    val lexwareSync: Boolean = d.bool("lexwareSync") == true
+
     /** Archiviert (inaktiv): bleibt für Bauakten erhalten, erscheint aber nicht in Auswahllisten und standardmäßig nicht in der Kundenliste. */
     val archivedAt: Instant? = ApiDate.parse(d.str("archivedAt"))
     val anonymizedAt: Instant? = ApiDate.parse(d.str("anonymizedAt"))

@@ -185,6 +185,8 @@ public struct Contact: Identifiable, Equatable, Sendable {
     public let archivedAt: Date?
     /// Anonymisiert (DSGVO): Name und Kontaktdaten wurden im Büro ersetzt.
     public let anonymizedAt: Date?
+    /// „Mit Lexware Office abgleichen“; aus = der Kunde bleibt nur in EstrichONE (wirksam bei eingeschaltetem Modul).
+    public let lexwareSync: Bool
 
     public var isArchived: Bool { archivedAt != nil }
 
@@ -215,6 +217,7 @@ public struct Contact: Identifiable, Equatable, Sendable {
         syncState = entity.syncState
         archivedAt = data["archivedAt"]?.string.flatMap(APIDate.parse)
         anonymizedAt = data["anonymizedAt"]?.string.flatMap(APIDate.parse)
+        lexwareSync = data["lexwareSync"]?.bool ?? false
     }
 
     /// Kontakt aus einer Serverantwort (`ContactResponse`); `nil` ohne gültige ID.

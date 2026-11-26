@@ -121,6 +121,8 @@ public struct CustomerEdit: Equatable, Sendable {
     public var preferredChannel: ContactChannel?
     public var website: String
     public var notes: String
+    /// „Mit Lexware Office abgleichen“. `nil` = nicht mitsenden (Modul aus oder älterer Server): Der Server setzt dann seine Vorgabe.
+    public var lexwareSync: Bool?
 
     public init(name: String = "", isCompany: Bool = false) {
         self.name = name
@@ -135,6 +137,7 @@ public struct CustomerEdit: Equatable, Sendable {
         preferredChannel = nil
         website = ""
         notes = ""
+        lexwareSync = nil
     }
 
     public init(_ contact: Contact) {
@@ -149,6 +152,7 @@ public struct CustomerEdit: Equatable, Sendable {
         preferredChannel = contact.preferredChannel
         website = contact.website ?? ""
         notes = contact.notes ?? ""
+        lexwareSync = contact.lexwareSync
     }
 
     /// Für die Dublettenprüfung des Servers.
@@ -175,12 +179,14 @@ public struct CustomerEdit: Equatable, Sendable {
         func text(_ value: String, _ max: Int) -> JSONValue { ContactPhone.clean(value, max) }
         let numbers = phones.filter { !$0.number.trimmingCharacters(in: .whitespaces).isEmpty }
         let addresses = emails.filter { !$0.address.trimmingCharacters(in: .whitespaces).isEmpty }
-        return [
+        var result: [String: JSONValue] = [
             "name": .string(name.trimmingCharacters(in: .whitespacesAndNewlines)), "kind": .string(isCompany ? "company" : "person"),
             "salutation": text(salutation, 50), "title": text(title, 50), "street": text(street, 200), "postalCode": text(postalCode, 10),
             "city": text(city, 100), "phones": .array(numbers.map(\.json)), "emails": .array(addresses.map(\.json)),
             "preferredChannel": JSONValue(preferredChannel?.rawValue), "website": text(website, 300), "notes": text(notes, 4000),
         ]
+        if let lexwareSync { result["lexwareSync"] = .bool(lexwareSync) }
+        return result
     }
 }
 

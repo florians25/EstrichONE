@@ -30,6 +30,32 @@ struct AppModulesTests {
         #expect(AppModules.allOn.isOn(AppModules.helpdesk))
     }
 
+    @Test("Lexware Office: nur an, wenn der Server es meldet; Vorgabe für neue Kunden")
+    func lexware() throws {
+        #expect(!AppModules.allOn.lexwareOn, "älterer Server ohne das Modul: aus")
+        #expect(!AppModules.allOn.lexwareSyncDefault)
+        func decode(enabled: Bool, extra: String) throws -> AppModules {
+            let module = "{\"key\":\"lexware\",\"area\":\"office\",\"title\":\"Lexware Office\",\"description\":\"\",\"enabled\":\(enabled),\"core\":false,\"requires\":[],\"requiredBy\":[]}"
+            return try AppModules.decode(Data("{\"version\":1,\(extra)\"modules\":[\(module)]}".utf8))
+        }
+        let on = try decode(enabled: true, extra: "\"lexwareSyncDefault\":true,")
+        #expect(on.lexwareOn)
+        #expect(on.lexwareSyncDefault)
+        let onWithoutDefault = try decode(enabled: true, extra: "\"lexwareSyncDefault\":false,")
+        #expect(onWithoutDefault.lexwareOn)
+        #expect(!onWithoutDefault.lexwareSyncDefault)
+        let off = try decode(enabled: false, extra: "\"lexwareSyncDefault\":true,")
+        #expect(!off.lexwareOn)
+        #expect(!off.lexwareSyncDefault, "Modul aus: keine Vorgabe")
+        let legacy = try decode(enabled: true, extra: "")
+        #expect(legacy.lexwareOn)
+        #expect(!legacy.lexwareSyncDefault, "Feld fehlt: keine Vorgabe")
+        // Der Stand übersteht das Zwischenspeichern für den Offline-Betrieb.
+        let restored = try JSONDecoder().decode(AppModules.self, from: try JSONEncoder().encode(on))
+        #expect(restored == on)
+        #expect(restored.lexwareSyncDefault)
+    }
+
     @Test("ohne Verbindung gilt der zuletzt gespeicherte Stand, ohne Stand alles an")
     func cachesOffline() async throws {
         let directory = FileManager.default.temporaryDirectory.appending(path: "modules-\(UUID().uuidString)")

@@ -35,6 +35,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.foundation.layout.Box
@@ -137,6 +138,7 @@ fun CustomerScreen(id: String, showBack: Boolean = true) {
     val context = LocalContext.current
     val contact by session.local(id) { session.service.contact(id) }
     val bauakten by session.local(id) { session.service.bauaktenOfCustomer(id) }
+    val modules by session.modules.collectAsState()
     var editing by remember { mutableStateOf(false) }
     var menu by remember { mutableStateOf(false) }
     var removing by remember { mutableStateOf(false) }
@@ -200,6 +202,10 @@ fun CustomerScreen(id: String, showBack: Boolean = true) {
             c.addressLine?.let { address ->
                 item { SectionHeader("Anschrift") }
                 item { SectionCard { RowItem(address, icon = Icons.Outlined.Place, onClick = { Links.route(context, address) }) } }
+            }
+            if (modules.lexwareOn) {
+                item { SectionHeader("Lexware Office") }
+                item { SectionCard { RowItem("Abgleich", value = if (c.lexwareSync) "wird abgeglichen" else "bleibt nur in EstrichONE") } }
             }
             c.notes?.takeIf { it.isNotBlank() }?.let { notes ->
                 item { SectionHeader("Notiz") }
@@ -310,8 +316,12 @@ private fun CustomerSheet(contact: Contact, onDismiss: () -> Unit) {
     var city by remember { mutableStateOf(contact.city ?: "") }
     var notes by remember { mutableStateOf(contact.notes ?: "") }
     var website by remember { mutableStateOf(contact.website ?: "") }
+    // „Mit Lexware Office abgleichen“ nur mit eingeschaltetem Modul; sonst bleibt der Wert unverändert.
+    val modules by session.modules.collectAsState()
+    var lexwareSync by remember { mutableStateOf(contact.lexwareSync) }
     FormSheet("Kunde bearbeiten", null, onDismiss, canSave = name.isNotBlank(), onSave = {
-        session.service.updateContact(contact, mapOf("name" to name, "street" to street, "postalCode" to postalCode, "city" to city, "notes" to notes, "website" to website))
+        session.service.updateContact(contact, mapOf("name" to name, "street" to street, "postalCode" to postalCode, "city" to city, "notes" to notes, "website" to website) +
+            (if (modules.lexwareOn) mapOf("lexwareSync" to lexwareSync) else emptyMap()))
     }) {
         OutlinedTextField(name, { name = it }, label = { Text("Name") }, singleLine = true, modifier = Modifier.fillMaxWidth())
         OutlinedTextField(contact.customerNumber ?: "wird automatisch vergeben", {}, label = { Text("Kundennummer") }, readOnly = true, enabled = false,
@@ -323,6 +333,15 @@ private fun CustomerSheet(contact: Contact, onDismiss: () -> Unit) {
         }
         OutlinedTextField(website, { website = it }, label = { Text("Webseite") }, singleLine = true, modifier = Modifier.fillMaxWidth())
         DictationField(notes, { notes = it }, "Notiz", minLines = 2)
+        if (modules.lexwareOn) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("Mit Lexware Office abgleichen")
+                    Secondary("Aus: Der Kunde bleibt nur in EstrichONE.")
+                }
+                Switch(lexwareSync, { lexwareSync = it })
+            }
+        }
         Secondary("Steuerdaten und Ansprechpartner pflegt das Büro.", Modifier.padding(PaddingValues(top = 4.dp)))
     }
 }

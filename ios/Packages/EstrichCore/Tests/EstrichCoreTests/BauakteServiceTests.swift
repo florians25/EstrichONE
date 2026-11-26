@@ -472,6 +472,43 @@ struct CustomerTests {
         #expect(try await service.bauakten(ofCustomer: id).map(\.id) == [bauakte])
     }
 
+    @Test("Kunde: „Mit Lexware Office abgleichen“ wird offline mitgetragen, ohne Angabe nicht gesendet")
+    func customerLexwareSync() async throws {
+        let directory = FileManager.default.temporaryDirectory.appending(path: "lexware-sync-\(UUID().uuidString)")
+        let key = SymmetricKey(size: .bits256)
+        let store = LocalStore(database: try EncryptedDatabase(url: directory.appending(path: "data.sealed"), key: key, migrations: LocalStore.schema))
+        let service = BauakteService(store: store, files: FileVault(directory: directory.appending(path: "files"), key: key), userId: UUID.v7())
+
+        // Ohne Angabe (Modul aus oder älterer Server): Feld fehlt in der Anlage, der Server setzt seine Vorgabe.
+        let plainId = try await service.saveCustomer(CustomerEdit(name: "Ohne Angabe"))
+        var oneSided = CustomerEdit(name: "Einseitiger Kunde")
+        oneSided.lexwareSync = false
+        let oneSidedId = try await service.saveCustomer(oneSided)
+        var synchronized = CustomerEdit(name: "Abgeglichener Kunde")
+        synchronized.lexwareSync = true
+        let synchronizedId = try await service.saveCustomer(synchronized)
+
+        let queued = try await store.operations().filter { $0.type == "contact.create" }
+        let plainPayload = queued.first { $0.entityId == plainId }?.payload
+        #expect(plainPayload?.object?.keys.contains("lexwareSync") == false)
+        #expect(queued.first { $0.entityId == oneSidedId }?.payload["lexwareSync"]?.bool == false)
+        #expect(queued.first { $0.entityId == synchronizedId }?.payload["lexwareSync"]?.bool == true)
+        let plain = try await service.contact(plainId)
+        let stored = try await service.contact(synchronizedId)
+        #expect(plain?.lexwareSync == false)
+        #expect(stored?.lexwareSync == true, "sofort lokal sichtbar")
+
+        // Bearbeiten: der Stand des Kunden ist vorbelegt; Umschalten wird in die noch ungesendete Anlage übernommen.
+        var switched = CustomerEdit(try #require(try await service.contact(oneSidedId)))
+        #expect(switched.lexwareSync == false)
+        switched.lexwareSync = true
+        try await service.saveCustomer(switched, id: oneSidedId)
+        let changed = try await service.contact(oneSidedId)
+        #expect(changed?.lexwareSync == true)
+        let merged = try await store.operations().first { $0.entityId == oneSidedId }
+        #expect(merged?.payload["lexwareSync"]?.bool == true)
+    }
+
     @Test("Suche über Name und Kundennummer; zuletzt gewählte Kunden zuerst")
     func customers() async throws {
         let server = SimulatedSyncServer()

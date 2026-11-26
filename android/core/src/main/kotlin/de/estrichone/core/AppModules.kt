@@ -14,6 +14,12 @@ data class AppModules(val states: Map<String, Boolean> = emptyMap()) {
     /** Mindestens eines der Module ist an (z. B. Aufgaben oder Mängel). */
     fun anyOn(vararg keys: String): Boolean = keys.any { isOn(it) }
 
+    /** Lexware Office ist nur an, wenn der Server es ausdrücklich meldet (ältere Server kennen das Modul nicht). */
+    val lexwareOn: Boolean get() = states[LEXWARE] == true
+
+    /** Vorbelegung des Schalters „Mit Lexware Office abgleichen“ bei neuen Kunden. */
+    val lexwareSyncDefault: Boolean get() = lexwareOn && states[LEXWARE_SYNC_DEFAULT] == true
+
     /** Für den Zwischenspeicher: „calls=false,planning=true“. */
     fun encode(): String = states.entries.joinToString(",") { "${it.key}=${it.value}" }
 
@@ -36,16 +42,21 @@ data class AppModules(val states: Map<String, Boolean> = emptyMap()) {
         const val HELPDESK = "helpdesk"
         const val FEEDBACK = "feedback"
         const val FUEL = "fuel"
+        const val LEXWARE = "lexware"
+
+        /** Kein Modul: Vorgabe „Mit Lexware Office abgleichen“ für neue Kunden, zusammen mit den Schaltern gespeichert. */
+        const val LEXWARE_SYNC_DEFAULT = "lexwareSyncDefault"
 
         val ALL_ON = AppModules()
 
         /** Zustand aus `GET settings/modules`; Kernmodule sind immer an. */
         fun parse(element: JsonElement?): AppModules {
-            val list = ((element as? JsonObject)?.get("modules") as? JsonArray) ?: return ALL_ON
+            val root = element as? JsonObject
+            val list = (root?.get("modules") as? JsonArray) ?: return ALL_ON
             return AppModules(list.mapNotNull { it as? JsonObject }.mapNotNull { module ->
                 val key = module.str("key") ?: return@mapNotNull null
                 key to (module.bool("core") == true || module.bool("enabled") != false)
-            }.toMap())
+            }.toMap() + (LEXWARE_SYNC_DEFAULT to (root?.bool(LEXWARE_SYNC_DEFAULT) == true)))
         }
 
         /** Gegenstück zu [encode]; unlesbares wird ignoriert. */

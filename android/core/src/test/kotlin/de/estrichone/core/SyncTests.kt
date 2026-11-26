@@ -227,4 +227,28 @@ class SyncTests {
         assertNull(retried.errorCode)
         assertEquals(0, store.retryFailedUploads())
     }
+
+    @Test
+    @DisplayName("Kunde: „Mit Lexware Office abgleichen“ wird offline mitgetragen, ohne Angabe nicht gesendet")
+    fun customerLexwareSync() {
+        val (_, store, service) = demo()
+        val plain = service.createContact(NewCustomer("Ohne Angabe"))
+        val oneSided = service.createContact(NewCustomer("Einseitiger Kunde", lexwareSync = false))
+        val withSync = service.createContact(NewCustomer("Abgeglichener Kunde", lexwareSync = true))
+        val payloads = store.backend.outbox().filter { it.type == "contact.create" }.associate { it.entityId.lowercase() to it.payload }
+        // Ohne Angabe (Modul aus oder älterer Server) fehlt das Feld: Der Server setzt seine Vorgabe.
+        assertFalse(payloads.getValue(plain.lowercase()).containsKey("lexwareSync"))
+        assertEquals(JsonPrimitive(false), payloads.getValue(oneSided.lowercase())["lexwareSync"])
+        assertEquals(JsonPrimitive(true), payloads.getValue(withSync.lowercase())["lexwareSync"])
+        assertFalse(service.contact(plain)!!.lexwareSync)
+        assertFalse(service.contact(oneSided)!!.lexwareSync)
+        assertTrue(service.contact(withSync)!!.lexwareSync, "sofort lokal sichtbar")
+
+        // Bearbeiten: Umschalten erzeugt eine Änderung mit altem und neuem Wert; unveränderte Felder werden nicht gesendet.
+        service.updateContact(service.contact(oneSided)!!, mapOf("name" to "Einseitiger Kunde", "lexwareSync" to true))
+        assertTrue(service.contact(oneSided)!!.lexwareSync)
+        val update = store.backend.outbox().single { it.type == "contact.update" }
+        assertEquals(JsonObject(mapOf("lexwareSync" to JsonPrimitive(true))), update.payload["changes"])
+        assertEquals(JsonObject(mapOf("lexwareSync" to JsonPrimitive(false))), update.payload["base"])
+    }
 }

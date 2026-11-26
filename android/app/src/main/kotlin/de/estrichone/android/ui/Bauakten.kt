@@ -252,6 +252,9 @@ fun NewBauakteSheet(onDismiss: () -> Unit, onCreated: (String) -> Unit) {
     var phone by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
     val contacts = remember { session.service.activeContacts() }
+    // „Mit Lexware Office abgleichen“ nur mit eingeschaltetem Modul, vorbelegt mit der Vorgabe aus den Einstellungen.
+    val modules by session.modules.collectAsState()
+    var lexwareSync by remember(modules) { mutableStateOf(modules.lexwareSyncDefault) }
 
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true), containerColor = tones.canvas) {
         Column(Modifier.verticalScroll(rememberScrollState()).imePadding().padding(horizontal = 20.dp).padding(bottom = 32.dp),
@@ -315,6 +318,15 @@ fun NewBauakteSheet(onDismiss: () -> Unit, onCreated: (String) -> Unit) {
                     Text("Firma", modifier = Modifier.weight(1f))
                     Switch(company, { company = it })
                 }
+                if (modules.lexwareOn) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text("Mit Lexware Office abgleichen")
+                            Secondary("Aus: Der Kunde bleibt nur in EstrichONE.")
+                        }
+                        Switch(lexwareSync, { lexwareSync = it })
+                    }
+                }
                 OutlinedTextField(phone, { phone = it }, label = { Text("Telefon (optional)") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone))
                 Text("Vorhandenen Kunden wählen", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge,
@@ -324,7 +336,8 @@ fun NewBauakteSheet(onDismiss: () -> Unit, onCreated: (String) -> Unit) {
             Button(onClick = {
                 try {
                     val id = session.service.createBauakte(title, street, postalCode, city, template, customerId,
-                        if (newCustomer && customerName.isNotBlank()) NewCustomer(customerName, company, street, postalCode, city, phone) else null)
+                        if (newCustomer && customerName.isNotBlank()) NewCustomer(customerName, company, street, postalCode, city, phone,
+                            lexwareSync = if (modules.lexwareOn) lexwareSync else null) else null)
                     model.message("Bauakte angelegt. Sie wird beim nächsten Abgleich übertragen.")
                     onCreated(id)
                 } catch (e: IllegalArgumentException) {

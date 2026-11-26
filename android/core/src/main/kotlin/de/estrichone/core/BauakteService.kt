@@ -7,10 +7,13 @@ import java.security.MessageDigest
 import java.time.Instant
 import java.time.LocalDate
 
-/** Neuer Kunde bei der Schnellanlage (`contact.create` vor `bauakte.create`). */
+/**
+ * Neuer Kunde bei der Schnellanlage (`contact.create` vor `bauakte.create`). [lexwareSync]: „Mit Lexware Office abgleichen“;
+ * `null` = nicht mitsenden (Modul aus oder älterer Server), dann setzt der Server seine Vorgabe.
+ */
 data class NewCustomer(
     val name: String, val isCompany: Boolean = false, val street: String? = null, val postalCode: String? = null, val city: String? = null,
-    val phone: String? = null, val email: String? = null,
+    val phone: String? = null, val email: String? = null, val lexwareSync: Boolean? = null,
 )
 
 /**
@@ -272,6 +275,7 @@ class BauakteService(val store: LocalStore, private val files: FileVault, privat
         val payload = json(
             "name" to customer.name.trim(), "kind" to if (customer.isCompany) "company" else "person", "street" to customer.street.clean(),
             "postalCode" to customer.postalCode.clean(), "city" to customer.city.clean(), "phone" to customer.phone.clean(), "email" to customer.email.clean(),
+            *listOfNotNull(customer.lexwareSync?.let { "lexwareSync" to it }).toTypedArray(),
         )
         store.create(EntityTypes.CONTACT, id, payload, payload)
         return id
