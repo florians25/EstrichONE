@@ -56,6 +56,8 @@ public struct Bauakte: Identifiable, Equatable, Sendable {
     /// Ansprechpartner vor Ort (z. B. Polier), vom Büro gepflegt.
     public let siteContactName: String?
     public let siteContactPhone: String?
+    /// „Hinweise und Zugang“ (Sync-Feld `siteNotes`): Zufahrt, Schlüssel, Strom, Wasser, Pumpenstandort, Behinderungen.
+    public let siteNotes: String?
     /// Begründung, falls storniert.
     public let cancellationReason: String?
     /// Werte des Bauvorhabens (Fläche, Estrichart, Aufbau …).
@@ -90,6 +92,7 @@ public struct Bauakte: Identifiable, Equatable, Sendable {
         templateKey = data["templateKey"]?.string
         siteContactName = data["siteContactName"]?.string
         siteContactPhone = data["siteContactPhone"]?.string
+        siteNotes = data["siteNotes"]?.string
         cancellationReason = data["cancellationReason"]?.string
         project = BauakteProject(data["project"])
         projectData = data["project"]?.object ?? [:]
@@ -111,6 +114,13 @@ public struct Bauakte: Identifiable, Equatable, Sendable {
     }
 
     public var hasLocation: Bool { latitude != nil && longitude != nil }
+
+    /// Höchstlänge von „Hinweise und Zugang“ (wie auf dem Server).
+    public static let maxSiteNotesLength = 3000
+
+    /// Text des einen Blocks „Hinweise und Zugang“. Ältere Server liefern „Zugang / Besonderheiten“ noch getrennt
+    /// (`project.siteAccess`); dann stehen beide Texte zusammen, ohne Doppelung.
+    public var siteNotesAndAccess: String? { FreeText.merged(siteNotes, project.siteAccess) }
 
     /// „Keine Erstbegehung erforderlich (Max Huber, 10.11.2026, Bestandsgebäude)“ – leere Angaben entfallen; `nil` ohne Vermerk.
     public var initialInspectionWaiverText: String? {

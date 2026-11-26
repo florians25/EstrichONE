@@ -541,13 +541,17 @@ struct BauakteDetailView: View {
         var tint: Color = Theme.accent
     }
 
-    /// Ein zusammenhängender Block direkt nach den Kennwerten: Beschreibung, Hinweise und Behinderungen, Zugang und
-    /// Besonderheiten (und weitere mehrzeilige Felder des Büros), angeheftete Notizen, Hinweise der Disposition für heute.
+    /// Ein zusammenhängender Block direkt nach den Kennwerten: Beschreibung, Hinweise und Zugang (ein Block, auch wenn ein
+    /// älterer Server den Zugang noch getrennt liefert), weitere mehrzeilige Felder des Büros, angeheftete Notizen,
+    /// Hinweise der Disposition für heute.
     private func siteNoteItems(_ content: BauakteContent) -> [SiteNote] {
         var list: [SiteNote] = []
         let description = FreeText.clean(content.bauakte.description)
         if let description {
             list.append(SiteNote(id: "description", title: "Beschreibung", text: description, symbol: "doc.text", tint: Theme.textSecondary))
+        }
+        if let notes = content.bauakte.siteNotesAndAccess {
+            list.append(SiteNote(id: "siteNotesAndAccess", title: "Hinweise und Zugang", text: notes, symbol: "exclamationmark.triangle", tint: Theme.warning))
         }
         list += ProjectSection.freeTexts(content.bauakte, schema: schema).filter { $0.text != description }.map {
             SiteNote(id: "field-\($0.id)", title: $0.title, text: $0.text, symbol: $0.symbol)

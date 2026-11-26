@@ -1,7 +1,7 @@
 import EstrichCore
 import SwiftUI
 
-/// Freitext (Beschreibung, Zugang und Besonderheiten, Notizen, Hinweise der Disposition) als gut lesbarer Textblock:
+/// Freitext (Beschreibung, Hinweise und Zugang, Notizen, Hinweise der Disposition) als gut lesbarer Textblock:
 /// Überschrift mit Symbol, Zeilenumbrüche bleiben erhalten, Links, Telefonnummern und E-Mail-Adressen sind antippbar,
 /// lange Texte zunächst gekürzt mit „Mehr anzeigen“. Text lässt sich markieren und kopieren.
 struct FreeTextBlock: View {

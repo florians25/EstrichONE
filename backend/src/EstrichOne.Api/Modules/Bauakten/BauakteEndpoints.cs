@@ -53,7 +53,8 @@ public sealed record CreateBauakteRequest(
     BauakteStatus? Status = null,
     BauakteProject? Project = null,
     DateOnly? PlannedStart = null,
-    DateOnly? PlannedEnd = null);
+    DateOnly? PlannedEnd = null,
+    [property: MaxLength(Bauakte.MaxSiteNotesLength)] string? SiteNotes = null);
 
 /// <summary>Ersetzt alle bearbeitbaren Felder. Version per <c>If-Match</c>.</summary>
 public sealed record UpdateBauakteRequest(
@@ -277,10 +278,15 @@ internal static class BauakteEndpoints
             return Validation(projectError, "INVALID_PROJECT");
         }
 
+        if (Bauakte.MergeSiteAccess(request.SiteNotes, request.Project?.SiteAccess) is { Length: > Bauakte.MaxSiteNotesLength })
+        {
+            return Validation($"Hinweise und Zugang: höchstens {Bauakte.MaxSiteNotesLength} Zeichen.", "INVALID_PROJECT");
+        }
+
         var (bauakte, outcome) = await commands.CreateAsync(new NewBauakte(request.Id, request.Title, request.Street,
             request.PostalCode, request.City, request.Latitude, request.Longitude, request.Description, request.CustomerId,
             request.TemplateKey, request.Status == BauakteStatus.Inquiry ? BauakteStatus.Inquiry : BauakteStatus.Planned,
-            request.Project, request.PlannedStart, request.PlannedEnd), cancellationToken);
+            request.Project, request.PlannedStart, request.PlannedEnd, request.SiteNotes), cancellationToken);
 
         switch (outcome)
         {

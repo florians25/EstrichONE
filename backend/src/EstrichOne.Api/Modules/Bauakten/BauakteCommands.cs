@@ -24,7 +24,7 @@ public sealed record NewBauakte(
     Guid Id, string Title, string? Street = null, string? PostalCode = null, string? City = null, double? Latitude = null,
     double? Longitude = null, string? Description = null, Guid? CustomerId = null, string? TemplateKey = null,
     BauakteStatus InitialStatus = BauakteStatus.Planned, BauakteProject? Project = null, DateOnly? PlannedStart = null,
-    DateOnly? PlannedEnd = null);
+    DateOnly? PlannedEnd = null, string? SiteNotes = null);
 
 /// <summary>Anlage einer Bauakte – gemeinsam für REST-API und Synchronisation.</summary>
 public sealed class BauakteCommands(EstrichOneDbContext db, ICurrentUser currentUser, BauakteNumberGenerator numbers, IBauakteHistory history)
@@ -62,6 +62,7 @@ public sealed class BauakteCommands(EstrichOneDbContext db, ICurrentUser current
         bauakte.Describe(request.Description);
         bauakte.AssignCustomer(request.CustomerId);
         bauakte.ApplyTemplate(request.TemplateKey);
+        bauakte.ChangeSiteNotes(request.SiteNotes);
         if (request.Project is { } project)
         {
             bauakte.ChangeProject(project);

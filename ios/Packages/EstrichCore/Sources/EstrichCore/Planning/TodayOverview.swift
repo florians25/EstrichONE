@@ -119,7 +119,7 @@ extension BauakteProject {
     }
 }
 
-/// Freitexte (Beschreibung, Zugang und Besonderheiten, Notizen): Aufbereitung für die Anzeige.
+/// Freitexte (Beschreibung, Hinweise und Zugang, Notizen): Aufbereitung für die Anzeige.
 public enum FreeText {
     /// Leerzeichen am Rand weg, mehr als eine Leerzeile zusammengefasst; `nil` bei leerem Text. Zeilenumbrüche bleiben.
     public static func clean(_ text: String?) -> String? {
@@ -127,6 +127,14 @@ public enum FreeText {
         var result = text.replacingOccurrences(of: "\r\n", with: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
         while result.contains("\n\n\n") { result = result.replacingOccurrences(of: "\n\n\n", with: "\n\n") }
         return result.isEmpty ? nil : result
+    }
+
+    /// Hinweise und früheres Feld „Zugang / Besonderheiten“ als ein Text: mit Leerzeile getrennt; steht der Zugang schon
+    /// wortgleich in den Hinweisen, bleibt es bei den Hinweisen. `nil`, wenn beides leer ist.
+    public static func merged(_ notes: String?, _ access: String?) -> String? {
+        guard let access = clean(access) else { return clean(notes) }
+        guard let notes = clean(notes) else { return access }
+        return notes.contains(access) ? notes : notes + "\n\n" + access
     }
 
     /// Lang genug für „Mehr anzeigen“: mehr Zeilen als `lines` oder (bei Fließtext) deutlich mehr als `lines` Zeilen à 45 Zeichen.

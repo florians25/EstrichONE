@@ -358,12 +358,11 @@ struct LiveServerTests {
         #expect(synced.syncState == .synced && synced.project == project && synced.plannedStart == "2026-11-02" && synced.plannedEnd == "2026-11-06")
 
         project.priority = .urgent
-        project.siteAccess = "Zufahrt über Hof"
-        try await service.updateProject(project, of: id)
+        #expect(try await service.updateBasics(of: synced, siteNotes: "Zufahrt über Hof", project: project.json))
         #expect(await device.engine.synchronize() == .completed)
         #expect(try await device.store.summary().isSettled)
         synced = try #require(try await service.bauakte(id))
-        #expect(synced.project == project)
+        #expect(synced.project == project && synced.siteNotes == "Zufahrt über Hof" && synced.siteNotesAndAccess == "Zufahrt über Hof")
     }
 
     @Test("Abnahmeprotokoll über den echten Server: Mangel mit Frist, beide Unterschriften, PDF; zweites Protokoll mit Kundenlink")

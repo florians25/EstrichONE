@@ -9,6 +9,8 @@ public struct NewBauakte: Sendable {
     public var latitude: Double?
     public var longitude: Double?
     public var description: String?
+    /// „Hinweise und Zugang“ (höchstens 3000 Zeichen).
+    public var siteNotes: String?
     public var customerId: UUID?
     public var template: BauakteTemplate
     /// Werte des Bauvorhabens (Fläche, Estrichart, Aufbau …).
@@ -22,7 +24,8 @@ public struct NewBauakte: Sendable {
     public init(title: String, street: String? = nil, postalCode: String? = nil, city: String? = nil, latitude: Double? = nil,
                 longitude: Double? = nil, description: String? = nil, customerId: UUID? = nil, template: BauakteTemplate = .standard,
                 project: BauakteProject = BauakteProject(), plannedStart: String? = nil, plannedEnd: String? = nil,
-                projectData: [String: JSONValue]? = nil) {
+                projectData: [String: JSONValue]? = nil, siteNotes: String? = nil) {
+        self.siteNotes = siteNotes
         self.projectData = projectData
         self.project = project
         self.plannedStart = plannedStart
@@ -174,6 +177,7 @@ public struct BauakteService: Sendable {
             "customerId": JSONValue(input.customerId), "templateKey": .string(input.template.rawValue),
             "project": input.projectData.map { JSONValue.object($0) } ?? (input.project.isEmpty ? .null : input.project.json),
             "plannedStart": JSONValue(input.plannedStart), "plannedEnd": JSONValue(input.plannedEnd),
+            "siteNotes": JSONValue(FreeText.clean(input.siteNotes).map { String($0.prefix(Bauakte.maxSiteNotesLength)) }),
         ]
         let timestamp = JSONValue.string(APIDate.format(now()))
         let local = JSONValue.object(payload).merging([
@@ -211,6 +215,32 @@ public struct BauakteService: Sendable {
         } catch {
             throw .from(error)
         }
+    }
+
+    /// Basisdaten in einem Vorgang ändern: „Hinweise und Zugang“ (`siteNotes`) und, falls geändert, die Werte des
+    /// Bauvorhabens (`project` als ganzes Objekt, sonst `nil`). Wird der Text geändert, entfällt ein noch getrennt
+    /// gespeichertes „Zugang / Besonderheiten“ (ältere Server), damit nichts doppelt steht. Ohne Änderung geschieht
+    /// nichts (Ergebnis `false`).
+    @discardableResult
+    public func updateBasics(of bauakte: Bauakte, siteNotes: String?, project: JSONValue? = nil) async throws(BauakteError) -> Bool {
+        let notes = FreeText.clean(siteNotes).map { String($0.prefix(Bauakte.maxSiteNotesLength)) }
+        var changes: [String: JSONValue] = [:]
+        if let project { changes["project"] = project }
+        if notes != bauakte.siteNotesAndAccess {
+            changes["siteNotes"] = JSONValue(notes)
+            if bauakte.project.siteAccess != nil {
+                var data = (project ?? .object(bauakte.projectData)).object ?? [:]
+                data["siteAccess"] = .null
+                changes["project"] = .object(data)
+            }
+        }
+        guard !changes.isEmpty else { return false }
+        do {
+            try await store.update(.bauakte, id: bauakte.id, changes: changes)
+        } catch {
+            throw .from(error)
+        }
+        return true
     }
 
     /// „Erstbegehung nicht erforderlich“ vermerken (Begründung optional, höchstens 500 Zeichen). Offline möglich;

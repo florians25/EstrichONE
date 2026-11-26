@@ -82,6 +82,8 @@ public struct BauakteProject: Equatable, Sendable {
     /// z. B. „KG, EG, OG“.
     public var floors: String?
     public var priority: Priority?
+    /// Veraltet: früheres Feld „Zugang / Besonderheiten“. Neue Server liefern es leer, der Text steht in
+    /// `Bauakte.siteNotes` („Hinweise und Zugang“). Nur noch gelesen, um ältere Server anzuzeigen.
     public var siteAccess: String?
     public var waterOnSite: Bool?
     public var powerOnSite: Bool?

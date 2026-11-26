@@ -117,8 +117,9 @@ public sealed class SiteNotesAndAccessTests(PostgresFixture postgres) : IAsyncLi
     {
         using var worker = await _factory.CreateClientAsAsync("baustelle", StandardRoles.SiteWorkerId);
         var id = Guid.CreateVersion7();
-        var created = (await worker.PushAsync(SyncClient.Op("bauakte.create", id, new { title = "Anbau", project = new { siteAccess = "Schlüssel beim Nachbarn" } })))
-            .Results.Single();
+        // Anlage: neue Apps senden siteNotes, ältere project.siteAccess; beides zusammen wird nicht doppelt gespeichert.
+        var created = (await worker.PushAsync(SyncClient.Op("bauakte.create", id,
+            new { title = "Anbau", siteNotes = "Schlüssel beim Nachbarn", project = new { siteAccess = "Schlüssel beim Nachbarn" } }))).Results.Single();
         created.Status.ShouldBe(SyncOperationStatus.Applied);
         created.Entity!["siteNotes"]!.GetValue<string>().ShouldBe("Schlüssel beim Nachbarn");
         created.Entity["project"]!["siteAccess"].ShouldBeNull();

@@ -57,12 +57,20 @@ internal sealed class BauakteSync(
             throw new SyncValidationException("Das Bauvorhaben braucht eine Bezeichnung.");
         }
 
+        var siteNotes = SyncPayload.Read<string>(p, "siteNotes");
+        var newProject = await ReadProjectAsync(p["project"], cancellationToken);
+        if (Bauakte.MergeSiteAccess(siteNotes, newProject?.SiteAccess) is { Length: > Bauakte.MaxSiteNotesLength })
+        {
+            throw new SyncValidationException($"Hinweise und Zugang: höchstens {Bauakte.MaxSiteNotesLength} Zeichen.");
+        }
+
         var (bauakte, outcome) = await commands.CreateAsync(new NewBauakte(op.EntityId, title,
             SyncPayload.Read<string>(p, "street"), SyncPayload.Read<string>(p, "postalCode"), SyncPayload.Read<string>(p, "city"),
             SyncPayload.Read<double?>(p, "latitude"), SyncPayload.Read<double?>(p, "longitude"), SyncPayload.Read<string>(p, "description"),
             SyncPayload.Read<Guid?>(p, "customerId"), SyncPayload.Read<string>(p, "templateKey"),
-            Project: await ReadProjectAsync(p["project"], cancellationToken),
-            PlannedStart: SyncPayload.Read<DateOnly?>(p, "plannedStart"), PlannedEnd: SyncPayload.Read<DateOnly?>(p, "plannedEnd")), cancellationToken);
+            Project: newProject,
+            PlannedStart: SyncPayload.Read<DateOnly?>(p, "plannedStart"), PlannedEnd: SyncPayload.Read<DateOnly?>(p, "plannedEnd"),
+            SiteNotes: siteNotes), cancellationToken);
 
         // Offline angelegt und gleich „Erstbegehung nicht erforderlich“ vermerkt: Die App führt das in der Anlage mit.
         if (outcome == CreateBauakteOutcome.Created && SyncPayload.Read<bool?>(p, "initialInspectionWaived") == true)

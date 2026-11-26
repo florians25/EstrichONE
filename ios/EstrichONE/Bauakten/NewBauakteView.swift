@@ -247,6 +247,7 @@ struct NewBauakteView: View {
     /// Fläche, Estrich, Aufbau, vor Ort, Zeitraum – alles optional.
     @ViewBuilder
     private var projectFields: some View {
+        SiteNotesSection(text: Binding { input.siteNotes ?? "" } set: { input.siteNotes = $0.isEmpty ? nil : $0 })
         if let schema {
             SchemaProjectFields(schema: schema, lists: lists, values: Binding { input.projectData ?? [:] } set: { input.projectData = $0 })
             PlannedPeriodSection(plannedStart: $input.plannedStart, plannedEnd: $input.plannedEnd)

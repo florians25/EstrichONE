@@ -706,12 +706,12 @@ struct HomeView: View {
             visits = known
         }
 
-        // Leistung, Zugang und angeheftete Notizen der heutigen Baustellen; Chat aus der zuletzt geladenen Liste.
+        // Leistung, Hinweise und Zugang sowie angeheftete Notizen der heutigen Baustellen; Chat aus der zuletzt geladenen Liste.
         var siteExtras: [UUID: TodaySiteExtras] = [:]
         for id in Set(jobs.map(\.bauakteId)) {
             guard let bauakte = bauakten[id] else { continue }
             let pinned = ((try? await service.notes(of: id)) ?? []).filter(\.isPinned).compactMap { FreeText.clean($0.text) }
-            siteExtras[id] = TodaySiteExtras(facts: bauakte.project.keyFactsText, access: FreeText.clean(bauakte.project.siteAccess),
+            siteExtras[id] = TodaySiteExtras(facts: bauakte.project.keyFactsText, access: bauakte.siteNotesAndAccess,
                                          pinned: pinned, chat: extras[id]?.chat)
         }
         extras = siteExtras

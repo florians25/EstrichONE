@@ -54,8 +54,6 @@ struct ProjectFields: View {
         Section("Vor Ort") {
             Toggle("Wasser vorhanden", isOn: flag(\.waterOnSite))
             Toggle("Strom vorhanden", isOn: flag(\.powerOnSite))
-            FreeTextEditor(title: "Zugang und Besonderheiten", prompt: "Pumpenstandort, Zufahrt, Etage, Schlüssel",
-                           text: text(\.siteAccess), identifier: "projectSiteAccessField")
         }
         if let plannedStart, let plannedEnd {
             PlannedPeriodSection(plannedStart: plannedStart, plannedEnd: plannedEnd)
@@ -137,7 +135,7 @@ private struct UnitField<Field: View>: View {
 }
 
 /// Abschnitt „Basisdaten“ in der Bauakte: alle Werte des Bauvorhabens und der geplante Zeitraum als Zeilen
-/// (Bezeichnung links, Wert rechts) mit Symbolen; Freitexte (z. B. Zugang und Besonderheiten) als eigene, gut lesbare
+/// (Bezeichnung links, Wert rechts) mit Symbolen; eigene mehrzeilige Felder des Büros als gut lesbare
 /// Textblöcke darunter. Ohne Werte ein Leerzustand mit „Basisdaten erfassen“.
 struct ProjectSection: View {
     let bauakte: Bauakte
@@ -179,7 +177,7 @@ struct ProjectSection: View {
         .accessibilityIdentifier("projectSection")
     }
 
-    /// Freitext der Basisdaten (Zugang und Besonderheiten, eigene mehrzeilige Felder des Büros).
+    /// Freitext der Basisdaten (eigene mehrzeilige Felder des Büros).
     struct FreeTextItem: Identifiable, Equatable {
         let id: String
         let title: String
@@ -187,17 +185,12 @@ struct ProjectSection: View {
         let symbol: String
     }
 
-    /// Mehrzeilige Felder: nach dem Schema alle Felder vom Typ „Textbereich“, ohne Schema „Zugang und Besonderheiten“.
+    /// Eigene mehrzeilige Felder des Büros: nach dem Schema alle Felder vom Typ „Textbereich“.
     static func freeTexts(_ bauakte: Bauakte, schema: FormSchema?) -> [FreeTextItem] {
-        guard let schema else {
-            return FreeText.clean(bauakte.project.siteAccess).map {
-                [FreeTextItem(id: "siteAccess", title: "Zugang und Besonderheiten", text: $0, symbol: "key")]
-            } ?? []
-        }
+        guard let schema else { return [] }
         return schema.fields.filter { $0.type == .textarea }.compactMap { field in
             FreeText.clean(FormSchema.value(field, in: bauakte.projectData).string).map {
-                FreeTextItem(id: field.key, title: field.label.replacingOccurrences(of: " / ", with: " und "), text: $0,
-                             symbol: field.key == "siteAccess" ? "key" : "text.alignleft")
+                FreeTextItem(id: field.key, title: field.label.replacingOccurrences(of: " / ", with: " und "), text: $0, symbol: "text.alignleft")
             }
         }
     }
@@ -237,7 +230,7 @@ struct ProjectSection: View {
     }
 }
 
-/// Werte des Bauvorhabens bearbeiten (offline, `bauakte.update` mit `project`).
+/// „Hinweise und Zugang“ und die Werte des Bauvorhabens bearbeiten (offline, `bauakte.update` mit `siteNotes` und `project`).
 struct EditProjectView: View {
     let bauakte: Bauakte
     var schema: FormSchema?
@@ -247,6 +240,7 @@ struct EditProjectView: View {
     @Environment(AppModel.self) private var model
     @State private var project = BauakteProject()
     @State private var values: [String: JSONValue] = [:]
+    @State private var siteNotes = ""
     @State private var error: String?
     @State private var loaded = false
 
@@ -256,6 +250,7 @@ struct EditProjectView: View {
                 if let error {
                     Section { StatusMessage(kind: .error, text: error) }
                 }
+                SiteNotesSection(text: $siteNotes)
                 if let schema {
                     SchemaProjectFields(schema: schema, lists: lists, values: $values)
                 } else {
@@ -274,6 +269,7 @@ struct EditProjectView: View {
                 if !loaded {
                     project = bauakte.project
                     values = bauakte.projectData
+                    siteNotes = bauakte.siteNotesAndAccess ?? ""
                     loaded = true
                 }
             }
@@ -289,12 +285,10 @@ struct EditProjectView: View {
                     error = "Bitte noch angeben: \(missing.joined(separator: ", "))."
                     return
                 }
-                if values != bauakte.projectData {
-                    try await service.updateProject(json: values, of: bauakte.id)
+                if try await service.updateBasics(of: bauakte, siteNotes: siteNotes, project: values != bauakte.projectData ? .object(values) : nil) {
                     model.active?.sync?.localChangeMade()
                 }
-            } else if project != bauakte.project {
-                try await service.updateProject(project, of: bauakte.id)
+            } else if try await service.updateBasics(of: bauakte, siteNotes: siteNotes, project: project != bauakte.project ? project.json : nil) {
                 model.active?.sync?.localChangeMade()
             }
             onDone()
@@ -304,6 +298,21 @@ struct EditProjectView: View {
     }
 }
 
+
+/// „Hinweise und Zugang“ der Bauakte: ein Freitext für alles, was vor Ort wichtig ist (Anlage und Bearbeiten).
+struct SiteNotesSection: View {
+    @Binding var text: String
+
+    var body: some View {
+        Section {
+            FreeTextEditor(title: "Hinweise und Zugang", prompt: "Zufahrt, Schlüssel, Strom, Wasser, Pumpenstandort, Behinderungen",
+                           text: $text, identifier: "siteNotesField")
+                .onChange(of: text) { _, value in
+                    if value.count > Bauakte.maxSiteNotesLength { text = String(value.prefix(Bauakte.maxSiteNotesLength)) }
+                }
+        }
+    }
+}
 
 /// Basisdaten nach dem Formular-Schema des Büros: je Gruppe ein Abschnitt, Felder in der Reihenfolge des Schemas,
 /// Auswahl aus den Wertelisten (inaktive nur, wenn schon gesetzt), Pflichtfelder markiert.
@@ -421,7 +430,6 @@ extension FormSchema.Field {
         case "waterOnSite": "drop"
         case "powerOnSite": "bolt"
         case "priority": "flag"
-        case "siteAccess": "car"
         default: "list.bullet"
         }
     }
