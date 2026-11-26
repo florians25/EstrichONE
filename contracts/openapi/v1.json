@@ -51708,7 +51708,7 @@
             ]
           },
           "siteNotes": {
-            "maxLength": 2000,
+            "maxLength": 3000,
             "type": [
               "null",
               "string"
