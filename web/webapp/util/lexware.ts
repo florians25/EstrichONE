@@ -122,6 +122,14 @@ export interface LexwareVoucher {
 export interface LexwareBauakteCustomer { id: string; name: string; lexwareContactId: string | null; syncEnabled: boolean }
 export interface BauakteLexware {
 	bauakteId: string; configured: boolean; canAssign: boolean; customer: LexwareBauakteCustomer | null; vouchers: LexwareVoucher[]; syncError: string | null;
+	/** Verknüpfter Lexware-Kontakt des Kunden (aus dem zuletzt abgeglichenen Stand); fehlt ohne Verknüpfung. */
+	contact?: LexwareBauakteContact | null;
+	/** Summen der zugeordneten Belege als Textzeile. */
+	summary?: string | null;
+}
+export interface LexwareBauakteContact {
+	lexwareContactId: string; name: string | null; number: string | null; url: string; street: string | null; postalCode: string | null; city: string | null;
+	email: string | null; differingFields: string[]; sync: LexwareSyncState;
 }
 /** Beleg aus der Belegliste von Lexware Office (Kunde, Zuordnungsdialog). */
 export interface LexwareVoucherItem {
@@ -361,7 +369,7 @@ export function deviationSummary(fields: LexwareDeviationField[]): string {
 }
 
 /** Auswahl im Dialog als Anfrage: nur entschiedene Felder; ohne Entscheidung nichts. */
-export function resolveRequest(choices: Record<string, DeviationSource | "" | undefined>): { fields: Record<string, DeviationSource> } | null {
+export function resolveRequest(choices: Record<string, DeviationSource | "open" | "" | undefined>): { fields: Record<string, DeviationSource> } | null {
 	const fields = Object.fromEntries(Object.entries(choices).filter(([, source]) => source === "estrichOne" || source === "lexware")) as Record<string, DeviationSource>;
 	return Object.keys(fields).length > 0 ? { fields } : null;
 }
@@ -385,4 +393,80 @@ export function voucherPdfPath(owner: { customerId: string; lexwareId: string } 
 /** Titel der PDF-Anzeige, z. B. „Rechnung RE1042“. */
 export function voucherTitle(v: { type: string; number: string | null }): string {
 	return v.number ? `${voucherTypeText(v.type)} ${v.number}` : voucherTypeText(v.type);
+}
+
+// ---------- Lexware Office in der Übersicht der Bauakte ----------
+
+export interface BauakteLexwareBlock {
+	/** Block zeigen: Kunde verknüpft. */
+	linked: boolean;
+	/** Dezenter Hinweis statt Block: Kunde vorhanden, nicht verknüpft, Nutzer darf verknüpfen. */
+	unlinkedHint: boolean;
+	customerId: string;
+	name: string; number: string; address: string; addressDiffers: boolean; email: string; emailDiffers: boolean; nameDiffers: boolean;
+	stateText: string; stateState: State; stateHint: string; summary: string; url: string;
+}
+
+const DIFFERS = "weicht von EstrichONE ab";
+export const differsText = (differs: boolean) => (differs ? DIFFERS : "");
+
+/** Kompakter Block „Lexware Office“ in der Übersicht der Bauakte (nur Anzeige, ohne Aufruf bei Lexware Office). */
+export function bauakteLexwareBlock(data: BauakteLexware | null, at: (iso: string) => string): BauakteLexwareBlock {
+	const empty: BauakteLexwareBlock = {
+		linked: false, unlinkedHint: false, customerId: data?.customer?.id ?? "", name: "", number: "", address: "", addressDiffers: false, email: "", emailDiffers: false,
+		nameDiffers: false, stateText: "", stateState: "None", stateHint: "", summary: "", url: "",
+	};
+	const c = data?.contact;
+	if (!data || !c) return { ...empty, unlinkedHint: !!data?.customer && data.configured && data.canAssign };
+	const differs = (...fields: string[]) => fields.some((f) => c.differingFields.includes(f));
+	const state = changeSyncState(c.sync, at);
+	const quiet = !state.text && c.sync.state === "disabled";
+	return {
+		...empty, linked: true, name: c.name ?? "Lexware-Kontakt", number: c.number ?? "", address: placeText(c), addressDiffers: differs("street", "postalCode", "city"),
+		email: c.email ?? "", emailDiffers: differs("email"), nameDiffers: differs("name"),
+		stateText: quiet ? "Abgleich ausgeschaltet" : state.text, stateState: state.state,
+		stateHint: c.sync.state === "synced" || c.sync.state === "deviations" ? (c.sync.syncedAt ? `Zuletzt abgeglichen: ${at(c.sync.syncedAt)}` : "") : state.hint,
+		summary: data.summary || voucherSummary(data.vouchers) || "Dieser Bauakte ist noch kein Beleg zugeordnet.", url: c.url,
+	};
+}
+
+// ---------- Prüfung beim Anlegen eines Kunden ----------
+
+export interface LexwareContactCheck { checked: boolean; message: string | null; candidates: LexwareContactCandidate[]; canImport: boolean }
+
+export const LEXWARE_EXISTS_WARNING = "Achtung: Dieser Kunde ist bereits in Lexware Office vorhanden.";
+export const LEXWARE_CHECK_UNAVAILABLE = "Die Prüfung in Lexware Office ist derzeit nicht möglich.";
+
+/** Die Prüfung läuft mit eingeschaltetem Modul und hinterlegtem Schlüssel, unabhängig vom Schalter „Mit Lexware Office abgleichen“. */
+export function lexwareCheckActive(modules: Record<string, boolean | undefined>, status: Pick<LexwareStatus, "configured"> | null | undefined): boolean {
+	return modules.lexware === true && status?.configured === true;
+}
+
+/** Eingaben des Dialogs „Neuer Kunde“ als Anfrage; ohne Name und E-Mail-Adresse wird nicht geprüft. */
+export function lexwareCheckRequest(draft: { kind: string; name: string; street?: string | null; postalCode?: string | null; city?: string | null; phones?: string[]; emails?: string[]; vatId?: string | null }):
+Record<string, string | null> | null {
+	const text = (value: string | null | undefined) => value?.trim() || null;
+	const name = text(draft.name);
+	const email = text(draft.emails?.[0]);
+	if ((name?.length ?? 0) < 3 && !email) return null;
+	return { name, kind: draft.kind === "company" ? "company" : "person", email, phone: text(draft.phones?.[0]), street: text(draft.street),
+		postalCode: text(draft.postalCode), city: text(draft.city), vatId: text(draft.vatId) };
+}
+
+/** Warnung über den Treffern, in Einzahl und Mehrzahl. */
+export function lexwareCheckText(check: LexwareContactCheck | null): { warning: string; note: string } {
+	if (!check) return { warning: "", note: "" };
+	if (!check.checked) return { warning: "", note: check.message ? `${check.message} Der Kunde lässt sich trotzdem anlegen und erscheint später im Kundenabgleich.` : "" };
+	const n = check.candidates.length;
+	return { warning: n === 0 ? "" : n === 1 ? LEXWARE_EXISTS_WARNING : `${LEXWARE_EXISTS_WARNING} Es gibt ${n} passende Kontakte.`, note: "" };
+}
+
+/** Zeile zu einem Treffer: Kundennummer und Anschrift. */
+export function lexwareCandidateLine(c: LexwareContactSummary): string {
+	return [c.customerNumber ? `Kundennummer ${c.customerNumber}` : "ohne Kundennummer", placeText(c), c.email].filter(Boolean).join(", ");
+}
+
+/** Was mit einem Treffer möglich ist: übernehmen, auf den vorhandenen Kunden verweisen oder nur warnen. */
+export function lexwareCandidateAction(c: LexwareContactSummary, canImport: boolean): "import" | "linked" | "none" {
+	return c.linkedContactId ? "linked" : canImport ? "import" : "none";
 }

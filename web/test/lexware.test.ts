@@ -3,7 +3,8 @@ import {
   assignedText, createAnywayQuestion, dueLabel, euro, lastTestText, lexwareVisible, linkText, matchLabel, placeText, reconciliationFigures, syncFieldVisible,
   syncInitial, syncStateText, uniquePairs, voucherNumber, voucherStatus, voucherSummary, voucherTypeText, type LexwareReconciliation,
   changeSyncHelp, changeSyncOptions, changeSyncStand, changeSyncState, deviationSummary, deviationValue, pdfAvailable, PDF_DRAFT_HINT, resolveRequest,
-  voucherPdfPath, voucherTitle, type LexwareSyncState,
+  voucherPdfPath, voucherTitle, type LexwareSyncState, bauakteLexwareBlock, type BauakteLexware,
+  lexwareCandidateAction, lexwareCandidateLine, lexwareCheckActive, lexwareCheckRequest, lexwareCheckText, LEXWARE_EXISTS_WARNING,
 } from '../webapp/util/lexware';
 import { adminAreas, matchesArea } from '../webapp/util/adminCatalog';
 import { routes } from '../webapp/util/routes';
@@ -254,5 +255,74 @@ describe('Lexware Office: Beleg als PDF', () => {
     expect(voucherPdfPath({ bauakteId: 'b1', linkId: 'l1' })).toBe('bauakten/b1/lexware/vouchers/l1/document');
     expect(voucherTitle({ type: 'invoice', number: 'RE1042' })).toBe('Rechnung RE1042');
     expect(voucherTitle({ type: 'quotation', number: null })).toBe('Angebot');
+  });
+});
+
+describe('Lexware Office: Block in der Übersicht der Bauakte', () => {
+  const at = (iso: string) => `am ${iso.slice(0, 10)}`;
+  const base: BauakteLexware = { bauakteId: 'b1', configured: true, canAssign: true, customer: { id: 'k1', name: 'Huber', lexwareContactId: null, syncEnabled: true }, vouchers: [], syncError: null };
+  const contact = {
+    lexwareContactId: 'l1', name: 'HUBER BAU GMBH', number: '10001', url: 'https://app.lexware.de/permalink/contacts/view/l1', street: 'Postfach 7', postalCode: '83001',
+    city: 'Rosenheim', email: 'rechnung@huber.example', differingFields: ['name', 'email'],
+    sync: { state: 'deviations', syncedAt: '2026-11-26T10:00:00Z', error: null, deviations: [{ field: 'name', label: 'Name', estrichOne: 'a', lexware: 'b' }, { field: 'email', label: 'E-Mail-Adresse', estrichOne: 'a', lexware: 'b' }] },
+  };
+
+  it('ohne Verknüpfung kein Block, höchstens ein Hinweis für Berechtigte', () => {
+    expect(bauakteLexwareBlock(null, at)).toMatchObject({ linked: false, unlinkedHint: false });
+    expect(bauakteLexwareBlock(base, at)).toMatchObject({ linked: false, unlinkedHint: true, customerId: 'k1' });
+    expect(bauakteLexwareBlock({ ...base, canAssign: false }, at).unlinkedHint).toBe(false);
+    expect(bauakteLexwareBlock({ ...base, customer: null }, at).unlinkedHint).toBe(false);
+  });
+
+  it('mit Verknüpfung: Kontakt, Abweichungen dezent, Abgleichstand und Summenzeile', () => {
+    const block = bauakteLexwareBlock({ ...base, contact, summary: '4 Rechnungen: offen 15.767,50 €, davon überfällig 5.176,50 €. 1 Angebot: angenommen 5.355,00 €' }, at);
+    expect(block).toMatchObject({
+      linked: true, unlinkedHint: false, name: 'HUBER BAU GMBH', number: '10001', address: 'Postfach 7, 83001 Rosenheim', addressDiffers: false, email: 'rechnung@huber.example',
+      emailDiffers: true, nameDiffers: true, stateText: '2 Abweichungen offen', stateState: 'Warning', stateHint: 'Zuletzt abgeglichen: am 2026-11-26',
+    });
+    expect(block.summary).toContain('davon überfällig 5.176,50 €');
+    const synced = bauakteLexwareBlock({ ...base, contact: { ...contact, differingFields: [], sync: { state: 'synced', syncedAt: '2026-11-26T10:00:00Z', error: null, deviations: [] } } }, at);
+    expect(synced).toMatchObject({ stateText: 'Abgeglichen', emailDiffers: false, summary: 'Dieser Bauakte ist noch kein Beleg zugeordnet.' });
+    const off = bauakteLexwareBlock({ ...base, contact: { ...contact, sync: { state: 'disabled', syncedAt: null, error: null, deviations: [] } } }, at);
+    expect(off.stateText).toBe('Abgleich ausgeschaltet');
+  });
+});
+
+describe('Lexware Office: Prüfung beim Anlegen eines Kunden', () => {
+  const contact = { id: 'l1', name: 'Malerbetrieb Kern GmbH', isCompany: true, customerNumber: '10003', street: 'Färberweg 3', postalCode: '83059', city: 'Kolbermoor',
+    email: 'info@maler-kern.example', phone: null, url: 'https://app.lexware.de/permalink/contacts/view/l1', linkedContactId: null, linkedContactName: null };
+  const candidate = { contact, score: 80, reasons: ['gleicher Name und PLZ'], strong: false };
+
+  it('läuft mit Modul und Schlüssel, unabhängig vom Schalter am Kunden', () => {
+    expect(lexwareCheckActive({ lexware: true }, { configured: true })).toBe(true);
+    expect(lexwareCheckActive({ lexware: true }, { configured: false })).toBe(false);
+    expect(lexwareCheckActive({ lexware: false }, { configured: true })).toBe(false);
+    expect(lexwareCheckActive({ lexware: true }, null)).toBe(false);
+  });
+
+  it('Anfrage aus den Eingaben, erst ab drei Zeichen oder mit E-Mail-Adresse', () => {
+    expect(lexwareCheckRequest({ kind: 'company', name: 'Ma' })).toBeNull();
+    expect(lexwareCheckRequest({ kind: 'person', name: '', emails: ['a@b.example'] })).toMatchObject({ kind: 'person', email: 'a@b.example', name: null });
+    expect(lexwareCheckRequest({ kind: 'company', name: ' Malerbetrieb Kern ', postalCode: '83059', street: null, phones: ['08031 1'], vatId: '' }))
+      .toEqual({ name: 'Malerbetrieb Kern', kind: 'company', email: null, phone: '08031 1', street: null, postalCode: '83059', city: null, vatId: null });
+  });
+
+  it('deutliche Warnung bei Treffern, dezenter Hinweis ohne Verbindung', () => {
+    expect(lexwareCheckText(null)).toEqual({ warning: '', note: '' });
+    expect(lexwareCheckText({ checked: true, message: null, candidates: [], canImport: true }).warning).toBe('');
+    expect(lexwareCheckText({ checked: true, message: null, candidates: [candidate], canImport: true }).warning).toBe(LEXWARE_EXISTS_WARNING);
+    expect(LEXWARE_EXISTS_WARNING).toBe('Achtung: Dieser Kunde ist bereits in Lexware Office vorhanden.');
+    expect(lexwareCheckText({ checked: true, message: null, candidates: [candidate, candidate], canImport: true }).warning).toContain('Es gibt 2 passende Kontakte.');
+    const down = lexwareCheckText({ checked: false, message: 'Die Prüfung in Lexware Office ist derzeit nicht möglich.', candidates: [], canImport: false });
+    expect(down.warning).toBe('');
+    expect(down.note).toContain('derzeit nicht möglich');
+    expect(down.note).toContain('trotzdem anlegen');
+  });
+
+  it('Treffer: Kundennummer und Anschrift, Übernahme nur mit Recht und ohne bestehende Verknüpfung', () => {
+    expect(lexwareCandidateLine(contact)).toBe('Kundennummer 10003, Färberweg 3, 83059 Kolbermoor, info@maler-kern.example');
+    expect(lexwareCandidateAction(contact, true)).toBe('import');
+    expect(lexwareCandidateAction(contact, false)).toBe('none');
+    expect(lexwareCandidateAction({ ...contact, linkedContactId: 'k9', linkedContactName: 'Kern' }, true)).toBe('linked');
   });
 });

@@ -424,7 +424,7 @@ export function openAssignVoucherDialog(bauakteId: string): Promise<boolean> {
 
 // ---------- Abweichungen entscheiden ----------
 
-interface DeviationRow extends LexwareDeviationField { estrichOneText: string; lexwareText: string; choice: DeviationSource | "" }
+interface DeviationRow extends LexwareDeviationField { estrichOneText: string; lexwareText: string; choice: DeviationSource | "open" }
 
 /** Entscheidung für alle offenen Abweichungen eines Kunden: Werte aus EstrichONE oder aus Lexware Office übernehmen. */
 export async function resolveAllDeviations(customer: { id: string; name: string }, source: DeviationSource): Promise<CustomerLexware | null> {
@@ -450,7 +450,7 @@ export function openDeviationDialog(customer: { id: string; name: string }, fiel
 	return new Promise((resolve) => {
 		let result: CustomerLexware | null = null;
 		const model = new JSONModel({
-			rows: fields.map((f): DeviationRow => ({ ...f, estrichOneText: deviationValue(f.estrichOne), lexwareText: deviationValue(f.lexware), choice: "" })),
+			rows: fields.map((f): DeviationRow => ({ ...f, estrichOneText: deviationValue(f.estrichOne), lexwareText: deviationValue(f.lexware), choice: "open" })),
 		});
 		const table = new Table({
 			columns: [column("Feld", { width: "9rem" }), column("EstrichONE"), column("Lexware Office"), column("Übernehmen aus", { width: "19rem" })],
@@ -463,7 +463,7 @@ export function openDeviationDialog(customer: { id: string; name: string }, fiel
 						new SegmentedButton({
 							selectedKey: "{choice}",
 							items: [new SegmentedButtonItem({ key: "estrichOne", text: "EstrichONE" }), new SegmentedButtonItem({ key: "lexware", text: "Lexware" }),
-								new SegmentedButtonItem({ key: "", text: "Offen" })],
+								new SegmentedButtonItem({ key: "open", text: "Offen" })],
 						}),
 					],
 				}),

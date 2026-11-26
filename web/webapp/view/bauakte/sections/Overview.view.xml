@@ -59,6 +59,45 @@
 			<Label text="{i18n>overview.photos}"/><Link text="{= ${ov>/photoText} || '0 Fotos' }" press=".onToPhotos"/>
 			<Label text="{i18n>overview.diary}"/><Text text="{= (${ov>/diaryCount} || '0') + (${ov>/diaryFooter} ? ', ' + ${ov>/diaryFooter} : '') }"/>
 		</form:SimpleForm>
+		<VBox id="overviewLexware" renderType="Bare" class="sapUiSmallMarginTop" visible="{= ${ov>/lx/linked} === true }">
+			<form:SimpleForm editable="false" layout="ResponsiveGridLayout" columnsXL="2" columnsL="2" columnsM="1" labelSpanXL="4" labelSpanL="4" labelSpanM="4" labelSpanS="12"
+				emptySpanXL="0" emptySpanL="0" emptySpanM="0" adjustLabelSpan="false" singleContainerFullSize="false" class="eoDenseForm">
+				<core:Title text="Lexware Office"/>
+				<Label text="Kontakt in Lexware"/>
+				<VBox>
+					<Text id="overviewLexwareName" text="{ov>/lx/name}"/>
+					<Text text="weicht von EstrichONE ab" class="eoMuted" visible="{ov>/lx/nameDiffers}"/>
+				</VBox>
+				<Label text="Kundennummer in Lexware"/><Text text="{= ${ov>/lx/number} || 'ohne Kundennummer' }"/>
+				<Label text="Rechnungsanschrift"/>
+				<VBox>
+					<Text text="{= ${ov>/lx/address} || 'noch nicht abgeglichen' }"/>
+					<Text text="weicht von EstrichONE ab" class="eoMuted" visible="{ov>/lx/addressDiffers}"/>
+				</VBox>
+				<Label text="E-Mail"/>
+				<VBox>
+					<Text text="{= ${ov>/lx/email} || 'keine Angabe' }"/>
+					<Text text="weicht von EstrichONE ab" class="eoMuted" visible="{ov>/lx/emailDiffers}"/>
+				</VBox>
+				<core:Title text="Abgleich und Belege"/>
+				<Label text="Abgleich"/>
+				<VBox>
+					<ObjectStatus id="overviewLexwareState" text="{ov>/lx/stateText}" state="{ov>/lx/stateState}" visible="{= !!${ov>/lx/stateText} }"/>
+					<Text text="{ov>/lx/stateHint}" class="eoMuted" visible="{= !!${ov>/lx/stateHint} }"/>
+				</VBox>
+				<Label text="Belege"/><Text id="overviewLexwareSummary" text="{ov>/lx/summary}"/>
+				<Label text=""/>
+				<HBox renderType="Bare" wrap="Wrap">
+					<Link text="Rechnungen und Angebote" press=".onToInvoices" class="sapUiSmallMarginEnd"/>
+					<Link text="In Lexware öffnen" href="{ov>/lx/url}" target="_blank" class="sapUiSmallMarginEnd"/>
+					<Link text="Zum Kunden" press=".onToLexwareCustomer"/>
+				</HBox>
+			</form:SimpleForm>
+		</VBox>
+		<HBox id="overviewLexwareHint" renderType="Bare" wrap="Wrap" class="sapUiSmallMarginTop" visible="{= ${ov>/lx/unlinkedHint} === true }">
+			<Text text="Der Kunde ist nicht mit Lexware Office verknüpft." class="eoMuted sapUiTinyMarginEnd"/>
+			<Link text="Beim Kunden verknüpfen" press=".onToLexwareCustomer"/>
+		</HBox>
 
 		<!-- Kennwerte des Bauvorhabens aus dem Formular-Schema (Formular-Designer der Stammdaten) -->
 		<form:Form formContainers="{akte>/projectGroups}" editable="false" class="eoDenseForm">

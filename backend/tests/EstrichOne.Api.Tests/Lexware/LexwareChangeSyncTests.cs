@@ -493,6 +493,117 @@ public sealed class LexwareChangeSyncTests(PostgresFixture postgres) : IAsyncLif
         _lexware.Calls.ShouldAllBe(c => c.Method == "GET");
     }
 
+    // ---------- Prüfung beim Anlegen eines Kunden ----------
+
+    [Fact]
+    public async Task NewCustomerCheck_WarnsWhenContactExistsInLexware_AndNeverBlocks()
+    {
+        const string check = "/api/v1/lexware/contacts/check";
+        var huber = _lexware.AddContact("HUBER BAU GMBH & Co. KG", email: "buero@huber.example", street: "Am Anger 7", zip: "83022", city: "Rosenheim");
+        var lang = _lexware.AddContact("Zimmerei Lang", email: "info@lang.example");
+        var existing = await CustomerAsync("Lang Zimmerei", email: "info@lang.example");
+        await LinkAsync(existing, lang);
+
+        // Treffer mit Grund, auch wenn der Kunde später nicht abgeglichen werden soll.
+        var hit = await SendAsync<CheckLexwareContactResponse>(HttpMethod.Post, check, new { name = "Huber Bau GmbH", kind = "company", postalCode = "83022" });
+        (hit.Checked, hit.Message, hit.CanImport).ShouldBe((true, null, true));
+        var candidate = hit.Candidates.ShouldHaveSingleItem();
+        (candidate.Contact.Id, candidate.Contact.CustomerNumber, candidate.Contact.City).ShouldBe((huber, "10001", "Rosenheim"));
+        candidate.Reasons.ShouldContain("gleicher Name und PLZ");
+        candidate.Contact.LinkedContactId.ShouldBeNull();
+
+        // Der Kontakt gehört schon zu einem EstrichONE-Kunden: Hinweis auf diesen statt zweiter Übernahme.
+        var taken = (await SendAsync<CheckLexwareContactResponse>(HttpMethod.Post, check, new { name = "Lang", email = "INFO@lang.example" })).Candidates.ShouldHaveSingleItem();
+        (taken.Contact.LinkedContactId, taken.Contact.LinkedContactName, taken.Strong).ShouldBe((existing, "Lang Zimmerei", true));
+
+        // Kein Treffer, zu wenig Eingabe.
+        (await SendAsync<CheckLexwareContactResponse>(HttpMethod.Post, check, new { name = "Malerbetrieb Kern" })).Candidates.ShouldBeEmpty();
+        (await SendAsync<CheckLexwareContactResponse>(HttpMethod.Post, check, new { name = "H" })).Candidates.ShouldBeEmpty();
+        _lexware.Calls.ShouldAllBe(c => c.Method == "GET");
+
+        // Ohne das Recht, Belege zuzuordnen: Warnung ja, Übernahme nein. Ohne das Recht, Kunden zu bearbeiten: kein Zugriff.
+        using var office = await ClientWithAsync("kundenpflege", "contacts.read", "contacts.edit");
+        (await SendAsync<CheckLexwareContactResponse>(office, HttpMethod.Post, check, new { name = "Huber Bau GmbH" })).CanImport.ShouldBeFalse();
+        using var reader = await ClientWithAsync("nurlesen", "contacts.read", "invoices.read");
+        using (var denied = await reader.PostAsJsonAsync(check, new { name = "Huber Bau GmbH" }, Ct))
+        {
+            denied.StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+        }
+
+        // Übernehmen legt den Kunden mit den Lexware-Daten an, verknüpft ihn und schaltet den Abgleich ein.
+        var imported = await SendAsync<ImportLexwareContactResponse>(HttpMethod.Post, $"/api/v1/lexware/contacts/{huber}/import", new { createAnyway = false });
+        imported.Imported.ShouldBeTrue();
+        var created = await GetCustomerAsync(imported.ContactId!.Value);
+        (created["name"]!.GetValue<string>(), created["lexwareSync"]!.GetValue<bool>()).ShouldBe(("HUBER BAU GMBH & Co. KG", true));
+        (await StateAsync(imported.ContactId.Value)).Link!.LexwareContactId.ShouldBe(huber);
+
+        // Lexware Office nicht erreichbar: Hinweis statt Fehler, das Anlegen bleibt möglich.
+        await using (var scope = _factory.Services.CreateAsyncScope())
+        {
+            scope.ServiceProvider.GetRequiredService<LexwareService>().ForgetContacts();
+        }
+
+        _lexware.Raw["/v1/contacts"] = (503, "");
+        var down = await SendAsync<CheckLexwareContactResponse>(HttpMethod.Post, check, new { name = "Huber Bau GmbH" });
+        (down.Checked, down.Message, down.Candidates.Count).ShouldBe((false, "Die Prüfung in Lexware Office ist derzeit nicht möglich.", 0));
+        await CustomerAsync("Huber Bau Zweitanlage");
+    }
+
+    // ---------- Lexware-Daten in der Bauakte ----------
+
+    [Fact]
+    public async Task Bauakte_ShowsLexwareContactData_SyncState_AndVoucherSummary_WithoutCallingLexware()
+    {
+        var lexContact = _lexware.AddContact("HUBER BAU GMBH", email: "rechnung@huber.example", street: "Postfach 7", zip: "83001", city: "Rosenheim");
+        var customer = await CustomerAsync("Huber Bau GmbH", email: "info@huber.example", street: "Postfach 7", postalCode: "83001", city: "Rosenheim");
+        var unlinked = await CustomerAsync("Lang Zimmerei");
+        async Task<Guid> BauakteAsync(Guid customerId)
+        {
+            var id = Guid.CreateVersion7();
+            await SendAsync<JsonObject>(HttpMethod.Post, "/api/v1/bauakten",
+                new { id, title = "EFH", customerId, street = "Am Anger 7", postalCode = "83022", city = "Rosenheim" }, HttpStatusCode.Created);
+            return id;
+        }
+
+        var bauakte = await BauakteAsync(customer);
+        var other = await BauakteAsync(unlinked);
+
+        // Ohne Verknüpfung: kein Kontaktblock.
+        (await SendAsync<BauakteLexwareResponse>(HttpMethod.Get, $"/api/v1/bauakten/{other}/lexware")).Contact.ShouldBeNull();
+        (await SendAsync<BauakteLexwareResponse>(HttpMethod.Get, $"/api/v1/bauakten/{bauakte}/lexware")).Contact.ShouldBeNull();
+
+        await LinkAsync(customer, lexContact);
+        foreach (var (type, status, number, due, gross) in new[]
+                 {
+                     ("invoice", "open", "RE1", "2099-01-01", 10591.00m), ("invoice", "open", "RE2", "2020-01-31", 5176.50m),
+                     ("invoice", "paid", "RE3", "2026-01-31", 1190m), ("invoice", "draft", (string?)null, "2026-01-31", 99m),
+                     ("quotation", "accepted", "AG1", "2026-01-31", 5355m), ("creditnote", "voided", "GS1", "2026-01-31", 50m),
+                 })
+        {
+            var id = _lexware.AddVoucher(type, status, number, "2026-01-10", due, gross, gross, lexContact, "HUBER BAU GMBH");
+            await SendAsync<LexwareVoucherResponse>(HttpMethod.Post, $"/api/v1/bauakten/{bauakte}/lexware/vouchers/assign", new { lexwareId = id, type },
+                HttpStatusCode.Created);
+        }
+
+        var calls = _lexware.Calls.Count;
+        var view = await SendAsync<BauakteLexwareResponse>(HttpMethod.Get, $"/api/v1/bauakten/{bauakte}/lexware");
+        _lexware.Calls.Count.ShouldBe(calls); // Kontaktdaten und Summen kommen aus dem gespeicherten Stand
+
+        var contact = view.Contact.ShouldNotBeNull();
+        (contact.LexwareContactId, contact.Name, contact.Number).ShouldBe((lexContact, "HUBER BAU GMBH", "10001"));
+        contact.Url.ShouldBe($"https://app.lexware.de/permalink/contacts/view/{lexContact}");
+        (contact.Street, contact.PostalCode, contact.City, contact.Email).ShouldBe(("Postfach 7", "83001", "Rosenheim", "rechnung@huber.example"));
+        contact.DifferingFields.ShouldBe(["name", "email"]);
+        contact.Sync.State.ShouldBe("deviations");
+        contact.Sync.SyncedAt.ShouldNotBeNull();
+        view.Summary.ShouldBe("4 Rechnungen: offen 15.767,50 €, davon überfällig 5.176,50 €, bezahlt 1.190,00 €, 1 im Entwurf. 1 Angebot: angenommen 5.355,00 €. 1 weiterer Beleg");
+
+        // Nach der Entscheidung: keine Abweichung mehr, die Lexware-Werte entsprechen dem Kunden.
+        await SendAsync<CustomerLexwareResponse>(HttpMethod.Post, $"/api/v1/lexware/customers/{customer}/sync/resolve", new { source = "lexware" });
+        var after = (await SendAsync<BauakteLexwareResponse>(HttpMethod.Get, $"/api/v1/bauakten/{bauakte}/lexware")).Contact!;
+        (after.Sync.State, after.DifferingFields.Count, after.Email).ShouldBe(("synced", 0, "rechnung@huber.example"));
+    }
+
     // ---------- Beleg als PDF ----------
 
     [Fact]

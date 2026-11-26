@@ -232,10 +232,11 @@ export const auditDetailLabels: Record<string, string> = {
 	scope: "Umfang", sender: "Absender", severity: "Dringlichkeit", source: "Quelle", startsAt: "ab", subject: "Betreff",
 	thresholdPercent: "Schwelle (%)", via: "über", webPush: "Web Push", added: "hinzugefügt", amount: "Betrag",
 	apiKey: "API-Schlüssel", lexwareSync: "Mit Lexware Office abgleichen", newCustomersSync: "Neue Kunden abgleichen", customer: "Kunde", baseUrl: "Basis-URL", lexwareContact: "Lexware-Kontakt", lexwareNumber: "Kundennummer in Lexware", duplicatesIgnored: "Mögliche Dubletten bestätigt",
+	direction: "Richtung", changeSync: "Änderungsabgleich",
 };
 /** Werte im Protokoll (Aufzählungen des Servers). */
 export const auditDetailValues: Record<string, string> = {
-	true: "ja", false: "nein", Photo: "Foto", Video: "Video", Document: "Dokument", Plan: "Plan", Accepted: "abgenommen",
+	true: "ja", false: "nein", Both: "beide Richtungen", ToLexware: "nur nach Lexware Office", FromLexware: "nur nach EstrichONE", Off: "aus", Photo: "Foto", Video: "Video", Document: "Dokument", Plan: "Plan", Accepted: "abgenommen",
 	AcceptedWithReservations: "mit Vorbehalt", Rejected: "abgelehnt", Planned: "geplant", InProgress: "in Ausführung", Completed: "abgeschlossen",
 	Invoiced: "abgerechnet", Archived: "archiviert", Inquiry: "Anfrage", Offer: "Angebot", OnHold: "pausiert", Cancelled: "storniert",
 	Task: "Aufgabe", Defect: "Mangel", InitialInspection: "Erstbegehung", SecondInspection: "Zweitbegehung", Acceptance: "Abnahme",

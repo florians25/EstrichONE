@@ -57,6 +57,8 @@ export EstrichOne__AppUpdates__ReleaseNotesPath="$ROOT/docs/releases"
 # Lexware Office (26-lexware.spec.ts): die Basis-URL darf auf die nachgebildete API des Tests zeigen (sonst nur Lexware-Hosts).
 export EstrichOne__Lexware__AllowAnyBaseUrl=true
 export EstrichOne__Lexware__MinRequestInterval=00:00:00.050
+# Änderungsabgleich verknüpfter Kunden: Der Hintergrunddienst sieht im Test alle fünf Sekunden nach Änderungen (sonst 30).
+export EstrichOne__Lexware__ChangePollInterval=00:00:05
 dotnet publish "$ROOT/backend/src/EstrichOne.Api" -c Release -o "$WORK/api" --nologo -v quiet
 dotnet "$WORK/api/EstrichOne.Api.dll" migrate >/dev/null
 dotnet "$WORK/api/EstrichOne.Api.dll" >"$WORK/api.log" 2>&1 &

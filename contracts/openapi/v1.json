@@ -24768,6 +24768,45 @@
         ]
       }
     },
+    "/api/v1/lexware/contacts/check": {
+      "post": {
+        "tags": [
+          "Lexware Office"
+        ],
+        "summary": "Beim Anlegen eines Kunden prüfen, ob es ihn in Lexware Office schon gibt (Dublettenprüfung mit Gründen; blockiert nie, auch wenn Lexware Office nicht erreichbar ist)",
+        "operationId": "CheckLexwareContact",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckLexwareContactRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CheckLexwareContactResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/lexware/contacts/{lexwareContactId}/candidates": {
       "get": {
         "tags": [
@@ -30883,6 +30922,22 @@
               "null",
               "string"
             ]
+          },
+          "contact": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/LexwareBauakteContact"
+              }
+            ]
+          },
+          "summary": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -33553,6 +33608,99 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "CheckLexwareContactRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "maxLength": 200,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "kind": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ContactKind"
+              }
+            ]
+          },
+          "email": {
+            "maxLength": 320,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "phone": {
+            "maxLength": 50,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "street": {
+            "maxLength": 200,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "postalCode": {
+            "maxLength": 10,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "city": {
+            "maxLength": 100,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "vatId": {
+            "maxLength": 30,
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "CheckLexwareContactResponse": {
+        "required": [
+          "checked",
+          "message",
+          "candidates",
+          "canImport"
+        ],
+        "type": "object",
+        "properties": {
+          "checked": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "candidates": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LexwareContactCandidate"
+            }
+          },
+          "canImport": {
+            "type": "boolean"
           }
         }
       },
@@ -40397,6 +40545,74 @@
           "updatedAt": {
             "type": "string",
             "format": "date-time"
+          }
+        }
+      },
+      "LexwareBauakteContact": {
+        "required": [
+          "lexwareContactId",
+          "name",
+          "number",
+          "url",
+          "street",
+          "postalCode",
+          "city",
+          "email",
+          "differingFields",
+          "sync"
+        ],
+        "type": "object",
+        "properties": {
+          "lexwareContactId": {
+            "type": "string"
+          },
+          "name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "number": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "url": {
+            "type": "string"
+          },
+          "street": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "postalCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "city": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "email": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "differingFields": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "sync": {
+            "$ref": "#/components/schemas/LexwareSyncState"
           }
         }
       },

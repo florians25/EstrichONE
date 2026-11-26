@@ -108,6 +108,18 @@ public sealed record CreateLexwareContactRequest(bool CreateAnyway = false);
 /// <param name="Created">Kontakt angelegt und verknüpft. Sonst stehen in <paramref name="Candidates"/> die möglichen Dubletten zur Entscheidung.</param>
 public sealed record CreateLexwareContactResponse(bool Created, LexwareContactLinkResponse? Link, IReadOnlyList<LexwareContactCandidate> Candidates);
 
+/// <summary>Angaben eines Kunden, der gerade angelegt wird, für die Prüfung gegen Lexware Office.</summary>
+public sealed record CheckLexwareContactRequest(
+    [property: MaxLength(200)] string? Name = null, ContactKind? Kind = null, [property: MaxLength(320)] string? Email = null,
+    [property: MaxLength(50)] string? Phone = null, [property: MaxLength(200)] string? Street = null, [property: MaxLength(10)] string? PostalCode = null,
+    [property: MaxLength(100)] string? City = null, [property: MaxLength(30)] string? VatId = null);
+
+/// <summary>Ergebnis der Prüfung „Gibt es diesen Kunden schon in Lexware Office?“ beim Anlegen eines Kunden.</summary>
+/// <param name="Checked">Die Prüfung war möglich. Sonst nennt <paramref name="Message"/> den Grund; das Anlegen wird nie blockiert.</param>
+/// <param name="Candidates">Passende Kontakte in Lexware Office mit Grund; <c>LinkedContactId</c> nennt den EstrichONE-Kunden, mit dem ein Kontakt schon verknüpft ist.</param>
+/// <param name="CanImport">Der Nutzer darf den Kontakt aus Lexware Office übernehmen (<c>invoices.assign</c> und <c>contacts.edit</c>).</param>
+public sealed record CheckLexwareContactResponse(bool Checked, string? Message, IReadOnlyList<LexwareContactCandidate> Candidates, bool CanImport);
+
 public sealed record LexwareContactListResponse(
     IReadOnlyList<LexwareContactSummary> Items, int Page, int PageSize, int Total, DateTimeOffset LoadedAt);
 
@@ -164,9 +176,23 @@ public sealed record LexwareVoucherResponse(
 /// <param name="SyncEnabled">„Mit Lexware Office abgleichen“ ist für den Kunden eingeschaltet.</param>
 public sealed record LexwareBauakteCustomer(Guid Id, string Name, string? LexwareContactId, bool SyncEnabled = false);
 
+/// <summary>
+/// Daten des verknüpften Lexware-Kontakts für die Bauakte (nur Anzeige), aus dem zuletzt abgeglichenen Stand: kein Aufruf
+/// bei Lexware Office. Anschrift und E-Mail-Adresse sind leer, solange noch kein Änderungsabgleich lief.
+/// </summary>
+/// <param name="Url">Adresse des Kontakts in der Lexware-Oberfläche.</param>
+/// <param name="DifferingFields">Felder, in denen Lexware Office vom Kunden in EstrichONE abweicht (<c>name</c>, <c>street</c>, <c>postalCode</c>, <c>city</c>, <c>email</c> …).</param>
+/// <param name="Sync">Stand des Änderungsabgleichs (zuletzt abgeglichen, offene Abweichungen).</param>
+public sealed record LexwareBauakteContact(
+    string LexwareContactId, string? Name, string? Number, string Url, string? Street, string? PostalCode, string? City, string? Email,
+    IReadOnlyList<string> DifferingFields, LexwareSyncState Sync);
+
 /// <param name="SyncError">Abgleich mit Lexware Office fehlgeschlagen; die Liste zeigt den zuletzt gespeicherten Stand.</param>
+/// <param name="Contact">Verknüpfter Lexware-Kontakt des Kunden der Bauakte; fehlt ohne Verknüpfung.</param>
+/// <param name="Summary">Summen der zugeordneten Belege als Textzeile, z. B. „2 Rechnungen: offen 1.190,00 €. 1 Angebot: angenommen 5.355,00 €“.</param>
 public sealed record BauakteLexwareResponse(
-    Guid BauakteId, bool Configured, bool CanAssign, LexwareBauakteCustomer? Customer, IReadOnlyList<LexwareVoucherResponse> Vouchers, string? SyncError);
+    Guid BauakteId, bool Configured, bool CanAssign, LexwareBauakteCustomer? Customer, IReadOnlyList<LexwareVoucherResponse> Vouchers, string? SyncError,
+    LexwareBauakteContact? Contact = null, string? Summary = null);
 
 /// <summary>Beleg aus der Belegliste von Lexware Office (Kunde, Zuordnungsdialog).</summary>
 /// <param name="GrossAmount">Bruttobetrag laut Belegliste.</param>
@@ -184,6 +210,58 @@ public sealed record CustomerVouchersResponse(bool Linked, IReadOnlyList<Lexware
 public sealed record BauakteVoucherCandidatesResponse(bool CustomerLinked, IReadOnlyList<LexwareVoucherItem> Vouchers);
 
 public sealed record AssignLexwareVoucherRequest([property: Required, MaxLength(100)] string LexwareId, [property: Required, MaxLength(30)] string Type);
+
+/// <summary>Summen einer Belegliste als Textzeile (wie in der Weboberfläche): Entwürfe und stornierte Belege zählen nicht in die Beträge.</summary>
+public static class LexwareVoucherSummary
+{
+    private static readonly System.Globalization.NumberFormatInfo German = new() { NumberGroupSeparator = ".", NumberDecimalSeparator = "," };
+
+    public static string Euro(decimal value) => value.ToString("#,##0.00", German) + " €";
+
+    public static string? Text(IReadOnlyList<LexwareVoucherResponse> vouchers)
+    {
+        List<LexwareVoucherResponse> Of(string type, params string[] statuses) => vouchers.Where(v => v.Type == type && statuses.Contains(v.Status)).ToList();
+        static decimal Sum(IEnumerable<LexwareVoucherResponse> list) => list.Sum(v => v.GrossAmount ?? 0m);
+        static string Count(int n) => n.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        var parts = new List<string>();
+        var invoices = vouchers.Count(v => v.Type == LexwareVoucherTypes.Invoice);
+        if (invoices > 0)
+        {
+            var open = Of(LexwareVoucherTypes.Invoice, "open", "overdue");
+            var overdue = Of(LexwareVoucherTypes.Invoice, "overdue");
+            var paid = Of(LexwareVoucherTypes.Invoice, "paid", "paidoff");
+            var drafts = Of(LexwareVoucherTypes.Invoice, "draft");
+            var details = new[]
+            {
+                open.Count > 0 ? $"offen {Euro(Sum(open))}" : null, overdue.Count > 0 ? $"davon überfällig {Euro(Sum(overdue))}" : null,
+                paid.Count > 0 ? $"bezahlt {Euro(Sum(paid))}" : null, drafts.Count > 0 ? $"{Count(drafts.Count)} im Entwurf" : null,
+            }.Where(d => d is not null).ToList();
+            parts.Add($"{Count(invoices)} {(invoices == 1 ? "Rechnung" : "Rechnungen")}{(details.Count > 0 ? ": " + string.Join(", ", details) : string.Empty)}");
+        }
+
+        var quotations = vouchers.Count(v => v.Type == LexwareVoucherTypes.Quotation);
+        if (quotations > 0)
+        {
+            var accepted = Of(LexwareVoucherTypes.Quotation, "accepted");
+            var open = Of(LexwareVoucherTypes.Quotation, "open").Count;
+            var rejected = Of(LexwareVoucherTypes.Quotation, "rejected").Count;
+            var details = new[]
+            {
+                open > 0 ? $"{Count(open)} offen" : null, accepted.Count > 0 ? $"angenommen {Euro(Sum(accepted))}" : null,
+                rejected > 0 ? $"{Count(rejected)} abgelehnt" : null,
+            }.Where(d => d is not null).ToList();
+            parts.Add($"{Count(quotations)} {(quotations == 1 ? "Angebot" : "Angebote")}{(details.Count > 0 ? ": " + string.Join(", ", details) : string.Empty)}");
+        }
+
+        var others = vouchers.Count - invoices - quotations;
+        if (others > 0)
+        {
+            parts.Add($"{Count(others)} {(others == 1 ? "weiterer Beleg" : "weitere Belege")}");
+        }
+
+        return parts.Count == 0 ? null : string.Join(". ", parts);
+    }
+}
 
 /// <summary>
 /// Lexware Office: Einstellungen (nur mit <c>settings.integrations</c>), Kundenverknüpfung mit beidseitiger
@@ -275,6 +353,9 @@ internal static class LexwareEndpoints
             .WithSummary("Kunden aus Lexware Office, seitenweise mit Suche (Liste kurz zwischengespeichert); unlinked=true nur ohne Verknüpfung")
             .ProducesProblem(StatusCodes.Status409Conflict).ProducesProblem(StatusCodes.Status424FailedDependency)
             .ProducesProblem(StatusCodes.Status503ServiceUnavailable).RequirePermission(Permissions.InvoicesAssign);
+        contacts.MapPost("/check", CheckContactAsync).WithName("CheckLexwareContact")
+            .WithSummary("Beim Anlegen eines Kunden prüfen, ob es ihn in Lexware Office schon gibt (Dublettenprüfung mit Gründen; blockiert nie, auch wenn Lexware Office nicht erreichbar ist)")
+            .RequirePermission(Permissions.ContactsEdit);
         contacts.MapGet("/{lexwareContactId}/candidates", CustomerCandidatesAsync).WithName("FindCustomerCandidatesForLexwareContact")
             .WithSummary("Dublettenprüfung in EstrichONE für einen Lexware-Kontakt")
             .ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status409Conflict)
@@ -845,6 +926,49 @@ internal static class LexwareEndpoints
         return TypedResults.Ok(new LexwareContactListResponse(items, page, size, filtered.Count, loadedAt));
     }
 
+    /// <summary>
+    /// Prüfung beim Anlegen eines Kunden, unabhängig vom Schalter „Mit Lexware Office abgleichen“. Ohne Schlüssel oder ohne
+    /// Verbindung gibt es keine Fehlermeldung, sondern den Hinweis, dass die Prüfung derzeit nicht möglich ist.
+    /// </summary>
+    private static async Task<Ok<CheckLexwareContactResponse>> CheckContactAsync(CheckLexwareContactRequest request, LexwareService lexware,
+        IUserPermissions permissions, CancellationToken cancellationToken)
+    {
+        var canImport = await permissions.HasAsync(Permissions.InvoicesAssign, cancellationToken);
+        var name = request.Name?.Trim() ?? string.Empty;
+        if (name.Length < 2 && string.IsNullOrWhiteSpace(request.Email))
+        {
+            return TypedResults.Ok(new CheckLexwareContactResponse(true, null, [], canImport));
+        }
+
+        var row = await lexware.SettingsAsync(cancellationToken);
+        if (!row.Configured)
+        {
+            return TypedResults.Ok(new CheckLexwareContactResponse(false, null, [], canImport));
+        }
+
+        IReadOnlyList<LexwareContact> contacts;
+        try
+        {
+            (contacts, _) = await lexware.ContactsAsync(row, refresh: false, cancellationToken);
+        }
+        catch (LexwareException)
+        {
+            return TypedResults.Ok(new CheckLexwareContactResponse(false, "Die Prüfung in Lexware Office ist derzeit nicht möglich.", [], canImport));
+        }
+
+        static List<string> One(string? value) => string.IsNullOrWhiteSpace(value) ? [] : [value.Trim()];
+        var subject = new MatchParty("neu", name, request.Kind != ContactKind.Person, One(request.Email), One(request.Phone), request.Street, request.PostalCode,
+            request.City, null, request.VatId);
+        var linked = await LinkedAsync(lexware.Db, cancellationToken);
+        var byId = contacts.ToDictionary(c => c.Id, StringComparer.Ordinal);
+        var candidates = LexwareMatching.Find(subject, contacts.Select(LexwareService.Party), 10).Select(r =>
+        {
+            var owner = linked.TryGetValue(r.Party.Key, out var found) ? found : ((Guid Id, string Name)?)null;
+            return new LexwareContactCandidate(Summary(lexware, row, byId[r.Party.Key], owner?.Id, owner?.Name), r.Match.Score, r.Match.Reasons, r.Match.Strong);
+        }).ToList();
+        return TypedResults.Ok(new CheckLexwareContactResponse(true, null, candidates, canImport));
+    }
+
     private static async Task<(List<Contact> Customers, Dictionary<Guid, string> Links)> CustomersAsync(EstrichOneDbContext db, CancellationToken cancellationToken)
     {
         var customers = await db.Set<Contact>().AsNoTracking().Include(c => c.Persons).Where(c => c.AnonymizedAt == null).ToListAsync(cancellationToken);
@@ -1148,7 +1272,33 @@ internal static class LexwareEndpoints
             .Select(l => ToResponse(lexware, row, l)).ToList();
         return TypedResults.Ok(new BauakteLexwareResponse(id, row.Configured,
             row.Configured && await permissions.HasAsync(Permissions.InvoicesAssign, cancellationToken),
-            await BauakteCustomerAsync(db, bauakte, cancellationToken), vouchers, error));
+            await BauakteCustomerAsync(db, bauakte, cancellationToken), vouchers, error,
+            await BauakteContactAsync(lexware, row, bauakte, cancellationToken), LexwareVoucherSummary.Text(vouchers)));
+    }
+
+    /// <summary>Lexware-Seite des verknüpften Kunden aus dem gemerkten Abgleichstand (zuletzt abgeglichene Werte, bei Abweichungen der Wert aus Lexware Office).</summary>
+    private static async Task<LexwareBauakteContact?> BauakteContactAsync(LexwareService lexware, LexwareSettingsRow row, Bauakte bauakte,
+        CancellationToken cancellationToken)
+    {
+        var db = lexware.Db;
+        if (bauakte.CustomerId is not { } customerId
+            || await db.Set<LexwareContactLink>().AsNoTracking().SingleOrDefaultAsync(l => l.ContactId == customerId, cancellationToken) is not { } link
+            || await db.Set<Contact>().AsNoTracking().SingleOrDefaultAsync(c => c.Id == customerId, cancellationToken) is not { } contact)
+        {
+            return null;
+        }
+
+        var state = SyncState(row, link, contact);
+        var values = LexwareContactSync.Baseline(link.SyncedFields) ?? [];
+        var deviations = state.State is "off" or "disabled" or "paused" ? [] : LexwareContactSync.Deviations(link.Deviations);
+        foreach (var deviation in deviations)
+        {
+            values[deviation.Field] = deviation.Lexware;
+        }
+
+        return new LexwareBauakteContact(link.LexwareContactId, link.LexwareName, link.LexwareNumber, lexware.ContactUrl(row, link.LexwareContactId),
+            values.GetValueOrDefault(LexwareSyncFields.Street), values.GetValueOrDefault(LexwareSyncFields.PostalCode),
+            values.GetValueOrDefault(LexwareSyncFields.City), values.GetValueOrDefault(LexwareSyncFields.Email), deviations.Select(d => d.Field).ToList(), state);
     }
 
     /// <summary>Höchstzahl der Belege, die für den Vorschlag einzeln gelesen werden (Lexware erlaubt zwei Anfragen je Sekunde).</summary>
