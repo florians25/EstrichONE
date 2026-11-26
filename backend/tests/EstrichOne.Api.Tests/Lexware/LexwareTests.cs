@@ -17,7 +17,8 @@ namespace EstrichOne.Api.Tests.Lexware;
 /// <summary>
 /// Lexware-Office-Anbindung gegen eine nachgebildete API (gefälschter <see cref="HttpMessageHandler"/>, kein echter Aufruf):
 /// Modulschalter, Betrieb ohne Schlüssel, verschlüsselter Schlüssel, Verbindungstest, Rechte, Kundenverknüpfung mit
-/// beidseitiger Dublettenprüfung, Abgleichübersicht, Rechnungsentwurf, Statusabgleich und Zuordnung vorhandener Rechnungen.
+/// beidseitiger Dublettenprüfung, Abgleichübersicht, Anzeige von Rechnungen und Angeboten an Kunde und Bauakte (nur lesend),
+/// Statusabgleich und Zuordnung zu Bauakten. Kein Test und kein Endpunkt legt einen Beleg in Lexware Office an.
 /// </summary>
 public sealed class LexwareTests(PostgresFixture postgres) : IAsyncLifetime
 {
@@ -104,13 +105,13 @@ public sealed class LexwareTests(PostgresFixture postgres) : IAsyncLifetime
         status.Enabled.ShouldBeFalse();
         status.Configured.ShouldBeFalse();
         status.CanRead.ShouldBeTrue();
-        status.CanCreate.ShouldBeTrue();
+        status.CanAssign.ShouldBeTrue();
         status.CanManage.ShouldBeFalse();
 
         var bauakte = await BauakteAsync("EFH ohne Lexware", null);
         (await ProblemAsync(office, HttpMethod.Get, $"/api/v1/bauakten/{bauakte}/lexware", HttpStatusCode.Conflict)).ShouldStartWith("MODULE_DISABLED");
-        (await ProblemAsync(office, HttpMethod.Post, $"/api/v1/bauakten/{bauakte}/lexware/invoices", HttpStatusCode.Conflict,
-            new { lines = new[] { new { kind = "custom", name = "Estrich", quantity = 1 } } })).ShouldStartWith("MODULE_DISABLED");
+        (await ProblemAsync(office, HttpMethod.Post, $"/api/v1/bauakten/{bauakte}/lexware/vouchers/assign", HttpStatusCode.Conflict,
+            new { lexwareId = "x", type = "invoice" })).ShouldStartWith("MODULE_DISABLED");
         (await ProblemAsync(_admin, HttpMethod.Get, "/api/v1/lexware/contacts", HttpStatusCode.Conflict)).ShouldContain("LEXWARE_NOT_CONFIGURED");
 
         // Erst einrichten, dann einschalten: Einstellungen und Verbindungstest gehen auch bei abgeschaltetem Modul.
@@ -132,14 +133,14 @@ public sealed class LexwareTests(PostgresFixture postgres) : IAsyncLifetime
 
         var list = await SendAsync<BauakteLexwareResponse>(_admin, HttpMethod.Get, $"/api/v1/bauakten/{bauakte}/lexware");
         list.Configured.ShouldBeFalse();
-        list.CanCreate.ShouldBeFalse();
-        list.Invoices.ShouldBeEmpty();
+        list.CanAssign.ShouldBeFalse();
+        list.Vouchers.ShouldBeEmpty();
         list.Customer!.LexwareContactId.ShouldBeNull();
 
         foreach (var (method, path, body) in new (HttpMethod, string, object?)[]
                  {
-                     (HttpMethod.Post, $"/api/v1/bauakten/{bauakte}/lexware/invoices", new { lines = new[] { new { kind = "custom", name = "Estrich", quantity = 1 } } }),
-                     (HttpMethod.Get, $"/api/v1/bauakten/{bauakte}/lexware/invoices/search?number=RE1", null),
+                     (HttpMethod.Post, $"/api/v1/bauakten/{bauakte}/lexware/vouchers/assign", new { lexwareId = "x", type = "invoice" }),
+                     (HttpMethod.Get, $"/api/v1/bauakten/{bauakte}/lexware/candidates?number=RE1", null),
                      (HttpMethod.Get, $"/api/v1/lexware/customers/{customer}/candidates", null),
                      (HttpMethod.Post, $"/api/v1/lexware/customers/{customer}/create", new { }),
                      (HttpMethod.Get, "/api/v1/lexware/contacts", null),
@@ -158,7 +159,7 @@ public sealed class LexwareTests(PostgresFixture postgres) : IAsyncLifetime
     public async Task Settings_KeyEncryptedAndNeverReturned_ConnectionTestShowsCompany()
     {
         await EnableAsync();
-        using var raw = await _admin.PutAsJsonAsync("/api/v1/settings/integrations/lexware", new { apiKey = FakeLexware.Key, paymentTermDays = 10 }, Ct);
+        using var raw = await _admin.PutAsJsonAsync("/api/v1/settings/integrations/lexware", new { apiKey = FakeLexware.Key, newCustomersSync = false }, Ct);
         var text = await raw.Content.ReadAsStringAsync(Ct);
         raw.StatusCode.ShouldBe(HttpStatusCode.OK, text);
         text.ShouldNotContain(FakeLexware.Key);
@@ -167,7 +168,7 @@ public sealed class LexwareTests(PostgresFixture postgres) : IAsyncLifetime
         var stored = await DbAsync(db => db.Set<LexwareSettingsRow>().AsNoTracking().SingleAsync(Ct));
         stored.ProtectedApiKey.ShouldNotBeNull();
         stored.ProtectedApiKey.ShouldNotContain(FakeLexware.Key);
-        stored.PaymentTermDays.ShouldBe(10);
+        stored.NewCustomersSync.ShouldBeFalse();
 
         var test = await SendAsync<LexwareTestResponse>(_admin, HttpMethod.Post, "/api/v1/settings/integrations/lexware/test");
         test.Ok.ShouldBeTrue();
@@ -175,9 +176,9 @@ public sealed class LexwareTests(PostgresFixture postgres) : IAsyncLifetime
         _lexware.Calls.ShouldHaveSingleItem().Path.ShouldBe("/v1/profile");
 
         // Speichern ohne Schlüssel lässt den gespeicherten stehen.
-        var kept = await SendAsync<LexwareSettingsResponse>(_admin, HttpMethod.Put, "/api/v1/settings/integrations/lexware", new { paymentTermDays = 21 });
+        var kept = await SendAsync<LexwareSettingsResponse>(_admin, HttpMethod.Put, "/api/v1/settings/integrations/lexware", new { });
         kept.HasApiKey.ShouldBeTrue();
-        kept.PaymentTermDays.ShouldBe(21);
+        kept.NewCustomersSync.ShouldBeFalse();
         kept.OrganizationName.ShouldBe("Estrichbau Muster GmbH");
 
         // Falscher Schlüssel: verständliche Meldung statt Fehlerstatus.
@@ -225,7 +226,7 @@ public sealed class LexwareTests(PostgresFixture postgres) : IAsyncLifetime
 
         foreach (var path in new[]
                  {
-                     $"/api/v1/bauakten/{bauakte}/lexware", $"/api/v1/bauakten/{bauakte}/lexware/invoice-proposal", $"/api/v1/lexware/customers/{customer}",
+                     $"/api/v1/bauakten/{bauakte}/lexware", $"/api/v1/bauakten/{bauakte}/lexware/candidates", $"/api/v1/lexware/customers/{customer}/vouchers", $"/api/v1/lexware/customers/{customer}",
                      $"/api/v1/lexware/customers/{customer}/candidates", "/api/v1/lexware/contacts", "/api/v1/settings/integrations/lexware",
                  })
         {
@@ -233,12 +234,20 @@ public sealed class LexwareTests(PostgresFixture postgres) : IAsyncLifetime
             response.StatusCode.ShouldBe(HttpStatusCode.Forbidden, path);
         }
 
-        using var create = await worker.PostAsJsonAsync($"/api/v1/bauakten/{bauakte}/lexware/invoices",
-            new { lines = new[] { new { kind = "custom", name = "Estrich", quantity = 1 } } }, Ct);
-        create.StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+        using var assign = await worker.PostAsJsonAsync($"/api/v1/bauakten/{bauakte}/lexware/vouchers/assign", new { lexwareId = "x", type = "invoice" }, Ct);
+        assign.StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+
+        // Einen Beleg in Lexware Office anzulegen ist für niemanden möglich: Die Endpunkte der Beleganlage gibt es nicht.
+        foreach (var path in new[] { $"/api/v1/bauakten/{bauakte}/lexware/invoices", $"/api/v1/bauakten/{bauakte}/lexware/vouchers", $"/api/v1/bauakten/{bauakte}/lexware/quotations" })
+        {
+            using var none = await _admin.PostAsJsonAsync(path, new { lines = new[] { new { kind = "custom", name = "Estrich", quantity = 1, unitPrice = 1 } } }, Ct);
+            none.StatusCode.ShouldBeOneOf(HttpStatusCode.NotFound, HttpStatusCode.MethodNotAllowed);
+        }
+
+        _lexware.Calls.ShouldNotContain(c => c.Method != "GET");
 
         // Büro: Rechnungen ja, Einstellungen und Abgleichübersicht nein.
-        (await SendAsync<BauakteLexwareResponse>(office, HttpMethod.Get, $"/api/v1/bauakten/{bauakte}/lexware")).CanCreate.ShouldBeTrue();
+        (await SendAsync<BauakteLexwareResponse>(office, HttpMethod.Get, $"/api/v1/bauakten/{bauakte}/lexware")).CanAssign.ShouldBeTrue();
         foreach (var path in new[] { "/api/v1/settings/integrations/lexware", "/api/v1/settings/integrations/lexware/reconciliation" })
         {
             using var response = await office.GetAsync(new Uri(path, UriKind.Relative), Ct);
@@ -406,7 +415,7 @@ public sealed class LexwareTests(PostgresFixture postgres) : IAsyncLifetime
 
         // Ohne das Recht, Kunden zu bearbeiten, wird nichts übernommen.
         await using var scope = _factory.Services.CreateAsyncScope();
-        var role = Modules.Access.Role.Create(Guid.CreateVersion7(), "Nur Rechnungen", "", isSystem: false, ["invoices.read", "invoices.create", "contacts.read"]);
+        var role = Modules.Access.Role.Create(Guid.CreateVersion7(), "Nur Rechnungen", "", isSystem: false, ["invoices.read", "invoices.assign", "contacts.read"]);
         var db = scope.ServiceProvider.GetRequiredService<EstrichOneDbContext>();
         db.Add(role);
         await db.SaveChangesAsync(Ct);
@@ -556,16 +565,14 @@ public sealed class LexwareTests(PostgresFixture postgres) : IAsyncLifetime
             new { id = customer, kind = "company", name = "Huber Bau GmbH", email = "buero@huber-bau.example", lexwareSync = false }, HttpStatusCode.Created);
         var other = await CustomerAsync("Zimmerei Lang");
         var bauakte = await BauakteAsync("EFH Huber", customer);
-        var lines = new { lines = new[] { new { kind = "custom", name = "Estrich", quantity = 10, unitPrice = 20 } } };
 
-        // Weder verknüpfen noch anlegen noch Rechnung: klare Meldung, kein schreibender Aufruf bei Lexware.
+        // Weder verknüpfen noch anlegen: klare Meldung, kein schreibender Aufruf bei Lexware.
         var status = await SendAsync<CustomerLexwareResponse>(_admin, HttpMethod.Get, $"/api/v1/lexware/customers/{customer}");
         status.SyncEnabled.ShouldBeFalse();
         foreach (var (path, body) in new (string, object)[]
                  {
                      ($"/api/v1/lexware/customers/{customer}/link", new { lexwareContactId = lexContact }),
                      ($"/api/v1/lexware/customers/{customer}/create", new { createAnyway = true }),
-                     ($"/api/v1/bauakten/{bauakte}/lexware/invoices", lines),
                  })
         {
             var problem = await ProblemAsync(_admin, HttpMethod.Post, path, HttpStatusCode.Conflict, body);
@@ -594,12 +601,12 @@ public sealed class LexwareTests(PostgresFixture postgres) : IAsyncLifetime
         after.Excluded.ShouldBe(0);
         after.Suggestions.ShouldHaveSingleItem().Unique.ShouldBeTrue();
 
-        // Verknüpfen und Rechnung gehen jetzt; beim Ausschalten bleibt die Verknüpfung bestehen, bis sie gelöst wird.
+        // Verknüpfen geht jetzt; beim Ausschalten bleibt die Verknüpfung bestehen, bis sie gelöst wird.
         await SendAsync<CustomerLexwareResponse>(_admin, HttpMethod.Post, $"/api/v1/lexware/customers/{customer}/link", new { lexwareContactId = lexContact });
         var offAgain = await SendAsync<CustomerLexwareResponse>(_admin, HttpMethod.Put, $"/api/v1/lexware/customers/{customer}/sync", new { enabled = false });
         offAgain.SyncEnabled.ShouldBeFalse();
         offAgain.Link!.LexwareContactId.ShouldBe(lexContact);
-        await SendAsync<LexwareVoucherResponse>(_admin, HttpMethod.Post, $"/api/v1/bauakten/{bauakte}/lexware/invoices", lines, HttpStatusCode.Created);
+        (await SendAsync<CustomerVouchersResponse>(_admin, HttpMethod.Get, $"/api/v1/lexware/customers/{customer}/vouchers")).Linked.ShouldBeTrue();
         var linked = await SendAsync<LexwareReconciliationResponse>(_admin, HttpMethod.Get, "/api/v1/settings/integrations/lexware/reconciliation");
         linked.Linked.ShouldBe(1);
         linked.LinkedItems[0].Customer.SyncEnabled.ShouldBeFalse();
@@ -608,198 +615,206 @@ public sealed class LexwareTests(PostgresFixture postgres) : IAsyncLifetime
         // Nach dem Lösen ist der Kunde wieder nur in EstrichONE.
         using var unlink = await _admin.DeleteAsync(new Uri($"/api/v1/lexware/customers/{customer}/link", UriKind.Relative), Ct);
         unlink.StatusCode.ShouldBe(HttpStatusCode.NoContent);
-        (await ProblemAsync(_admin, HttpMethod.Post, $"/api/v1/bauakten/{bauakte}/lexware/invoices", HttpStatusCode.Conflict, lines)).ShouldStartWith("LEXWARE_SYNC_DISABLED");
+        (await SendAsync<CustomerVouchersResponse>(_admin, HttpMethod.Get, $"/api/v1/lexware/customers/{customer}/vouchers")).Linked.ShouldBeFalse();
         var back = await SendAsync<CustomerLexwareResponse>(_admin, HttpMethod.Put, $"/api/v1/lexware/customers/{customer}/sync", new { enabled = true });
         back.SyncEnabled.ShouldBeTrue();
         (await DbAsync(db => db.Set<AuditEvent>().AsNoTracking().Where(e => e.Action.StartsWith("lexware.sync")).Select(e => e.Action).ToListAsync(Ct)))
             .ShouldBe(["lexware.sync_enabled_bulk", "lexware.sync_changed", "lexware.sync_changed"], ignoreOrder: true);
     }
 
-    // ---------- Rechnungen ----------
+    // ---------- Rechnungen und Angebote (nur lesend) ----------
 
     [Fact]
-    public async Task InvoiceDraft_ProposalPayloadLinkAndStatusSync()
-    {
-        await ConfigureAsync();
-        var lexContact = _lexware.AddContact("Huber Bau GmbH");
-        var customer = await CustomerAsync("Huber Bau GmbH");
-        var bauakte = await BauakteAsync("EFH Huber, Neubau", customer, new { totalArea = 182.5, nominalThicknessMm = 65, strengthClass = "ct-c25-f4", underfloorHeating = true });
-        var lines = new object[]
-        {
-            new { kind = "custom", name = "Zementestrich CT-C25-F4", description = "Nenndicke 65 mm", quantity = 182.5, unitName = "m²", unitPrice = 24.9, taxRate = 19 },
-            new { kind = "custom", name = "Anfahrt", quantity = 1, unitPrice = 85 },
-            new { kind = "text", name = "Hinweis", description = "Belegreife vor Verlegung prüfen." },
-        };
-
-        // Kunde noch nicht verknüpft: klare Meldung, kein Aufruf.
-        var notLinked = await ProblemAsync(_admin, HttpMethod.Post, $"/api/v1/bauakten/{bauakte}/lexware/invoices", HttpStatusCode.Conflict, new { lines });
-        notLinked.ShouldStartWith("LEXWARE_CUSTOMER_NOT_LINKED");
-        _lexware.CallsTo("POST", "/v1/invoices").ShouldBeEmpty();
-        await SendAsync<CustomerLexwareResponse>(_admin, HttpMethod.Post, $"/api/v1/lexware/customers/{customer}/link", new { lexwareContactId = lexContact });
-
-        // Vorschlag aus den Kennwerten: Fläche als Menge, Preis leer, 19 %.
-        var proposal = await SendAsync<LexwareInvoiceProposal>(_admin, HttpMethod.Get, $"/api/v1/bauakten/{bauakte}/lexware/invoice-proposal");
-        proposal.Customer!.LexwareContactId.ShouldBe(lexContact);
-        proposal.PaymentTermDays.ShouldBe(14);
-        proposal.Introduction.ShouldContain("Bauvorhaben: EFH Huber, Neubau");
-        proposal.Introduction.ShouldContain("Bauakte: ");
-        proposal.Introduction.ShouldContain("Leistungsort: Am Anger 7, 83022 Rosenheim");
-        var main = proposal.Lines.ShouldHaveSingleItem();
-        main.Name.ShouldBe("Estricharbeiten CT-C25-F4");
-        main.Description.ShouldBe("Nenndicke 65 mm, als Heizestrich, liefern und einbauen");
-        main.Quantity.ShouldBe(182.5m);
-        main.UnitName.ShouldBe("m²");
-        main.UnitPrice.ShouldBeNull();
-        main.TaxRate.ShouldBe(19m);
-
-        // Ungültige Eingaben.
-        (await ProblemAsync(_admin, HttpMethod.Post, $"/api/v1/bauakten/{bauakte}/lexware/invoices", HttpStatusCode.UnprocessableEntity,
-            new { lines = new[] { new { kind = "custom", name = "Estrich", quantity = 0 } } })).ShouldStartWith("LEXWARE_INVALID_INVOICE");
-        (await ProblemAsync(_admin, HttpMethod.Post, $"/api/v1/bauakten/{bauakte}/lexware/invoices", HttpStatusCode.UnprocessableEntity,
-            new { lines = new[] { new { kind = "custom", name = "Estrich", quantity = 1, taxRate = 16 } } })).ShouldStartWith("LEXWARE_INVALID_INVOICE");
-
-        // Entwurf anlegen.
-        var created = await SendAsync<LexwareVoucherResponse>(_admin, HttpMethod.Post, $"/api/v1/bauakten/{bauakte}/lexware/invoices", new
-        {
-            lines, voucherDate = "2026-11-20", title = "Rechnung", introduction = proposal.Introduction, remark = "Vielen Dank.",
-            serviceDate = "2026-11-10", serviceEndDate = "2026-11-12", paymentTermDays = 10,
-        }, HttpStatusCode.Created);
-        created.Status.ShouldBe("draft");
-        created.Created.ShouldBeTrue();
-        created.NetAmount.ShouldBe(4629.25m);
-        created.GrossAmount.ShouldBe(5508.81m);
-        created.Url.ShouldBe($"https://app.lexware.de/permalink/invoices/edit/{created.LexwareId}");
-
-        var call = _lexware.CallsTo("POST", "/v1/invoices").ShouldHaveSingleItem();
-        call.Query.ShouldBeEmpty(); // kein finalize: es bleibt ein Entwurf
-        var body = JsonNode.Parse(call.Body!)!;
-        body["address"]!["contactId"]!.GetValue<string>().ShouldBe(lexContact);
-        body["voucherDate"]!.GetValue<string>().ShouldBe("2026-11-20T00:00:00.000+01:00");
-        body["taxConditions"]!["taxType"]!.GetValue<string>().ShouldBe("net");
-        body["introduction"]!.GetValue<string>().ShouldContain("Leistungsort: Am Anger 7, 83022 Rosenheim");
-        body["paymentConditions"]!.ToJsonString().ShouldBe("""{"paymentTermLabel":"Zahlbar innerhalb von 10 Tagen ohne Abzug.","paymentTermDuration":10}""");
-        body["shippingConditions"]!["shippingType"]!.GetValue<string>().ShouldBe("serviceperiod");
-        var items = body["lineItems"]!.AsArray();
-        items.Count.ShouldBe(3);
-        items[0]!["unitPrice"]!["netAmount"]!.GetValue<decimal>().ShouldBe(24.9m);
-        items[1]!["unitName"]!.GetValue<string>().ShouldBe("Stück");
-        items[1]!["unitPrice"]!["taxRatePercentage"]!.GetValue<decimal>().ShouldBe(19m);
-        items[2]!["type"]!.GetValue<string>().ShouldBe("text");
-
-        // Anzeige innerhalb des kurzen Caches: kein weiterer Aufruf.
-        var before = _lexware.CallsTo("GET", "/v1/invoices/").Count();
-        var list = await SendAsync<BauakteLexwareResponse>(_admin, HttpMethod.Get, $"/api/v1/bauakten/{bauakte}/lexware");
-        list.Invoices.ShouldHaveSingleItem().Id.ShouldBe(created.Id);
-        _lexware.CallsTo("GET", "/v1/invoices/").Count().ShouldBe(before);
-
-        // In Lexware abgeschlossen: Nummer, offen, Fälligkeit. „Aktualisieren“ holt den Stand sofort.
-        var remote = _lexware.Invoices[created.LexwareId];
-        remote["voucherStatus"] = "open";
-        remote["voucherNumber"] = "RE1042";
-        remote["dueDate"] = "2099-01-31T00:00:00.000+01:00";
-        var open = (await SendAsync<BauakteLexwareResponse>(_admin, HttpMethod.Get, $"/api/v1/bauakten/{bauakte}/lexware?refresh=true")).Invoices[0];
-        open.Status.ShouldBe("open");
-        open.Number.ShouldBe("RE1042");
-        open.DueDate.ShouldBe(new DateOnly(2099, 1, 31));
-        open.Url.ShouldBe($"https://app.lexware.de/permalink/invoices/view/{created.LexwareId}");
-
-        // Fälligkeit überschritten: überfällig wird abgeleitet. Abgleich bei der Anzeige erst nach Ablauf des Caches.
-        remote["dueDate"] = "2020-01-31T00:00:00.000+01:00";
-        (await SendAsync<BauakteLexwareResponse>(_admin, HttpMethod.Get, $"/api/v1/bauakten/{bauakte}/lexware")).Invoices[0].Status.ShouldBe("open");
-        _factory.Clock.Advance(TimeSpan.FromMinutes(3));
-        (await SendAsync<BauakteLexwareResponse>(_admin, HttpMethod.Get, $"/api/v1/bauakten/{bauakte}/lexware")).Invoices[0].Status.ShouldBe("overdue");
-
-        remote["voucherStatus"] = "paid";
-        (await SendAsync<BauakteLexwareResponse>(_admin, HttpMethod.Get, $"/api/v1/bauakten/{bauakte}/lexware?refresh=true")).Invoices[0].Status.ShouldBe("paid");
-
-        // Lexware nicht erreichbar bzw. Schlüssel ungültig: gespeicherter Stand mit Hinweis statt Fehler.
-        _lexware.Raw["/v1/invoices/"] = (401, "{}");
-        var stale = await SendAsync<BauakteLexwareResponse>(_admin, HttpMethod.Get, $"/api/v1/bauakten/{bauakte}/lexware?refresh=true");
-        stale.SyncError!.ShouldContain("API-Schlüssel");
-        stale.Invoices[0].Status.ShouldBe("paid");
-
-        // In Lexware gelöscht: Hinweis am Beleg.
-        _lexware.Raw["/v1/invoices/"] = (404, "{}");
-        var gone = await SendAsync<BauakteLexwareResponse>(_admin, HttpMethod.Get, $"/api/v1/bauakten/{bauakte}/lexware?refresh=true");
-        gone.SyncError.ShouldBeNull();
-        gone.Invoices[0].SyncError.ShouldBe("In Lexware Office nicht mehr vorhanden.");
-
-        (await DbAsync(db => db.Set<AuditEvent>().AsNoTracking().CountAsync(e => e.Action == "lexware.invoice_created", Ct))).ShouldBe(1);
-    }
-
-    [Fact]
-    public async Task InvoiceDraft_RejectedByLexware_ShowsDetails_AndStoresNothing()
+    public async Task CustomerVouchers_ShowInvoicesAndQuotationsOfLinkedContact_ReadOnlyWithShortCache()
     {
         await ConfigureAsync();
         var lexContact = _lexware.AddContact("Huber Bau GmbH");
         var customer = await CustomerAsync("Huber Bau GmbH");
         var bauakte = await BauakteAsync("EFH Huber", customer);
+
+        // Nicht verknüpft: leere Liste, kein Aufruf.
+        var none = await SendAsync<CustomerVouchersResponse>(_admin, HttpMethod.Get, $"/api/v1/lexware/customers/{customer}/vouchers");
+        none.Linked.ShouldBeFalse();
+        none.Vouchers.ShouldBeEmpty();
+        _lexware.CallsTo("GET", "/v1/voucherlist").ShouldBeEmpty();
         await SendAsync<CustomerLexwareResponse>(_admin, HttpMethod.Post, $"/api/v1/lexware/customers/{customer}/link", new { lexwareContactId = lexContact });
-        var body = new { lines = new[] { new { kind = "custom", name = "Estrich", quantity = 10, unitPrice = 20 } } };
 
-        _lexware.Raw["/v1/invoices"] = (406, """{"status":406,"details":[{"field":"address.contactId","message":"ist unbekannt"}]}""");
-        var rejected = await ProblemAsync(_admin, HttpMethod.Post, $"/api/v1/bauakten/{bauakte}/lexware/invoices", HttpStatusCode.FailedDependency, body);
-        rejected.ShouldStartWith("LEXWARE_INVALID");
-        rejected.ShouldContain("address.contactId ist unbekannt");
+        var draft = _lexware.AddVoucher("invoice", "draft", null, "2026-11-20", null, 500m, 595m, lexContact, "Huber Bau GmbH");
+        var overdue = _lexware.AddVoucher("invoice", "open", "RE1042", "2026-10-01", "2020-01-31", 1000m, 1190m, lexContact, "Huber Bau GmbH");
+        var paid = _lexware.AddVoucher("invoice", "paid", "RE0990", "2026-09-01", "2026-09-15", 2000m, 2380m, lexContact, "Huber Bau GmbH");
+        var accepted = _lexware.AddVoucher("quotation", "accepted", "AG0311", "2026-08-01", "2026-08-31", 3000m, 3570m, lexContact, "Huber Bau GmbH");
+        var rejected = _lexware.AddVoucher("quotation", "rejected", "AG0290", "2026-07-01", "2026-07-31", 4000m, 4760m, lexContact, "Huber Bau GmbH");
+        var credit = _lexware.AddVoucher("creditnote", "voided", "GS0007", "2026-06-01", null, 100m, 119m, lexContact, "Huber Bau GmbH");
+        _lexware.AddVoucher("invoice", "open", "RE7777", "2026-11-01", "2099-01-01", 1m, 1.19m, _lexware.AddContact("Fremd GmbH"), "Fremd GmbH");
+        await SendAsync<LexwareVoucherResponse>(_admin, HttpMethod.Post, $"/api/v1/bauakten/{bauakte}/lexware/vouchers/assign",
+            new { lexwareId = paid, type = "invoice" }, HttpStatusCode.Created);
 
-        _lexware.Raw["/v1/invoices"] = (402, "{}");
-        (await ProblemAsync(_admin, HttpMethod.Post, $"/api/v1/bauakten/{bauakte}/lexware/invoices", HttpStatusCode.FailedDependency, body))
+        var list = await SendAsync<CustomerVouchersResponse>(_admin, HttpMethod.Get, $"/api/v1/lexware/customers/{customer}/vouchers");
+        list.Linked.ShouldBeTrue();
+        list.Vouchers.Select(v => (v.LexwareId, v.Type, v.Status)).ShouldBe(
+        [
+            (draft, "invoice", "draft"), (overdue, "invoice", "overdue"), (paid, "invoice", "paid"), (accepted, "quotation", "accepted"),
+            (rejected, "quotation", "rejected"), (credit, "creditnote", "voided"),
+        ]);
+        list.Vouchers[1].GrossAmount.ShouldBe(1190m);
+        list.Vouchers[1].DueDate.ShouldBe(new DateOnly(2020, 1, 31));
+        list.Vouchers[0].Url.ShouldBe($"https://app.lexware.de/permalink/invoices/edit/{draft}");
+        list.Vouchers[3].Url.ShouldBe($"https://app.lexware.de/permalink/quotations/view/{accepted}");
+        list.Vouchers[5].Url.ShouldBe($"https://app.lexware.de/permalink/credit-notes/view/{credit}");
+        list.Vouchers[2].AssignedBauakteId.ShouldBe(bauakte);
+        list.Vouchers[0].AssignedBauakteId.ShouldBeNull();
+        var query = _lexware.CallsTo("GET", "/v1/voucherlist").ShouldHaveSingleItem().Query;
+        query.ShouldContain($"contactId={lexContact}");
+        query.ShouldContain("voucherType=invoice,quotation,creditnote,orderconfirmation");
+
+        // Kurzer Cache; „Aktualisieren“ und der Ablauf des Caches laden neu.
+        await SendAsync<CustomerVouchersResponse>(_admin, HttpMethod.Get, $"/api/v1/lexware/customers/{customer}/vouchers");
+        _lexware.CallsTo("GET", "/v1/voucherlist").Count().ShouldBe(1);
+        await SendAsync<CustomerVouchersResponse>(_admin, HttpMethod.Get, $"/api/v1/lexware/customers/{customer}/vouchers?refresh=true");
+        _lexware.CallsTo("GET", "/v1/voucherlist").Count().ShouldBe(2);
+        _factory.Clock.Advance(TimeSpan.FromMinutes(3));
+        await SendAsync<CustomerVouchersResponse>(_admin, HttpMethod.Get, $"/api/v1/lexware/customers/{customer}/vouchers");
+        _lexware.CallsTo("GET", "/v1/voucherlist").Count().ShouldBe(3);
+
+        // Lexware lehnt ab bzw. ist nicht erreichbar: verständliche Meldung, kein Serverfehler.
+        _lexware.Raw["/v1/voucherlist"] = (402, "{}");
+        (await ProblemAsync(_admin, HttpMethod.Get, $"/api/v1/lexware/customers/{customer}/vouchers?refresh=true", HttpStatusCode.FailedDependency))
             .ShouldStartWith("LEXWARE_NO_API_ACCESS");
-
-        _lexware.Raw["/v1/invoices"] = (503, "");
-        (await ProblemAsync(_admin, HttpMethod.Post, $"/api/v1/bauakten/{bauakte}/lexware/invoices", HttpStatusCode.ServiceUnavailable, body))
+        _lexware.Raw["/v1/voucherlist"] = (503, "");
+        (await ProblemAsync(_admin, HttpMethod.Get, $"/api/v1/lexware/customers/{customer}/vouchers?refresh=true", HttpStatusCode.ServiceUnavailable))
             .ShouldStartWith("LEXWARE_UNAVAILABLE");
-        (await DbAsync(db => db.Set<LexwareVoucherLink>().CountAsync(Ct))).ShouldBe(0);
 
-        // Drosselung: Wiederholung mit Wartezeit, dann Erfolg.
-        _lexware.Raw.Clear();
-        _lexware.Throttle["/v1/invoices"] = 2;
-        await SendAsync<LexwareVoucherResponse>(_admin, HttpMethod.Post, $"/api/v1/bauakten/{bauakte}/lexware/invoices", body, HttpStatusCode.Created);
-        _lexware.CallsTo("POST", "/v1/invoices").Count().ShouldBe(6);
-        _lexware.Invoices.Count.ShouldBe(1);
+        // Über alle Aufrufe hinweg wurde in Lexware nichts geschrieben (auch die Verknüpfung liest den Kontakt nur).
+        _lexware.Calls.ShouldAllBe(c => c.Method == "GET");
     }
 
     [Fact]
-    public async Task ExistingInvoice_IsFoundByNumber_AssignedOnce_AndCanBeReleased()
+    public async Task BauakteVouchers_SuggestByBauakteNumber_AssignAfterConfirmation_StatusSync()
+    {
+        await ConfigureAsync();
+        var lexContact = _lexware.AddContact("Huber Bau GmbH");
+        var customer = await CustomerAsync("Huber Bau GmbH");
+        var bauakte = await BauakteAsync("EFH Huber, Neubau", customer);
+        var number = (await SendAsync<JsonObject>(_admin, HttpMethod.Get, $"/api/v1/bauakten/{bauakte}"))["number"]!.GetValue<string>();
+        await SendAsync<CustomerLexwareResponse>(_admin, HttpMethod.Post, $"/api/v1/lexware/customers/{customer}/link", new { lexwareContactId = lexContact });
+
+        var quotation = _lexware.AddVoucher("quotation", "open", "AG0311", "2026-08-01", "2026-08-31", 3000m, 3570m, lexContact, "Huber Bau GmbH",
+            title: $"Angebot Estricharbeiten, Bauakte {number}");
+        var invoice = _lexware.AddVoucher("invoice", "draft", null, "2026-11-20", null, 4629.25m, 5508.81m, lexContact, "Huber Bau GmbH",
+            introduction: $"Bauvorhaben EFH Huber\nBauakte: {number.ToLowerInvariant()}");
+        var unrelated = _lexware.AddVoucher("invoice", "paid", "RE0500", "2026-03-01", "2026-03-15", 100m, 119m, lexContact, "Huber Bau GmbH",
+            introduction: "Reparatur Garage");
+
+        // Zuordnungsdialog: Belege des Kunden, Vorschläge über die Bauaktennummer zuerst. Zugeordnet wird dabei nichts.
+        var candidates = await SendAsync<BauakteVoucherCandidatesResponse>(_admin, HttpMethod.Get, $"/api/v1/bauakten/{bauakte}/lexware/candidates");
+        candidates.CustomerLinked.ShouldBeTrue();
+        candidates.Vouchers.Select(v => (v.LexwareId, v.Suggested)).ShouldBe([(invoice, true), (quotation, true), (unrelated, false)]);
+        (await DbAsync(db => db.Set<LexwareVoucherLink>().CountAsync(Ct))).ShouldBe(0);
+        // Die Texte der Belege werden dafür einzeln gelesen und zwischengespeichert.
+        var detailCalls = _lexware.Calls.Count(c => c.Path.StartsWith("/v1/invoices/", StringComparison.Ordinal) || c.Path.StartsWith("/v1/quotations/", StringComparison.Ordinal));
+        detailCalls.ShouldBe(3);
+        await SendAsync<BauakteVoucherCandidatesResponse>(_admin, HttpMethod.Get, $"/api/v1/bauakten/{bauakte}/lexware/candidates");
+        _lexware.Calls.Count(c => c.Path.StartsWith("/v1/invoices/", StringComparison.Ordinal) || c.Path.StartsWith("/v1/quotations/", StringComparison.Ordinal))
+            .ShouldBe(detailCalls);
+
+        // Nach Bestätigung zuordnen: Rechnung (Entwurf) und Angebot.
+        var draft = await SendAsync<LexwareVoucherResponse>(_admin, HttpMethod.Post, $"/api/v1/bauakten/{bauakte}/lexware/vouchers/assign",
+            new { lexwareId = invoice, type = "invoice" }, HttpStatusCode.Created);
+        (draft.Type, draft.Status, draft.NetAmount, draft.GrossAmount, draft.ContactName).ShouldBe(("invoice", "draft", 4629.25m, 5508.81m, "Huber Bau GmbH"));
+        draft.Url.ShouldBe($"https://app.lexware.de/permalink/invoices/edit/{invoice}");
+        var offer = await SendAsync<LexwareVoucherResponse>(_admin, HttpMethod.Post, $"/api/v1/bauakten/{bauakte}/lexware/vouchers/assign",
+            new { lexwareId = quotation, type = "quotation" }, HttpStatusCode.Created);
+        (offer.Type, offer.Status, offer.Number, offer.DueDate).ShouldBe(("quotation", "open", "AG0311", new DateOnly(2026, 8, 31)));
+        (await ProblemAsync(_admin, HttpMethod.Post, $"/api/v1/bauakten/{bauakte}/lexware/vouchers/assign", HttpStatusCode.UnprocessableEntity,
+            new { lexwareId = unrelated, type = "salesvoucher" })).ShouldStartWith("LEXWARE_UNKNOWN_VOUCHER_TYPE");
+
+        // Anzeige innerhalb des kurzen Caches: kein weiterer Aufruf.
+        var before = _lexware.Calls.Count;
+        var list = await SendAsync<BauakteLexwareResponse>(_admin, HttpMethod.Get, $"/api/v1/bauakten/{bauakte}/lexware");
+        list.CanAssign.ShouldBeTrue();
+        list.Vouchers.Select(v => v.Id).ShouldBe([draft.Id, offer.Id]);
+        _lexware.Calls.Count.ShouldBe(before);
+
+        // In Lexware abgeschlossen bzw. angenommen: „Aktualisieren“ holt den Stand sofort.
+        var remote = _lexware.Vouchers[invoice];
+        remote["voucherStatus"] = "open";
+        remote["voucherNumber"] = "RE1042";
+        remote["dueDate"] = "2099-01-31T00:00:00.000+01:00";
+        _lexware.Vouchers[quotation]["voucherStatus"] = "accepted";
+        var refreshed = (await SendAsync<BauakteLexwareResponse>(_admin, HttpMethod.Get, $"/api/v1/bauakten/{bauakte}/lexware?refresh=true")).Vouchers;
+        (refreshed[0].Status, refreshed[0].Number, refreshed[0].DueDate).ShouldBe(("open", "RE1042", new DateOnly(2099, 1, 31)));
+        refreshed[0].Url.ShouldBe($"https://app.lexware.de/permalink/invoices/view/{invoice}");
+        refreshed[1].Status.ShouldBe("accepted");
+
+        // Fälligkeit überschritten: überfällig wird abgeleitet (nur bei Rechnungen). Abgleich bei der Anzeige erst nach Ablauf des Caches.
+        remote["dueDate"] = "2020-01-31T00:00:00.000+01:00";
+        (await SendAsync<BauakteLexwareResponse>(_admin, HttpMethod.Get, $"/api/v1/bauakten/{bauakte}/lexware")).Vouchers[0].Status.ShouldBe("open");
+        _factory.Clock.Advance(TimeSpan.FromMinutes(3));
+        var later = (await SendAsync<BauakteLexwareResponse>(_admin, HttpMethod.Get, $"/api/v1/bauakten/{bauakte}/lexware")).Vouchers;
+        later[0].Status.ShouldBe("overdue");
+        later[1].Status.ShouldBe("accepted");
+        remote["voucherStatus"] = "paid";
+        (await SendAsync<BauakteLexwareResponse>(_admin, HttpMethod.Get, $"/api/v1/bauakten/{bauakte}/lexware?refresh=true")).Vouchers[0].Status.ShouldBe("paid");
+
+        // Schlüssel ungültig: gespeicherter Stand mit Hinweis statt Fehler. In Lexware gelöscht: Hinweis am Beleg.
+        _lexware.Raw["/v1/invoices/"] = (401, "{}");
+        var stale = await SendAsync<BauakteLexwareResponse>(_admin, HttpMethod.Get, $"/api/v1/bauakten/{bauakte}/lexware?refresh=true");
+        stale.SyncError!.ShouldContain("API-Schlüssel");
+        stale.Vouchers[0].Status.ShouldBe("paid");
+        _lexware.Raw["/v1/invoices/"] = (404, "{}");
+        var gone = await SendAsync<BauakteLexwareResponse>(_admin, HttpMethod.Get, $"/api/v1/bauakten/{bauakte}/lexware?refresh=true");
+        gone.SyncError.ShouldBeNull();
+        gone.Vouchers[0].SyncError.ShouldBe("In Lexware Office nicht mehr vorhanden.");
+
+        // Drosselung beim Lesen: Wiederholung, dann Erfolg.
+        _lexware.Raw.Clear();
+        _lexware.Throttle["/v1/quotations/"] = 2;
+        (await SendAsync<BauakteLexwareResponse>(_admin, HttpMethod.Get, $"/api/v1/bauakten/{bauakte}/lexware?refresh=true")).SyncError.ShouldBeNull();
+
+        (await DbAsync(db => db.Set<AuditEvent>().AsNoTracking().CountAsync(e => e.Action == "lexware.voucher_assigned", Ct))).ShouldBe(2);
+        // EstrichONE hat in Lexware Office keinen Beleg angelegt oder geändert.
+        _lexware.Calls.ShouldAllBe(c => c.Method == "GET");
+        _lexware.Vouchers.Count.ShouldBe(3);
+    }
+
+    [Fact]
+    public async Task Voucher_IsFoundByNumber_AssignedOnce_AndCanBeReleased()
     {
         await ConfigureAsync();
         var first = await BauakteAsync("EFH Huber", null);
         var second = await BauakteAsync("MFH Lang", null);
-        var invoice = _lexware.AddInvoice("open", "RE0815", "2026-10-01", "2026-10-15", 1000m, 1190m, "Huber Bau GmbH");
+        var invoice = _lexware.AddVoucher("invoice", "open", "RE0815", "2026-10-01", "2026-10-15", 1000m, 1190m, null, "Huber Bau GmbH");
 
-        var hits = await SendAsync<List<LexwareVoucherHit>>(_admin, HttpMethod.Get, $"/api/v1/bauakten/{first}/lexware/invoices/search?number=RE0815");
-        var hit = hits.ShouldHaveSingleItem();
-        hit.LexwareId.ShouldBe(invoice);
-        hit.Status.ShouldBe("overdue");
-        hit.GrossAmount.ShouldBe(1190m);
-        hit.ContactName.ShouldBe("Huber Bau GmbH");
+        // Ohne Kunde bzw. ohne Verknüpfung: keine Belegliste, aber die Suche über die Nummer.
+        var empty = await SendAsync<BauakteVoucherCandidatesResponse>(_admin, HttpMethod.Get, $"/api/v1/bauakten/{first}/lexware/candidates");
+        empty.CustomerLinked.ShouldBeFalse();
+        empty.Vouchers.ShouldBeEmpty();
+        var hit = (await SendAsync<BauakteVoucherCandidatesResponse>(_admin, HttpMethod.Get, $"/api/v1/bauakten/{first}/lexware/candidates?number=RE0815"))
+            .Vouchers.ShouldHaveSingleItem();
+        (hit.LexwareId, hit.Type, hit.Status, hit.GrossAmount, hit.ContactName).ShouldBe((invoice, "invoice", "overdue", 1190m, "Huber Bau GmbH"));
         hit.AssignedBauakteId.ShouldBeNull();
-        var query = _lexware.CallsTo("GET", "/v1/voucherlist").ShouldHaveSingleItem().Query;
-        query.ShouldContain("voucherType=invoice");
-        query.ShouldContain("voucherStatus=open,paid,paidoff,voided,overdue");
-        query.ShouldContain("voucherNumber=RE0815");
-        (await SendAsync<List<LexwareVoucherHit>>(_admin, HttpMethod.Get, $"/api/v1/bauakten/{first}/lexware/invoices/search?number=GIBTSNICHT")).ShouldBeEmpty();
+        _lexware.CallsTo("GET", "/v1/voucherlist").ShouldHaveSingleItem().Query.ShouldContain("voucherNumber=RE0815");
+        (await SendAsync<BauakteVoucherCandidatesResponse>(_admin, HttpMethod.Get, $"/api/v1/bauakten/{first}/lexware/candidates?number=GIBTSNICHT"))
+            .Vouchers.ShouldBeEmpty();
 
-        var assigned = await SendAsync<LexwareVoucherResponse>(_admin, HttpMethod.Post, $"/api/v1/bauakten/{first}/lexware/invoices/assign",
-            new { lexwareId = invoice }, HttpStatusCode.Created);
-        assigned.Number.ShouldBe("RE0815");
-        assigned.Created.ShouldBeFalse();
-        assigned.NetAmount.ShouldBe(1000m);
-        assigned.Status.ShouldBe("overdue");
+        var assigned = await SendAsync<LexwareVoucherResponse>(_admin, HttpMethod.Post, $"/api/v1/bauakten/{first}/lexware/vouchers/assign",
+            new { lexwareId = invoice, type = "invoice" }, HttpStatusCode.Created);
+        (assigned.Number, assigned.NetAmount, assigned.Status).ShouldBe(("RE0815", 1000m, "overdue"));
 
-        // Eine Rechnung gehört zu genau einer Bauakte.
-        var conflict = await ProblemAsync(_admin, HttpMethod.Post, $"/api/v1/bauakten/{second}/lexware/invoices/assign", HttpStatusCode.Conflict,
-            new { lexwareId = invoice });
+        // Ein Beleg gehört zu genau einer Bauakte.
+        var conflict = await ProblemAsync(_admin, HttpMethod.Post, $"/api/v1/bauakten/{second}/lexware/vouchers/assign", HttpStatusCode.Conflict,
+            new { lexwareId = invoice, type = "invoice" });
         conflict.ShouldStartWith("LEXWARE_ALREADY_LINKED");
-        (await SendAsync<List<LexwareVoucherHit>>(_admin, HttpMethod.Get, $"/api/v1/bauakten/{second}/lexware/invoices/search?number=RE0815"))
-            .ShouldHaveSingleItem().AssignedBauakteId.ShouldBe(first);
-        (await ProblemAsync(_admin, HttpMethod.Post, $"/api/v1/bauakten/{second}/lexware/invoices/assign", HttpStatusCode.FailedDependency,
-            new { lexwareId = Guid.NewGuid().ToString() })).ShouldStartWith("LEXWARE_NOT_FOUND");
+        (await SendAsync<BauakteVoucherCandidatesResponse>(_admin, HttpMethod.Get, $"/api/v1/bauakten/{second}/lexware/candidates?number=RE0815"))
+            .Vouchers.ShouldHaveSingleItem().AssignedBauakteId.ShouldBe(first);
+        (await ProblemAsync(_admin, HttpMethod.Post, $"/api/v1/bauakten/{second}/lexware/vouchers/assign", HttpStatusCode.FailedDependency,
+            new { lexwareId = Guid.NewGuid().ToString(), type = "invoice" })).ShouldStartWith("LEXWARE_NOT_FOUND");
 
-        using var release = await _admin.DeleteAsync(new Uri($"/api/v1/bauakten/{first}/lexware/invoices/{assigned.Id}", UriKind.Relative), Ct);
+        using var release = await _admin.DeleteAsync(new Uri($"/api/v1/bauakten/{first}/lexware/vouchers/{assigned.Id}", UriKind.Relative), Ct);
         release.StatusCode.ShouldBe(HttpStatusCode.NoContent);
-        await SendAsync<LexwareVoucherResponse>(_admin, HttpMethod.Post, $"/api/v1/bauakten/{second}/lexware/invoices/assign", new { lexwareId = invoice },
-            HttpStatusCode.Created);
-        _lexware.Invoices.ContainsKey(invoice).ShouldBeTrue();
+        await SendAsync<LexwareVoucherResponse>(_admin, HttpMethod.Post, $"/api/v1/bauakten/{second}/lexware/vouchers/assign",
+            new { lexwareId = invoice, type = "invoice" }, HttpStatusCode.Created);
+        _lexware.Vouchers.ContainsKey(invoice).ShouldBeTrue();
+        _lexware.Calls.ShouldAllBe(c => c.Method == "GET");
     }
 }

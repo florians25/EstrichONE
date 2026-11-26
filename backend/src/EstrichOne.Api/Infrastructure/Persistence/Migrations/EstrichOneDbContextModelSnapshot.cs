@@ -4595,15 +4595,6 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(300)")
                         .HasColumnName("organization_name");
 
-                    b.Property<int>("PaymentTermDays")
-                        .HasColumnType("integer")
-                        .HasColumnName("payment_term_days");
-
-                    b.Property<string>("PaymentTermLabel")
-                        .HasMaxLength(300)
-                        .HasColumnType("character varying(300)")
-                        .HasColumnName("payment_term_label");
-
                     b.Property<string>("ProtectedApiKey")
                         .HasColumnType("text")
                         .HasColumnName("protected_api_key");
@@ -4634,9 +4625,10 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("bauakte_id");
 
-                    b.Property<bool>("Created")
-                        .HasColumnType("boolean")
-                        .HasColumnName("created");
+                    b.Property<string>("ContactName")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("contact_name");
 
                     b.Property<string>("Currency")
                         .IsRequired()

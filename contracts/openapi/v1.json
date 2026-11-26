@@ -23922,6 +23922,94 @@
         ]
       }
     },
+    "/api/v1/lexware/customers/{contactId}/vouchers": {
+      "get": {
+        "tags": [
+          "Lexware Office"
+        ],
+        "summary": "Rechnungen, Angebote, Gutschriften und Auftragsbestätigungen des verknüpften Lexware-Kontakts (nur Anzeige, kurzer Cache)",
+        "operationId": "ListCustomerLexwareVouchers",
+        "parameters": [
+          {
+            "name": "contactId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "refresh",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerVouchersResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "424": {
+            "description": "Failed Dependency",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/lexware/customers/{contactId}/candidates": {
       "get": {
         "tags": [
@@ -24580,7 +24668,7 @@
         "tags": [
           "Lexware Office"
         ],
-        "summary": "Rechnungen der Bauakte mit Statusabgleich (kurzer Cache; refresh=true gleicht alle sofort ab)",
+        "summary": "Rechnungen und Angebote der Bauakte mit Statusabgleich (kurzer Cache; refresh=true gleicht alle sofort ab)",
         "operationId": "GetBauakteLexware",
         "parameters": [
           {
@@ -24633,163 +24721,13 @@
         ]
       }
     },
-    "/api/v1/bauakten/{id}/lexware/invoice-proposal": {
+    "/api/v1/bauakten/{id}/lexware/candidates": {
       "get": {
         "tags": [
           "Lexware Office"
         ],
-        "summary": "Vorschlag für den Rechnungsentwurf: Texte, Positionen aus den Kennwerten, Leistungszeitraum, Zahlungsziel",
-        "operationId": "GetLexwareInvoiceProposal",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/LexwareInvoiceProposal"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Nicht angemeldet oder Token abgelaufen"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ]
-      }
-    },
-    "/api/v1/bauakten/{id}/lexware/invoices": {
-      "post": {
-        "tags": [
-          "Lexware Office"
-        ],
-        "summary": "Rechnung als Entwurf in Lexware Office anlegen (kein Abschluss) und der Bauakte zuordnen",
-        "operationId": "CreateLexwareInvoiceDraft",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateLexwareInvoiceRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "201": {
-            "description": "Created",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/LexwareVoucherResponse"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Conflict",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Unprocessable Entity",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "424": {
-            "description": "Failed Dependency",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "Service Unavailable",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Nicht angemeldet oder Token abgelaufen"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ]
-      }
-    },
-    "/api/v1/bauakten/{id}/lexware/invoices/search": {
-      "get": {
-        "tags": [
-          "Lexware Office"
-        ],
-        "summary": "Vorhandene Rechnung in Lexware Office über die Belegnummer suchen",
-        "operationId": "SearchLexwareInvoices",
+        "summary": "Belege zum Zuordnen: Belege des Kunden der Bauakte (mit Vorschlag, wenn die Bauaktennummer im Text vorkommt) oder Suche über die Belegnummer",
+        "operationId": "ListLexwareVoucherCandidates",
         "parameters": [
           {
             "name": "id",
@@ -24807,6 +24745,14 @@
               "maxLength": 100,
               "type": "string"
             }
+          },
+          {
+            "name": "refresh",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
           }
         ],
         "responses": {
@@ -24815,10 +24761,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/LexwareVoucherHit"
-                  }
+                  "$ref": "#/components/schemas/BauakteVoucherCandidatesResponse"
                 }
               }
             }
@@ -24874,13 +24817,13 @@
         ]
       }
     },
-    "/api/v1/bauakten/{id}/lexware/invoices/assign": {
+    "/api/v1/bauakten/{id}/lexware/vouchers/assign": {
       "post": {
         "tags": [
           "Lexware Office"
         ],
-        "summary": "Vorhandene Rechnung aus Lexware Office der Bauakte zuordnen",
-        "operationId": "AssignLexwareInvoice",
+        "summary": "Beleg aus Lexware Office der Bauakte zuordnen (nur in EstrichONE; in Lexware Office wird nichts geschrieben)",
+        "operationId": "AssignLexwareVoucher",
         "parameters": [
           {
             "name": "id",
@@ -24896,7 +24839,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/AssignLexwareInvoiceRequest"
+                "$ref": "#/components/schemas/AssignLexwareVoucherRequest"
               }
             }
           },
@@ -24964,13 +24907,13 @@
         ]
       }
     },
-    "/api/v1/bauakten/{id}/lexware/invoices/{linkId}": {
+    "/api/v1/bauakten/{id}/lexware/vouchers/{linkId}": {
       "delete": {
         "tags": [
           "Lexware Office"
         ],
-        "summary": "Zuordnung der Rechnung zur Bauakte lösen (in Lexware Office wird nichts gelöscht)",
-        "operationId": "UnassignLexwareInvoice",
+        "summary": "Zuordnung des Belegs zur Bauakte lösen (in Lexware Office ändert sich nichts)",
+        "operationId": "UnassignLexwareVoucher",
         "parameters": [
           {
             "name": "id",
@@ -29165,14 +29108,19 @@
           }
         }
       },
-      "AssignLexwareInvoiceRequest": {
+      "AssignLexwareVoucherRequest": {
         "required": [
-          "lexwareId"
+          "lexwareId",
+          "type"
         ],
         "type": "object",
         "properties": {
           "lexwareId": {
             "maxLength": 100,
+            "type": "string"
+          },
+          "type": {
+            "maxLength": 30,
             "type": "string"
           }
         }
@@ -30514,9 +30462,9 @@
         "required": [
           "bauakteId",
           "configured",
-          "canCreate",
+          "canAssign",
           "customer",
-          "invoices",
+          "vouchers",
           "syncError"
         ],
         "type": "object",
@@ -30528,7 +30476,7 @@
           "configured": {
             "type": "boolean"
           },
-          "canCreate": {
+          "canAssign": {
             "type": "boolean"
           },
           "customer": {
@@ -30541,7 +30489,7 @@
               }
             ]
           },
-          "invoices": {
+          "vouchers": {
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/LexwareVoucherResponse"
@@ -31109,6 +31057,24 @@
           },
           "closeAction": {
             "$ref": "#/components/schemas/TeamsCloseAction"
+          }
+        }
+      },
+      "BauakteVoucherCandidatesResponse": {
+        "required": [
+          "customerLinked",
+          "vouchers"
+        ],
+        "type": "object",
+        "properties": {
+          "customerLinked": {
+            "type": "boolean"
+          },
+          "vouchers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LexwareVoucherItem"
+            }
           }
         }
       },
@@ -34453,73 +34419,6 @@
           }
         }
       },
-      "CreateLexwareInvoiceRequest": {
-        "required": [
-          "lines"
-        ],
-        "type": "object",
-        "properties": {
-          "lines": {
-            "maxItems": 100,
-            "minItems": 1,
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/LexwareInvoiceLine"
-            }
-          },
-          "voucherDate": {
-            "type": [
-              "null",
-              "string"
-            ],
-            "format": "date"
-          },
-          "title": {
-            "maxLength": 250,
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "introduction": {
-            "maxLength": 2000,
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "remark": {
-            "maxLength": 2000,
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "serviceDate": {
-            "type": [
-              "null",
-              "string"
-            ],
-            "format": "date"
-          },
-          "serviceEndDate": {
-            "type": [
-              "null",
-              "string"
-            ],
-            "format": "date"
-          },
-          "paymentTermDays": {
-            "maximum": 365,
-            "minimum": 0,
-            "type": [
-              "null",
-              "integer"
-            ],
-            "format": "int32"
-          }
-        }
-      },
       "CreateNoteRequest": {
         "required": [
           "id",
@@ -35220,6 +35119,32 @@
             "items": {
               "$ref": "#/components/schemas/CustomerReference"
             }
+          }
+        }
+      },
+      "CustomerVouchersResponse": {
+        "required": [
+          "linked",
+          "vouchers",
+          "loadedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "linked": {
+            "type": "boolean"
+          },
+          "vouchers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LexwareVoucherItem"
+            }
+          },
+          "loadedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
           }
         }
       },
@@ -40412,125 +40337,6 @@
           }
         }
       },
-      "LexwareInvoiceLine": {
-        "required": [
-          "kind",
-          "name"
-        ],
-        "type": "object",
-        "properties": {
-          "kind": {
-            "maxLength": 10,
-            "type": "string"
-          },
-          "name": {
-            "maxLength": 255,
-            "type": "string"
-          },
-          "description": {
-            "maxLength": 2000,
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "quantity": {
-            "maximum": 10000000,
-            "minimum": 0,
-            "type": [
-              "null",
-              "number"
-            ],
-            "format": "double"
-          },
-          "unitName": {
-            "maxLength": 30,
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "unitPrice": {
-            "maximum": 100000000,
-            "minimum": 0,
-            "type": [
-              "null",
-              "number"
-            ],
-            "format": "double"
-          },
-          "taxRate": {
-            "type": [
-              "null",
-              "number"
-            ],
-            "format": "double"
-          }
-        }
-      },
-      "LexwareInvoiceProposal": {
-        "required": [
-          "customer",
-          "title",
-          "introduction",
-          "remark",
-          "voucherDate",
-          "serviceDate",
-          "serviceEndDate",
-          "paymentTermDays",
-          "lines"
-        ],
-        "type": "object",
-        "properties": {
-          "customer": {
-            "oneOf": [
-              {
-                "type": "null"
-              },
-              {
-                "$ref": "#/components/schemas/LexwareBauakteCustomer"
-              }
-            ]
-          },
-          "title": {
-            "type": "string"
-          },
-          "introduction": {
-            "type": "string"
-          },
-          "remark": {
-            "type": "string"
-          },
-          "voucherDate": {
-            "type": "string",
-            "format": "date"
-          },
-          "serviceDate": {
-            "type": [
-              "null",
-              "string"
-            ],
-            "format": "date"
-          },
-          "serviceEndDate": {
-            "type": [
-              "null",
-              "string"
-            ],
-            "format": "date"
-          },
-          "paymentTermDays": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "lines": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/LexwareInvoiceLine"
-            }
-          }
-        }
-      },
       "LexwareLinkedPair": {
         "required": [
           "customer",
@@ -40677,8 +40483,6 @@
           "hasApiKey",
           "baseUrl",
           "customBaseUrl",
-          "paymentTermDays",
-          "paymentTermLabel",
           "organizationName",
           "lastTestAt",
           "lastTestOk",
@@ -40701,16 +40505,6 @@
           },
           "customBaseUrl": {
             "type": "boolean"
-          },
-          "paymentTermDays": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "paymentTermLabel": {
-            "type": [
-              "null",
-              "string"
-            ]
           },
           "organizationName": {
             "type": [
@@ -40763,7 +40557,7 @@
           "enabled",
           "configured",
           "canRead",
-          "canCreate",
+          "canAssign",
           "canManage"
         ],
         "type": "object",
@@ -40777,7 +40571,7 @@
           "canRead": {
             "type": "boolean"
           },
-          "canCreate": {
+          "canAssign": {
             "type": "boolean"
           },
           "canManage": {
@@ -40850,9 +40644,10 @@
           }
         }
       },
-      "LexwareVoucherHit": {
+      "LexwareVoucherItem": {
         "required": [
           "lexwareId",
+          "type",
           "number",
           "voucherDate",
           "dueDate",
@@ -40860,12 +40655,16 @@
           "currency",
           "status",
           "contactName",
+          "url",
           "assignedBauakteId",
           "assignedBauakte"
         ],
         "type": "object",
         "properties": {
           "lexwareId": {
+            "type": "string"
+          },
+          "type": {
             "type": "string"
           },
           "number": {
@@ -40907,6 +40706,9 @@
               "string"
             ]
           },
+          "url": {
+            "type": "string"
+          },
           "assignedBauakteId": {
             "type": [
               "null",
@@ -40919,6 +40721,10 @@
               "null",
               "string"
             ]
+          },
+          "suggested": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -40926,6 +40732,7 @@
         "required": [
           "id",
           "lexwareId",
+          "type",
           "number",
           "title",
           "voucherDate",
@@ -40934,7 +40741,7 @@
           "grossAmount",
           "currency",
           "status",
-          "created",
+          "contactName",
           "url",
           "syncedAt",
           "syncError"
@@ -40946,6 +40753,9 @@
             "format": "uuid"
           },
           "lexwareId": {
+            "type": "string"
+          },
+          "type": {
             "type": "string"
           },
           "number": {
@@ -40994,8 +40804,11 @@
           "status": {
             "type": "string"
           },
-          "created": {
-            "type": "boolean"
+          "contactName": {
+            "type": [
+              "null",
+              "string"
+            ]
           },
           "url": {
             "type": "string"
@@ -47343,20 +47156,6 @@
             "default": false
           },
           "baseUrl": {
-            "maxLength": 300,
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "paymentTermDays": {
-            "maximum": 365,
-            "minimum": 0,
-            "type": "integer",
-            "format": "int32",
-            "default": 14
-          },
-          "paymentTermLabel": {
             "maxLength": 300,
             "type": [
               "null",

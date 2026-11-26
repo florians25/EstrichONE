@@ -16,17 +16,17 @@ namespace EstrichOne.Api.Modules.Lexware;
 /// <param name="Enabled">Modul eingeschaltet (Verwaltung › Module).</param>
 /// <param name="Configured">API-Schlüssel hinterlegt.</param>
 /// <param name="CanRead">Recht <c>invoices.read</c>.</param>
-/// <param name="CanCreate">Recht <c>invoices.create</c>.</param>
+/// <param name="CanAssign">Recht <c>invoices.assign</c>.</param>
 /// <param name="CanManage">Recht <c>settings.integrations</c>.</param>
 /// <param name="SyncDefault">Vorgabe für „Mit Lexware Office abgleichen“ bei neuen Kunden (Modul an und Einstellung gesetzt).</param>
-public sealed record LexwareStatusResponse(bool Enabled, bool Configured, bool CanRead, bool CanCreate, bool CanManage, bool SyncDefault = false);
+public sealed record LexwareStatusResponse(bool Enabled, bool Configured, bool CanRead, bool CanAssign, bool CanManage, bool SyncDefault = false);
 
 /// <param name="HasApiKey">Schlüssel hinterlegt; der Schlüssel selbst wird nie zurückgegeben.</param>
 /// <param name="BaseUrl">Wirksame Basis-URL der API.</param>
 /// <param name="CustomBaseUrl">Abweichende Basis-URL eingestellt (sonst die Vorgabe).</param>
 /// <param name="KeyHelpUrl">Seite in Lexware Office, auf der der Schlüssel erzeugt wird.</param>
 public sealed record LexwareSettingsResponse(
-    bool ModuleEnabled, bool HasApiKey, string BaseUrl, bool CustomBaseUrl, int PaymentTermDays, string? PaymentTermLabel, string? OrganizationName,
+    bool ModuleEnabled, bool HasApiKey, string BaseUrl, bool CustomBaseUrl, string? OrganizationName,
     DateTimeOffset? LastTestAt, bool? LastTestOk, string? LastTestError, int LinkedCustomers, int LinkedInvoices, string KeyHelpUrl, long Version,
     bool NewCustomersSync = true);
 
@@ -36,7 +36,6 @@ public sealed record LexwareSettingsResponse(
 /// <param name="NewCustomersSync">Neue Kunden standardmäßig mit Lexware Office abgleichen; ohne Angabe unverändert.</param>
 public sealed record SaveLexwareSettingsRequest(
     [property: MaxLength(500)] string? ApiKey = null, bool ClearApiKey = false, [property: MaxLength(LexwareSettingsRow.MaxUrl)] string? BaseUrl = null,
-    [property: Range(0, 365)] int PaymentTermDays = 14, [property: MaxLength(LexwareSettingsRow.MaxLabel)] string? PaymentTermLabel = null,
     long? Version = null, bool? NewCustomersSync = null);
 
 public sealed record LexwareTestResponse(bool Ok, string? OrganizationName, string? Error, DateTimeOffset At);
@@ -120,49 +119,45 @@ public sealed record LinkUniqueLexwareRequest([property: Required, MaxLength(200
 
 public sealed record LinkUniqueLexwareResponse(int Linked, int Skipped);
 
-/// <summary>Beleg der Bauakte in Lexware Office.</summary>
-/// <param name="Status"><c>draft</c>, <c>open</c>, <c>overdue</c> (offen und Fälligkeit überschritten), <c>paid</c>, <c>paidoff</c>, <c>voided</c>.</param>
-/// <param name="Created">Aus EstrichONE als Entwurf angelegt (sonst nachträglich zugeordnet).</param>
+/// <summary>Beleg aus Lexware Office, der einer Bauakte zugeordnet ist (nur Anzeige; Belege entstehen in Lexware Office).</summary>
+/// <param name="Type"><c>invoice</c>, <c>quotation</c>, <c>creditnote</c> oder <c>orderconfirmation</c>.</param>
+/// <param name="DueDate">Fälligkeit der Rechnung bzw. „gültig bis“ des Angebots.</param>
+/// <param name="Status">
+/// <c>draft</c>, <c>open</c>, <c>overdue</c> (Rechnung offen und Fälligkeit überschritten), <c>paid</c>, <c>paidoff</c>, <c>voided</c>;
+/// bei Angeboten auch <c>accepted</c> und <c>rejected</c>.
+/// </param>
 public sealed record LexwareVoucherResponse(
-    Guid Id, string LexwareId, string? Number, string? Title, DateOnly? VoucherDate, DateOnly? DueDate, decimal? NetAmount, decimal? GrossAmount,
-    string Currency, string Status, bool Created, string Url, DateTimeOffset? SyncedAt, string? SyncError);
+    Guid Id, string LexwareId, string Type, string? Number, string? Title, DateOnly? VoucherDate, DateOnly? DueDate, decimal? NetAmount,
+    decimal? GrossAmount, string Currency, string Status, string? ContactName, string Url, DateTimeOffset? SyncedAt, string? SyncError);
 
 /// <param name="SyncEnabled">„Mit Lexware Office abgleichen“ ist für den Kunden eingeschaltet.</param>
 public sealed record LexwareBauakteCustomer(Guid Id, string Name, string? LexwareContactId, bool SyncEnabled = false);
 
 /// <param name="SyncError">Abgleich mit Lexware Office fehlgeschlagen; die Liste zeigt den zuletzt gespeicherten Stand.</param>
 public sealed record BauakteLexwareResponse(
-    Guid BauakteId, bool Configured, bool CanCreate, LexwareBauakteCustomer? Customer, IReadOnlyList<LexwareVoucherResponse> Invoices, string? SyncError);
+    Guid BauakteId, bool Configured, bool CanAssign, LexwareBauakteCustomer? Customer, IReadOnlyList<LexwareVoucherResponse> Vouchers, string? SyncError);
 
-/// <param name="Kind"><c>custom</c> (Position mit Menge und Preis) oder <c>text</c> (Textzeile).</param>
-/// <param name="UnitPrice">Einzelpreis netto in Euro.</param>
-/// <param name="TaxRate">Steuersatz in Prozent (0, 7 oder 19).</param>
-public sealed record LexwareInvoiceLine(
-    [property: Required, MaxLength(10)] string Kind, [property: Required, MaxLength(255)] string Name, [property: MaxLength(2000)] string? Description = null,
-    [property: Range(0, 10_000_000)] decimal? Quantity = null, [property: MaxLength(30)] string? UnitName = null,
-    [property: Range(0, 100_000_000)] decimal? UnitPrice = null, decimal? TaxRate = null);
+/// <summary>Beleg aus der Belegliste von Lexware Office (Kunde, Zuordnungsdialog).</summary>
+/// <param name="GrossAmount">Bruttobetrag laut Belegliste.</param>
+/// <param name="AssignedBauakteId">Bauakte, der der Beleg bereits zugeordnet ist.</param>
+/// <param name="Suggested">Die Bauaktennummer kommt in Titel, Einleitung oder Schlusstext vor (Vorschlag für die Zuordnung).</param>
+public sealed record LexwareVoucherItem(
+    string LexwareId, string Type, string? Number, DateOnly? VoucherDate, DateOnly? DueDate, decimal? GrossAmount, string Currency, string Status,
+    string? ContactName, string Url, Guid? AssignedBauakteId, string? AssignedBauakte, bool Suggested = false);
 
-/// <summary>Vorschlag für den Dialog „Rechnung erstellen“.</summary>
-public sealed record LexwareInvoiceProposal(
-    LexwareBauakteCustomer? Customer, string Title, string Introduction, string Remark, DateOnly VoucherDate, DateOnly? ServiceDate,
-    DateOnly? ServiceEndDate, int PaymentTermDays, IReadOnlyList<LexwareInvoiceLine> Lines);
+/// <summary>Belege eines Kunden aus Lexware Office (nur Anzeige).</summary>
+/// <param name="Linked">Der Kunde ist mit einem Lexware-Kontakt verknüpft; sonst ist die Liste leer.</param>
+public sealed record CustomerVouchersResponse(bool Linked, IReadOnlyList<LexwareVoucherItem> Vouchers, DateTimeOffset? LoadedAt);
 
-public sealed record CreateLexwareInvoiceRequest(
-    [property: Required, MinLength(1), MaxLength(100)] IReadOnlyList<LexwareInvoiceLine> Lines, DateOnly? VoucherDate = null,
-    [property: MaxLength(250)] string? Title = null, [property: MaxLength(2000)] string? Introduction = null,
-    [property: MaxLength(2000)] string? Remark = null, DateOnly? ServiceDate = null, DateOnly? ServiceEndDate = null,
-    [property: Range(0, 365)] int? PaymentTermDays = null);
+/// <param name="CustomerLinked">Der Kunde der Bauakte ist verknüpft; sonst geht nur die Suche über die Belegnummer.</param>
+public sealed record BauakteVoucherCandidatesResponse(bool CustomerLinked, IReadOnlyList<LexwareVoucherItem> Vouchers);
 
-/// <param name="AssignedBauakteId">Bauakte, der die Rechnung bereits zugeordnet ist.</param>
-public sealed record LexwareVoucherHit(
-    string LexwareId, string? Number, DateOnly? VoucherDate, DateOnly? DueDate, decimal? GrossAmount, string Currency, string Status, string? ContactName,
-    Guid? AssignedBauakteId, string? AssignedBauakte);
-
-public sealed record AssignLexwareInvoiceRequest([property: Required, MaxLength(100)] string LexwareId);
+public sealed record AssignLexwareVoucherRequest([property: Required, MaxLength(100)] string LexwareId, [property: Required, MaxLength(30)] string Type);
 
 /// <summary>
 /// Lexware Office: Einstellungen (nur mit <c>settings.integrations</c>), Kundenverknüpfung mit beidseitiger
-/// Dublettenprüfung, Rechnungsentwurf aus der Bauakte und Belegliste mit Statusabgleich.
+/// Dublettenprüfung und die Anzeige von Rechnungen und Angeboten an Kunde und Bauakte. Belege werden nur gelesen und in
+/// EstrichONE Bauakten zugeordnet; angelegt oder geändert werden sie ausschließlich in Lexware Office.
 /// </summary>
 internal static class LexwareEndpoints
 {
@@ -200,69 +195,66 @@ internal static class LexwareEndpoints
         var customers = api.MapGroup("/lexware/customers/{contactId:guid}").WithTags(Tag).RequireModule(AppModules.Lexware).AddEndpointFilter(GuardAsync);
         customers.MapGet("/", CustomerAsync).WithName("GetCustomerLexwareLink").WithSummary("Verknüpfung des Kunden mit Lexware Office")
             .ProducesProblem(StatusCodes.Status404NotFound).RequirePermission(Permissions.InvoicesRead);
+        customers.MapGet("/vouchers", CustomerVouchersAsync).WithName("ListCustomerLexwareVouchers")
+            .WithSummary("Rechnungen, Angebote, Gutschriften und Auftragsbestätigungen des verknüpften Lexware-Kontakts (nur Anzeige, kurzer Cache)")
+            .ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status409Conflict)
+            .ProducesProblem(StatusCodes.Status424FailedDependency).ProducesProblem(StatusCodes.Status503ServiceUnavailable)
+            .RequirePermission(Permissions.InvoicesRead);
         customers.MapGet("/candidates", CandidatesAsync).WithName("FindLexwareContactCandidates")
             .WithSummary("Dublettenprüfung in Lexware Office für diesen Kunden; mit q gezielte Suche nach Name, E-Mail-Adresse oder Kundennummer")
             .ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status409Conflict)
             .ProducesProblem(StatusCodes.Status424FailedDependency).ProducesProblem(StatusCodes.Status503ServiceUnavailable)
-            .RequirePermission(Permissions.InvoicesCreate);
+            .RequirePermission(Permissions.InvoicesAssign);
         customers.MapPost("/link", LinkCustomerAsync).WithName("LinkCustomerToLexware")
             .WithSummary("Kunde mit vorhandenem Lexware-Kontakt verknüpfen (je Seite höchstens eine Verknüpfung)")
             .ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status409Conflict)
             .ProducesProblem(StatusCodes.Status424FailedDependency).ProducesProblem(StatusCodes.Status503ServiceUnavailable)
-            .RequirePermission(Permissions.InvoicesCreate);
+            .RequirePermission(Permissions.InvoicesAssign);
         customers.MapPost("/create", CreateContactAsync).WithName("CreateLexwareContact")
             .WithSummary("Kunde in Lexware Office anlegen; vorher immer Dublettenprüfung, bei Treffern nur mit createAnyway")
             .ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status409Conflict)
             .ProducesProblem(StatusCodes.Status424FailedDependency).ProducesProblem(StatusCodes.Status503ServiceUnavailable)
-            .RequirePermission(Permissions.InvoicesCreate);
+            .RequirePermission(Permissions.InvoicesAssign);
         customers.MapPut("/sync", SetSyncAsync).WithName("SetCustomerLexwareSync")
             .WithSummary("„Mit Lexware Office abgleichen“ für den Kunden ein- oder ausschalten (eine bestehende Verknüpfung bleibt, bis sie gelöst wird)")
-            .ProducesProblem(StatusCodes.Status404NotFound).RequirePermission(Permissions.InvoicesCreate);
+            .ProducesProblem(StatusCodes.Status404NotFound).RequirePermission(Permissions.InvoicesAssign);
         customers.MapDelete("/link", UnlinkCustomerAsync).WithName("UnlinkCustomerFromLexware")
             .WithSummary("Verknüpfung lösen (in Lexware Office wird nichts gelöscht)").ProducesProblem(StatusCodes.Status404NotFound)
-            .RequirePermission(Permissions.InvoicesCreate);
+            .RequirePermission(Permissions.InvoicesAssign);
 
         var contacts = api.MapGroup("/lexware/contacts").WithTags(Tag).RequireModule(AppModules.Lexware).AddEndpointFilter(GuardAsync);
         contacts.MapGet("/", ListContactsAsync).WithName("ListLexwareContacts")
             .WithSummary("Kunden aus Lexware Office, seitenweise mit Suche (Liste kurz zwischengespeichert); unlinked=true nur ohne Verknüpfung")
             .ProducesProblem(StatusCodes.Status409Conflict).ProducesProblem(StatusCodes.Status424FailedDependency)
-            .ProducesProblem(StatusCodes.Status503ServiceUnavailable).RequirePermission(Permissions.InvoicesCreate);
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable).RequirePermission(Permissions.InvoicesAssign);
         contacts.MapGet("/{lexwareContactId}/candidates", CustomerCandidatesAsync).WithName("FindCustomerCandidatesForLexwareContact")
             .WithSummary("Dublettenprüfung in EstrichONE für einen Lexware-Kontakt")
             .ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status409Conflict)
             .ProducesProblem(StatusCodes.Status424FailedDependency).ProducesProblem(StatusCodes.Status503ServiceUnavailable)
-            .RequirePermission(Permissions.InvoicesCreate);
+            .RequirePermission(Permissions.InvoicesAssign);
         contacts.MapPost("/{lexwareContactId}/import", ImportContactAsync).WithName("ImportLexwareContact")
             .WithSummary("Lexware-Kontakt als Kunde nach EstrichONE übernehmen; vorher immer Dublettenprüfung, bei Treffern nur mit createAnyway")
             .ProducesProblem(StatusCodes.Status403Forbidden).ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status409Conflict)
             .ProducesProblem(StatusCodes.Status424FailedDependency).ProducesProblem(StatusCodes.Status503ServiceUnavailable)
-            .RequirePermission(Permissions.InvoicesCreate);
+            .RequirePermission(Permissions.InvoicesAssign);
 
         var bauakte = api.MapGroup("/bauakten/{id:guid}/lexware").WithTags(Tag).RequireModule(AppModules.Lexware).AddEndpointFilter(GuardAsync);
         bauakte.MapGet("/", BauakteAsync).WithName("GetBauakteLexware")
-            .WithSummary("Rechnungen der Bauakte mit Statusabgleich (kurzer Cache; refresh=true gleicht alle sofort ab)")
+            .WithSummary("Rechnungen und Angebote der Bauakte mit Statusabgleich (kurzer Cache; refresh=true gleicht alle sofort ab)")
             .ProducesProblem(StatusCodes.Status404NotFound).RequirePermission(Permissions.InvoicesRead);
-        bauakte.MapGet("/invoice-proposal", ProposalAsync).WithName("GetLexwareInvoiceProposal")
-            .WithSummary("Vorschlag für den Rechnungsentwurf: Texte, Positionen aus den Kennwerten, Leistungszeitraum, Zahlungsziel")
-            .ProducesProblem(StatusCodes.Status404NotFound).RequirePermission(Permissions.InvoicesCreate);
-        bauakte.MapPost("/invoices", CreateInvoiceAsync).WithName("CreateLexwareInvoiceDraft")
-            .WithSummary("Rechnung als Entwurf in Lexware Office anlegen (kein Abschluss) und der Bauakte zuordnen")
-            .ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status409Conflict)
-            .ProducesProblem(StatusCodes.Status422UnprocessableEntity).ProducesProblem(StatusCodes.Status424FailedDependency)
-            .ProducesProblem(StatusCodes.Status503ServiceUnavailable).RequirePermission(Permissions.InvoicesCreate);
-        bauakte.MapGet("/invoices/search", SearchInvoicesAsync).WithName("SearchLexwareInvoices")
-            .WithSummary("Vorhandene Rechnung in Lexware Office über die Belegnummer suchen")
+        bauakte.MapGet("/candidates", CandidatesForBauakteAsync).WithName("ListLexwareVoucherCandidates")
+            .WithSummary("Belege zum Zuordnen: Belege des Kunden der Bauakte (mit Vorschlag, wenn die Bauaktennummer im Text vorkommt) oder Suche über die Belegnummer")
             .ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status409Conflict)
             .ProducesProblem(StatusCodes.Status424FailedDependency).ProducesProblem(StatusCodes.Status503ServiceUnavailable)
-            .RequirePermission(Permissions.InvoicesCreate);
-        bauakte.MapPost("/invoices/assign", AssignInvoiceAsync).WithName("AssignLexwareInvoice")
-            .WithSummary("Vorhandene Rechnung aus Lexware Office der Bauakte zuordnen")
+            .RequirePermission(Permissions.InvoicesAssign);
+        bauakte.MapPost("/vouchers/assign", AssignVoucherAsync).WithName("AssignLexwareVoucher")
+            .WithSummary("Beleg aus Lexware Office der Bauakte zuordnen (nur in EstrichONE; in Lexware Office wird nichts geschrieben)")
             .ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status409Conflict)
             .ProducesProblem(StatusCodes.Status424FailedDependency).ProducesProblem(StatusCodes.Status503ServiceUnavailable)
-            .RequirePermission(Permissions.InvoicesCreate);
-        bauakte.MapDelete("/invoices/{linkId:guid}", UnassignInvoiceAsync).WithName("UnassignLexwareInvoice")
-            .WithSummary("Zuordnung der Rechnung zur Bauakte lösen (in Lexware Office wird nichts gelöscht)")
-            .ProducesProblem(StatusCodes.Status404NotFound).RequirePermission(Permissions.InvoicesCreate);
+            .RequirePermission(Permissions.InvoicesAssign);
+        bauakte.MapDelete("/vouchers/{linkId:guid}", UnassignVoucherAsync).WithName("UnassignLexwareVoucher")
+            .WithSummary("Zuordnung des Belegs zur Bauakte lösen (in Lexware Office ändert sich nichts)")
+            .ProducesProblem(StatusCodes.Status404NotFound).RequirePermission(Permissions.InvoicesAssign);
     }
 
     // ---------- Status und Einstellungen ----------
@@ -274,7 +266,7 @@ internal static class LexwareEndpoints
         var enabled = (await system.GetAsync(cancellationToken)).Modules.IsEnabled(AppModules.Lexware);
         var row = await lexware.SettingsAsync(cancellationToken);
         return TypedResults.Ok(new LexwareStatusResponse(enabled, row.Configured, granted.Contains(Permissions.InvoicesRead),
-            granted.Contains(Permissions.InvoicesCreate), granted.Contains(Permissions.SettingsIntegrations), enabled && row.NewCustomersSync));
+            granted.Contains(Permissions.InvoicesAssign), granted.Contains(Permissions.SettingsIntegrations), enabled && row.NewCustomersSync));
     }
 
     private static async Task<LexwareSettingsResponse> ToResponseAsync(LexwareService lexware, ISystemSettings system, LexwareSettingsRow row,
@@ -292,7 +284,7 @@ internal static class LexwareEndpoints
         }
 
         return new LexwareSettingsResponse((await system.GetAsync(cancellationToken)).Modules.IsEnabled(AppModules.Lexware), row.Configured, baseUrl,
-            !string.IsNullOrWhiteSpace(row.BaseUrl), row.PaymentTermDays, row.PaymentTermLabel, row.OrganizationName, row.LastTestAt, row.LastTestOk,
+            !string.IsNullOrWhiteSpace(row.BaseUrl), row.OrganizationName, row.LastTestAt, row.LastTestOk,
             row.LastTestError, await db.Set<LexwareContactLink>().CountAsync(cancellationToken),
             await db.Set<LexwareVoucherLink>().CountAsync(cancellationToken), LexwareService.KeyHelpUrl, row.Version, row.NewCustomersSync);
     }
@@ -339,8 +331,6 @@ internal static class LexwareEndpoints
         }
 
         row.BaseUrl = baseUrl;
-        row.PaymentTermDays = request.PaymentTermDays;
-        row.PaymentTermLabel = LexwareService.Cut(request.PaymentTermLabel, LexwareSettingsRow.MaxLabel);
         row.NewCustomersSync = request.NewCustomersSync ?? row.NewCustomersSync;
         if (connectionChanged)
         {
@@ -425,7 +415,7 @@ internal static class LexwareEndpoints
         var link = await db.Set<LexwareContactLink>().AsNoTracking().SingleOrDefaultAsync(l => l.ContactId == contactId, cancellationToken);
         var sync = await db.Set<Contact>().Where(c => c.Id == contactId).Select(c => c.LexwareSync).SingleAsync(cancellationToken);
         return TypedResults.Ok(new CustomerLexwareResponse(contactId, link is null ? null : ToResponse(lexware, row, link),
-            row.Configured && await permissions.HasAsync(Permissions.InvoicesCreate, cancellationToken), sync));
+            row.Configured && await permissions.HasAsync(Permissions.InvoicesAssign, cancellationToken), sync));
     }
 
     private static List<LexwareContactCandidate> Candidates(LexwareService lexware, LexwareSettingsRow row, Contact contact,
@@ -860,8 +850,48 @@ internal static class LexwareEndpoints
     // ---------- Bauakte ----------
 
     private static LexwareVoucherResponse ToResponse(LexwareService lexware, LexwareSettingsRow row, LexwareVoucherLink link) => new(
-        link.Id, link.LexwareId, link.Number, link.Title, link.VoucherDate, link.DueDate, link.NetAmount, link.GrossAmount, link.Currency,
-        lexware.DisplayStatus(link), link.Created, lexware.InvoiceUrl(row, link.LexwareId, link.Status), link.SyncedAt, link.SyncError);
+        link.Id, link.LexwareId, link.VoucherType, link.Number, link.Title, link.VoucherDate, link.DueDate, link.NetAmount, link.GrossAmount,
+        link.Currency, lexware.DisplayStatus(link.VoucherType, link.Status, link.DueDate), link.ContactName,
+        lexware.VoucherUrl(row, link.VoucherType, link.LexwareId, link.Status), link.SyncedAt, link.SyncError);
+
+    /// <summary>Belege der Belegliste mit der Bauakte, der sie schon zugeordnet sind.</summary>
+    private static async Task<List<LexwareVoucherItem>> ItemsAsync(LexwareService lexware, LexwareSettingsRow row, IReadOnlyList<LexwareVoucher> vouchers,
+        HashSet<string>? suggested, CancellationToken cancellationToken)
+    {
+        var db = lexware.Db;
+        var ids = vouchers.Select(v => v.Id).ToList();
+        var assigned = (await db.Set<LexwareVoucherLink>().AsNoTracking().Where(l => ids.Contains(l.LexwareId))
+            .Join(db.Set<Bauakte>().AsNoTracking(), l => l.BauakteId, b => b.Id, (l, b) => new { l.LexwareId, b.Id, b.Number, b.Title })
+            .ToListAsync(cancellationToken)).ToDictionary(x => x.LexwareId, StringComparer.Ordinal);
+        return vouchers.Select(v =>
+        {
+            var owner = assigned.GetValueOrDefault(v.Id);
+            return new LexwareVoucherItem(v.Id, v.Type, v.Number, v.VoucherDate, v.DueDate, v.GrossAmount, v.Currency,
+                lexware.DisplayStatus(v.Type, v.Status, v.DueDate), v.ContactName, lexware.VoucherUrl(row, v.Type, v.Id, v.Status), owner?.Id,
+                owner is null ? null : string.Join(' ', new[] { owner.Number, owner.Title }.Where(p => p is not null)), suggested?.Contains(v.Id) == true);
+        }).ToList();
+    }
+
+    private static async Task<Results<Ok<CustomerVouchersResponse>, ProblemHttpResult>> CustomerVouchersAsync(Guid contactId, LexwareService lexware,
+        CancellationToken cancellationToken, [FromQuery] bool refresh = false)
+    {
+        var db = lexware.Db;
+        if (!await db.Set<Contact>().AnyAsync(c => c.Id == contactId, cancellationToken))
+        {
+            return CustomerNotFound();
+        }
+
+        var lexwareId = await db.Set<LexwareContactLink>().AsNoTracking().Where(l => l.ContactId == contactId).Select(l => l.LexwareContactId)
+            .FirstOrDefaultAsync(cancellationToken);
+        if (lexwareId is null)
+        {
+            return TypedResults.Ok(new CustomerVouchersResponse(false, [], null));
+        }
+
+        var row = await lexware.SettingsAsync(cancellationToken);
+        var (vouchers, loadedAt) = await lexware.ContactVouchersAsync(row, lexwareId, refresh, cancellationToken);
+        return TypedResults.Ok(new CustomerVouchersResponse(true, await ItemsAsync(lexware, row, vouchers, null, cancellationToken), loadedAt));
+    }
 
     private static async Task<Bauakte?> BauakteEntityAsync(LexwareService lexware, IBauakteAccess access, Guid id, CancellationToken cancellationToken) =>
         await access.CanReadAsync(id, cancellationToken)
@@ -894,166 +924,67 @@ internal static class LexwareEndpoints
         var row = await lexware.SettingsAsync(cancellationToken);
         var links = await db.Set<LexwareVoucherLink>().Where(l => l.BauakteId == id).ToListAsync(cancellationToken);
         var error = await lexware.SyncAsync(row, links, refresh, cancellationToken);
-        var invoices = links.OrderByDescending(l => l.VoucherDate ?? DateOnly.FromDateTime(l.LinkedAt.UtcDateTime)).ThenByDescending(l => l.LinkedAt)
+        var vouchers = links.OrderByDescending(l => l.VoucherDate ?? DateOnly.FromDateTime(l.LinkedAt.UtcDateTime)).ThenByDescending(l => l.LinkedAt)
             .Select(l => ToResponse(lexware, row, l)).ToList();
         return TypedResults.Ok(new BauakteLexwareResponse(id, row.Configured,
-            row.Configured && await permissions.HasAsync(Permissions.InvoicesCreate, cancellationToken),
-            await BauakteCustomerAsync(db, bauakte, cancellationToken), invoices, error));
+            row.Configured && await permissions.HasAsync(Permissions.InvoicesAssign, cancellationToken),
+            await BauakteCustomerAsync(db, bauakte, cancellationToken), vouchers, error));
     }
 
-    private static async Task<Results<Ok<LexwareInvoiceProposal>, ProblemHttpResult>> ProposalAsync(Guid id, LexwareService lexware, IBauakteAccess access,
-        CancellationToken cancellationToken)
+    /// <summary>Höchstzahl der Belege, die für den Vorschlag einzeln gelesen werden (Lexware erlaubt zwei Anfragen je Sekunde).</summary>
+    private const int SuggestionLimit = 12;
+
+    private static async Task<Results<Ok<BauakteVoucherCandidatesResponse>, ProblemHttpResult>> CandidatesForBauakteAsync(Guid id, LexwareService lexware,
+        IBauakteAccess access, [FromQuery, MaxLength(100)] string? number, CancellationToken cancellationToken, [FromQuery] bool refresh = false)
     {
         if (await BauakteEntityAsync(lexware, access, id, cancellationToken) is not { } bauakte)
         {
             return BauakteWriteProblems.NotFound();
         }
 
-        var row = await lexware.SettingsAsync(cancellationToken);
-        var (introduction, lines) = await lexware.ProposalAsync(bauakte, cancellationToken);
-        var today = lexware.Today();
-        // Leistungszeitraum nur vorschlagen, wenn die Ausführung schon begonnen hat.
-        var start = bauakte.PlannedStart is { } planned && planned <= today ? planned : (DateOnly?)null;
-        var end = start is not null && bauakte.PlannedEnd is { } plannedEnd && plannedEnd <= today && plannedEnd > start ? plannedEnd : (DateOnly?)null;
-        return TypedResults.Ok(new LexwareInvoiceProposal(await BauakteCustomerAsync(lexware.Db, bauakte, cancellationToken), "Rechnung", introduction,
-            "Vielen Dank für Ihren Auftrag.", today, start, end, row.PaymentTermDays,
-            lines.Select(l => new LexwareInvoiceLine(l.Kind, l.Name, l.Description, l.Quantity, l.UnitName, null, l.TaxRatePercentage)).ToList()));
-    }
-
-    private static readonly decimal[] TaxRates = [0m, 7m, 19m];
-
-    private static async Task<Results<Created<LexwareVoucherResponse>, ProblemHttpResult>> CreateInvoiceAsync(Guid id, CreateLexwareInvoiceRequest request,
-        LexwareService lexware, IBauakteAccess access, IAuditLog audit, ICurrentUser currentUser, CancellationToken cancellationToken)
-    {
-        if (await BauakteEntityAsync(lexware, access, id, cancellationToken) is not { } bauakte)
-        {
-            return BauakteWriteProblems.NotFound();
-        }
-
-        var db = lexware.Db;
         var row = await lexware.SettingsAsync(cancellationToken);
         var connection = lexware.Connection(row);
-        var customer = await BauakteCustomerAsync(db, bauakte, cancellationToken);
-        if (customer is null)
+        var customer = await BauakteCustomerAsync(lexware.Db, bauakte, cancellationToken);
+        if (!string.IsNullOrWhiteSpace(number))
         {
-            return Problem(new LexwareException("NO_CUSTOMER", "Die Bauakte hat keinen Kunden. Bitte ordnen Sie der Bauakte zuerst einen Kunden zu."));
+            var hits = await lexware.Client.ListVouchersAsync(connection, null, number.Trim(), 25, cancellationToken);
+            return TypedResults.Ok(new BauakteVoucherCandidatesResponse(customer?.LexwareContactId is not null,
+                await ItemsAsync(lexware, row, hits, null, cancellationToken)));
         }
 
-        if (customer.LexwareContactId is null && !customer.SyncEnabled)
+        if (customer?.LexwareContactId is null)
         {
-            return Problem(LexwareService.SyncDisabled(customer.Name));
+            return TypedResults.Ok(new BauakteVoucherCandidatesResponse(false, []));
         }
 
-        if (customer.LexwareContactId is null)
+        var (vouchers, _) = await lexware.ContactVouchersAsync(row, customer.LexwareContactId, refresh, cancellationToken);
+        var taken = await lexware.Db.Set<LexwareVoucherLink>().AsNoTracking().Select(l => l.LexwareId).ToListAsync(cancellationToken);
+        // Vorschlag statt automatischer Zuordnung: Die Nummer kann auch als Verweis in einem Beleg zu einer anderen Bauakte
+        // stehen (Nachtrag, Sammelrechnung). Zugeordnet wird deshalb immer erst nach Bestätigung.
+        var suggested = new HashSet<string>(StringComparer.Ordinal);
+        if (bauakte.Number is { Length: >= 3 } bauakteNumber)
         {
-            return Problem(new LexwareException("CUSTOMER_NOT_LINKED",
-                $"Der Kunde „{customer.Name}“ ist noch nicht mit Lexware Office verknüpft. Bitte verknüpfen Sie den Kunden oder legen Sie ihn in Lexware Office an."));
-        }
-
-        var lines = new List<LexwareLineDraft>();
-        foreach (var line in request.Lines)
-        {
-            if (line.Kind is not ("custom" or "text") || string.IsNullOrWhiteSpace(line.Name))
+            foreach (var voucher in vouchers.Where(v => !taken.Contains(v.Id)).Take(SuggestionLimit))
             {
-                return Invalid("Jede Position braucht eine Bezeichnung.");
+                try
+                {
+                    if (await lexware.MentionsAsync(row, voucher, bauakteNumber, cancellationToken))
+                    {
+                        suggested.Add(voucher.Id);
+                    }
+                }
+                catch (LexwareException)
+                {
+                    break; // Die Liste bleibt nutzbar, nur ohne weitere Vorschläge.
+                }
             }
-
-            if (line.Kind == "text")
-            {
-                lines.Add(new LexwareLineDraft("text", line.Name.Trim(), line.Description, 0m, null, 0m, 0m));
-                continue;
-            }
-
-            var tax = line.TaxRate ?? 19m;
-            if (!TaxRates.Contains(tax))
-            {
-                return Invalid("Als Steuersatz sind 0, 7 und 19 Prozent möglich.");
-            }
-
-            if (line.Quantity is not > 0)
-            {
-                return Invalid($"Bitte geben Sie bei der Position „{line.Name.Trim()}“ eine Menge größer als 0 an.");
-            }
-
-            lines.Add(new LexwareLineDraft("custom", line.Name.Trim(), line.Description, decimal.Round(line.Quantity.Value, 4),
-                string.IsNullOrWhiteSpace(line.UnitName) ? "Stück" : line.UnitName.Trim(), decimal.Round(line.UnitPrice ?? 0m, 4), tax));
         }
 
-        if (lines.All(l => l.Kind == "text"))
-        {
-            return Invalid("Die Rechnung braucht mindestens eine Position mit Menge.");
-        }
-
-        if (request.ServiceDate is { } from && request.ServiceEndDate is { } to && to < from)
-        {
-            return Invalid("Das Ende des Leistungszeitraums darf nicht vor dem Beginn liegen.");
-        }
-
-        var days = request.PaymentTermDays ?? row.PaymentTermDays;
-        var voucherDate = request.VoucherDate ?? lexware.Today();
-        var draft = new LexwareInvoiceDraft(customer.LexwareContactId, voucherDate, LexwareService.Cut(request.Title, 250) ?? "Rechnung",
-            LexwareService.Cut(request.Introduction, 2000), LexwareService.Cut(request.Remark, 2000), lines, days,
-            LexwareService.PaymentTermLabel(row, days), request.ServiceDate, request.ServiceDate is null ? null : request.ServiceEndDate);
-        var lexwareId = await lexware.Client.CreateInvoiceDraftAsync(connection, draft, cancellationToken);
-
-        var net = lines.Sum(l => decimal.Round(l.Quantity * l.NetUnitPrice, 2));
-        var gross = lines.Sum(l => decimal.Round(l.Quantity * l.NetUnitPrice * (1 + (l.TaxRatePercentage / 100m)), 2));
-        var link = new LexwareVoucherLink
-        {
-            Id = Guid.CreateVersion7(), BauakteId = id, LexwareId = lexwareId, Title = draft.Title, VoucherDate = voucherDate,
-            DueDate = voucherDate.AddDays(days), NetAmount = net, GrossAmount = gross, Status = "draft", Created = true,
-            LinkedByUserId = currentUser.UserId, LinkedAt = lexware.Clock.GetUtcNow(),
-        };
-        try
-        {
-            // Beträge und Status so übernehmen, wie Lexware sie berechnet hat.
-            lexware.Apply(link, await lexware.Client.GetInvoiceAsync(connection, lexwareId, cancellationToken));
-        }
-        catch (LexwareException)
-        {
-            // Der Entwurf ist angelegt; der nächste Abgleich holt die Werte nach.
-        }
-
-        db.Add(link);
-        audit.Record("lexware.invoice_created", currentUser.UserId, "bauakte", id.ToString(), new Dictionary<string, string?>
-        {
-            ["bauakte"] = bauakte.Number ?? bauakte.Title, ["customer"] = customer.Name,
-            ["amount"] = link.GrossAmount?.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture),
-        });
-        await db.SaveChangesAsync(cancellationToken);
-        return TypedResults.Created($"/api/v1/bauakten/{id}/lexware", ToResponse(lexware, row, link));
+        var items = await ItemsAsync(lexware, row, vouchers, suggested, cancellationToken);
+        return TypedResults.Ok(new BauakteVoucherCandidatesResponse(true, items.OrderByDescending(i => i.Suggested).ToList()));
     }
 
-    private static async Task<Results<Ok<List<LexwareVoucherHit>>, ProblemHttpResult>> SearchInvoicesAsync(Guid id, LexwareService lexware,
-        IBauakteAccess access, [FromQuery, MaxLength(100)] string? number, CancellationToken cancellationToken)
-    {
-        if (await BauakteEntityAsync(lexware, access, id, cancellationToken) is null)
-        {
-            return BauakteWriteProblems.NotFound();
-        }
-
-        if (string.IsNullOrWhiteSpace(number))
-        {
-            return TypedResults.Ok(new List<LexwareVoucherHit>());
-        }
-
-        var db = lexware.Db;
-        var hits = await lexware.Client.FindInvoicesByNumberAsync(await lexware.ConnectionAsync(cancellationToken), number.Trim(), cancellationToken);
-        var ids = hits.Select(h => h.Id).ToList();
-        var assigned = (await db.Set<LexwareVoucherLink>().AsNoTracking().Where(l => ids.Contains(l.LexwareId))
-            .Join(db.Set<Bauakte>().AsNoTracking(), l => l.BauakteId, b => b.Id, (l, b) => new { l.LexwareId, b.Id, b.Number, b.Title })
-            .ToListAsync(cancellationToken)).ToDictionary(x => x.LexwareId, StringComparer.Ordinal);
-        var today = lexware.Today();
-        return TypedResults.Ok(hits.Select(h =>
-        {
-            var owner = assigned.GetValueOrDefault(h.Id);
-            return new LexwareVoucherHit(h.Id, h.Number, h.VoucherDate, h.DueDate, h.GrossAmount, h.Currency,
-                h.Status == "open" && h.DueDate is { } due && due < today ? "overdue" : h.Status, h.ContactName, owner?.Id,
-                owner is null ? null : string.Join(' ', new[] { owner.Number, owner.Title }.Where(p => p is not null)));
-        }).ToList());
-    }
-
-    private static async Task<Results<Created<LexwareVoucherResponse>, ProblemHttpResult>> AssignInvoiceAsync(Guid id, AssignLexwareInvoiceRequest request,
+    private static async Task<Results<Created<LexwareVoucherResponse>, ProblemHttpResult>> AssignVoucherAsync(Guid id, AssignLexwareVoucherRequest request,
         LexwareService lexware, IBauakteAccess access, IAuditLog audit, ICurrentUser currentUser, CancellationToken cancellationToken)
     {
         if (await BauakteEntityAsync(lexware, access, id, cancellationToken) is not { } bauakte)
@@ -1068,27 +999,28 @@ internal static class LexwareEndpoints
                 .FirstOrDefaultAsync(cancellationToken) is { } owner)
         {
             return Problem(new LexwareException("ALREADY_LINKED", owner.Id == id
-                ? "Diese Rechnung ist der Bauakte bereits zugeordnet."
-                : $"Diese Rechnung ist bereits der Bauakte {owner.Number ?? owner.Title} zugeordnet. Lösen Sie die Zuordnung zuerst dort."));
+                ? "Dieser Beleg ist der Bauakte bereits zugeordnet."
+                : $"Dieser Beleg ist bereits der Bauakte {owner.Number ?? owner.Title} zugeordnet. Lösen Sie die Zuordnung zuerst dort."));
         }
 
         var row = await lexware.SettingsAsync(cancellationToken);
-        var invoice = await lexware.Client.GetInvoiceAsync(lexware.Connection(row), lexwareId, cancellationToken);
+        var voucher = await lexware.Client.GetVoucherAsync(lexware.Connection(row), request.Type.Trim().ToLowerInvariant(), lexwareId, cancellationToken);
         var link = new LexwareVoucherLink
         {
-            Id = Guid.CreateVersion7(), BauakteId = id, LexwareId = invoice.Id, LinkedByUserId = currentUser.UserId, LinkedAt = lexware.Clock.GetUtcNow(),
+            Id = Guid.CreateVersion7(), BauakteId = id, LexwareId = voucher.Id, VoucherType = voucher.Type, LinkedByUserId = currentUser.UserId,
+            LinkedAt = lexware.Clock.GetUtcNow(),
         };
-        lexware.Apply(link, invoice);
+        lexware.Apply(link, voucher);
         db.Add(link);
-        audit.Record("lexware.invoice_assigned", currentUser.UserId, "bauakte", id.ToString(), new Dictionary<string, string?>
+        audit.Record("lexware.voucher_assigned", currentUser.UserId, "bauakte", id.ToString(), new Dictionary<string, string?>
         {
-            ["bauakte"] = bauakte.Number ?? bauakte.Title, ["number"] = link.Number,
+            ["bauakte"] = bauakte.Number ?? bauakte.Title, ["kind"] = link.VoucherType, ["number"] = link.Number,
         });
         await db.SaveChangesAsync(cancellationToken);
         return TypedResults.Created($"/api/v1/bauakten/{id}/lexware", ToResponse(lexware, row, link));
     }
 
-    private static async Task<Results<NoContent, ProblemHttpResult>> UnassignInvoiceAsync(Guid id, Guid linkId, LexwareService lexware, IBauakteAccess access,
+    private static async Task<Results<NoContent, ProblemHttpResult>> UnassignVoucherAsync(Guid id, Guid linkId, LexwareService lexware, IBauakteAccess access,
         IAuditLog audit, ICurrentUser currentUser, CancellationToken cancellationToken)
     {
         var db = lexware.Db;
@@ -1096,11 +1028,14 @@ internal static class LexwareEndpoints
             || await db.Set<LexwareVoucherLink>().SingleOrDefaultAsync(l => l.Id == linkId && l.BauakteId == id, cancellationToken) is not { } link)
         {
             return TypedResults.Problem(statusCode: StatusCodes.Status404NotFound, title: "Nicht gefunden",
-                detail: "Diese Rechnung ist der Bauakte nicht zugeordnet.", extensions: Code("LEXWARE_NOT_LINKED"));
+                detail: "Dieser Beleg ist der Bauakte nicht zugeordnet.", extensions: Code("LEXWARE_NOT_LINKED"));
         }
 
         db.Remove(link);
-        audit.Record("lexware.invoice_unassigned", currentUser.UserId, "bauakte", id.ToString(), new Dictionary<string, string?> { ["number"] = link.Number });
+        audit.Record("lexware.voucher_unassigned", currentUser.UserId, "bauakte", id.ToString(), new Dictionary<string, string?>
+        {
+            ["kind"] = link.VoucherType, ["number"] = link.Number,
+        });
         await db.SaveChangesAsync(cancellationToken);
         return TypedResults.NoContent();
     }
@@ -1112,17 +1047,14 @@ internal static class LexwareEndpoints
     private static ProblemHttpResult CustomerNotFound() => TypedResults.Problem(statusCode: StatusCodes.Status404NotFound, title: "Kontakt nicht gefunden",
         extensions: Code("CONTACT_NOT_FOUND"));
 
-    private static ProblemHttpResult Invalid(string detail) => TypedResults.Problem(statusCode: StatusCodes.Status422UnprocessableEntity,
-        title: "Rechnung", detail: detail, extensions: Code("LEXWARE_INVALID_INVOICE"));
-
     /// <summary>Lexware-Fehler als Problem-Antwort: nie 500, immer mit Code <c>LEXWARE_…</c> und verständlichem Text.</summary>
     internal static ProblemHttpResult Problem(LexwareException exception)
     {
         var (status, title) = exception.Code switch
         {
             "NOT_CONFIGURED" or "KEY_UNREADABLE" => (StatusCodes.Status409Conflict, "Lexware Office ist nicht eingerichtet"),
-            "ALREADY_LINKED" or "NO_CUSTOMER" or "CUSTOMER_NOT_LINKED" or "NOT_A_CUSTOMER" or "ANONYMIZED" or "SYNC_DISABLED" => (StatusCodes.Status409Conflict, Tag),
-            "INVALID_BASE_URL" => (StatusCodes.Status422UnprocessableEntity, Tag),
+            "ALREADY_LINKED" or "NOT_A_CUSTOMER" or "ANONYMIZED" or "SYNC_DISABLED" => (StatusCodes.Status409Conflict, Tag),
+            "INVALID_BASE_URL" or "UNKNOWN_VOUCHER_TYPE" => (StatusCodes.Status422UnprocessableEntity, Tag),
             "OFFLINE" or "TIMEOUT" or "UNAVAILABLE" or "RATE_LIMITED" => (StatusCodes.Status503ServiceUnavailable, "Lexware Office ist nicht erreichbar"),
             _ => (StatusCodes.Status424FailedDependency, "Lexware Office hat die Anfrage abgelehnt"),
         };

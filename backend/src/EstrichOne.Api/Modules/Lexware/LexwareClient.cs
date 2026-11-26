@@ -77,21 +77,41 @@ public sealed record LexwareContactDraft(
 
 public sealed record LexwarePage<T>(IReadOnlyList<T> Items, int Page, int TotalPages, int TotalElements, bool Last);
 
-/// <param name="Kind"><c>custom</c> (Position mit Menge und Preis) oder <c>text</c> (reine Textzeile).</param>
-public sealed record LexwareLineDraft(string Kind, string Name, string? Description, decimal Quantity, string? UnitName, decimal NetUnitPrice,
-    decimal TaxRatePercentage);
+/// <summary>Beleg aus Lexware Office (nur gelesen).</summary>
+/// <param name="Type"><c>invoice</c>, <c>quotation</c>, <c>creditnote</c> oder <c>orderconfirmation</c>.</param>
+/// <param name="DueDate">Fälligkeit der Rechnung bzw. „gültig bis“ des Angebots.</param>
+/// <param name="Text">Titel, Einleitung und Schlusstext (nur beim Einzelabruf), für den Zuordnungsvorschlag über die Bauaktennummer.</param>
+public sealed record LexwareVoucher(
+    string Id, string Type, string Status, string? Number, string? Title, DateOnly? VoucherDate, DateOnly? DueDate, decimal? NetAmount,
+    decimal? GrossAmount, string Currency, string? ContactId, string? ContactName, string? Text = null);
 
-public sealed record LexwareInvoiceDraft(
-    string ContactId, DateOnly VoucherDate, string? Title, string? Introduction, string? Remark, IReadOnlyList<LexwareLineDraft> Lines,
-    int PaymentTermDays, string PaymentTermLabel, DateOnly? ServiceDate, DateOnly? ServiceEndDate);
+/// <summary>Belegarten, die EstrichONE anzeigt, mit ihrem Pfad in der API und in den Links der Lexware-Oberfläche.</summary>
+public static class LexwareVoucherTypes
+{
+    public const string Invoice = "invoice";
+    public const string Quotation = "quotation";
+    public const string CreditNote = "creditnote";
+    public const string OrderConfirmation = "orderconfirmation";
 
-public sealed record LexwareInvoice(
-    string Id, string Status, string? Number, string? Title, DateOnly? VoucherDate, DateOnly? DueDate, decimal? NetAmount, decimal? GrossAmount,
-    string Currency, string? ContactId, string? ContactName);
+    public static IReadOnlyList<string> All { get; } = [Invoice, Quotation, CreditNote, OrderConfirmation];
+
+    /// <summary>Pfadteil der API und der Permalinks; <c>null</c> für unbekannte Arten.</summary>
+    public static string? Segment(string? type) => type switch
+    {
+        Invoice => "invoices",
+        Quotation => "quotations",
+        CreditNote => "credit-notes",
+        OrderConfirmation => "order-confirmations",
+        _ => null,
+    };
+}
 
 /// <summary>
 /// Gekapselter Zugang zur Public API von Lexware Office (früher lexoffice): Bearer-Schlüssel, höchstens zwei Anfragen je
 /// Sekunde, Wiederholung bei 429 mit wachsender Wartezeit, Zeitlimit je Versuch und verständliche Fehlermeldungen.
+/// Geschrieben wird ausschließlich beim Anlegen eines Kontakts (<c>POST /v1/contacts</c>). Belege (Rechnungen, Angebote,
+/// Gutschriften, Auftragsbestätigungen) werden nur gelesen: Es gibt keine Methode, die einen Beleg anlegt oder ändert, und
+/// <see cref="WriteAllowed"/> weist jeden anderen schreibenden Aufruf schon vor dem Senden ab.
 /// Alle Feldnamen der API stehen nur in dieser Datei (docs/lexware-office.md), damit Anpassungen an einer Stelle bleiben.
 /// </summary>
 public sealed class LexwareClient(IHttpClientFactory http, IOptions<LexwareOptions> options, ILogger<LexwareClient> logger) : IDisposable
@@ -190,95 +210,42 @@ public sealed class LexwareClient(IHttpClientFactory http, IOptions<LexwareOptio
         return Str(json?["id"]) ?? throw new LexwareException("UNEXPECTED_RESPONSE", $"{Service} hat keine Kontakt-ID geliefert.");
     }
 
-    /// <summary>Legt eine Rechnung als Entwurf an (ohne <c>finalize</c>) und liefert ihre ID.</summary>
-    public async Task<string> CreateInvoiceDraftAsync(LexwareConnection connection, LexwareInvoiceDraft draft, CancellationToken cancellationToken)
+    /// <summary>Beleg lesen (Status, Nummer, Beträge, Texte).</summary>
+    public async Task<LexwareVoucher> GetVoucherAsync(LexwareConnection connection, string type, string id, CancellationToken cancellationToken)
     {
-        var json = await SendAsync(connection, HttpMethod.Post, "/v1/invoices", InvoiceBody(draft), cancellationToken);
-        return Str(json?["id"]) ?? throw new LexwareException("UNEXPECTED_RESPONSE", $"{Service} hat keine Rechnungs-ID geliefert.");
-    }
-
-    internal static JsonObject InvoiceBody(LexwareInvoiceDraft draft)
-    {
-        var lines = new JsonArray();
-        foreach (var line in draft.Lines)
-        {
-            var item = new JsonObject { ["type"] = line.Kind, ["name"] = line.Name };
-            Put(item, "description", line.Description);
-            if (line.Kind != "text")
-            {
-                item["quantity"] = line.Quantity;
-                Put(item, "unitName", line.UnitName);
-                item["unitPrice"] = new JsonObject
-                {
-                    ["currency"] = "EUR", ["netAmount"] = line.NetUnitPrice, ["taxRatePercentage"] = line.TaxRatePercentage,
-                };
-                item["discountPercentage"] = 0;
-            }
-
-            lines.Add(item);
-        }
-
-        var shipping = new JsonObject();
-        if (draft.ServiceDate is { } from)
-        {
-            shipping["shippingDate"] = Timestamp(from);
-            if (draft.ServiceEndDate is { } to && to > from)
-            {
-                shipping["shippingEndDate"] = Timestamp(to);
-                shipping["shippingType"] = "serviceperiod";
-            }
-            else
-            {
-                shipping["shippingType"] = "service";
-            }
-        }
-        else
-        {
-            shipping["shippingType"] = "none";
-        }
-
-        var body = new JsonObject
-        {
-            ["archived"] = false,
-            ["voucherDate"] = Timestamp(draft.VoucherDate),
-            ["address"] = new JsonObject { ["contactId"] = draft.ContactId },
-            ["lineItems"] = lines,
-            ["totalPrice"] = new JsonObject { ["currency"] = "EUR" },
-            ["taxConditions"] = new JsonObject { ["taxType"] = "net" },
-            ["paymentConditions"] = new JsonObject
-            {
-                ["paymentTermLabel"] = draft.PaymentTermLabel, ["paymentTermDuration"] = draft.PaymentTermDays,
-            },
-            ["shippingConditions"] = shipping,
-        };
-        Put(body, "title", draft.Title);
-        Put(body, "introduction", draft.Introduction);
-        Put(body, "remark", draft.Remark);
-        return body;
-    }
-
-    public async Task<LexwareInvoice> GetInvoiceAsync(LexwareConnection connection, string id, CancellationToken cancellationToken)
-    {
-        var json = await SendAsync(connection, HttpMethod.Get, $"/v1/invoices/{Uri.EscapeDataString(id)}", null, cancellationToken);
+        var segment = LexwareVoucherTypes.Segment(type)
+            ?? throw new LexwareException("UNKNOWN_VOUCHER_TYPE", "Diese Belegart zeigt EstrichONE nicht an.");
+        var json = await SendAsync(connection, HttpMethod.Get, $"/v1/{segment}/{Uri.EscapeDataString(id)}", null, cancellationToken);
         var total = json?["totalPrice"];
         var address = json?["address"];
-        return new LexwareInvoice(Str(json?["id"]) ?? id, Str(json?["voucherStatus"])?.ToLowerInvariant() ?? "draft", Str(json?["voucherNumber"]),
-            Str(json?["title"]), Date(json?["voucherDate"]), Date(json?["dueDate"]) ?? DueDate(json), Decimal(total?["totalNetAmount"]),
-            Decimal(total?["totalGrossAmount"]), Str(total?["currency"]) ?? "EUR", Str(address?["contactId"]), Str(address?["name"]));
+        var text = string.Join('\n', new[] { Str(json?["title"]), Str(json?["introduction"]), Str(json?["remark"]) }.Where(p => p is not null));
+        return new LexwareVoucher(Str(json?["id"]) ?? id, type, Str(json?["voucherStatus"])?.ToLowerInvariant() ?? "draft", Str(json?["voucherNumber"]),
+            Str(json?["title"]), Date(json?["voucherDate"]), Date(json?["dueDate"]) ?? Date(json?["expirationDate"]) ?? DueDate(json),
+            Decimal(total?["totalNetAmount"]), Decimal(total?["totalGrossAmount"]), Str(total?["currency"]) ?? "EUR", Str(address?["contactId"]),
+            Str(address?["name"]), text);
     }
 
-    /// <summary>Rechnungen über die Belegnummer finden (Belegliste; ohne Entwürfe, die noch keine Nummer haben).</summary>
-    public async Task<IReadOnlyList<LexwareInvoice>> FindInvoicesByNumberAsync(LexwareConnection connection, string number, CancellationToken cancellationToken)
+    /// <summary>
+    /// Belegliste (Rechnungen, Angebote, Gutschriften, Auftragsbestätigungen), neueste zuerst: alle Belege eines Kontakts
+    /// (<paramref name="contactId"/>) oder Suche über die Belegnummer (<paramref name="number"/>).
+    /// </summary>
+    public async Task<IReadOnlyList<LexwareVoucher>> ListVouchersAsync(LexwareConnection connection, string? contactId, string? number, int size,
+        CancellationToken cancellationToken)
     {
-        var path = "/v1/voucherlist?voucherType=invoice&voucherStatus=open,paid,paidoff,voided,overdue&size=25&voucherNumber=" + Uri.EscapeDataString(number);
-        var json = await SendAsync(connection, HttpMethod.Get, path, null, cancellationToken);
-        return (json?["content"] as JsonArray ?? []).OfType<JsonObject>().Where(v => Str(v["id"]) is not null).Select(v =>
-        {
-            // Die Belegliste kennt zusätzlich „overdue“; gespeichert wird der Status der Rechnung selbst.
-            var status = Str(v["voucherStatus"])?.ToLowerInvariant() ?? "open";
-            return new LexwareInvoice(Str(v["id"])!, status == "overdue" ? "open" : status, Str(v["voucherNumber"]), null, Date(v["voucherDate"]),
-                Date(v["dueDate"]), null, Decimal(v["totalAmount"]), Str(v["currency"]) ?? "EUR", Str(v["contactId"]), Str(v["contactName"]));
-        }).ToList();
+        var query = new StringBuilder("/v1/voucherlist?voucherType=").Append(string.Join(',', LexwareVoucherTypes.All))
+            .Append("&voucherStatus=any&sort=voucherDate,DESC&size=").Append(size.ToString(CultureInfo.InvariantCulture));
+        Append(query, "contactId", contactId);
+        Append(query, "voucherNumber", number);
+        var json = await SendAsync(connection, HttpMethod.Get, query.ToString(), null, cancellationToken);
+        return (json?["content"] as JsonArray ?? []).OfType<JsonObject>()
+            .Where(v => Str(v["id"]) is not null && LexwareVoucherTypes.Segment(Str(v["voucherType"])?.ToLowerInvariant()) is not null).Select(v =>
+            {
+                // Die Belegliste kennt zusätzlich „overdue“; gespeichert wird der Status des Belegs selbst.
+                var status = Str(v["voucherStatus"])?.ToLowerInvariant() ?? "open";
+                return new LexwareVoucher(Str(v["id"])!, Str(v["voucherType"])!.ToLowerInvariant(), status == "overdue" ? "open" : status,
+                    Str(v["voucherNumber"]), null, Date(v["voucherDate"]), Date(v["dueDate"]), null, Decimal(v["totalAmount"]), Str(v["currency"]) ?? "EUR",
+                    Str(v["contactId"]), Str(v["contactName"]));
+            }).ToList();
     }
 
     // ---------- Abbildung ----------
@@ -348,25 +315,12 @@ public sealed class LexwareClient(IHttpClientFactory http, IOptions<LexwareOptio
         Str(node) is { } text && DateTimeOffset.TryParse(text, CultureInfo.InvariantCulture, DateTimeStyles.None, out var value)
             ? DateOnly.FromDateTime(value.DateTime) : null;
 
-    private static readonly TimeZoneInfo Berlin = FindBerlin();
-
-    private static TimeZoneInfo FindBerlin()
-    {
-        try
-        {
-            return TimeZoneInfo.FindSystemTimeZoneById("Europe/Berlin");
-        }
-        catch (Exception exception) when (exception is TimeZoneNotFoundException or InvalidTimeZoneException)
-        {
-            return TimeZoneInfo.Utc;
-        }
-    }
-
-    internal static string Timestamp(DateOnly date)
-    {
-        var local = date.ToDateTime(TimeOnly.MinValue, DateTimeKind.Unspecified);
-        return new DateTimeOffset(local, Berlin.GetUtcOffset(local)).ToString("yyyy-MM-dd'T'HH:mm:ss.fffzzz", CultureInfo.InvariantCulture);
-    }
+    /// <summary>
+    /// Schreibende Aufrufe sind nur für das Anlegen eines Kontakts erlaubt. Alles andere, insbesondere jeder Beleg, ist
+    /// lesend: Rechnungen und Angebote entstehen ausschließlich in Lexware Office.
+    /// </summary>
+    internal static bool WriteAllowed(HttpMethod method, string path) =>
+        method == HttpMethod.Get || (method == HttpMethod.Post && path == "/v1/contacts");
 
     // ---------- Transport ----------
 
@@ -375,6 +329,11 @@ public sealed class LexwareClient(IHttpClientFactory http, IOptions<LexwareOptio
     {
         var uri = new Uri(connection.BaseUri, pathAndQuery);
         var path = uri.AbsolutePath; // ohne Abfrage: dort können Namen und Adressen stehen
+        if (!WriteAllowed(method, path))
+        {
+            throw new InvalidOperationException($"EstrichONE schreibt in Lexware Office nur Kontakte; {method.Method} {path} ist nicht vorgesehen.");
+        }
+
         var payload = body?.ToJsonString();
         var attempts = Math.Max(1, Options.MaxAttempts);
         for (var attempt = 1; ; attempt++)

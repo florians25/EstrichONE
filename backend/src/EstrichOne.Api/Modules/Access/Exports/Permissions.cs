@@ -37,7 +37,7 @@ public static class Permissions
     public const string FuelManage = "fuel.manage";
     public const string FuelExport = "fuel.export";
     public const string InvoicesRead = "invoices.read";
-    public const string InvoicesCreate = "invoices.create";
+    public const string InvoicesAssign = "invoices.assign";
     public const string UsersManage = "users.manage";
     public const string RolesManage = "roles.manage";
     public const string DevicesRead = "devices.read";
@@ -89,8 +89,8 @@ public static class Permissions
         new(FuelRecord, "Tankbelege", "Eigene Tankbelege erfassen und sehen (Apps und Web; für das Belegfoto zusätzlich „Fotos, Videos und Dokumente hochladen“)"),
         new(FuelManage, "Tankbelege", "Alle Tankbelege sehen, prüfen, freigeben, ablehnen, als erstattet bzw. gebucht markieren; Auswertung je Fahrzeug"),
         new(FuelExport, "Tankbelege", "Tankbelege als CSV für die Buchhaltung exportieren"),
-        new(InvoicesRead, "Rechnungen", "Rechnungen der Bauakten und die Verknüpfung der Kunden mit Lexware Office sehen (wenn das Modul aktiv ist)"),
-        new(InvoicesCreate, "Rechnungen", "Rechnungsentwürfe in Lexware Office anlegen, vorhandene Rechnungen zuordnen und Kunden mit Lexware Office verknüpfen"),
+        new(InvoicesRead, "Rechnungen", "Rechnungen und Angebote aus Lexware Office an Kunden und Bauakten sehen (wenn das Modul aktiv ist)"),
+        new(InvoicesAssign, "Rechnungen", "Rechnungen und Angebote aus Lexware Office Bauakten zuordnen und Kunden mit Lexware Office verknüpfen (Belege entstehen nur in Lexware Office)"),
         new(UsersManage, "Verwaltung", "Benutzer verwalten"),
         new(RolesManage, "Verwaltung", "Rollen und Rechte verwalten"),
         new(DevicesRead, "IT Center", "Geräte sehen"),

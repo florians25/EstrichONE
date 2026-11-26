@@ -69,7 +69,7 @@ public sealed class LexwareClientTests : IDisposable
     {
         _fake.Raw["/v1/invoices"] = (status, "{}");
         using var client = Client(o => o.MaxAttempts = 1);
-        var exception = await Should.ThrowAsync<LexwareException>(() => client.GetInvoiceAsync(_connection, "abc", Ct));
+        var exception = await Should.ThrowAsync<LexwareException>(() => client.GetVoucherAsync(_connection, "invoice", "abc", Ct));
         exception.Code.ShouldBe(code);
         exception.Status.ShouldBe(status);
         exception.Message.ShouldContain(text);
@@ -124,10 +124,10 @@ public sealed class LexwareClientTests : IDisposable
     [Fact]
     public async Task ServerError_OnPost_IsNotRetried()
     {
-        _fake.Raw["/v1/invoices"] = (503, "");
+        _fake.Raw["/v1/contacts"] = (503, "");
         using var client = Client();
-        var draft = new LexwareInvoiceDraft("c", new DateOnly(2026, 11, 26), null, null, null, [new("custom", "Estrich", null, 1, "m²", 1, 19)], 14, "x", null, null);
-        (await Should.ThrowAsync<LexwareException>(() => client.CreateInvoiceDraftAsync(_connection, draft, Ct))).Code.ShouldBe("UNAVAILABLE");
+        var draft = new LexwareContactDraft(true, "Test GmbH", null, null, null, null, null, null, null, null, null, null, null, null);
+        (await Should.ThrowAsync<LexwareException>(() => client.CreateContactAsync(_connection, draft, Ct))).Code.ShouldBe("UNAVAILABLE");
         _fake.Calls.Count.ShouldBe(1);
     }
 
@@ -167,35 +167,53 @@ public sealed class LexwareClientTests : IDisposable
     }
 
     [Fact]
-    public void InvoiceBody_IsADraftWithNetPricesServicePeriodAndPaymentTerm()
+    public void Vouchers_AreReadOnly_ClientWritesNothingButContacts()
     {
-        var body = LexwareClient.InvoiceBody(new LexwareInvoiceDraft("contact-1", new DateOnly(2026, 7, 15), "Rechnung", "Einleitung", "Schluss",
-        [
-            new("custom", "Zementestrich CT-C25-F4", "Nenndicke 65 mm", 182.5m, "m²", 24.9m, 19m),
-            new("text", "Hinweis", "Belegreife beachten", 0, null, 0, 0),
-        ], 14, "Zahlbar innerhalb von 14 Tagen ohne Abzug.", new DateOnly(2026, 7, 1), new DateOnly(2026, 7, 3)));
+        // Rechnungen und Angebote entstehen ausschließlich in Lexware Office: Der Client hat keine Methode, die einen Beleg
+        // anlegt oder ändert, und der Transport weist jeden schreibenden Aufruf außer „Kontakt anlegen“ ab.
+        var methods = typeof(LexwareClient).GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance
+            | System.Reflection.BindingFlags.DeclaredOnly).Select(m => m.Name).Where(n => n != "Dispose").Order().ToList();
+        methods.ShouldBe(["CreateContactAsync", "GetContactAsync", "GetVoucherAsync", "ListCustomersAsync", "ListVouchersAsync", "ProfileAsync"]);
 
-        body["voucherDate"]!.GetValue<string>().ShouldBe("2026-07-15T00:00:00.000+02:00"); // Sommerzeit
-        body["address"]!.ToJsonString().ShouldBe("""{"contactId":"contact-1"}""");
-        body["taxConditions"]!["taxType"]!.GetValue<string>().ShouldBe("net");
-        body["totalPrice"]!["currency"]!.GetValue<string>().ShouldBe("EUR");
-        body["paymentConditions"]!["paymentTermDuration"]!.GetValue<int>().ShouldBe(14);
-        body["shippingConditions"]!["shippingType"]!.GetValue<string>().ShouldBe("serviceperiod");
-        body["shippingConditions"]!["shippingDate"]!.GetValue<string>().ShouldStartWith("2026-07-01T00:00:00.000");
-        body["shippingConditions"]!["shippingEndDate"]!.GetValue<string>().ShouldStartWith("2026-07-03");
-        var lines = body["lineItems"]!.AsArray();
-        lines[0]!["type"]!.GetValue<string>().ShouldBe("custom");
-        lines[0]!["quantity"]!.GetValue<decimal>().ShouldBe(182.5m);
-        lines[0]!["unitName"]!.GetValue<string>().ShouldBe("m²");
-        lines[0]!["unitPrice"]!.ToJsonString().ShouldBe("""{"currency":"EUR","netAmount":24.9,"taxRatePercentage":19}""");
-        lines[1]!.AsObject().ContainsKey("unitPrice").ShouldBeFalse();
-        body.ContainsKey("finalize").ShouldBeFalse();
+        LexwareClient.WriteAllowed(HttpMethod.Post, "/v1/contacts").ShouldBeTrue();
+        foreach (var path in new[] { "/v1/invoices", "/v1/quotations", "/v1/credit-notes", "/v1/order-confirmations", "/v1/contacts/abc", "/v1/voucherlist", "/v1/files" })
+        {
+            foreach (var method in new[] { HttpMethod.Post, HttpMethod.Put, HttpMethod.Patch, HttpMethod.Delete })
+            {
+                LexwareClient.WriteAllowed(method, path).ShouldBeFalse($"{method} {path}");
+            }
 
-        var single = LexwareClient.InvoiceBody(new LexwareInvoiceDraft("c", new DateOnly(2026, 1, 15), null, null, null, [], 0, "x", new DateOnly(2026, 1, 10), null));
-        single["voucherDate"]!.GetValue<string>().ShouldBe("2026-01-15T00:00:00.000+01:00");
-        single["shippingConditions"]!["shippingType"]!.GetValue<string>().ShouldBe("service");
-        LexwareClient.InvoiceBody(new LexwareInvoiceDraft("c", new DateOnly(2026, 1, 15), null, null, null, [], 0, "x", null, null))
-            ["shippingConditions"]!["shippingType"]!.GetValue<string>().ShouldBe("none");
+            LexwareClient.WriteAllowed(HttpMethod.Get, path).ShouldBeTrue();
+        }
+
+        LexwareClient.WriteAllowed(HttpMethod.Put, "/v1/contacts").ShouldBeFalse();
+        LexwareClient.WriteAllowed(HttpMethod.Delete, "/v1/contacts").ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task Vouchers_AreReadByType_AndListedForContactOrNumber()
+    {
+        var invoice = _fake.AddVoucher("invoice", "open", "RE1", "2026-07-15", "2026-07-29", 100m, 119m, "c1", "Huber", introduction: "Bauakte 2026-014");
+        var quotation = _fake.AddVoucher("quotation", "accepted", "AG7", "2026-06-01", "2026-06-30", 200m, 238m, "c1", "Huber");
+        _fake.AddVoucher("invoice", "paid", "RE2", "2026-05-01", null, 10m, 11.9m, "c2", "Lang");
+        using var client = Client();
+
+        var read = await client.GetVoucherAsync(_connection, "invoice", invoice, Ct);
+        (read.Type, read.Status, read.Number, read.GrossAmount, read.DueDate).ShouldBe(("invoice", "open", "RE1", 119m, new DateOnly(2026, 7, 29)));
+        read.Text!.ShouldContain("Bauakte 2026-014");
+        var offer = await client.GetVoucherAsync(_connection, "quotation", quotation, Ct);
+        (offer.Type, offer.Status, offer.DueDate).ShouldBe(("quotation", "accepted", new DateOnly(2026, 6, 30)));
+        _fake.Calls.Select(c => c.Path).ShouldBe([$"/v1/invoices/{invoice}", $"/v1/quotations/{quotation}"]);
+        (await Should.ThrowAsync<LexwareException>(() => client.GetVoucherAsync(_connection, "salesinvoice", invoice, Ct))).Code.ShouldBe("UNKNOWN_VOUCHER_TYPE");
+
+        var ofContact = await client.ListVouchersAsync(_connection, "c1", null, 100, Ct);
+        ofContact.Select(v => (v.Type, v.Number)).ShouldBe([("invoice", "RE1"), ("quotation", "AG7")]);
+        var query = _fake.Calls.Last().Query;
+        query.ShouldContain("voucherType=invoice,quotation,creditnote,orderconfirmation");
+        query.ShouldContain("voucherStatus=any");
+        query.ShouldContain("contactId=c1");
+        (await client.ListVouchersAsync(_connection, null, "RE2", 25, Ct)).ShouldHaveSingleItem().ContactName.ShouldBe("Lang");
+        _fake.Calls.ShouldAllBe(c => c.Method == "GET");
     }
 
     [Fact]

@@ -8,7 +8,8 @@ namespace EstrichOne.Api.Tests.Support;
 
 /// <summary>
 /// Nachgebildete Public API von Lexware Office als <see cref="HttpMessageHandler"/> (kein echter Aufruf): Profil, Kontakte
-/// (Liste mit Filtern, Abruf, Anlage), Rechnungen (Entwurf, Abruf) und Belegliste. Zeichnet jede Anfrage auf; Schlüssel,
+/// (Liste mit Filtern, Abruf, Anlage), Belege (Rechnungen, Angebote, Gutschriften, Auftragsbestätigungen: nur Abruf) und
+/// Belegliste. Schreibende Aufrufe für Belege kennt sie bewusst nicht (404). Zeichnet jede Anfrage auf; Schlüssel,
 /// Drosselung (429) und feste Fehlerantworten sind steuerbar.
 /// </summary>
 public sealed class FakeLexware : HttpMessageHandler
@@ -21,7 +22,8 @@ public sealed class FakeLexware : HttpMessageHandler
 
     public ConcurrentDictionary<string, JsonObject> Contacts { get; } = new();
 
-    public ConcurrentDictionary<string, JsonObject> Invoices { get; } = new();
+    /// <summary>Belege aller Arten: ID → Beleg (mit <c>voucherType</c> und <c>address.contactId</c>).</summary>
+    public ConcurrentDictionary<string, JsonObject> Vouchers { get; } = new();
 
     /// <summary>Nächste N Aufrufe auf Pfade mit diesem Anfang mit 429 beantworten.</summary>
     public ConcurrentDictionary<string, int> Throttle { get; } = new();
@@ -79,18 +81,25 @@ public sealed class FakeLexware : HttpMessageHandler
         return id;
     }
 
-    public string AddInvoice(string status, string? number, string voucherDate, string? dueDate, decimal net, decimal gross, string? contactName = null)
+    public string AddVoucher(string type, string status, string? number, string voucherDate, string? dueDate, decimal net, decimal gross,
+        string? contactId = null, string? contactName = null, string? title = null, string? introduction = null)
     {
         var id = Guid.NewGuid().ToString();
-        Invoices[id] = new JsonObject
+        Vouchers[id] = new JsonObject
         {
-            ["id"] = id, ["voucherStatus"] = status, ["voucherNumber"] = number, ["voucherDate"] = voucherDate + "T00:00:00.000+01:00",
-            ["dueDate"] = dueDate is null ? null : dueDate + "T00:00:00.000+01:00", ["title"] = "Rechnung",
-            ["address"] = new JsonObject { ["name"] = contactName },
+            ["id"] = id, ["voucherType"] = type, ["voucherStatus"] = status, ["voucherNumber"] = number, ["voucherDate"] = voucherDate + "T00:00:00.000+01:00",
+            [type == "quotation" ? "expirationDate" : "dueDate"] = dueDate is null ? null : dueDate + "T00:00:00.000+01:00",
+            ["title"] = title ?? (type == "quotation" ? "Angebot" : "Rechnung"), ["introduction"] = introduction,
+            ["address"] = new JsonObject { ["contactId"] = contactId, ["name"] = contactName },
             ["totalPrice"] = new JsonObject { ["currency"] = "EUR", ["totalNetAmount"] = net, ["totalGrossAmount"] = gross },
         };
         return id;
     }
+
+    private static readonly Dictionary<string, string> Segments = new(StringComparer.Ordinal)
+    {
+        ["invoices"] = "invoice", ["quotations"] = "quotation", ["credit-notes"] = "creditnote", ["order-confirmations"] = "orderconfirmation",
+    };
 
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
@@ -163,37 +172,21 @@ public sealed class FakeLexware : HttpMessageHandler
                 return Json(HttpStatusCode.OK, new JsonObject { ["id"] = id, ["resourceUri"] = $"https://api.lexware.io/v1/contacts/{id}", ["version"] = 1 });
             }
 
-            case ("POST", "/v1/invoices"):
-            {
-                var invoice = JsonNode.Parse(body!)!.AsObject();
-                var id = Guid.NewGuid().ToString();
-                decimal net = 0, gross = 0;
-                foreach (var line in invoice["lineItems"]!.AsArray().OfType<JsonObject>().Where(l => l["unitPrice"] is not null))
-                {
-                    var amount = line["quantity"]!.GetValue<decimal>() * line["unitPrice"]!["netAmount"]!.GetValue<decimal>();
-                    net += amount;
-                    gross += amount * (1 + (line["unitPrice"]!["taxRatePercentage"]!.GetValue<decimal>() / 100m));
-                }
-
-                invoice["id"] = id;
-                invoice["voucherStatus"] = "draft";
-                invoice["totalPrice"] = new JsonObject
-                {
-                    ["currency"] = "EUR", ["totalNetAmount"] = decimal.Round(net, 2), ["totalGrossAmount"] = decimal.Round(gross, 2),
-                };
-                Invoices[id] = invoice;
-                return Json(HttpStatusCode.Created, new JsonObject { ["id"] = id, ["resourceUri"] = $"https://api.lexware.io/v1/invoices/{id}", ["version"] = 0 });
-            }
-
             case ("GET", "/v1/voucherlist"):
             {
-                var number = parameters.GetValueOrDefault("voucherNumber");
-                var hits = Invoices.Values.Where(i => i["voucherNumber"]?.GetValue<string>() == number).Select(i => (JsonNode)new JsonObject
-                {
-                    ["id"] = i["id"]!.GetValue<string>(), ["voucherType"] = "invoice", ["voucherStatus"] = i["voucherStatus"]!.GetValue<string>(),
-                    ["voucherNumber"] = number, ["voucherDate"] = i["voucherDate"]?.DeepClone(), ["dueDate"] = i["dueDate"]?.DeepClone(),
-                    ["contactName"] = i["address"]?["name"]?.DeepClone(), ["totalAmount"] = i["totalPrice"]!["totalGrossAmount"]!.DeepClone(), ["currency"] = "EUR",
-                }).ToArray();
+                var types = parameters.GetValueOrDefault("voucherType", string.Empty).Split(',');
+                var hits = Vouchers.Values.Where(v => types.Contains(v["voucherType"]!.GetValue<string>()))
+                    .Where(v => !parameters.TryGetValue("voucherNumber", out var number) || v["voucherNumber"]?.GetValue<string>() == number)
+                    .Where(v => !parameters.TryGetValue("contactId", out var contact) || v["address"]?["contactId"]?.GetValue<string>() == contact)
+                    .OrderByDescending(v => v["voucherDate"]!.GetValue<string>(), StringComparer.Ordinal)
+                    .Select(v => (JsonNode)new JsonObject
+                    {
+                        ["id"] = v["id"]!.GetValue<string>(), ["voucherType"] = v["voucherType"]!.GetValue<string>(),
+                        ["voucherStatus"] = v["voucherStatus"]!.GetValue<string>(), ["voucherNumber"] = v["voucherNumber"]?.DeepClone(),
+                        ["voucherDate"] = v["voucherDate"]?.DeepClone(), ["dueDate"] = (v["dueDate"] ?? v["expirationDate"])?.DeepClone(),
+                        ["contactId"] = v["address"]?["contactId"]?.DeepClone(), ["contactName"] = v["address"]?["name"]?.DeepClone(),
+                        ["totalAmount"] = v["totalPrice"]!["totalGrossAmount"]!.DeepClone(), ["currency"] = "EUR",
+                    }).ToArray();
                 return Json(HttpStatusCode.OK, new JsonObject { ["content"] = new JsonArray(hits), ["last"] = true, ["totalPages"] = 1 });
             }
         }
@@ -203,9 +196,11 @@ public sealed class FakeLexware : HttpMessageHandler
             return Contacts.TryGetValue(path["/v1/contacts/".Length..], out var contact) ? Json(HttpStatusCode.OK, contact.DeepClone()) : NotFound();
         }
 
-        if (method == "GET" && path.StartsWith("/v1/invoices/", StringComparison.Ordinal))
+        var parts = path.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        if (method == "GET" && parts.Length == 3 && Segments.TryGetValue(parts[1], out var type))
         {
-            return Invoices.TryGetValue(path["/v1/invoices/".Length..], out var invoice) ? Json(HttpStatusCode.OK, invoice.DeepClone()) : NotFound();
+            return Vouchers.TryGetValue(parts[2], out var voucher) && voucher["voucherType"]!.GetValue<string>() == type
+                ? Json(HttpStatusCode.OK, voucher.DeepClone()) : NotFound();
         }
 
         return NotFound();

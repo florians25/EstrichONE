@@ -18,12 +18,6 @@ public sealed class LexwareSettingsRow : IVersionedEntity
     /// <summary>Abweichende Basis-URL der API; leer = Vorgabe (<see cref="LexwareOptions.DefaultBaseUrl"/>).</summary>
     public string? BaseUrl { get; set; }
 
-    /// <summary>Zahlungsziel in Tagen für neue Rechnungsentwürfe.</summary>
-    public int PaymentTermDays { get; set; } = 14;
-
-    /// <summary>Text der Zahlungsbedingung; leer = Standardtext mit dem Zahlungsziel.</summary>
-    public string? PaymentTermLabel { get; set; }
-
     /// <summary>Neue Kunden standardmäßig mit Lexware Office abgleichen (Vorgabe für <c>Contact.LexwareSync</c>).</summary>
     public bool NewCustomersSync { get; set; } = true;
 
@@ -69,7 +63,10 @@ public sealed class LexwareContactLink
     public DateTimeOffset LinkedAt { get; set; }
 }
 
-/// <summary>Beleg in Lexware Office, der zu einer Bauakte gehört (derzeit nur Rechnungen).</summary>
+/// <summary>
+/// Beleg aus Lexware Office (Rechnung, Angebot, Gutschrift, Auftragsbestätigung), der in EstrichONE einer Bauakte zugeordnet
+/// ist. Die Zuordnung liegt nur hier; in Lexware Office wird dafür nichts geschrieben.
+/// </summary>
 public sealed class LexwareVoucherLink
 {
     public const string InvoiceType = "invoice";
@@ -86,11 +83,13 @@ public sealed class LexwareVoucherLink
     public decimal? GrossAmount { get; set; }
     public string Currency { get; set; } = "EUR";
 
-    /// <summary>Status laut Lexware: draft, open, paid, paidoff, voided. „Überfällig“ wird aus Fälligkeit und Status abgeleitet.</summary>
+    /// <summary>
+    /// Status laut Lexware: draft, open, paid, paidoff, voided, bei Angeboten auch accepted und rejected. „Überfällig“ wird
+    /// bei Rechnungen aus Fälligkeit und Status abgeleitet.
+    /// </summary>
     public string Status { get; set; } = "draft";
 
-    /// <summary>Von EstrichONE als Entwurf angelegt (sonst nachträglich zugeordnet).</summary>
-    public bool Created { get; set; }
+    public string? ContactName { get; set; }
     public Guid LinkedByUserId { get; set; }
     public DateTimeOffset LinkedAt { get; set; }
     public DateTimeOffset? SyncedAt { get; set; }
@@ -105,7 +104,6 @@ internal sealed class LexwareSettingsRowConfiguration : IEntityTypeConfiguration
         builder.ConfigureVersioned();
         builder.Property(s => s.Id).ValueGeneratedNever();
         builder.Property(s => s.BaseUrl).HasMaxLength(LexwareSettingsRow.MaxUrl);
-        builder.Property(s => s.PaymentTermLabel).HasMaxLength(LexwareSettingsRow.MaxLabel);
         builder.Property(s => s.OrganizationId).HasMaxLength(100);
         builder.Property(s => s.OrganizationName).HasMaxLength(LexwareContactLink.MaxName);
         builder.Property(s => s.LastTestError).HasMaxLength(2000);
@@ -143,6 +141,7 @@ internal sealed class LexwareVoucherLinkConfiguration : IEntityTypeConfiguration
         builder.HasIndex(l => l.BauakteId);
         builder.Property(l => l.Number).HasMaxLength(100);
         builder.Property(l => l.Title).HasMaxLength(300);
+        builder.Property(l => l.ContactName).HasMaxLength(LexwareContactLink.MaxName);
         builder.Property(l => l.NetAmount).HasPrecision(14, 2);
         builder.Property(l => l.GrossAmount).HasPrecision(14, 2);
         builder.Property(l => l.Currency).HasMaxLength(3);

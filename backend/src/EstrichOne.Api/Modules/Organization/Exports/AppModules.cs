@@ -65,7 +65,7 @@ public static class AppModules
             "Tankbelege in den Apps fotografieren und erfassen, im Büro prüfen, private Auslagen erstatten und für die Buchhaltung exportieren.",
             [Machines]),
         new(Lexware, "office", "Lexware Office",
-            "Kunden mit Lexware Office verknüpfen, Rechnungen aus der Bauakte als Entwurf anlegen und den Status der Belege anzeigen. Benötigt einen API-Schlüssel (Verwaltung › Integrationen).",
+            "Kunden mit Lexware Office verknüpfen und Rechnungen und Angebote aus Lexware Office an Kunden und Bauakten anzeigen. Belege entstehen nur in Lexware Office. Benötigt einen API-Schlüssel (Verwaltung › Integrationen).",
             []),
 
         new(Materials, "material", "Material und Lieferanten", "Materialstamm, Lieferanten und Materialhinweise in Bauakten.", []),

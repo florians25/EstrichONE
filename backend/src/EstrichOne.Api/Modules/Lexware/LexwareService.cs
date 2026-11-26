@@ -55,12 +55,50 @@ internal sealed class LexwareDirectory : IDisposable
         }
     }
 
-    public void Clear() => _state = null;
+    public void Clear()
+    {
+        _state = null;
+        _customerVouchers.Clear();
+        _voucherTexts.Clear();
+    }
+
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, (DateTimeOffset LoadedAt, IReadOnlyList<LexwareVoucher> Vouchers)> _customerVouchers = new();
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, (DateTimeOffset LoadedAt, string Text)> _voucherTexts = new();
+
+    /// <summary>Belege eines Kontakts, kurz zwischengespeichert (Schlüssel: Stempel und Kontakt).</summary>
+    public async Task<(IReadOnlyList<LexwareVoucher> Vouchers, DateTimeOffset LoadedAt)> VouchersAsync(string key, DateTimeOffset now, TimeSpan maxAge,
+        bool refresh, Func<Task<IReadOnlyList<LexwareVoucher>>> load)
+    {
+        if (!refresh && _customerVouchers.TryGetValue(key, out var cached) && now - cached.LoadedAt < maxAge)
+        {
+            return (cached.Vouchers, cached.LoadedAt);
+        }
+
+        var vouchers = await load();
+        _customerVouchers[key] = (now, vouchers);
+        return (vouchers, now);
+    }
+
+    /// <summary>Texte eines Belegs (Titel, Einleitung, Schlusstext) für den Zuordnungsvorschlag, zwischengespeichert.</summary>
+    public async Task<string> VoucherTextAsync(string key, DateTimeOffset now, TimeSpan maxAge, Func<Task<string>> load)
+    {
+        if (_voucherTexts.TryGetValue(key, out var cached) && now - cached.LoadedAt < maxAge)
+        {
+            return cached.Text;
+        }
+
+        var text = await load();
+        _voucherTexts[key] = (now, text);
+        return text;
+    }
 
     public void Dispose() => _gate.Dispose();
 }
 
-/// <summary>Fachlogik der Lexware-Office-Anbindung: Einstellungen, Kontaktverknüpfung mit Dublettenprüfung, Rechnungsentwürfe und Belegstatus.</summary>
+/// <summary>
+/// Fachlogik der Lexware-Office-Anbindung: Einstellungen, Kontaktverknüpfung mit Dublettenprüfung und die lesende Anzeige
+/// der Belege (Rechnungen, Angebote) mit Statusabgleich. Belege werden nie angelegt oder geändert.
+/// </summary>
 public sealed class LexwareService(
     EstrichOneDbContext db, LexwareClient client, IDataProtectionProvider protection, IOptions<LexwareOptions> options, TimeProvider clock,
     IServiceProvider services)
@@ -164,9 +202,9 @@ public sealed class LexwareService(
     public string ContactUrl(LexwareSettingsRow row, string lexwareContactId) =>
         $"{AppBaseUrl(row)}/permalink/contacts/view/{Uri.EscapeDataString(lexwareContactId)}";
 
-    /// <summary>Entwürfe öffnen im Bearbeitungsmodus, alle anderen Rechnungen in der Ansicht.</summary>
-    public string InvoiceUrl(LexwareSettingsRow row, string lexwareId, string status) =>
-        $"{AppBaseUrl(row)}/permalink/invoices/{(status == "draft" ? "edit" : "view")}/{Uri.EscapeDataString(lexwareId)}";
+    /// <summary>Link zum Beleg in der Lexware-Oberfläche: Entwürfe im Bearbeitungsmodus, alle anderen in der Ansicht.</summary>
+    public string VoucherUrl(LexwareSettingsRow row, string type, string lexwareId, string status) =>
+        $"{AppBaseUrl(row)}/permalink/{LexwareVoucherTypes.Segment(type) ?? "invoices"}/{(status == "draft" ? "edit" : "view")}/{Uri.EscapeDataString(lexwareId)}";
 
     private static string Stamp(LexwareSettingsRow row) =>
         Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes($"{row.BaseUrl}|{row.ProtectedApiKey}")))[..16];
@@ -300,7 +338,7 @@ public sealed class LexwareService(
         && unique.ConstraintName?.Contains("lexware", StringComparison.Ordinal) == true
             ? new LexwareException("ALREADY_LINKED",
                 unique.ConstraintName.Contains("voucher", StringComparison.Ordinal)
-                    ? "Diese Rechnung ist bereits einer Bauakte zugeordnet."
+                    ? "Dieser Beleg ist bereits einer Bauakte zugeordnet."
                     : "Dieser Eintrag ist bereits verknüpft. Ein Kunde und ein Lexware-Kontakt können nur einmal miteinander verknüpft sein.")
             : null;
 
@@ -323,26 +361,48 @@ public sealed class LexwareService(
     }
 
     /// <summary>Status für die Anzeige: offene Rechnungen nach Ablauf der Fälligkeit gelten als überfällig.</summary>
-    public string DisplayStatus(LexwareVoucherLink link) =>
-        link.Status == "open" && link.DueDate is { } due && due < Today() ? "overdue" : link.Status;
+    public string DisplayStatus(string type, string status, DateOnly? dueDate) =>
+        type == LexwareVoucherTypes.Invoice && status == "open" && dueDate is { } due && due < Today() ? "overdue" : status;
 
-    public void Apply(LexwareVoucherLink link, LexwareInvoice invoice)
+    public void Apply(LexwareVoucherLink link, LexwareVoucher voucher)
     {
-        link.Status = Cut(invoice.Status, 20) ?? link.Status;
-        link.Number = Cut(invoice.Number, 100) ?? link.Number;
-        link.Title = Cut(invoice.Title, 300) ?? link.Title;
-        link.VoucherDate = invoice.VoucherDate ?? link.VoucherDate;
-        link.DueDate = invoice.DueDate ?? link.DueDate;
-        link.NetAmount = invoice.NetAmount ?? link.NetAmount;
-        link.GrossAmount = invoice.GrossAmount ?? link.GrossAmount;
-        link.Currency = Cut(invoice.Currency, 3) ?? link.Currency;
+        link.Status = Cut(voucher.Status, 20) ?? link.Status;
+        link.Number = Cut(voucher.Number, 100) ?? link.Number;
+        link.Title = Cut(voucher.Title, 300) ?? link.Title;
+        link.ContactName = Cut(voucher.ContactName, LexwareContactLink.MaxName) ?? link.ContactName;
+        link.VoucherDate = voucher.VoucherDate ?? link.VoucherDate;
+        link.DueDate = voucher.DueDate ?? link.DueDate;
+        link.NetAmount = voucher.NetAmount ?? link.NetAmount;
+        link.GrossAmount = voucher.GrossAmount ?? link.GrossAmount;
+        link.Currency = Cut(voucher.Currency, 3) ?? link.Currency;
         link.SyncedAt = clock.GetUtcNow();
         link.SyncError = null;
     }
 
+    /// <summary>Belege eines Lexware-Kontakts (Belegliste), kurz zwischengespeichert; <paramref name="refresh"/> lädt neu.</summary>
+    public Task<(IReadOnlyList<LexwareVoucher> Vouchers, DateTimeOffset LoadedAt)> ContactVouchersAsync(LexwareSettingsRow row, string lexwareContactId,
+        bool refresh, CancellationToken cancellationToken)
+    {
+        var connection = Connection(row);
+        return Directory.VouchersAsync($"{Stamp(row)}|{lexwareContactId}", clock.GetUtcNow(), Options.StatusCacheDuration, refresh,
+            () => client.ListVouchersAsync(connection, lexwareContactId, null, 100, cancellationToken));
+    }
+
+    /// <summary>
+    /// Kommt die Bauaktennummer in Titel, Einleitung oder Schlusstext des Belegs vor? Dafür wird der Beleg einzeln gelesen
+    /// (zwischengespeichert). Nur ein Vorschlag: zugeordnet wird erst nach Bestätigung.
+    /// </summary>
+    public async Task<bool> MentionsAsync(LexwareSettingsRow row, LexwareVoucher voucher, string bauakteNumber, CancellationToken cancellationToken)
+    {
+        var connection = Connection(row);
+        var text = await Directory.VoucherTextAsync($"{Stamp(row)}|{voucher.Id}", clock.GetUtcNow(), Options.ContactCacheDuration,
+            async () => (await client.GetVoucherAsync(connection, voucher.Type, voucher.Id, cancellationToken)).Text ?? string.Empty);
+        return text.Contains(bauakteNumber, StringComparison.OrdinalIgnoreCase);
+    }
+
     /// <summary>
     /// Status der Belege mit Lexware Office abgleichen: bei der Anzeige nur, was länger als der kurze Cache nicht geprüft
-    /// wurde (stornierte Rechnungen ändern sich nicht mehr), auf Wunsch alle. Fehler bleiben am Beleg stehen; die
+    /// wurde (stornierte Belege ändern sich nicht mehr), auf Wunsch alle. Fehler bleiben am Beleg stehen; die
     /// gespeicherten Werte werden weiter angezeigt.
     /// </summary>
     public async Task<string?> SyncAsync(LexwareSettingsRow row, IReadOnlyList<LexwareVoucherLink> links, bool force, CancellationToken cancellationToken)
@@ -374,7 +434,7 @@ public sealed class LexwareService(
         {
             try
             {
-                Apply(link, await client.GetInvoiceAsync(connection, link.LexwareId, cancellationToken));
+                Apply(link, await client.GetVoucherAsync(connection, link.VoucherType, link.LexwareId, cancellationToken));
             }
             catch (LexwareException exception) when (exception.Code == "NOT_FOUND")
             {
@@ -393,71 +453,6 @@ public sealed class LexwareService(
         return failure;
     }
 
-    /// <summary>Vorschlag für den Rechnungsentwurf aus den Kennwerten der Bauakte.</summary>
-    public async Task<(string Introduction, IReadOnlyList<LexwareLineDraft> Lines)> ProposalAsync(Bauakte bauakte, CancellationToken cancellationToken)
-    {
-        var project = bauakte.Project;
-        var lists = await services.GetRequiredService<IValueLists>().GetAllAsync(cancellationToken);
-        string? Label(string list, string? key) =>
-            key is null ? null : lists.TryGetValue(list, out var entries) ? entries.FirstOrDefault(e => e.Key == key)?.Label ?? key : key;
-
-        var site = string.Join(", ", new[] { bauakte.Street, string.Join(' ', new[] { bauakte.PostalCode, bauakte.City }.Where(p => !string.IsNullOrWhiteSpace(p))) }
-            .Where(p => !string.IsNullOrWhiteSpace(p)));
-        var introduction = new StringBuilder("wir berechnen Ihnen unsere Leistungen für folgendes Bauvorhaben:\n");
-        introduction.Append("Bauvorhaben: ").Append(bauakte.Title).Append('\n');
-        if (bauakte.Number is not null)
-        {
-            introduction.Append("Bauakte: ").Append(bauakte.Number).Append('\n');
-        }
-
-        if (site.Length > 0)
-        {
-            introduction.Append("Leistungsort: ").Append(site).Append('\n');
-        }
-
-        var screed = Label(ValueLists.ScreedType, project.ScreedType);
-        var name = screed ?? "Estricharbeiten";
-        if (project.StrengthClass is not null && !name.Contains(project.StrengthClass, StringComparison.OrdinalIgnoreCase))
-        {
-            name += " " + project.StrengthClass;
-        }
-
-        var facts = new List<string>();
-        if (project.NominalThicknessMm is { } thickness)
-        {
-            facts.Add($"Nenndicke {thickness.ToString(CultureInfo.InvariantCulture)} mm");
-        }
-
-        if (Label(ValueLists.Construction, project.Construction) is { } construction)
-        {
-            facts.Add($"Bauart {construction}");
-        }
-
-        if (project.UnderfloorHeating == true)
-        {
-            facts.Add("als Heizestrich");
-        }
-
-        facts.Add("liefern und einbauen");
-        var lines = new List<LexwareLineDraft>
-        {
-            new("custom", name, string.Join(", ", facts), project.TotalArea ?? 1m, project.TotalArea is null ? "Stück" : "m²", 0m, 19m),
-        };
-        if (project.Insulation is not null)
-        {
-            var insulation = project.InsulationThicknessMm is { } mm
-                ? $"{project.Insulation}, {mm.ToString(CultureInfo.InvariantCulture)} mm" : project.Insulation;
-            lines.Add(new LexwareLineDraft("custom", "Dämmung", insulation + ", liefern und verlegen", project.TotalArea ?? 1m,
-                project.TotalArea is null ? "Stück" : "m²", 0m, 19m));
-        }
-
-        return (introduction.ToString().TrimEnd(), lines);
-    }
-
-    public static string PaymentTermLabel(LexwareSettingsRow row, int days) =>
-        !string.IsNullOrWhiteSpace(row.PaymentTermLabel) && days == row.PaymentTermDays
-            ? row.PaymentTermLabel
-            : days == 0 ? "Zahlbar sofort ohne Abzug." : $"Zahlbar innerhalb von {days.ToString(CultureInfo.InvariantCulture)} Tagen ohne Abzug.";
 }
 
 /// <summary>
