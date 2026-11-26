@@ -8,7 +8,8 @@ ab und zeigt Rechnungen und Angebote am Kunden und an der Bauakte an (Nummer, Ar
 
 **Grundsatz: Belege sind rein lesend.** EstrichONE legt in Lexware Office keinen Beleg an, ändert keinen, schließt keinen
 ab und löscht nichts. Geschrieben wird in Lexware Office ausschließlich an Kontakten: beim Anlegen (`POST /v1/contacts`,
-nur nach Dublettenprüfung und ausdrücklicher Entscheidung) und beim Abgleich geänderter Kundendaten
+immer nach Dublettenprüfung: von Hand mit ausdrücklicher Entscheidung, automatisch nur ohne jeden Treffer) und beim
+Abgleich geänderter Kundendaten
 (`PUT /v1/contacts/{id}`, nur für verknüpfte Kunden mit eingeschaltetem Abgleich). Kontakte werden dort nie archiviert
 oder gelöscht. Abgesichert ist das an drei Stellen:
 
@@ -35,6 +36,7 @@ vor dem Einsatz zu bestätigen ist.
 | `LexwareService.cs` | Einstellungen, Schlüssel (Data Protection), Kontaktliste und Belege mit Cache, Verknüpfung, Statusabgleich, Beleg-PDF |
 | `LexwareContactSync.cs` | Änderungsabgleich als reine Funktionen: Felder beider Seiten, Vergleich, Dreiwege-Abgleich, Übernahme in den Kunden |
 | `LexwareChangeSync.cs` | Änderungsabgleich je Verknüpfung, Lauf über alle Verknüpfungen, Hintergrunddienst |
+| `LexwareAutoCreate.cs` | Neue Kunden ohne ähnlichen Kontakt automatisch anlegen, Vermerke in `lexware_contact_creations` |
 | `LexwareEndpoints.cs` | Endpunkte, Rechte, Fehlerabbildung auf Problem-Antworten |
 | `LexwareModel.cs` | Tabellen `lexware_settings`, `lexware_contact_links` (mit Abgleichstand), `lexware_voucher_links` |
 
@@ -113,16 +115,18 @@ Links in die Lexware-Oberfläche: `https://app.lexware.de/permalink/{invoices|qu
 | `POST lexware/customers/{id}/create` | `invoices.assign` | in Lexware anlegen; bei Treffern nur mit `createAnyway` |
 | `DELETE lexware/customers/{id}/link` | `invoices.assign` | Verknüpfung lösen |
 | `PUT lexware/customers/{id}/sync` | `invoices.assign` | „Mit Lexware Office abgleichen“ ein- oder ausschalten |
+| `POST lexware/customers/{id}/create/retry` | `invoices.assign` | automatische Anlage erneut versuchen (prüft vorher erneut auf Dubletten) |
+| `POST lexware/contacts/check` | `contacts.edit` | beim Anlegen eines Kunden prüfen, ob es ihn in Lexware Office schon gibt; blockiert nie |
 | `POST lexware/customers/{id}/sync/run` | `invoices.assign` | Änderungsabgleich für diesen Kunden jetzt ausführen |
 | `POST lexware/customers/{id}/sync/resolve` | `invoices.assign`, für „Lexware übernehmen“ zusätzlich `contacts.edit` | Abweichungen entscheiden: `source` für alle Felder oder `fields` je Feld, jeweils `estrichOne` oder `lexware` |
 | `GET lexware/customers/{id}/vouchers/{lexwareId}/document` | `invoices.read` | Beleg des verknüpften Kontakts als PDF (`download=true` als Anhang) |
 | `GET bauakten/{id}/lexware/vouchers/{linkId}/document` | `invoices.read` | der Bauakte zugeordneter Beleg als PDF (`download=true` als Anhang) |
-| `POST settings/integrations/lexware/reconciliation/enable-sync` | `settings.integrations` | Abgleich für ausgewählte Kunden einschalten |
+| `POST settings/integrations/lexware/reconciliation/enable-sync` | `settings.integrations` | Abgleich für ausgewählte Kunden einschalten; mit `preview=true` nur die Zahlen (`wouldCreate`, `withMatches`) |
 | `GET lexware/contacts` | `invoices.assign` | Lexware-Kunden seitenweise mit Suche (`q`, `page`, `size`, `unlinked`) |
 | `GET lexware/contacts/{lexwareId}/candidates` | `invoices.assign` | Dublettenprüfung in EstrichONE |
 | `POST lexware/contacts/{lexwareId}/import` | `invoices.assign` und `contacts.edit` | als Kunde übernehmen; bei Treffern nur mit `createAnyway` |
 | `GET lexware/customers/{id}/vouchers` | `invoices.read` | Rechnungen, Angebote, Gutschriften und Auftragsbestätigungen des verknüpften Kontakts (`refresh=true` lädt neu) |
-| `GET bauakten/{id}/lexware` | `invoices.read` | der Bauakte zugeordnete Belege mit Statusabgleich (`refresh=true` sofort) |
+| `GET bauakten/{id}/lexware` | `invoices.read` | der Bauakte zugeordnete Belege mit Statusabgleich (`refresh=true` sofort), dazu `contact` (Lexware-Seite des verknüpften Kunden aus dem gemerkten Abgleichstand, Abgleichstand, abweichende Felder) und `summary` (Summenzeile der Belege) |
 | `GET bauakten/{id}/lexware/candidates` | `invoices.assign` | Belege zum Zuordnen: Belege des Kunden der Bauakte mit Vorschlag, mit `number` Suche über die Belegnummer |
 | `POST bauakten/{id}/lexware/vouchers/assign` | `invoices.assign` | Beleg zuordnen (`lexwareId`, `type`); schreibt nur in EstrichONE |
 | `DELETE bauakten/{id}/lexware/vouchers/{linkId}` | `invoices.assign` | Zuordnung lösen |
@@ -167,6 +171,28 @@ Bauleitung“ nur bei neuen Installationen; in bestehenden Installationen vergib
 - Statusabgleich: beim Öffnen des Abschnitts für Belege, deren letzter Abgleich älter als zwei Minuten ist (stornierte
   nicht mehr), höchstens zwanzig je Aufruf; „Aktualisieren“ gleicht alle sofort ab. Ist Lexware nicht erreichbar, bleibt
   der gespeicherte Stand mit Hinweis sichtbar. In Lexware gelöschte Belege erhalten den Hinweis „nicht mehr vorhanden“.
+
+## Prüfung beim Anlegen und automatische Anlage
+
+- **Warnung im Dialog „Neuer Kunde“:** `POST lexware/contacts/check` vergleicht die Eingaben mit der Kontaktliste
+  (`LexwareMatching`, wie die übrige Dublettenprüfung) und liefert Treffer mit Gründen, unabhängig vom Schalter „Mit
+  Lexware Office abgleichen“. Ohne Schlüssel oder ohne Verbindung antwortet der Endpunkt mit `checked=false` und einem
+  Hinweis statt mit einem Fehler. „Aus Lexware Office übernehmen“ ist `POST lexware/contacts/{id}/import` (prüft seinerseits
+  gegen die EstrichONE-Kunden); ein schon verknüpfter Kontakt wird mit seinem Kunden genannt.
+- **Automatische Anlage** (`LexwareAutoCreateService`, Einstellung `autoCreate`, Vorgabe an): Der Hintergrunddienst nimmt
+  bei jedem Lauf Kunden mit eingeschaltetem Abgleich, ohne Verknüpfung und ohne Vermerk. Dublettenprüfung gegen die
+  Kontaktliste; ohne Treffer `POST /v1/contacts`, verknüpfen (`CreatedInLexware`), Protokoll `lexware.contact_created` ohne
+  Benutzer. Mit Treffern Vermerk `duplicates`, kein Aufruf; der Kunde steht in der Abgleichübersicht unter den möglichen
+  Dubletten. Das erfasst Web, Apps und offline angelegte Kunden gleichermaßen, weil nur der gespeicherte Kunde zählt.
+- **Bestand:** Die Migration vermerkt alle vorhandenen Kunden mit eingeschaltetem Abgleich und ohne Verknüpfung als
+  `skipped`. Dasselbe geschieht mit den offenen Kunden, wenn die Einstellung von aus auf an wechselt, und beim bewussten
+  Lösen einer Verknüpfung. Schaltet jemand den Abgleich für einen Kunden später ein (am Kunden oder als Massenaktion),
+  entfällt der Vermerk und es gilt die Regel für neue Kunden.
+- **Keine Doppelanlage:** Ein Anlageversuch läuft immer unter derselben Sperre wie das Anlegen von Hand und der
+  Änderungsabgleich. Schlägt er fehl, steht der Grund am Kunden (`failed`), der nächste Versuch folgt nach 2, 4, 8 bis
+  höchstens 60 Minuten oder über „Erneut versuchen“. Vor jedem weiteren Versuch wird die Kontaktliste neu gelesen und
+  erneut geprüft: Hat Lexware den Kontakt trotz Fehlermeldung angelegt, wird er als Treffer gefunden und nicht noch
+  einmal angelegt.
 
 ## Beleg als PDF
 
@@ -311,11 +337,14 @@ Nur Kontakte mit der Rolle Kunde werden betrachtet, archivierte nicht.
 14. Beleg-PDF: `GET /v1/{belegart}/{id}/file` mit `Accept: application/pdf` für alle vier Belegarten; Antwort bei Entwürfen
     (erwartet `406`); falls der Pfad fehlt, der ältere Weg über `/document` und `/v1/files/{documentFileId}`. Bei
     E-Rechnungen (XRechnung, ZUGFeRD) prüfen, dass mit `Accept: application/pdf` ein PDF und kein XML kommt.
-15. Lastverhalten: Erstabgleich mit vielen Verknüpfungen (liest nur die Kontaktliste) und viele Änderungen kurz
+15. Automatische Anlage: Pflichtfelder bei `POST /v1/contacts` für Personen ohne Vornamen und Firmen ohne Anschrift;
+    Verhalten bei Zeitüberschreitung (Kontakt trotzdem angelegt?) und ob er danach in `GET /v1/contacts` sofort erscheint.
+16. Lastverhalten: Erstabgleich mit vielen Verknüpfungen (liest nur die Kontaktliste) und viele Änderungen kurz
     hintereinander (ein `GET` und ein `PUT` je Kontakt, zwei Anfragen je Sekunde).
 ## Nicht Teil dieser Runde
 
-Webhooks (Änderungen ohne Abruf, siehe oben), Belege und Abgleichstand in den Apps (dort gibt es nur den Schalter „Mit
-Lexware Office abgleichen“ am Kunden; Änderungen aus den Apps werden über den Sync abgeglichen), Abgleich von Land,
+Webhooks (Änderungen ohne Abruf, siehe oben), Lexware-Daten und Belege in der Bauakte der Apps sowie die Warnung beim
+Anlegen eines Kunden in den Apps (dort gibt es weiter nur den Schalter „Mit Lexware Office abgleichen“ am Kunden;
+Änderungen und neue Kunden aus den Apps werden auf dem Server abgeglichen bzw. angelegt; die Endpunkte dafür stehen bereit), Abgleich von Land,
 Steuernummer, Lieferanschrift und Ansprechpartnern, Zahlungseingänge im Einzelnen. Das Anlegen von Rechnungen oder
 Angeboten aus EstrichONE ist ausdrücklich nicht vorgesehen.

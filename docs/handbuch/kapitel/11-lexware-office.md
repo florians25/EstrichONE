@@ -50,8 +50,44 @@ eingeschaltet ist.
 Die Vorgabe für neue Kunden legen Sie unter **Verwaltung** → **Integrationen** → **Lexware Office** mit **Neue Kunden
 standardmäßig mit Lexware Office abgleichen** fest. Kunden, die es vor dem Einschalten des Moduls schon gab, stehen auf
 **Aus**, damit nichts ungefragt übertragen wird. Im Kundenabgleich schalten Sie den Abgleich für ausgewählte Kunden
-gesammelt ein. Auch mit eingeschaltetem Schalter legt EstrichONE in Lexware Office nichts von selbst an: Übertragen wird
-erst, wenn Sie einen Kunden verknüpfen oder in Lexware Office anlegen. Ab dann gleicht EstrichONE spätere Änderungen ab.
+gesammelt ein. Vorher sehen Sie, wie viele dieser Kunden dadurch in Lexware Office neu angelegt würden.
+
+## Neue Kunden anlegen
+
+### Warnung, wenn es den Kunden in Lexware Office schon gibt
+
+Während Sie im Dialog **Neuer Kunde** Name, Anschrift oder E-Mail-Adresse eingeben, sucht EstrichONE in Lexware Office
+nach passenden Kontakten. Gibt es Treffer, erscheint die Warnung **Achtung: Dieser Kunde ist bereits in Lexware Office
+vorhanden.** mit Name, Kundennummer, Anschrift und dem Grund der Übereinstimmung. Die Warnung kommt auch, wenn der
+Schalter **Mit Lexware Office abgleichen** aus ist.
+
+- **Aus Lexware Office übernehmen** legt den Kunden mit den Daten aus Lexware Office an, verknüpft ihn und schaltet den
+  Abgleich ein. Dafür benötigen Sie das Recht, Kunden zu verknüpfen.
+- **Trotzdem neu anlegen** legt den Kunden bewusst ohne Verknüpfung an. Er erscheint danach im Kundenabgleich unter
+  **Mögliche Dubletten**.
+- Ist der Kontakt schon mit einem anderen Kunden in EstrichONE verknüpft, führt ein Link zu diesem Kunden.
+
+![Warnung beim Anlegen eines Kunden](bilder/lexware-neuer-kunde.png "Neuer Kunde: Der Kunde ist bereits in Lexware Office vorhanden")
+
+Ist Lexware Office gerade nicht erreichbar, steht im Dialog ein Hinweis. Das Anlegen bleibt möglich.
+
+### Automatisch in Lexware Office anlegen
+
+Legen Sie einen Kunden mit eingeschaltetem **Mit Lexware Office abgleichen** an und gibt es in Lexware Office keinen
+ähnlichen Kontakt, legt EstrichONE ihn dort kurz darauf im Hintergrund an und verknüpft ihn. Das gilt für Web und
+Apps, auch für Kunden, die in der App ohne Verbindung angelegt wurden, und für Kunden, bei denen Sie den Schalter später
+einschalten.
+
+- Gibt es einen ähnlichen Kontakt, legt EstrichONE nichts an. Der Kunde steht im Kundenabgleich unter **Mögliche
+  Dubletten**, dort verknüpfen Sie ihn oder legen ihn bewusst neu an.
+- Mit ausgeschaltetem Schalter wird nichts angelegt.
+- Kunden, die es beim Update schon gab, werden nicht nachträglich angelegt.
+- Der Abschnitt **Lexware Office** am Kunden nennt den Stand: **Anlage ausstehend**, angelegt mit Datum oder **Anlage
+  fehlgeschlagen** mit Grund und **Erneut versuchen**. Vor jedem Versuch prüft EstrichONE erneut auf ähnliche Kontakte,
+  damit nichts doppelt entsteht.
+
+Die automatische Anlage schalten Sie unter **Verwaltung** → **Integrationen** → **Lexware Office** mit **Neue Kunden ohne
+Treffer automatisch in Lexware Office anlegen** aus. Dann legen Sie Kunden wie bisher einzeln an.
 
 Schalten Sie den Abgleich bei einem bereits verknüpften Kunden aus, bleibt die Verknüpfung bestehen, bis Sie sie lösen.
 Der Kontakt und seine Belege liegen ja bereits in Lexware Office und werden weiter angezeigt; die Kundenansicht weist
@@ -171,6 +207,19 @@ nur Paare, bei denen es auf beiden Seiten genau ein Gegenstück mit gleicher E-M
 gibt. **Aktualisieren** lädt die Kontaktliste neu aus Lexware Office und gleicht die Änderungen aller verknüpften
 Kunden ab; sonst hält EstrichONE die Liste einige Minuten vor.
 
+## Lexware Office in der Bauakte
+
+Ist der Kunde einer Bauakte mit Lexware Office verknüpft, zeigt die **Übersicht** der Bauakte den Block **Lexware
+Office**: Name und Kundennummer des Kontakts, Rechnungsanschrift und E-Mail-Adresse aus Lexware Office, den Stand des
+Abgleichs und eine Zeile mit den Summen der zugeordneten Belege, zum Beispiel „4 Rechnungen: offen 15.767,50 €, davon
+überfällig 5.176,50 €“. Weicht eine Angabe von EstrichONE ab, steht das dezent darunter. Links führen zum Abschnitt
+**Rechnungen und Angebote**, zum Kontakt in Lexware Office und zum Kunden.
+
+![Lexware Office in der Übersicht der Bauakte](bilder/lexware-bauakte-block.png "Übersicht der Bauakte mit dem Block Lexware Office")
+
+Ohne Verknüpfung erscheint der Block nicht. Wer Kunden verknüpfen darf, sieht stattdessen einen Hinweis mit Link zum
+Kunden.
+
 ## Rechnungen und Angebote in der Bauakte
 
 Die Bauakte zeigt mit eingeschaltetem Modul den Abschnitt **Rechnungen und Angebote** mit den Belegen, die Sie dieser
@@ -228,7 +277,8 @@ lädt die Datei ohne Vorschau herunter.
 | Kann ich in EstrichONE eine Rechnung oder ein Angebot schreiben? | Nein. Belege entstehen ausschließlich in Lexware Office; EstrichONE zeigt sie an. |
 | Ein Beleg zeigt „In Lexware Office nicht mehr vorhanden“. | Er wurde dort gelöscht. Lösen Sie die Zuordnung in der Bauakte. |
 | Ein Kunde soll nie nach Lexware Office. | Schalten Sie beim Kunden **Mit Lexware Office abgleichen** aus. |
-| Was geht an Lexware Office? | Nur die Daten der Kunden, die Sie dort anlegen oder verknüpfen. Belege liest EstrichONE nur. |
+| Was geht an Lexware Office? | Nur die Daten der Kunden mit eingeschaltetem Abgleich. Belege liest EstrichONE nur. |
+| Ein neuer Kunde wurde nicht in Lexware Office angelegt. | Es gibt dort einen ähnlichen Kontakt, der Schalter am Kunden ist aus oder die automatische Anlage ist ausgeschaltet. Der Abschnitt Lexware Office am Kunden nennt den Stand. |
 | Ein Kunde zeigt „Abweichungen offen“. | Kunde und Kontakt haben unterschiedliche Angaben. Entscheiden Sie am Kunden oder im Kundenabgleich, welcher Wert gilt. |
 | Eine Änderung aus Lexware Office ist noch nicht da. | Der Abgleich läuft etwa alle 15 Minuten. **Jetzt abgleichen** am Kunden holt sie sofort. |
 | Der Kunde zeigt „Kontakt in Lexware Office nicht mehr vorhanden“. | Der Kontakt wurde dort gelöscht. Lösen Sie die Verknüpfung und verknüpfen Sie den Kunden bei Bedarf neu. |

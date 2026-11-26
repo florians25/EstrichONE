@@ -778,6 +778,7 @@ public sealed class LexwareChangeSyncTests(PostgresFixture postgres) : IAsyncLif
             shown.Content.Headers.ContentType!.MediaType.ShouldBe("application/pdf");
             shown.Content.Headers.ContentDisposition!.ToString().ShouldBe("inline; filename=\"Rechnung-RE1042.pdf\"");
             shown.Headers.CacheControl!.NoStore.ShouldBeTrue();
+            shown.Headers.GetValues("X-Frame-Options").ShouldBe(["SAMEORIGIN"]); // Vorschau im Rahmen derselben Herkunft
             (await shown.Content.ReadAsByteArrayAsync(Ct)).ShouldBe(FakeLexware.Pdf(invoice));
         }
 
@@ -787,6 +788,7 @@ public sealed class LexwareChangeSyncTests(PostgresFixture postgres) : IAsyncLif
             download.StatusCode.ShouldBe(HttpStatusCode.OK);
             download.Content.Headers.ContentDisposition!.DispositionType.ShouldBe("attachment");
             download.Content.Headers.ContentDisposition.FileName.ShouldBe("Rechnung-RE1042.pdf");
+            download.Headers.GetValues("X-Frame-Options").ShouldBe(["DENY"]);
             (await download.Content.ReadAsByteArrayAsync(Ct)).ShouldBe(FakeLexware.Pdf(invoice));
         }
 

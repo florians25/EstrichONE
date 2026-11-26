@@ -1577,6 +1577,8 @@ internal static class LexwareEndpoints
             return TypedResults.File(document.Content, "application/pdf", name);
         }
 
+        // Anzeige in der Vorschau der Weboberfläche (Rahmen derselben Herkunft).
+        http.Items[EstrichOne.Api.Infrastructure.Http.SecurityHeadersMiddleware.AllowSameOriginFramingKey] = true;
         http.Response.Headers.ContentDisposition = $"inline; filename=\"{name}\"";
         return TypedResults.File(document.Content, "application/pdf");
     }

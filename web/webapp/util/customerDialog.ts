@@ -252,7 +252,7 @@ export function openNewCustomerDialog(options: NewCustomerOptions = {}): Promise
 						new Link({ text: `Bereits verknüpft mit dem Kunden ${c.linkedContactName ?? ""}`.trim(), href: `/kunden/${c.linkedContactId}`, target: "_blank",
 							visible: action === "linked" }),
 						new Text({ text: "Zum Übernehmen fehlt Ihnen das Recht, Kunden mit Lexware Office zu verknüpfen.", visible: action === "none" }).addStyleClass("eoMuted"),
-					] }).setLayoutData(new FlexItemData({ growFactor: 1, shrinkFactor: 1 })),
+					] }).setLayoutData(new FlexItemData({ growFactor: 1, shrinkFactor: 1, baseSize: "50%" })),
 					new Button({ text: "Aus Lexware Office übernehmen", type: "Emphasized", visible: action === "import",
 						tooltip: "Kunde mit den Daten aus Lexware Office anlegen und verknüpfen", press: () => void importFromLexware(d) }).addStyleClass("sapUiTinyMarginBegin"),
 				],

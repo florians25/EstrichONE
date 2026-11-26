@@ -390,12 +390,12 @@ test('Lexware Office: spätere Änderungen abgleichen, Abweichungen entscheiden,
   await page.goto(`/bauakten/${huberBauakte}`);
   // Übersicht der Bauakte: Block „Lexware Office“ mit Kontakt, Abgleichstand und Summenzeile der zugeordneten Belege.
   const block = page.locator('[id$="overviewLexware"]');
-  await expect(block.locator('[id$="overviewLexwareName"]')).toHaveText('Huber Bau GmbH');
+  await expect(block.locator('span[id$="overviewLexwareName"]')).toHaveText('Huber Bau GmbH');
   await expect(block).toContainText('10001');
   await expect(block).toContainText('Am Anger 9, 83022 Kolbermoor');
   await expect(block).toContainText('rechnung@huber-bau.example');
-  await expect(block.locator('[id$="overviewLexwareState"]')).toContainText('Abgeglichen');
-  await expect(block.locator('[id$="overviewLexwareSummary"]')).toContainText('1 Rechnung: offen 5.407,66 €, davon überfällig 5.407,66 €. 1 Angebot: angenommen 5.355,00 €');
+  await expect(block.locator('.sapMObjStatus[id$="overviewLexwareState"]')).toContainText('Abgeglichen');
+  await expect(block.locator('span[id$="overviewLexwareSummary"]')).toContainText('1 Rechnung: offen 5.407,66 €, davon überfällig 5.407,66 €. 1 Angebot: angenommen 5.355,00 €');
   await expect(block.getByRole('link', { name: 'In Lexware öffnen' })).toHaveAttribute('href', new RegExp(`/permalink/contacts/view/${lexwareHuber}$`));
   await block.getByRole('link', { name: 'Rechnungen und Angebote' }).click();
   await expect(page.getByRole('tab', { name: 'Rechnungen und Angebote', exact: true })).toHaveAttribute('aria-selected', 'true');
