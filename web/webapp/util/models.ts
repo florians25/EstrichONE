@@ -366,6 +366,8 @@ export interface ContactResponse {
   preferredChannel: "phone" | "mobile" | "email" | "letter" | null;
   birthday: string | null;
   website: string | null;
+  /** „Mit Lexware Office abgleichen“; aus = der Kunde bleibt nur in EstrichONE (wirksam bei eingeschaltetem Modul). */
+  lexwareSync?: boolean;
   /** Archiviert (inaktiv): nicht in Auswahllisten und Suche. */
   archivedAt?: string | null;
   /** Anonymisiert (DSGVO): Name und Kontaktdaten ersetzt. */

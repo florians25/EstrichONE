@@ -40,7 +40,7 @@ einem Anruf erscheint. Die App fragt dafür einmalig nach dem Zugriff auf Ihre K
 
 Nutzt Ihr Betrieb Lexware Office, zeigt das Formular zusätzlich den Schalter **Mit Lexware Office abgleichen**. Er ist
 mit der Vorgabe Ihres Betriebs vorbelegt. Schalten Sie ihn aus, bleibt der Kunde nur in EstrichONE und wird nicht nach
-Lexware Office übertragen. Die Kundenansicht nennt den Stand unter **Lexware Office**. Verknüpft und abgerechnet wird
+Lexware Office übertragen. Die Kundenansicht nennt den Stand unter **Lexware Office**. Verknüpft wird
 im Büro in der Weboberfläche.
 
 Der Kunde wird beim nächsten Abgleich übertragen; die **Kundennummer wird automatisch aus dem Nummernkreis vergeben**. Neue Kunden lassen sich auch

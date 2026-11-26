@@ -5,6 +5,9 @@ import { uuidv7 } from "./ids";
 import { AUTO_NUMBER } from "./numberField";
 import type { DuplicateCandidate } from "./bauakteWizard";
 import type { ContactAddress, ContactEmail, ContactPhone, ContactResponse } from "./models";
+import { session } from "./session";
+import { SYNC_HELP, SYNC_LABEL, syncFieldVisible, syncInitial } from "./lexware";
+import type { Field } from "./forms";
 
 export async function openCustomerForm(contact: ContactResponse | null, readOnly: boolean): Promise<boolean> {
 	let checkedFor = "";
@@ -20,9 +23,13 @@ export async function openCustomerForm(contact: ContactResponse | null, readOnly
 			postalCode: (v[`${p}PostalCode`] as string) || null, city: (v[`${p}City`] as string) || null };
 		return a.name || a.street || a.postalCode || a.city ? a : null;
 	};
+	// „Mit Lexware Office abgleichen“ nur mit eingeschaltetem Modul; sonst bleibt der Wert auf dem Server unverändert.
+	const withSync = syncFieldVisible(session.data.modules ?? {});
+	const syncFields: Field[] = withSync
+		? [{ key: "sLexware", label: "Lexware Office", type: "section" }, { key: "lexwareSync", label: SYNC_LABEL, type: "switch", help: SYNC_HELP }] : [];
 	const saved = await openForm({
 		title: contact ? "Kunde bearbeiten" : "Neuer Kunde", readOnly, width: "42rem",
-		initial,
+		initial: { ...initial, lexwareSync: syncInitial(contact, session.data.lexware) },
 		fields: [
 			{ key: "kind", label: "Art", type: "segmented", options: [{ key: "person", text: "Privatperson" }, { key: "company", text: "Firma" }] },
 			{ key: "salutation", label: "Anrede", type: "combo", maxLength: 30, options: ["Herr", "Frau", "Familie", "Firma", "Eheleute"].map((t) => ({ key: t, text: t })) },
@@ -55,6 +62,7 @@ export async function openCustomerForm(contact: ContactResponse | null, readOnly
 			{ key: "deliveryStreet", label: "Straße", maxLength: 200 },
 			{ key: "deliveryPostalCode", label: "PLZ", maxLength: 10 },
 			{ key: "deliveryCity", label: "Ort", maxLength: 100 },
+			...syncFields,
 			{ key: "sNotes", label: "Notiz", type: "section" },
 			{ key: "notes", label: "Notizen", type: "textarea", maxLength: 4000 },
 		],
@@ -67,7 +75,8 @@ export async function openCustomerForm(contact: ContactResponse | null, readOnly
 				city: v.city || null, phone: phones[0]?.number ?? null, email: emails[0]?.address ?? null, notes: v.notes || null,
 				phones, emails, salutation: v.salutation || null, title: v.title || null,
 				billingAddress: address(v, "billing"), deliveryAddress: address(v, "delivery"), vatId: v.vatId || null, taxNumber: v.taxNumber || null,
-				preferredChannel: v.preferredChannel || null, birthday: v.kind === "person" ? v.birthday || null : null, website: v.website || null };
+				preferredChannel: v.preferredChannel || null, birthday: v.kind === "person" ? v.birthday || null : null, website: v.website || null,
+				...(withSync ? { lexwareSync: v.lexwareSync === true } : {}) };
 			if (!contact) {
 				// Dublettenprüfung auf dem Server (alle Nummern): Treffer zeigen; erneutes Speichern legt bewusst neu an.
 				const key = JSON.stringify([body.name, body.street, body.postalCode, phones, emails]);

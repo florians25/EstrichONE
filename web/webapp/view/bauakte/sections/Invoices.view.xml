@@ -1,0 +1,57 @@
+<mvc:View controllerName="estrichone.controller.bauakte.sections.Invoices" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:core="sap.ui.core">
+	<VBox renderType="Bare">
+		<MessageStrip id="invoicesNotConfigured" type="Information" showIcon="true" class="sapUiSmallMarginBottom" visible="{= ${inv>/loaded} === true &amp;&amp; ${inv>/configured} !== true }"
+			text="Lexware Office ist noch nicht eingerichtet. Der API-Schlüssel wird unter Verwaltung › Integrationen › Lexware Office hinterlegt."/>
+		<MessageStrip id="invoicesSyncError" type="Warning" showIcon="true" class="sapUiSmallMarginBottom" visible="{= !!${inv>/syncError} }"
+			text="{= 'Der Status konnte nicht mit Lexware Office abgeglichen werden. Angezeigt wird der zuletzt gespeicherte Stand. ' + ${inv>/syncError} }"/>
+		<Table id="invoiceTable" items="{inv>/vouchers}" popinLayout="GridSmall" contextualWidth="Auto"
+			noDataText="Dieser Bauakte ist noch keine Rechnung und kein Angebot zugeordnet.">
+			<headerToolbar>
+				<OverflowToolbar>
+					<Title text="Rechnungen und Angebote" level="H3"/>
+					<ToolbarSpacer/>
+					<Button id="invoiceRefresh" text="Aktualisieren" icon="sap-icon://refresh" press=".onRefresh" enabled="{= ${inv>/configured} === true }"
+						tooltip="Status aller Belege jetzt mit Lexware Office abgleichen"/>
+					<Button id="invoiceAssign" text="Beleg zuordnen" icon="sap-icon://chain-link" type="Emphasized" press=".onAssign" visible="{= ${inv>/canAssign} === true }"
+						tooltip="Vorhandene Rechnung oder vorhandenes Angebot aus Lexware Office dieser Bauakte zuordnen">
+						<layoutData><OverflowToolbarLayoutData priority="NeverOverflow"/></layoutData>
+					</Button>
+				</OverflowToolbar>
+			</headerToolbar>
+			<columns>
+				<Column width="9rem"><Text text="Art"/></Column>
+				<Column width="12rem"><Text text="Nummer"/></Column>
+				<Column width="7rem"><Text text="Datum"/></Column>
+				<Column width="9rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Fällig bzw. gültig bis"/></Column>
+				<Column hAlign="End" width="8rem" minScreenWidth="Desktop" demandPopin="true"><Text text="Netto"/></Column>
+				<Column hAlign="End" width="8rem"><Text text="Brutto"/></Column>
+				<Column width="9rem"><Text text="Status"/></Column>
+				<Column hAlign="End" width="14rem"/>
+			</columns>
+			<items>
+				<ColumnListItem>
+					<Text text="{inv>typeText}" class="eoStrong"/>
+					<VBox>
+						<Text text="{inv>numberText}" class="eoTabular"/>
+						<Text text="{inv>title}" class="eoMuted" visible="{= !!${inv>title} }" maxLines="1"/>
+					</VBox>
+					<Text text="{inv>dateText}" class="eoTabular"/>
+					<Text text="{inv>dueText}" class="eoTabular"/>
+					<Text text="{inv>netText}" class="eoTabular"/>
+					<Text text="{inv>grossText}" class="eoTabular eoStrong"/>
+					<VBox>
+						<ObjectStatus text="{inv>statusText}" state="{inv>statusState}" icon="{inv>statusIcon}" inverted="true"/>
+						<ObjectStatus text="{inv>syncError}" state="Warning" visible="{= !!${inv>syncError} }"/>
+					</VBox>
+					<HBox justifyContent="End" renderType="Bare">
+						<Button text="In Lexware öffnen" icon="sap-icon://action" type="Transparent" press=".onOpen"/>
+						<Button icon="sap-icon://broken-link" type="Transparent" tooltip="Zuordnung zur Bauakte lösen (der Beleg bleibt in Lexware Office unverändert)" press=".onUnassign"
+							visible="{= ${inv>/canAssign} === true }"/>
+					</HBox>
+				</ColumnListItem>
+			</items>
+		</Table>
+		<Text id="invoiceSummary" text="{inv>/summary}" class="sapUiTinyMarginTop" visible="{= !!${inv>/summary} }"/>
+		<Text text="Rechnungen und Angebote werden ausschließlich in Lexware Office erstellt und bearbeitet. EstrichONE zeigt Nummer, Betrag und Status und führt Sie zum Beleg." class="eoHelpText sapUiTinyMarginTop"/>
+	</VBox>
+</mvc:View>

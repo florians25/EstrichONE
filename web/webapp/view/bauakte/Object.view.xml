@@ -228,6 +228,12 @@
 					<mvc:XMLView id="secAssignments" viewName="estrichone.view.bauakte.sections.Assignments" async="true"/>
 				</uxap:ObjectPageSubSection></uxap:subSections>
 			</uxap:ObjectPageSection>
+			<uxap:ObjectPageSection id="rechnungen" title="{i18n>akte.sec.invoices}" titleUppercase="false"
+				visible="{= ${session>/modules/lexware} === true &amp;&amp; ${session>/permissions/invoices.read} === true }">
+				<uxap:subSections><uxap:ObjectPageSubSection>
+					<mvc:XMLView id="secInvoices" viewName="estrichone.view.bauakte.sections.Invoices" async="true"/>
+				</uxap:ObjectPageSubSection></uxap:subSections>
+			</uxap:ObjectPageSection>
 			<uxap:ObjectPageSection id="notizen" title="{i18n>akte.sec.notes}" titleUppercase="false">
 				<uxap:subSections><uxap:ObjectPageSubSection>
 					<mvc:XMLView id="secNotes" viewName="estrichone.view.bauakte.sections.Notes" async="true"/>

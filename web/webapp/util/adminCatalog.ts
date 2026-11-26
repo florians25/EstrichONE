@@ -30,7 +30,7 @@ export const adminGroups: AdminGroup[] = [
 	{ key: "groupHelpdesk", title: "IT-Service/Helpdesk", description: "Tickets der IT, Problem melden, Wissensdatenbank, Einstellungen des Helpdesks, Fehler & Wünsche" },
 	{ key: "groupAdminData", title: "Datensicherung & Archiv", description: "Backup Center, Backup-Ziele, revisionssicheres Archiv und Aktenarchiv" },
 	{ key: "groupAdminSystem", title: "System & Betrieb", description: "Überwachung, Speicher, Hinweise und Wartung, Protokoll" },
-	{ key: "groupAdminIntegrations", title: "Integrationen", description: "E-Mail-Versand, Pushnachrichten und Microsoft Teams" },
+	{ key: "groupAdminIntegrations", title: "Integrationen", description: "E-Mail-Versand, Pushnachrichten, Microsoft Teams und Lexware Office" },
 ];
 
 export const adminAreas: AdminArea[] = [
@@ -104,6 +104,10 @@ export const adminAreas: AdminArea[] = [
 		permission: "settings.integrations",
 		description: "Unterhaltungen in Teams: App-Registrierung (Entra ID), Konten zuordnen, Kanal oder Gruppenchat je Bauakte, Karten bei Ereignissen, Chat-Modus",
 		keywords: "teams microsoft 365 office entra azure ad app-registrierung graph kanal gruppenchat webhook workflows chat-modus chat archiv" },
+	{ key: "lexwareSettings", group: "groupAdminIntegrations", title: "Lexware Office", path: "/system/lexware-office", icon: "sap-icon://receipt",
+		permission: "settings.integrations",
+		description: "Rechnungen und Angebote aus Lexware Office anzeigen: API-Schlüssel, Verbindung testen, Kunden abgleichen mit Dublettenprüfung",
+		keywords: "lexware office lexoffice rechnung rechnungen angebot angebote e-rechnung xrechnung zugferd api schlüssel buchhaltung kunden abgleich dubletten" },
 ];
 
 /** Systemeinstellungen-Reiter, die in der Navigation als eigener Eintrag erscheinen (Query „bereich“). */

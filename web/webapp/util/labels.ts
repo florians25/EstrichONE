@@ -190,6 +190,11 @@ export const auditTexts: Record<string, string> = {
 	"fuel.receipt_created": "Tankbeleg erfasst", "fuel.receipt_changed": "Tankbeleg geändert", "fuel.receipt_deleted": "Tankbeleg gelöscht",
 	"fuel.receipt_check": "Tankbeleg freigegeben", "fuel.receipt_reject": "Tankbeleg abgelehnt", "fuel.receipt_settle": "Tankbeleg erstattet bzw. gebucht",
 	"fuel.receipt_reopen": "Tankbeleg wieder geöffnet",
+	"lexware.settings_changed": "Lexware Office: Einstellungen geändert", "lexware.contact_linked": "Kunde mit Lexware Office verknüpft",
+	"lexware.contact_created": "Kunde in Lexware Office angelegt", "lexware.contact_imported": "Kunde aus Lexware Office übernommen",
+	"lexware.contact_unlinked": "Verknüpfung mit Lexware Office gelöst", "lexware.contacts_linked_bulk": "Eindeutige Treffer mit Lexware Office verknüpft",
+	"lexware.voucher_assigned": "Beleg aus Lexware Office der Bauakte zugeordnet", "lexware.voucher_unassigned": "Zuordnung des Belegs gelöst", "lexware.sync_changed": "Abgleich mit Lexware Office für Kunden umgestellt",
+	"lexware.sync_enabled_bulk": "Abgleich mit Lexware Office für mehrere Kunden eingeschaltet",
 };
 export const auditGroups = [
 	{ key: "auth.", text: "Anmeldung und Sitzungen" }, { key: "bauakte.", text: "Bauakten" }, { key: "users.", text: "Benutzer" },
@@ -198,14 +203,14 @@ export const auditGroups = [
 	{ key: "notifications.", text: "Nachrichten" }, { key: "notices.", text: "Hinweise und Wartung" }, { key: "mail.", text: "E-Mail" },
 	{ key: "settings.", text: "Systemeinstellungen" }, { key: "company.", text: "Firmendaten" }, { key: "peer.", text: "Zusatzserver" },
 	{ key: "setup.", text: "Einrichtung" }, { key: "documents.", text: "Dokumentfreigaben" }, { key: "catalog.", text: "Stammdaten" },
-	{ key: "fuel.", text: "Tankbelege" },
+	{ key: "fuel.", text: "Tankbelege" }, { key: "lexware.", text: "Lexware Office" },
 ];
 /** Bereich (erster Teil des Ereignisses) als Kurztext für die Spalte „Bereich“. */
 export const auditAreas: Record<string, string> = {
 	auth: "Anmeldung", bauakte: "Bauakte", users: "Benutzer", access: "Rechte", devices: "Geräte", backup: "Sicherung", archive: "Archiv",
 	files: "Dateien", chat: "Chat", notifications: "Nachrichten", notices: "Hinweise", mail: "E-Mail", settings: "Einstellungen",
 	company: "Firmendaten", peer: "Zusatzserver", setup: "Einrichtung", documents: "Dokumente", catalog: "Stammdaten", valueList: "Stammdaten",
-	formSchema: "Stammdaten", contacts: "Kontakte", fuel: "Tankbelege",
+	formSchema: "Stammdaten", contacts: "Kontakte", fuel: "Tankbelege", lexware: "Lexware Office",
 };
 /** Bezeichnungen der Detailfelder im Protokoll. */
 export const auditDetailLabels: Record<string, string> = {
@@ -225,6 +230,7 @@ export const auditDetailLabels: Record<string, string> = {
 	photos: "Fotos", previous: "bisher", queued: "vorgemerkt", removed: "entfernt", renamed: "umbenannt", requireBackup: "Sicherungskopie nötig",
 	scope: "Umfang", sender: "Absender", severity: "Dringlichkeit", source: "Quelle", startsAt: "ab", subject: "Betreff",
 	thresholdPercent: "Schwelle (%)", via: "über", webPush: "Web Push", added: "hinzugefügt", amount: "Betrag",
+	apiKey: "API-Schlüssel", lexwareSync: "Mit Lexware Office abgleichen", newCustomersSync: "Neue Kunden abgleichen", customer: "Kunde", baseUrl: "Basis-URL", lexwareContact: "Lexware-Kontakt", lexwareNumber: "Kundennummer in Lexware", duplicatesIgnored: "Mögliche Dubletten bestätigt",
 };
 /** Werte im Protokoll (Aufzählungen des Servers). */
 export const auditDetailValues: Record<string, string> = {

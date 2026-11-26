@@ -40,6 +40,8 @@ import {
 } from "./customerMatch";
 import type { ContactEmail, ContactPhone, ContactResponse } from "./models";
 import { candidateUsable, useCandidateText } from "./customerRemoval";
+import Switch from "sap/m/Switch";
+import { SYNC_HELP, SYNC_LABEL, syncFieldVisible, syncInitial } from "./lexware";
 import { ensureActive } from "./customerRemovalDialog";
 
 export interface NewCustomerOptions {
@@ -98,6 +100,9 @@ export function openNewCustomerDialog(options: NewCustomerOptions = {}): Promise
 		phone: new Input("ncPersonPhone", { width: "100%", maxLength: 50, type: "Tel" }),
 		email: new Input("ncPersonEmail", { width: "100%", maxLength: 320, type: "Email" }),
 	};
+	// „Mit Lexware Office abgleichen“ nur mit eingeschaltetem Modul, vorbelegt mit der Vorgabe aus den Einstellungen.
+	const withSync = syncFieldVisible(session.data.modules ?? {});
+	const lexwareSync = new Switch("ncLexwareSync", { state: syncInitial(null, session.data.lexware), customTextOn: " ", customTextOff: " " });
 	const notes = new TextArea("ncNotes", { width: "100%", rows: 3, maxLength: 4000, growing: true,
 		placeholder: "z. B. Zahlungsziel, Rechnung nur per E-Mail, Schlüssel bei Nachbarn" });
 
@@ -136,6 +141,7 @@ export function openNewCustomerDialog(options: NewCustomerOptions = {}): Promise
 	const notesForm = form([
 		formTitle("Notiz"),
 		new Label({ text: "Notiz und Zahlungshinweise", labelFor: notes }), notes,
+		...(withSync ? [new Label({ text: SYNC_LABEL, labelFor: lexwareSync }), new VBox({ items: [lexwareSync, new Text({ text: SYNC_HELP }).addStyleClass("eoHelpText")] })] : []),
 	]);
 
 	const applyKind = () => {
@@ -276,6 +282,7 @@ export function openNewCustomerDialog(options: NewCustomerOptions = {}): Promise
 				phone: p[0]?.number ?? null, email: e[0]?.address ?? null, phones: p, emails: e,
 				salutation: company ? "Firma" : text(salutation.getValue()), title: company ? null : text(title.getValue()),
 				vatId: company ? text(vatId.getValue()) : null, preferredChannel: channel.getSelectedKey() || null, notes: text(notes.getValue()),
+				...(withSync ? { lexwareSync: lexwareSync.getState() } : {}),
 			});
 			if (company && person.name.getValue().trim()) {
 				await put(`contacts/${contact.id}/persons/${uuidv7()}`, {

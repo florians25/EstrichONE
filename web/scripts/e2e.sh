@@ -54,6 +54,9 @@ export EstrichOne__Notices__UpdateStatePath="$WORK/update-maintenance.json"
 export E2E_UPDATE_STATE="$EstrichOne__Notices__UpdateStatePath"
 # „Was gibt’s Neues“ (23-was-gibts-neues.spec.ts): Versionshinweise wie im API-Image (/app/releases).
 export EstrichOne__AppUpdates__ReleaseNotesPath="$ROOT/docs/releases"
+# Lexware Office (26-lexware.spec.ts): die Basis-URL darf auf die nachgebildete API des Tests zeigen (sonst nur Lexware-Hosts).
+export EstrichOne__Lexware__AllowAnyBaseUrl=true
+export EstrichOne__Lexware__MinRequestInterval=00:00:00.050
 dotnet publish "$ROOT/backend/src/EstrichOne.Api" -c Release -o "$WORK/api" --nologo -v quiet
 dotnet "$WORK/api/EstrichOne.Api.dll" migrate >/dev/null
 dotnet "$WORK/api/EstrichOne.Api.dll" >"$WORK/api.log" 2>&1 &

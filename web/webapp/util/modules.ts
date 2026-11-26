@@ -69,6 +69,7 @@ const PERMISSION_PREFIXES: { modules: string[]; prefixes: string[] }[] = [
 	{ modules: ["absence"], prefixes: ["absence."] },
 	{ modules: ["materials"], prefixes: ["materials."] },
 	{ modules: ["fuel"], prefixes: ["fuel."] },
+	{ modules: ["lexware"], prefixes: ["invoices."] },
 	{ modules: ["diary"], prefixes: ["diary."] },
 	{ modules: ["approvals"], prefixes: ["documents.approve"] },
 	{ modules: ["helpdesk"], prefixes: ["helpdesk."] },

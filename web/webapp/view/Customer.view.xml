@@ -64,6 +64,8 @@
 							<Label text="Rechnung an"/><Text text="{view>/billing}"/>
 							<Label text="Lieferung an"/><Text text="{view>/delivery}"/>
 							<core:Title text="Steuer"/>
+							<Label text="Lexware Office" visible="{= ${session>/modules/lexware} === true }"/>
+							<Text id="customerSyncLine" text="{= ${view>/c/lexwareSync} ? 'wird abgeglichen' : 'bleibt nur in EstrichONE' }" visible="{= ${session>/modules/lexware} === true }"/>
 							<Label text="USt-IdNr."/><Text text="{= ${view>/c/vatId} || '–' }"/>
 							<Label text="Steuernummer"/><Text text="{= ${view>/c/taxNumber} || '–' }"/>
 						</form:SimpleForm>
@@ -138,6 +140,71 @@
 							</CustomListItem>
 						</List>
 					</FlexBox>
+				</uxap:ObjectPageSubSection></uxap:subSections>
+			</uxap:ObjectPageSection>
+			<uxap:ObjectPageSection id="secLexware" title="Lexware Office"
+				visible="{= ${session>/modules/lexware} === true &amp;&amp; ${session>/permissions/invoices.read} === true }">
+				<uxap:subSections><uxap:ObjectPageSubSection>
+					<VBox renderType="Bare" busy="{view>/lexware/busy}" busyIndicatorDelay="0">
+						<Text text="Rechnungen und Angebote für diesen Kunden entstehen ausschließlich in Lexware Office. Ist der Kunde mit seinem Kontakt dort verknüpft, zeigt EstrichONE seine Belege hier an." class="sapUiSmallMarginBottom"/>
+						<HBox alignItems="Center" wrap="Wrap" renderType="Bare" class="sapUiSmallMarginBottom">
+							<ObjectStatus id="lexwareLinkState" text="{= ${view>/lexware/link} ? 'Verknüpft' : 'Nicht verknüpft' }" state="{= ${view>/lexware/link} ? 'Success' : 'None' }"
+								icon="{= ${view>/lexware/link} ? 'sap-icon://chain-link' : 'sap-icon://broken-link' }" inverted="true" class="sapUiSmallMarginEnd"/>
+							<Text id="lexwareLinkText" text="{view>/lexware/text}"/>
+						</HBox>
+						<HBox alignItems="Center" wrap="Wrap" renderType="Bare" class="sapUiSmallMarginBottom">
+							<Label text="Mit Lexware Office abgleichen" labelFor="lexwareSyncSwitch" class="sapUiSmallMarginEnd"/>
+							<Switch id="lexwareSyncSwitch" state="{view>/lexware/syncEnabled}" customTextOn=" " customTextOff=" " change=".onLexwareSync"
+								enabled="{= ${session>/permissions/invoices.assign} === true }" class="sapUiSmallMarginEnd"/>
+							<ObjectStatus id="lexwareSyncState" text="{view>/lexware/syncText}" state="{view>/lexware/syncState}"/>
+						</HBox>
+						<MessageStrip id="lexwareSyncHint" type="{= ${view>/lexware/link} ? 'Warning' : 'Information' }" showIcon="true" class="sapUiSmallMarginBottom"
+							visible="{= !!${view>/lexware/syncHint} }" text="{view>/lexware/syncHint}"/>
+						<form:SimpleForm editable="false" layout="ResponsiveGridLayout" labelSpanXL="3" labelSpanL="3" labelSpanM="4" labelSpanS="12" adjustLabelSpan="false"
+							class="eoDenseForm" visible="{= !!${view>/lexware/link} }">
+							<Label text="Kontakt in Lexware Office"/><Text text="{view>/lexware/link/name}"/>
+							<Label text="Kundennummer in Lexware"/><Text text="{view>/lexware/link/number}"/>
+							<Label text="Verknüpft seit"/><Text text="{path: 'view>/lexware/link/linkedAt', formatter: 'fmt.dateTime'}"/>
+						</form:SimpleForm>
+						<Toolbar style="Clear" class="sapUiSmallMarginTop">
+							<Button id="lexwareLink" text="Kontakt suchen und verknüpfen" icon="sap-icon://chain-link" type="Emphasized" press=".onLexwareLink"
+								visible="{= !${view>/lexware/link} &amp;&amp; ${view>/lexware/canEdit} === true &amp;&amp; ${view>/lexware/syncEnabled} === true }"
+								tooltip="Dublettenprüfung in Lexware Office, danach verknüpfen oder bewusst neu anlegen"/>
+							<Button id="lexwareOpen" text="In Lexware öffnen" icon="sap-icon://action" press=".onLexwareOpen" visible="{= !!${view>/lexware/link} }"/>
+							<Button id="lexwareUnlink" text="Verknüpfung lösen" type="Transparent" press=".onLexwareUnlink"
+								visible="{= !!${view>/lexware/link} &amp;&amp; ${view>/lexware/canEdit} === true }"/>
+						</Toolbar>
+						<MessageStrip type="Information" showIcon="true" class="sapUiSmallMarginTop" visible="{= ${view>/lexware/loaded} === true &amp;&amp; ${view>/lexware/canEdit} !== true &amp;&amp; !${view>/lexware/link} &amp;&amp; ${view>/lexware/syncEnabled} === true }"
+							text="{= ${session>/permissions/invoices.assign} === true ? 'Lexware Office ist noch nicht eingerichtet. Der API-Schlüssel wird unter Verwaltung › Integrationen › Lexware Office hinterlegt.' : 'Zum Verknüpfen fehlt Ihnen das Recht, Belege zuzuordnen und Kunden zu verknüpfen.' }"/>
+						<Table id="customerVouchers" items="{view>/lexware/vouchers}" visible="{= !!${view>/lexware/link} }" popinLayout="GridSmall" contextualWidth="Auto"
+							busy="{view>/lexware/vouchersBusy}" busyIndicatorDelay="0" growing="true" growingThreshold="50" class="sapUiSmallMarginTop"
+							noDataText="{= ${view>/lexware/vouchersError} || 'Zu diesem Kunden gibt es in Lexware Office noch keine Rechnungen oder Angebote.' }">
+							<headerToolbar><OverflowToolbar>
+								<Title text="Rechnungen und Angebote" level="H3"/>
+								<ToolbarSpacer/>
+								<Button id="customerVouchersRefresh" text="Aktualisieren" icon="sap-icon://refresh" press=".onLexwareVouchersRefresh"
+									tooltip="Belege neu aus Lexware Office laden"/>
+							</OverflowToolbar></headerToolbar>
+							<columns>
+								<Column width="11rem"><Text text="Art"/></Column><Column width="11rem"><Text text="Nummer"/></Column>
+								<Column width="7rem"><Text text="Datum"/></Column>
+								<Column width="9rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Fällig bzw. gültig bis"/></Column>
+								<Column hAlign="End" width="8rem"><Text text="Brutto"/></Column><Column width="9rem"><Text text="Status"/></Column>
+								<Column minScreenWidth="Desktop" demandPopin="true"><Text text="Bauakte"/></Column><Column hAlign="End" width="11rem"/>
+							</columns>
+							<items>
+								<ColumnListItem>
+									<Text text="{view>typeText}" class="eoStrong"/><Text text="{view>numberText}" class="eoTabular"/>
+									<Text text="{view>dateText}" class="eoTabular"/><Text text="{view>dueText}" class="eoTabular"/>
+									<Text text="{view>amountText}" class="eoTabular eoStrong"/>
+									<ObjectStatus text="{view>statusText}" state="{view>statusState}" icon="{view>statusIcon}" inverted="true"/>
+									<Link text="{view>assignedBauakte}" press=".onLexwareVoucherBauakte" visible="{= !!${view>assignedBauakteId} }" wrapping="true"/>
+									<Button text="In Lexware öffnen" icon="sap-icon://action" type="Transparent" press=".onLexwareVoucherOpen"/>
+								</ColumnListItem>
+							</items>
+						</Table>
+						<Text id="customerVoucherSummary" text="{view>/lexware/vouchersSummary}" class="sapUiTinyMarginTop" visible="{= !!${view>/lexware/vouchersSummary} }"/>
+					</VBox>
 				</uxap:ObjectPageSubSection></uxap:subSections>
 			</uxap:ObjectPageSection>
 			<uxap:ObjectPageSection id="secDocuments" title="Dokumente">

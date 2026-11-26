@@ -49,7 +49,7 @@ import { dossierStrip } from "../../util/dossier";
 /** Abschnitte der Objektseite: Schlüssel (Adresse ?abschnitt=…) → eingebettete View. */
 const sections: Record<string, string> = {
 	uebersicht: "secOverview", dokumente: "secDocuments", fotos: "secPhotos", dokumentation: "secDocumentation", raeume: "secRooms",
-	aufgaben: "secWork", material: "secMaterial", einsaetze: "secAssignments", kontakte: "secContacts", notizen: "secNotes",
+	aufgaben: "secWork", material: "secMaterial", einsaetze: "secAssignments", kontakte: "secContacts", notizen: "secNotes", rechnungen: "secInvoices",
 };
 
 export interface SectionController {
@@ -101,7 +101,9 @@ export default class ObjectController extends BaseController {
 		const id = match.params.id;
 		const wanted = match.query.get("abschnitt") ?? (match.route.name === "bauakteItem" ? match.params.section : null);
 		this.m().setProperty("/listShown", match.query.get("liste") === "1");
-		const section = wanted && sections[wanted] ? wanted : wanted === "datei" ? this.section : "uebersicht";
+		let section = wanted && sections[wanted] ? wanted : wanted === "datei" ? this.section : "uebersicht";
+		// Rechnungen nur mit Modul Lexware Office und Leserecht (sonst wäre der Abschnitt unsichtbar ausgewählt).
+		if (section === "rechnungen" && !(session.data.modules?.lexware === true && session.has("invoices.read"))) section = "uebersicht";
 		if (id !== this.id) {
 			this.id = id;
 			this.section = section;

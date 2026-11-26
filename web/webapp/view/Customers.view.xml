@@ -12,6 +12,9 @@
 						tooltip="E-Mail an die ausgewählten Kunden (Häkchen in der Liste)"/>
 					<Button id="bulkRemove" text="Löschen/Archivieren" icon="sap-icon://delete" press=".onBulkRemove" visible="{= ${session>/permissions/contacts.edit} === true }"
 						tooltip="Ausgewählte Kunden löschen (ohne verknüpfte Daten) oder archivieren"/>
+					<Button id="lexwareImport" text="Aus Lexware übernehmen" icon="sap-icon://download" press=".onLexwareImport"
+						visible="{= ${session>/modules/lexware} === true &amp;&amp; ${session>/permissions/invoices.assign} === true &amp;&amp; ${session>/permissions/contacts.edit} === true }"
+						tooltip="Kunden aus Lexware Office durchsuchen und nach einer Dublettenprüfung übernehmen"/>
 					<Button text="Neuer Kunde" icon="sap-icon://add-employee" type="Emphasized" press=".onNew" visible="{= ${session>/permissions/contacts.edit} === true }"/>
 				</f:actions>
 			</f:DynamicPageTitle>

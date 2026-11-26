@@ -1,0 +1,214 @@
+<mvc:View controllerName="estrichone.controller.admin.Lexware" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:f="sap.f" xmlns:form="sap.ui.layout.form"
+	xmlns:core="sap.ui.core" height="100%">
+	<f:DynamicPage id="page" toggleHeaderOnTitleClick="false" class="eoAdmin">
+		<f:title>
+			<f:DynamicPageTitle>
+				<f:heading><Title text="{i18n>nav.lexwareSettings}" level="H1"/></f:heading>
+				<f:expandedContent><Text text="Rechnungen und Angebote entstehen ausschließlich in Lexware Office, die Bauunterlagen liegen in EstrichONE. Kunden werden verknüpft; ihre Rechnungen und Angebote zeigt EstrichONE am Kunden und in der Bauakte an."/></f:expandedContent>
+				<f:actions>
+					<Button id="lexwareTestButton" text="Verbindung testen" icon="sap-icon://connected" press=".onTest" enabled="{= ${view>/s/hasApiKey} === true || !!${view>/apiKey} }"/>
+					<Button id="lexwareSave" text="{i18n>common.save}" icon="sap-icon://save" type="Emphasized" press=".onSave" enabled="{view>/loaded}"/>
+				</f:actions>
+			</f:DynamicPageTitle>
+		</f:title>
+		<f:content>
+			<VBox renderType="Bare">
+				<MessageStrip id="adminStatus" text="{view>/status/text}" type="{view>/status/type}" customIcon="{view>/status/icon}" showIcon="true"
+					visible="{= !!${view>/status} }" class="eoAdminStatus"/>
+				<IconTabBar id="lexwareTabs" expandable="false" stretchContentHeight="false" applyContentPadding="false" selectedKey="{view>/tab}" select=".onTab">
+					<items>
+						<IconTabFilter key="connection" text="Verbindung">
+							<VBox class="sapUiSmallMargin" busy="{view>/busy}">
+								<MessageStrip id="lexwareTestResult" visible="{= !!${view>/lastTestText} }" type="{= ${view>/s/lastTestOk} ? 'Success' : 'Error' }" showIcon="true"
+									text="{view>/lastTestText}" class="sapUiSmallMarginBottom"/>
+								<MessageStrip type="Information" showIcon="true" class="sapUiSmallMarginBottom" id="lexwareKeyHint"
+									text="Den API-Schlüssel erzeugen Sie in Lexware Office unter Einstellungen › Erweiterungen › Public API. Die Public API ist im Tarif XL enthalten. An Lexware Office gehen nur die Daten der Kunden, die Sie dort anlegen. Rechnungen und Angebote liest EstrichONE nur; es legt in Lexware Office keine Belege an und ändert keine.">
+									<link><Link text="Schlüssel in Lexware Office erzeugen" href="{view>/s/keyHelpUrl}" target="_blank"/></link>
+								</MessageStrip>
+							</VBox>
+							<form:SimpleForm editable="true" layout="ResponsiveGridLayout" labelSpanL="3" labelSpanM="4" width="56rem">
+								<core:Title text="Modul"/>
+								<Label text="Lexware Office verwenden" labelFor="lxModule"/>
+								<VBox>
+									<Switch id="lxModule" state="{view>/s/moduleEnabled}" customTextOn=" " customTextOff=" " change=".onModule"
+										enabled="{= ${session>/permissions/settings.manage} === true }"/>
+									<Text text="Schaltet die Abschnitte „Lexware Office“ beim Kunden und „Rechnungen und Angebote“ in der Bauakte ein. Derselbe Schalter steht unter Systemeinstellungen › Module. Vorhandene Verknüpfungen bleiben beim Ausschalten erhalten."/>
+								</VBox>
+								<core:Title text="Zugang"/>
+								<Label text="API-Schlüssel" labelFor="lxKey"/>
+								<VBox>
+									<Input id="lxKey" value="{view>/apiKey}" type="Password" valueLiveUpdate="true" autocomplete="off"
+										placeholder="{= ${view>/s/hasApiKey} ? 'hinterlegt (leer lassen, um ihn beizubehalten)' : 'Schlüssel aus Lexware Office einfügen' }"/>
+									<HBox alignItems="Center" renderType="Bare" wrap="Wrap">
+										<ObjectStatus id="lxKeyState" text="{= ${view>/s/hasApiKey} ? 'Schlüssel hinterlegt' : 'Kein Schlüssel hinterlegt' }"
+											state="{= ${view>/s/hasApiKey} ? 'Success' : 'None' }" icon="{= ${view>/s/hasApiKey} ? 'sap-icon://sys-enter-2' : 'sap-icon://key' }"
+											class="sapUiSmallMarginEnd"/>
+										<Button text="Schlüssel entfernen" type="Transparent" press=".onClearKey" visible="{= ${view>/s/hasApiKey} === true }"/>
+									</HBox>
+									<Text text="Der Schlüssel wird verschlüsselt gespeichert und nie wieder angezeigt."/>
+								</VBox>
+								<Label text="Organisation in Lexware" visible="{= !!${view>/s/organizationName} }"/>
+								<Text id="lxOrganization" text="{view>/s/organizationName}" visible="{= !!${view>/s/organizationName} }"/>
+								<core:Title text="Kunden"/>
+								<Label text="Neue Kunden standardmäßig mit Lexware Office abgleichen" labelFor="lxNewSync"/>
+								<VBox>
+									<Switch id="lxNewSync" state="{view>/s/newCustomersSync}" customTextOn=" " customTextOff=" "/>
+									<Text text="Vorgabe für den Schalter „Mit Lexware Office abgleichen“ bei neuen Kunden in Web und Apps. Je Kunde lässt sich der Schalter ändern. Kunden, die es vor dem Einschalten des Moduls schon gab, bleiben zunächst nur in EstrichONE; den Abgleich schalten Sie im Kundenabgleich für ausgewählte Kunden ein. Übertragen wird erst, wenn Sie einen Kunden verknüpfen oder anlegen."/>
+								</VBox>
+								<core:Title text="Erweitert"/>
+								<Label text="Basis-URL der API" labelFor="lxUrl"/>
+								<VBox>
+									<Input id="lxUrl" value="{view>/baseUrl}" maxLength="300" placeholder="https://api.lexware.io"/>
+									<Text text="Nur ändern, wenn Lexware eine andere Adresse vorgibt. Zulässig sind https://api.lexware.io und die frühere Adresse https://api.lexoffice.io."/>
+								</VBox>
+							</form:SimpleForm>
+						</IconTabFilter>
+						<IconTabFilter key="customers" text="Kundenabgleich" visible="{= ${view>/s/moduleEnabled} === true &amp;&amp; ${view>/s/hasApiKey} === true }">
+							<VBox class="sapUiSmallMargin" busy="{view>/recBusy}" busyIndicatorDelay="0">
+								<Text text="Kunden gibt es in EstrichONE und in Lexware Office. Hier sehen Sie, was zusammengehört und was fehlt. EstrichONE führt nichts automatisch zusammen und löscht nichts; jede Verknüpfung und jede Neuanlage bestätigen Sie selbst."
+									class="sapUiSmallMarginBottom"/>
+								<FlexBox id="lexwareFigures" class="eoKpiBar sapUiSmallMarginBottom" items="{view>/figures}" wrap="Wrap" renderType="Bare">
+									<VBox class="eoKpiItem" renderType="Bare">
+										<Label text="{view>label}" wrapping="true"/>
+										<ObjectStatus text="{view>value}" state="{view>state}" class="eoKpiFigure"/>
+										<Text text="{view>hint}" class="eoKpiHint"/>
+									</VBox>
+								</FlexBox>
+								<MessageStrip text="Die Listen zeigen jeweils die ersten 500 Einträge. Die Zähler gelten für alle Einträge." type="Information" showIcon="true"
+									visible="{= ${view>/rec/truncated} === true }" class="sapUiSmallMarginBottom"/>
+								<SegmentedButton id="lexwareList" selectedKey="{view>/list}" width="100%">
+									<items>
+										<SegmentedButtonItem key="suggestions" text="{= 'Mögliche Dubletten (' + (${view>/rec/possibleDuplicates} || 0) + ')' }"/>
+										<SegmentedButtonItem key="onlyEstrichOne" text="{= 'Nur in EstrichONE (' + (${view>/rec/onlyEstrichOne} || 0) + ')' }"/>
+										<SegmentedButtonItem key="excluded" text="{= 'Bewusst nur in EstrichONE (' + (${view>/rec/excluded} || 0) + ')' }"/>
+										<SegmentedButtonItem key="onlyLexware" text="{= 'Nur in Lexware (' + (${view>/rec/onlyLexware} || 0) + ')' }"/>
+										<SegmentedButtonItem key="linked" text="{= 'Verknüpft (' + (${view>/rec/linked} || 0) + ')' }"/>
+									</items>
+								</SegmentedButton>
+								<OverflowToolbar style="Clear" class="sapUiTinyMarginTop">
+									<Text text="{view>/recStand}" class="eoMuted"/>
+									<ToolbarSpacer/>
+									<Button id="lexwareLinkUnique" text="{= 'Eindeutige Treffer verknüpfen (' + (${view>/rec/uniqueMatches} || 0) + ')' }" icon="sap-icon://chain-link"
+										press=".onLinkUnique" enabled="{= ${view>/rec/uniqueMatches} > 0 }"
+										tooltip="Genau ein Gegenstück mit gleicher E-Mail-Adresse oder gleicher Kundennummer. Vor dem Verknüpfen sehen Sie eine Vorschau."/>
+									<Button id="lexwareRefresh" text="Aktualisieren" icon="sap-icon://refresh" press=".onRefresh" tooltip="Kontaktliste neu aus Lexware Office laden"/>
+								</OverflowToolbar>
+
+								<Table id="lexwareSuggestions" items="{view>/suggestions}" visible="{= ${view>/list} === 'suggestions' }" popinLayout="GridSmall" contextualWidth="Auto"
+									noDataText="Die Prüfung hat keine möglichen Dubletten zwischen EstrichONE und Lexware Office gefunden.">
+									<headerToolbar><Toolbar><Title text="Kunde in EstrichONE und Kontakt in Lexware Office könnten zusammengehören" level="H3" wrapping="true"/></Toolbar></headerToolbar>
+									<columns>
+										<Column><Text text="Kunde in EstrichONE"/></Column><Column><Text text="Kontakt in Lexware Office"/></Column>
+										<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Übereinstimmung"/></Column><Column width="9rem" hAlign="End"/>
+									</columns>
+									<items>
+										<ColumnListItem>
+											<VBox><Link text="{view>customer/name}" press=".onOpenCustomer" wrapping="true"/><Text text="{view>customerText}" class="eoMuted"/></VBox>
+											<VBox><Link text="{view>lexware/name}" href="{view>lexware/url}" target="_blank" wrapping="true"/><Text text="{view>lexwareText}" class="eoMuted"/></VBox>
+											<VBox>
+												<ObjectStatus text="{view>matchText}" state="{view>matchState}"/>
+												<ObjectStatus text="Eindeutiger Treffer" state="Success" icon="sap-icon://sys-enter-2" visible="{view>unique}"/>
+											</VBox>
+											<Button text="Verknüpfen" icon="sap-icon://chain-link" press=".onLinkSuggestion"/>
+										</ColumnListItem>
+									</items>
+								</Table>
+								<Table id="lexwareInternal" items="{view>/internal}" visible="{= ${view>/list} === 'suggestions' &amp;&amp; ${view>/internal}.length > 0 }" popinLayout="GridSmall"
+									contextualWidth="Auto" class="sapUiSmallMarginTop">
+									<headerToolbar><Toolbar><Title text="Hinweis: mögliche doppelte Einträge innerhalb eines Systems" level="H3" wrapping="true"/></Toolbar></headerToolbar>
+									<columns>
+										<Column width="9rem"><Text text="System"/></Column><Column><Text text="Erster Eintrag"/></Column><Column><Text text="Zweiter Eintrag"/></Column>
+										<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Übereinstimmung"/></Column>
+									</columns>
+									<items>
+										<ColumnListItem>
+											<Text text="{view>systemText}"/>
+											<VBox><Link text="{view>firstName}" press=".onOpenInternal" wrapping="true"><customData><core:CustomData key="which" value="first"/></customData></Link>
+												<Text text="{view>firstText}" class="eoMuted"/></VBox>
+											<VBox><Link text="{view>secondName}" press=".onOpenInternal" wrapping="true"><customData><core:CustomData key="which" value="second"/></customData></Link>
+												<Text text="{view>secondText}" class="eoMuted"/></VBox>
+											<ObjectStatus text="{view>matchText}" state="Information"/>
+										</ColumnListItem>
+									</items>
+								</Table>
+
+								<Table id="lexwareOnlyLocal" items="{view>/onlyEstrichOne}" visible="{= ${view>/list} === 'onlyEstrichOne' }" popinLayout="GridSmall" contextualWidth="Auto"
+									growing="true" growingThreshold="50" noDataText="Alle Kunden aus EstrichONE sind mit Lexware Office verknüpft.">
+									<columns>
+										<Column><Text text="Kunde in EstrichONE"/></Column><Column minScreenWidth="Tablet" demandPopin="true"><Text text="Anschrift"/></Column>
+										<Column minScreenWidth="Desktop" demandPopin="true"><Text text="E-Mail"/></Column><Column width="14rem" hAlign="End"/>
+									</columns>
+									<items>
+										<ColumnListItem>
+											<VBox><Link text="{view>name}" press=".onOpenCustomer" wrapping="true"/><Text text="{view>numberText}" class="eoMuted"/></VBox>
+											<Text text="{view>place}"/><Text text="{view>email}"/>
+											<Button text="Prüfen und verknüpfen" icon="sap-icon://chain-link" press=".onLinkCustomer"
+												tooltip="Dublettenprüfung in Lexware Office, danach verknüpfen oder bewusst neu anlegen"/>
+										</ColumnListItem>
+									</items>
+								</Table>
+
+								<Table id="lexwareExcluded" items="{view>/excluded}" visible="{= ${view>/list} === 'excluded' }" popinLayout="GridSmall" contextualWidth="Auto"
+									mode="MultiSelect" growing="true" growingThreshold="100" selectionChange=".onExcludedSelection"
+									noDataText="Für alle Kunden ist der Abgleich mit Lexware Office eingeschaltet.">
+									<headerToolbar><OverflowToolbar>
+										<Title text="Diese Kunden bleiben nur in EstrichONE (Abgleich ausgeschaltet)" level="H3" wrapping="true"/>
+										<ToolbarSpacer/>
+										<Button id="lexwareEnableSync" text="{= 'Abgleich einschalten (' + ${view>/excludedSelected} + ')' }" icon="sap-icon://synchronize" press=".onEnableSync"
+											enabled="{= ${view>/excludedSelected} > 0 }"
+											tooltip="Schaltet „Mit Lexware Office abgleichen“ für die ausgewählten Kunden ein. Übertragen wird dabei nichts."/>
+									</OverflowToolbar></headerToolbar>
+									<columns>
+										<Column><Text text="Kunde in EstrichONE"/></Column><Column minScreenWidth="Tablet" demandPopin="true"><Text text="Anschrift"/></Column>
+										<Column minScreenWidth="Desktop" demandPopin="true"><Text text="E-Mail"/></Column>
+									</columns>
+									<items>
+										<ColumnListItem>
+											<VBox><Link text="{view>name}" press=".onOpenCustomer" wrapping="true"/><Text text="{view>numberText}" class="eoMuted"/></VBox>
+											<Text text="{view>place}"/><Text text="{view>email}"/>
+										</ColumnListItem>
+									</items>
+								</Table>
+
+								<Table id="lexwareOnlyRemote" items="{view>/onlyLexware}" visible="{= ${view>/list} === 'onlyLexware' }" popinLayout="GridSmall" contextualWidth="Auto"
+									growing="true" growingThreshold="50" noDataText="Alle Kunden aus Lexware Office sind mit EstrichONE verknüpft.">
+									<columns>
+										<Column><Text text="Kontakt in Lexware Office"/></Column><Column minScreenWidth="Tablet" demandPopin="true"><Text text="Anschrift"/></Column>
+										<Column minScreenWidth="Desktop" demandPopin="true"><Text text="E-Mail"/></Column><Column width="14rem" hAlign="End"/>
+									</columns>
+									<items>
+										<ColumnListItem>
+											<VBox><Link text="{view>name}" href="{view>url}" target="_blank" wrapping="true"/><Text text="{view>numberText}" class="eoMuted"/></VBox>
+											<Text text="{view>place}"/><Text text="{view>email}"/>
+											<Button text="Prüfen und übernehmen" icon="sap-icon://download" press=".onImport"
+												tooltip="Dublettenprüfung in EstrichONE, danach verknüpfen oder bewusst als neuen Kunden anlegen"/>
+										</ColumnListItem>
+									</items>
+								</Table>
+
+								<Table id="lexwareLinked" items="{view>/linked}" visible="{= ${view>/list} === 'linked' }" popinLayout="GridSmall" contextualWidth="Auto"
+									growing="true" growingThreshold="50" noDataText="Noch kein Kunde ist mit Lexware Office verknüpft.">
+									<columns>
+										<Column><Text text="Kunde in EstrichONE"/></Column><Column><Text text="Kontakt in Lexware Office"/></Column><Column width="12rem" hAlign="End"/>
+									</columns>
+									<items>
+										<ColumnListItem>
+											<VBox><Link text="{view>customer/name}" press=".onOpenCustomer" wrapping="true"/><Text text="{view>customerText}" class="eoMuted"/></VBox>
+											<VBox>
+												<Link text="{view>lexware/name}" href="{view>lexware/url}" target="_blank" wrapping="true" visible="{= !${view>missingInLexware} }"/>
+												<Text text="{view>lexwareText}" class="eoMuted" visible="{= !${view>missingInLexware} }"/>
+												<ObjectStatus text="In Lexware Office nicht mehr vorhanden oder archiviert" state="Warning" icon="sap-icon://alert" visible="{view>missingInLexware}"/>
+												<ObjectStatus text="Abgleich ausgeschaltet, Verknüpfung besteht noch" state="Warning" visible="{= ${view>customer/syncEnabled} === false }"/>
+											</VBox>
+											<Button text="Verknüpfung lösen" type="Transparent" press=".onUnlink"/>
+										</ColumnListItem>
+									</items>
+								</Table>
+							</VBox>
+						</IconTabFilter>
+					</items>
+				</IconTabBar>
+			</VBox>
+		</f:content>
+	</f:DynamicPage>
+</mvc:View>

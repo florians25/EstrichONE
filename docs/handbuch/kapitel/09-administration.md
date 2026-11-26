@@ -272,6 +272,8 @@ Dokumentation, Kommunikation und Service). Die Schalter wirken **sofort** für a
   Kolonnenplanung*, *Tankbelege* braucht *Maschinen und Fahrzeuge*. Abhängige Module gehen beim Ausschalten mit aus; beim Einschalten kommen fehlende Voraussetzungen
   nach Rückfrage mit.
 - **Immer aktiv** sind Bauakten, Kunden und Kontakte, Benutzer und Rechte, Einstellungen und Sicherung.
+- **Lexware Office** ist nach der Installation ausgeschaltet und wird erst mit hinterlegtem API-Schlüssel eingeschaltet
+  (Kapitel „Lexware Office“).
 - Jede Änderung steht im **Protokoll** („settings.modules_changed“).
 - Bei gehosteten Instanzen sieht der Betreiber in der Hosting-Konsole, welche Module eingeschaltet sind, nur lesend,
   über eine eigene, mit dem Instanz-Schlüssel gesicherte Schnittstelle. Ein- und ausschalten können Module nur Sie.
@@ -401,6 +403,12 @@ Teams“** sehen alle einmal einen Hinweis auf der Startseite und in den Apps, m
 > **Datenschutz:** Vor der Umstellung mit dem Betriebsrat regeln und die Beschäftigten informieren (Vorlage für den
 > Datenschutzhinweis: `docs/microsoft-teams.md`). EstrichONE übermittelt nur Kontozuordnung, Mitgliedschaften und, falls
 > eingeschaltet, kurze Ereigniskarten ohne Namen, Kommentare oder Kundendaten; es liest keine Nachrichten aus Teams.
+
+## Lexware Office {#lexware}
+
+**Verwaltung** → **Integrationen** → **Lexware Office** (Recht „Integrationen einrichten“): API-Schlüssel, Verbindungstest,
+Vorgabe für neue Kunden und der Kundenabgleich mit Dublettenprüfung. Rechnungen und Angebote zeigt EstrichONE nur an. Einrichtung und Arbeitsweise beschreibt das Kapitel
+„Lexware Office“.
 
 ## Backup Center {#backup}
 

@@ -1,4 +1,5 @@
 import BaseController from "./BaseController";
+import { openLexwareImportDialog } from "../util/lexwareDialogs";
 import type Event from "sap/ui/base/Event";
 import type Control from "sap/ui/core/Control";
 import type FileUploader from "sap/ui/unified/FileUploader";
@@ -94,6 +95,11 @@ export default class Customers extends BaseController {
 			}
 		}
 		this.nav(`/kunden/${result.contact.id}`);
+	}
+
+	/** Kunden aus Lexware Office übernehmen (jeweils mit Dublettenprüfung gegen die vorhandenen Kunden). */
+	async onLexwareImport(): Promise<void> {
+		if (await openLexwareImportDialog()) await this.load();
 	}
 
 	onOpen(event: Event): void {

@@ -19,12 +19,19 @@ import type { RouteMatch } from "../util/router";
 import { navTo } from "../util/navigation";
 import { openCustomerRemoval, reactivateCustomer } from "../util/customerRemovalDialog";
 import { customerState } from "../util/customerRemoval";
+import { session } from "../util/session";
+import {
+	euro, lexwareVisible, linkText, problemText, syncStateText, voucherNumber, voucherStatus, voucherSummary, voucherTypeText, type CustomerLexware, type CustomerVouchers,
+	type LexwareVoucherItem,
+} from "../util/lexware";
+import { openCustomerLinkDialog, openExternal } from "../util/lexwareDialogs";
 
 interface DocumentListItem { file: FileResponse; bauakteNumber: string | null; bauakteTitle: string; approvalStatus: ApprovalStatus | null }
 interface Person { id: string; name: string; function: string | null; phone: string | null; email: string | null }
 type AkteRow = BauakteListItem & { place: string };
 
-const sections: Record<string, string> = { uebersicht: "secOverview", bauakten: "secBauakten", dokumente: "secDocuments", kontakte: "secContacts", verlauf: "secHistory" };
+const sections: Record<string, string> = { uebersicht: "secOverview", bauakten: "secBauakten", dokumente: "secDocuments", kontakte: "secContacts", verlauf: "secHistory",
+	lexware: "secLexware" };
 const channels: Record<string, string> = { phone: "Telefon", mobile: "Mobil", email: "E-Mail", letter: "Brief" };
 const addressText = (a: ContactAddress | null | undefined) =>
 	a ? [a.name, a.street, [a.postalCode, a.city].filter(Boolean).join(" ")].filter(Boolean).join(", ") || "–" : "wie Anschrift";
@@ -45,7 +52,8 @@ export default class Customer extends BaseController {
 		this.local({ c: null, busy: false, stateText: "", stateHint: "", headline: "", address: "", salutation: "", channel: "", billing: "", delivery: "",
 			primaryPhone: "", primaryEmail: "", routeUrl: null, mainPerson: "", kpis: [],
 			bauakten: [], shownBauakten: [], bauakteFilter: "", bauakteSearch: "", bauakteEmpty: "", counts: { all: 0, active: 0, inquiry: 0, old: 0 },
-			documents: [], reach: [], persons: [], history: [] });
+			documents: [], reach: [], persons: [], history: [], lexware: { loaded: false, busy: false, link: null, canEdit: false, text: "", syncEnabled: false, syncText: "", syncState: "None", syncHint: "",
+				vouchers: [], vouchersBusy: false, vouchersSummary: "", vouchersError: "" } });
 	}
 
 	async onRouteMatched(match: RouteMatch): Promise<void> {
@@ -73,6 +81,7 @@ export default class Customer extends BaseController {
 		}
 		document.title = `${c.name} (EstrichONE)`;
 		this.showContact(c);
+		void this.loadLexware();
 
 		const readAkten = this.has("bauakten.read");
 		const [akten, docs, persons, calls, figures] = await Promise.allSettled([
@@ -281,5 +290,98 @@ export default class Customer extends BaseController {
 			files: this.files, index: Math.max(0, this.files.findIndex((f) => f.id === item.file.id)), context: null,
 			onDetails: (file) => navTo(`/bauakten/${file.bauakteId}/datei/${file.id}?abschnitt=dokumente`),
 		});
+	}
+
+	// ---------- Lexware Office ----------
+
+	/** Verknüpfung mit Lexware Office (nur mit eingeschaltetem Modul und Leserecht; ohne Aufruf bei Lexware). */
+	private async loadLexware(): Promise<void> {
+		const m = this.model();
+		if (!lexwareVisible(session.data.modules ?? {}, session.data.permissions ?? {})) {
+			m.setProperty("/lexware", { loaded: false, busy: false, link: null, canEdit: false, text: "", syncEnabled: false, syncText: "", syncState: "None", syncHint: "",
+				vouchers: [], vouchersBusy: false, vouchersSummary: "", vouchersError: "" });
+			return;
+		}
+		m.setProperty("/lexware/busy", true);
+		this.applyLexware(await get<CustomerLexware>(`lexware/customers/${this.id}`).catch(() => null));
+	}
+
+	private applyLexware(state: CustomerLexware | null): void {
+		const link = state?.link ?? null;
+		const sync = syncStateText(state?.syncEnabled === true, link);
+		const m = this.model();
+		const hadLink = !!m.getProperty("/lexware/link");
+		m.setProperty("/lexware", { ...(m.getProperty("/lexware") as object), loaded: true, busy: false, link, canEdit: state?.canEdit === true, text: linkText(link),
+			syncEnabled: state?.syncEnabled === true, syncText: sync.text, syncState: sync.state, syncHint: sync.hint });
+		m.setProperty("/c/lexwareSync", state?.syncEnabled === true);
+		if (!link) {
+			m.setProperty("/lexware/vouchers", []);
+			m.setProperty("/lexware/vouchersSummary", "");
+		} else if (!hadLink || this.vouchersFor !== this.id) {
+			void this.loadLexwareVouchers(false);
+		}
+	}
+
+	private vouchersFor = "";
+
+	/** Rechnungen und Angebote des verknüpften Lexware-Kontakts (nur Anzeige; kurzer Cache auf dem Server). */
+	private async loadLexwareVouchers(refresh: boolean): Promise<void> {
+		const m = this.model();
+		const id = this.id;
+		this.vouchersFor = id;
+		m.setProperty("/lexware/vouchersBusy", true);
+		m.setProperty("/lexware/vouchersError", "");
+		try {
+			const result = await get<CustomerVouchers>(`lexware/customers/${id}/vouchers`, refresh ? { refresh: true } : undefined);
+			if (id !== this.id) return;
+			m.setProperty("/lexware/vouchers", result.vouchers.map((v: LexwareVoucherItem) => {
+				const status = voucherStatus(v.status);
+				return { ...v, typeText: voucherTypeText(v.type), numberText: voucherNumber(v), dateText: date(v.voucherDate), dueText: date(v.dueDate),
+					amountText: euro(v.grossAmount, v.currency), statusText: status.text, statusState: status.state, statusIcon: status.icon };
+			}));
+			m.setProperty("/lexware/vouchersSummary", voucherSummary(result.vouchers));
+		} catch (error) {
+			m.setProperty("/lexware/vouchers", []);
+			m.setProperty("/lexware/vouchersSummary", "");
+			m.setProperty("/lexware/vouchersError", problemText(error));
+		} finally {
+			m.setProperty("/lexware/vouchersBusy", false);
+		}
+	}
+
+	onLexwareVouchersRefresh(): void {
+		void this.loadLexwareVouchers(true);
+	}
+
+	onLexwareVoucherOpen(e: Event): void {
+		openExternal(this.obj<LexwareVoucherItem>(e).url);
+	}
+
+	onLexwareVoucherBauakte(e: Event): void {
+		this.nav(`/bauakten/${this.obj<LexwareVoucherItem>(e).assignedBauakteId}?abschnitt=rechnungen`);
+	}
+
+	/** „Mit Lexware Office abgleichen“ umschalten; eine bestehende Verknüpfung bleibt, bis sie gelöst wird. */
+	async onLexwareSync(e: Event): Promise<void> {
+		const enabled = e.getParameter("state" as never) as boolean;
+		const state = await this.run(() => put<CustomerLexware>(`lexware/customers/${this.id}/sync`, { enabled }),
+			enabled ? "Abgleich eingeschaltet" : "Abgleich ausgeschaltet");
+		if (state) this.applyLexware(state);
+		else await this.loadLexware();
+	}
+
+	async onLexwareLink(): Promise<void> {
+		const c = this.model().getProperty("/c") as ContactResponse;
+		if (await openCustomerLinkDialog({ id: c.id, name: c.name })) await this.loadLexware();
+	}
+
+	onLexwareOpen(): void {
+		openExternal(this.model().getProperty("/lexware/link/url") as string | null);
+	}
+
+	async onLexwareUnlink(): Promise<void> {
+		if (!await this.confirm("Verknüpfung mit Lexware Office lösen? Der Kontakt und alle Rechnungen bleiben in Lexware Office erhalten. "
+			+ "Neue Rechnungen lassen sich für diesen Kunden erst nach erneuter Verknüpfung erstellen.", { action: "Lösen", danger: true })) return;
+		if (await this.run(() => del(`lexware/customers/${this.id}/link`).then(() => true), "Verknüpfung gelöst")) await this.loadLexware();
 	}
 }
