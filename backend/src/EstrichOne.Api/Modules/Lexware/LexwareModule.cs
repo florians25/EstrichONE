@@ -20,6 +20,7 @@ public sealed class LexwareModule : IModule
         services.AddSingleton<LexwareDirectory>();
         services.AddScoped<LexwareService>();
         services.AddScoped<LexwareChangeSyncService>();
+        services.AddScoped<LexwareAutoCreateService>();
         services.AddSingleton<LexwareChangeSyncJob>();
         services.AddHostedService(provider => provider.GetRequiredService<LexwareChangeSyncJob>());
         services.AddScoped<ICustomerReferenceSource, LexwareCustomerReferences>();

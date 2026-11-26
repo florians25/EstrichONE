@@ -21,6 +21,9 @@ public sealed class LexwareSettingsRow : IVersionedEntity
     /// <summary>Neue Kunden standardmäßig mit Lexware Office abgleichen (Vorgabe für <c>Contact.LexwareSync</c>).</summary>
     public bool NewCustomersSync { get; set; } = true;
 
+    /// <summary>Neue Kunden mit eingeschaltetem Abgleich ohne ähnlichen Kontakt automatisch in Lexware Office anlegen.</summary>
+    public bool AutoCreate { get; set; } = true;
+
     /// <summary>Richtung, in der spätere Änderungen an verknüpften Kunden abgeglichen werden.</summary>
     public LexwareChangeSync ChangeSync { get; set; } = LexwareChangeSync.Both;
 
@@ -147,6 +150,7 @@ internal sealed class LexwareSettingsRowConfiguration : IEntityTypeConfiguration
         builder.Property(s => s.LastTestError).HasMaxLength(2000);
         builder.Property(s => s.ChangeSync).HasConversion<string>().HasMaxLength(20).HasDefaultValue(LexwareChangeSync.Both);
         builder.Property(s => s.LastChangeSyncError).HasMaxLength(2000);
+        builder.Property(s => s.AutoCreate).HasDefaultValue(true);
         builder.Ignore(s => s.Configured);
     }
 }

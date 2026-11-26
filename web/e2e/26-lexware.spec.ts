@@ -69,6 +69,14 @@ test('Lexware Office: ausgeschaltet unsichtbar, einrichten, Verbindung testen', 
   await expect(toast(page)).toContainText('Modul eingeschaltet');
   await expect(page.getByRole('tab', { name: 'Kundenabgleich' })).toBeVisible();
   expect((await apiCall<{ enabled: boolean; configured: boolean }>(page, 'GET', '/api/v1/lexware/status')).json).toMatchObject({ enabled: true, configured: true });
+
+  // Neue Kunden ohne Treffer automatisch anlegen: Vorgabe an. Für die folgenden Abläufe aus, damit sie nur das zeigen, was sie prüfen;
+  // die automatische Anlage hat weiter unten ihren eigenen Ablauf.
+  await expect(page.locator('[id$="lxAutoCreate"]').first()).toHaveAttribute('aria-checked', 'true');
+  await page.locator('.sapMSwtCont[id$="lxAutoCreate"]').click();
+  await page.locator('[id$="lexwareSave"]').click();
+  await expect(toast(page)).toContainText('Gespeichert');
+  expect((await apiCall<{ autoCreate: boolean }>(page, 'GET', '/api/v1/settings/integrations/lexware')).json.autoCreate).toBe(false);
 });
 
 test('Lexware Office: Kunde mit Dublettenprüfung verknüpfen, Rechnungen und Angebote anzeigen und zuordnen, Status abgleichen', async ({ page }) => {
@@ -258,7 +266,7 @@ test('Lexware Office: spätere Änderungen abgleichen, Abweichungen entscheiden,
   await page.locator('[id$="lexwareSave"]').click();
   await expect(toast(page)).toContainText('Gespeichert');
   expect((await apiCall<{ changeSync: string }>(page, 'GET', '/api/v1/settings/integrations/lexware')).json.changeSync).toBe('fromLexware');
-  expect((await apiCall(page, 'PUT', '/api/v1/settings/integrations/lexware', { changeSync: 'both' })).status).toBe(200);
+  expect((await apiCall(page, 'PUT', '/api/v1/settings/integrations/lexware', { changeSync: 'both', baseUrl: stub.url })).status).toBe(200);
   expect((await apiCall<{ changeSync: string; customersWithDeviations: number }>(page, 'GET', '/api/v1/settings/integrations/lexware')).json)
     .toMatchObject({ changeSync: 'both', customersWithDeviations: 1 });
 
@@ -321,6 +329,28 @@ test('Lexware Office: spätere Änderungen abgleichen, Abweichungen entscheiden,
   await expect(page.locator('[id$="lexwareChangeState"]')).toContainText('Abgeglichen');
   expect((await readCustomer()).email).toBe('rechnung@huber-bau.example');
 
+  // Neuer Kunde ohne ähnlichen Kontakt: wird im Hintergrund automatisch in Lexware Office angelegt und verknüpft, genau einmal.
+  expect((await apiCall(page, 'PUT', '/api/v1/settings/integrations/lexware', { autoCreate: true, baseUrl: stub.url })).status).toBe(200);
+  const auto = crypto.randomUUID();
+  expect((await apiCall(page, 'POST', '/api/v1/contacts', {
+    id: auto, kind: 'company', name: 'Fliesen Brandl GmbH', email: 'info@fliesen-brandl.example', street: 'Hofweg 2', postalCode: '83080', city: 'Oberaudorf', lexwareSync: true,
+  })).status).toBe(201);
+  const offOnly = crypto.randomUUID();
+  expect((await apiCall(page, 'POST', '/api/v1/contacts', { id: offOnly, kind: 'company', name: 'Nur Hier Bau GmbH', lexwareSync: false })).status).toBe(201);
+  const created = () => [...stub.contacts.values()].filter((c) => (c.company as { name?: string } | undefined)?.name === 'Fliesen Brandl GmbH');
+  await expect.poll(() => created().length, { timeout: 75_000, intervals: [1000] }).toBe(1);
+  expect(created()[0]).toMatchObject({ addresses: { billing: [{ street: 'Hofweg 2', zip: '83080', city: 'Oberaudorf', countryCode: 'DE' }] }, emailAddresses: { business: ['info@fliesen-brandl.example'] } });
+  await page.goto(`/kunden/${auto}?abschnitt=lexware`);
+  await expect(page.locator('[id$="lexwareLinkState"]')).toContainText('Verknüpft');
+  await expect(page.locator('[id$="lexwareLinkText"]')).toContainText('aus EstrichONE in Lexware Office angelegt');
+  // Schalter aus: nichts wird angelegt. Und kein zweiter Kontakt für den ersten Kunden.
+  await page.goto(`/kunden/${offOnly}?abschnitt=lexware`);
+  await expect(page.locator('[id$="lexwareSyncState"]')).toContainText('Nur in EstrichONE');
+  expect(stub.calls.filter((c) => c.method === 'POST')).toHaveLength(1);
+  expect([...stub.contacts.values()].some((c) => (c.company as { name?: string } | undefined)?.name === 'Nur Hier Bau GmbH')).toBe(false);
+  expect((await apiCall(page, 'PUT', '/api/v1/settings/integrations/lexware', { autoCreate: false, baseUrl: stub.url })).status).toBe(200);
+  await page.goto(`/kunden/${customer}?abschnitt=lexware`);
+
   // Beleg als PDF am Kunden: Anzeige in der Vorschau, Herunterladen, für Entwürfe kein PDF.
   const draft = stub.addVoucher({ type: 'invoice', status: 'draft', number: null, date: '2026-11-25', net: 100, gross: 119, contactId: lexwareHuber });
   await page.locator('[id$="customerVouchersRefresh"]').click();
@@ -382,7 +412,8 @@ test('Lexware Office: spätere Änderungen abgleichen, Abweichungen entscheiden,
 
   // Geschrieben wurde in Lexware Office nur an diesem einen Kontakt; Belege wurden ausschließlich gelesen.
   expect(puts().length).toBeGreaterThanOrEqual(2);
-  expect(stub.calls.filter((c) => c.method !== 'GET').every((c) => c.method === 'PUT' && c.path === `/v1/contacts/${lexwareHuber}`)).toBe(true);
+  expect(puts().every((c) => c.path === `/v1/contacts/${lexwareHuber}`)).toBe(true);
+  expect(stub.calls.filter((c) => c.method !== 'GET' && c.method !== 'PUT')).toEqual([{ method: 'POST', path: '/v1/contacts' }]);
   stub.vouchers.delete(draft);
 });
 
@@ -391,7 +422,7 @@ test('Lexware Office: Kundenabgleich mit Listen und Übernahme nach Dublettenpr�
   await page.goto('/system/lexware-office?reiter=kunden');
   const figures = page.locator('[id$="lexwareFigures"]');
   await expect(figures).toContainText('Verknüpft');
-  await expect(figures.locator('.eoKpiItem').filter({ hasText: 'Verknüpft' }).locator('.eoKpiFigure .sapMObjStatusText')).toHaveText('2');
+  await expect(figures.locator('.eoKpiItem').filter({ hasText: 'Verknüpft' }).locator('.eoKpiFigure .sapMObjStatusText')).toHaveText('3');
   await expect(figures.locator('.eoKpiItem').filter({ hasText: 'Nur in Lexware' }).locator('.eoKpiFigure .sapMObjStatusText')).toHaveText('2');
 
   // Bewusst nur in EstrichONE: eigene Gruppe, Abgleich für ausgewählte Kunden einschalten.
@@ -415,13 +446,13 @@ test('Lexware Office: Kundenabgleich mit Listen und Übernahme nach Dublettenpr�
   await expect(confirm).toContainText('Die Prüfung hat keinen ähnlichen Kunden gefunden.');
   await confirm.getByRole('button', { name: 'Kunde anlegen' }).click();
   await expect(toast(page)).toContainText('Hans Gruber als Kunde');
-  await expect(figures.locator('.eoKpiItem').filter({ hasText: 'Verknüpft' }).locator('.eoKpiFigure .sapMObjStatusText')).toHaveText('3');
+  await expect(figures.locator('.eoKpiItem').filter({ hasText: 'Verknüpft' }).locator('.eoKpiFigure .sapMObjStatusText')).toHaveText('4');
 
-  await page.getByRole('option', { name: /Verknüpft \(3\)/ }).click();
+  await page.getByRole('option', { name: /Verknüpft \(4\)/ }).click();
   await expect(page.locator('[id$="lexwareLinked"]').getByRole('row').filter({ hasText: 'Hans Gruber' })).toBeVisible();
 
   // Modul wieder aus: Abschnitte verschwinden, Verknüpfungen bleiben gespeichert.
   expect((await apiCall(page, 'PUT', '/api/v1/settings/modules', { modules: { lexware: false } })).status).toBe(200);
   const kept = await apiCall<{ linkedCustomers: number; linkedInvoices: number }>(page, 'GET', '/api/v1/settings/integrations/lexware');
-  expect(kept.json).toMatchObject({ linkedCustomers: 3, linkedInvoices: 2 });
+  expect(kept.json).toMatchObject({ linkedCustomers: 4, linkedInvoices: 2 });
 });

@@ -33,7 +33,12 @@ export interface LexwareSettings {
 	lastChangeSyncAt: string | null;
 	lastChangeSyncError: string | null;
 	customersWithDeviations: number;
+	/** Neue Kunden ohne Treffer automatisch in Lexware Office anlegen. */
+	autoCreate: boolean;
 }
+
+/** Stand der automatischen Anlage eines Kunden in Lexware Office. */
+export interface LexwareCreationState { state: "pending" | "duplicates" | "failed" | "manual" | string; error: string | null; at: string | null }
 
 export type ChangeSync = "both" | "toLexware" | "fromLexware" | "off";
 export type DeviationSource = "estrichOne" | "lexware";
@@ -76,6 +81,9 @@ export interface LexwareCustomerSummary {
 	archived: boolean;
 	linkedLexwareContactId: string | null;
 	syncEnabled?: boolean;
+	/** Stand der automatischen Anlage: pending, duplicates, failed, manual. */
+	creation?: string | null;
+	creationError?: string | null;
 }
 
 export interface Match { score: number; reasons: string[]; strong: boolean }
@@ -84,7 +92,7 @@ export interface LexwareCustomerCandidate extends Match { customer: LexwareCusto
 
 export type LexwareLinkOrigin = "linked" | "createdInLexware" | "importedFromLexware";
 export interface LexwareContactLink { lexwareContactId: string; name: string | null; number: string | null; url: string; origin: LexwareLinkOrigin; linkedAt: string }
-export interface CustomerLexware { contactId: string; link: LexwareContactLink | null; canEdit: boolean; syncEnabled: boolean; sync?: LexwareSyncState | null }
+export interface CustomerLexware { contactId: string; link: LexwareContactLink | null; canEdit: boolean; syncEnabled: boolean; sync?: LexwareSyncState | null; creation?: LexwareCreationState | null }
 export interface LexwareCandidates { candidates: LexwareContactCandidate[]; loadedAt: string | null }
 export interface CreateLexwareContactResponse { created: boolean; link: LexwareContactLink | null; candidates: LexwareContactCandidate[] }
 export interface ImportLexwareContactResponse { imported: boolean; contactId: string | null; customerNumber: string | null; candidates: LexwareCustomerCandidate[] }
@@ -469,4 +477,31 @@ export function lexwareCandidateLine(c: LexwareContactSummary): string {
 /** Was mit einem Treffer möglich ist: übernehmen, auf den vorhandenen Kunden verweisen oder nur warnen. */
 export function lexwareCandidateAction(c: LexwareContactSummary, canImport: boolean): "import" | "linked" | "none" {
 	return c.linkedContactId ? "linked" : canImport ? "import" : "none";
+}
+
+// ---------- Automatische Anlage in Lexware Office ----------
+
+/** Stand der automatischen Anlage als Text und Farbe (Kunde, Liste „Nur in EstrichONE“). */
+export function creationStateText(state: string | null | undefined, error?: string | null): { text: string; state: State; hint: string; retry: boolean } {
+	switch (state) {
+		case "pending": return { text: "Anlage in Lexware Office ausstehend", state: "Information", retry: false,
+			hint: "Der Kunde wird in Kürze im Hintergrund in Lexware Office angelegt, wenn es dort keinen ähnlichen Kontakt gibt." };
+		case "duplicates": return { text: "Nicht automatisch angelegt: ähnlicher Kontakt in Lexware Office", state: "Warning", retry: false,
+			hint: "In Lexware Office gibt es einen ähnlichen Kontakt. Prüfen Sie die Treffer und verknüpfen Sie den Kunden oder legen Sie ihn bewusst neu an." };
+		case "failed": return { text: "Anlage in Lexware Office fehlgeschlagen", state: "Error", retry: true,
+			hint: `${error ?? ""} EstrichONE versucht es später erneut.`.trim() };
+		default: return { text: "", state: "None", hint: "", retry: false };
+	}
+}
+
+/** Rückfrage der Massenaktion „Abgleich einschalten“ mit der Zahl der Kunden, die dadurch in Lexware Office neu angelegt würden. */
+export function enableSyncQuestion(preview: { changed: number; wouldCreate: number; withMatches: number }): string {
+	const who = preview.changed === 1 ? "den ausgewählten Kunden" : `${preview.changed} ausgewählte Kunden`;
+	const created = preview.wouldCreate === 0 ? "Dadurch wird in Lexware Office kein Kunde neu angelegt."
+		: preview.wouldCreate === 1 ? "Dadurch wird 1 Kunde automatisch in Lexware Office neu angelegt, weil es dort keinen ähnlichen Kontakt gibt."
+			: `Dadurch werden ${preview.wouldCreate} Kunden automatisch in Lexware Office neu angelegt, weil es dort keinen ähnlichen Kontakt gibt.`;
+	const matches = preview.withMatches === 0 ? ""
+		: preview.withMatches === 1 ? " 1 Kunde hat dort einen ähnlichen Kontakt und erscheint unter „Mögliche Dubletten“."
+			: ` ${preview.withMatches} Kunden haben dort einen ähnlichen Kontakt und erscheinen unter „Mögliche Dubletten“.`;
+	return `Abgleich mit Lexware Office für ${who} einschalten? ${created}${matches}`;
 }

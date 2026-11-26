@@ -29,16 +29,17 @@ public sealed record LexwareSettingsResponse(
     bool ModuleEnabled, bool HasApiKey, string BaseUrl, bool CustomBaseUrl, string? OrganizationName,
     DateTimeOffset? LastTestAt, bool? LastTestOk, string? LastTestError, int LinkedCustomers, int LinkedInvoices, string KeyHelpUrl, long Version,
     bool NewCustomersSync = true, LexwareChangeSync ChangeSync = LexwareChangeSync.Both, DateTimeOffset? LastChangeSyncAt = null,
-    string? LastChangeSyncError = null, int CustomersWithDeviations = 0);
+    string? LastChangeSyncError = null, int CustomersWithDeviations = 0, bool AutoCreate = true);
 
 /// <param name="ApiKey">Neuer Schlüssel; <c>null</c> oder leer lässt den gespeicherten unverändert.</param>
 /// <param name="ClearApiKey">Gespeicherten Schlüssel entfernen.</param>
 /// <param name="BaseUrl">Leer = Vorgabe <c>https://api.lexware.io</c>.</param>
 /// <param name="NewCustomersSync">Neue Kunden standardmäßig mit Lexware Office abgleichen; ohne Angabe unverändert.</param>
 /// <param name="ChangeSync">Richtung des Änderungsabgleichs verknüpfter Kunden; ohne Angabe unverändert.</param>
+/// <param name="AutoCreate">Neue Kunden ohne Treffer automatisch in Lexware Office anlegen; ohne Angabe unverändert.</param>
 public sealed record SaveLexwareSettingsRequest(
     [property: MaxLength(500)] string? ApiKey = null, bool ClearApiKey = false, [property: MaxLength(LexwareSettingsRow.MaxUrl)] string? BaseUrl = null,
-    long? Version = null, bool? NewCustomersSync = null, LexwareChangeSync? ChangeSync = null);
+    long? Version = null, bool? NewCustomersSync = null, LexwareChangeSync? ChangeSync = null, bool? AutoCreate = null);
 
 public sealed record LexwareTestResponse(bool Ok, string? OrganizationName, string? Error, DateTimeOffset At);
 
@@ -55,7 +56,7 @@ public sealed record LexwareContactCandidate(LexwareContactSummary Contact, int 
 /// <summary>Kunde in EstrichONE.</summary>
 public sealed record LexwareCustomerSummary(
     Guid Id, string Name, bool IsCompany, string? CustomerNumber, string? Street, string? PostalCode, string? City, string? Email, string? Phone,
-    bool Archived, string? LinkedLexwareContactId, bool SyncEnabled = false);
+    bool Archived, string? LinkedLexwareContactId, bool SyncEnabled = false, string? Creation = null, string? CreationError = null);
 
 /// <summary>Möglicher Treffer in EstrichONE mit Übereinstimmungsgründen.</summary>
 public sealed record LexwareCustomerCandidate(LexwareCustomerSummary Customer, int Score, IReadOnlyList<string> Reasons, bool Strong);
@@ -80,7 +81,16 @@ public sealed record LexwareSyncState(string State, DateTimeOffset? SyncedAt, IR
 /// <summary>Verknüpfungsstatus eines Kunden.</summary>
 /// <param name="SyncEnabled">„Mit Lexware Office abgleichen“ ist für den Kunden eingeschaltet (sonst bleibt er nur in EstrichONE).</param>
 /// <param name="Sync">Stand des Änderungsabgleichs; nur bei verknüpften Kunden.</param>
-public sealed record CustomerLexwareResponse(Guid ContactId, LexwareContactLinkResponse? Link, bool CanEdit, bool SyncEnabled = false, LexwareSyncState? Sync = null);
+/// <param name="Creation">Stand der automatischen Anlage in Lexware Office; nur bei nicht verknüpften Kunden mit eingeschaltetem Abgleich.</param>
+public sealed record CustomerLexwareResponse(
+    Guid ContactId, LexwareContactLinkResponse? Link, bool CanEdit, bool SyncEnabled = false, LexwareSyncState? Sync = null, LexwareCreationState? Creation = null);
+
+/// <summary>Stand der automatischen Anlage eines Kunden in Lexware Office.</summary>
+/// <param name="State">
+/// <c>pending</c> (Anlage steht aus), <c>duplicates</c> (ähnliche Kontakte gefunden, nicht automatisch angelegt), <c>failed</c>
+/// (Anlage fehlgeschlagen, <paramref name="Error"/> nennt den Grund) oder <c>manual</c> (wird nicht automatisch angelegt).
+/// </param>
+public sealed record LexwareCreationState(string State, string? Error, DateTimeOffset? At);
 
 /// <summary>Entscheidung zu Abweichungen: <c>estrichOne</c> oder <c>lexware</c>, für alle Felder oder je Feld.</summary>
 /// <param name="Source">Für alle offenen Abweichungen dieselbe Seite übernehmen.</param>
@@ -94,9 +104,13 @@ public sealed record LexwareDeviationItem(
 
 public sealed record SetLexwareSyncRequest(bool Enabled);
 
-public sealed record EnableLexwareSyncRequest([property: Required, MinLength(1), MaxLength(2000)] IReadOnlyList<Guid> ContactIds);
+/// <param name="Preview">Nur zählen, was das Einschalten bewirken würde; nichts ändern.</param>
+public sealed record EnableLexwareSyncRequest([property: Required, MinLength(1), MaxLength(2000)] IReadOnlyList<Guid> ContactIds, bool Preview = false);
 
-public sealed record EnableLexwareSyncResponse(int Changed);
+/// <param name="Changed">Kunden, für die der Abgleich eingeschaltet wurde (in der Vorschau: würde).</param>
+/// <param name="WouldCreate">Davon Kunden ohne ähnlichen Kontakt: Sie werden danach automatisch in Lexware Office angelegt (0, wenn die automatische Anlage aus ist).</param>
+/// <param name="WithMatches">Davon Kunden mit ähnlichem Kontakt: Sie erscheinen unter „Mögliche Dubletten“.</param>
+public sealed record EnableLexwareSyncResponse(int Changed, int WouldCreate = 0, int WithMatches = 0);
 
 public sealed record LexwareCandidatesResponse(IReadOnlyList<LexwareContactCandidate> Candidates, DateTimeOffset? LoadedAt);
 
@@ -328,6 +342,10 @@ internal static class LexwareEndpoints
         customers.MapPut("/sync", SetSyncAsync).WithName("SetCustomerLexwareSync")
             .WithSummary("„Mit Lexware Office abgleichen“ für den Kunden ein- oder ausschalten (eine bestehende Verknüpfung bleibt, bis sie gelöst wird)")
             .ProducesProblem(StatusCodes.Status404NotFound).RequirePermission(Permissions.InvoicesAssign);
+        customers.MapPost("/create/retry", RetryCreateAsync).WithName("RetryLexwareContactCreation")
+            .WithSummary("Automatische Anlage in Lexware Office erneut versuchen (prüft vorher erneut auf Dubletten; legt nur ohne Treffer an)")
+            .ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status409Conflict)
+            .RequirePermission(Permissions.InvoicesAssign);
         customers.MapPost("/sync/run", RunSyncAsync).WithName("RunCustomerLexwareSync")
             .WithSummary("Änderungsabgleich für diesen Kunden jetzt ausführen (liest den Lexware-Kontakt frisch)")
             .ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status409Conflict)
@@ -423,7 +441,8 @@ internal static class LexwareEndpoints
             row.LastTestError, await db.Set<LexwareContactLink>().CountAsync(cancellationToken),
             await db.Set<LexwareVoucherLink>().CountAsync(cancellationToken), LexwareService.KeyHelpUrl, row.Version, row.NewCustomersSync, row.ChangeSync,
             row.LastChangeSyncAt, row.LastChangeSyncError,
-            row.ChangeSync == LexwareChangeSync.Off ? 0 : await db.Set<LexwareContactLink>().CountAsync(l => l.DeviationCount > 0, cancellationToken));
+            row.ChangeSync == LexwareChangeSync.Off ? 0 : await db.Set<LexwareContactLink>().CountAsync(l => l.DeviationCount > 0, cancellationToken),
+            row.AutoCreate);
     }
 
     private static async Task<Ok<LexwareSettingsResponse>> GetSettingsAsync(LexwareService lexware, ISystemSettings system, CancellationToken cancellationToken) =>
@@ -479,6 +498,10 @@ internal static class LexwareEndpoints
         // Aus heißt: Es gilt kein abgeglichener Stand mehr. Beim Wiedereinschalten werden vorhandene Unterschiede als
         // Abweichungen gezeigt und nicht still übernommen.
         var forget = changeSync == LexwareChangeSync.Off && row.ChangeSync != LexwareChangeSync.Off;
+        // Wird die automatische Anlage eingeschaltet, gelten die bis dahin nicht angelegten Kunden als Bestand: Sie werden
+        // nicht nachträglich in einem Zug angelegt, sondern bleiben unter „Nur in EstrichONE“.
+        var keepExisting = request.AutoCreate == true && !row.AutoCreate;
+        row.AutoCreate = request.AutoCreate ?? row.AutoCreate;
         row.ChangeSync = changeSync;
         if (connectionChanged)
         {
@@ -494,8 +517,17 @@ internal static class LexwareEndpoints
         audit.Record("lexware.settings_changed", currentUser.UserId, "settings", "lexware", new Dictionary<string, string?>
         {
             ["apiKey"] = keyChange, ["baseUrl"] = baseUrl ?? LexwareOptions.DefaultBaseUrl, ["newCustomersSync"] = row.NewCustomersSync ? "ja" : "nein",
-            ["changeSync"] = row.ChangeSync.ToString(),
+            ["changeSync"] = row.ChangeSync.ToString(), ["autoCreate"] = row.AutoCreate ? "ja" : "nein",
         });
+        if (keepExisting)
+        {
+            var now = lexware.Clock.GetUtcNow();
+            foreach (var id in await LexwareAutoCreateService.Pending(lexware.Db).Select(c => c.Id).ToListAsync(cancellationToken))
+            {
+                lexware.Db.Add(new LexwareContactCreation { ContactId = id, State = LexwareContactCreation.Skipped, UpdatedAt = now });
+            }
+        }
+
         await lexware.Db.SaveChangesAsync(cancellationToken);
         if (forget)
         {
@@ -576,8 +608,39 @@ internal static class LexwareEndpoints
         var row = await lexware.SettingsAsync(cancellationToken);
         var link = await db.Set<LexwareContactLink>().AsNoTracking().SingleOrDefaultAsync(l => l.ContactId == contactId, cancellationToken);
         var contact = await db.Set<Contact>().AsNoTracking().SingleAsync(c => c.Id == contactId, cancellationToken);
+        LexwareCreationState? creation = null;
+        if (link is null && contact.LexwareSync && contact.ArchivedAt is null && contact.AnonymizedAt is null)
+        {
+            var note = await db.Set<LexwareContactCreation>().AsNoTracking().SingleOrDefaultAsync(x => x.ContactId == contactId, cancellationToken);
+            creation = note is null
+                ? new LexwareCreationState(row.Configured && row.AutoCreate ? "pending" : "manual", null, null)
+                : new LexwareCreationState(note.State == LexwareContactCreation.Skipped ? "manual" : note.State, note.Error, note.UpdatedAt);
+        }
+
         return new CustomerLexwareResponse(contactId, link is null ? null : ToResponse(lexware, row, link), row.Configured && canAssign, contact.LexwareSync,
-            link is null ? null : SyncState(row, link, contact));
+            link is null ? null : SyncState(row, link, contact), creation);
+    }
+
+    private static async Task<Results<Ok<CustomerLexwareResponse>, ProblemHttpResult>> RetryCreateAsync(Guid contactId, LexwareService lexware,
+        LexwareAutoCreateService creation, ICurrentUser currentUser, CancellationToken cancellationToken)
+    {
+        var db = lexware.Db;
+        if (await db.Set<Contact>().AsNoTracking().SingleOrDefaultAsync(c => c.Id == contactId, cancellationToken) is not { } contact)
+        {
+            return CustomerNotFound();
+        }
+
+        if (!contact.LexwareSync)
+        {
+            return Problem(LexwareService.SyncDisabled(contact.Name));
+        }
+
+        lexware.Connection(await lexware.SettingsAsync(cancellationToken)); // ohne Schlüssel: klare Meldung
+        // Der Versuch prüft wieder zuerst auf Dubletten; ein inzwischen angelegter Kontakt wird gefunden und nicht doppelt angelegt.
+        await db.Set<LexwareContactCreation>().Where(x => x.ContactId == contactId && x.State != LexwareContactCreation.Failed).ExecuteDeleteAsync(cancellationToken);
+        await creation.TryAsync(contactId, currentUser.UserId, cancellationToken);
+        db.ChangeTracker.Clear();
+        return TypedResults.Ok(await CustomerResponseAsync(lexware, contactId, true, cancellationToken));
     }
 
     private static List<LexwareDeviationField> DeviationFields(LexwareContactLink link) =>
@@ -788,6 +851,8 @@ internal static class LexwareEndpoints
         if (contact.LexwareSync != request.Enabled)
         {
             contact.SetLexwareSync(request.Enabled);
+            // Bewusst eingeschaltet: wie ein neuer Kunde behandeln (ohne Treffer automatisch anlegen, sonst mögliche Dublette).
+            await db.Set<LexwareContactCreation>().Where(x => x.ContactId == contactId).ExecuteDeleteAsync(cancellationToken);
             audit.Record("lexware.sync_changed", currentUser.UserId, "contact", contactId.ToString(), new Dictionary<string, string?>
             {
                 ["name"] = contact.Name, ["lexwareSync"] = request.Enabled ? "ein" : "aus",
@@ -800,12 +865,48 @@ internal static class LexwareEndpoints
         return TypedResults.Ok(await CustomerResponseAsync(lexware, contactId, true, cancellationToken));
     }
 
-    private static async Task<Ok<EnableLexwareSyncResponse>> EnableSyncAsync(EnableLexwareSyncRequest request, LexwareService lexware, IAuditLog audit,
-        ICurrentUser currentUser, CancellationToken cancellationToken)
+    private static async Task<Ok<EnableLexwareSyncResponse>> EnableSyncAsync(EnableLexwareSyncRequest request, LexwareService lexware,
+        LexwareAutoCreateService creation, IAuditLog audit, ICurrentUser currentUser, CancellationToken cancellationToken)
     {
         var db = lexware.Db;
         var ids = request.ContactIds.Distinct().ToList();
-        var customers = await db.Set<Contact>().Where(c => ids.Contains(c.Id) && !c.LexwareSync && c.AnonymizedAt == null).ToListAsync(cancellationToken);
+        var customers = await db.Set<Contact>().Include(c => c.Persons).Where(c => ids.Contains(c.Id) && !c.LexwareSync && c.AnonymizedAt == null)
+            .ToListAsync(cancellationToken);
+
+        // Was das Einschalten bewirkt: Kunden ohne ähnlichen Kontakt werden danach automatisch in Lexware Office angelegt.
+        var wouldCreate = 0;
+        var withMatches = 0;
+        var row = await lexware.SettingsAsync(cancellationToken);
+        if (customers.Count > 0 && await creation.ActiveAsync(row, cancellationToken))
+        {
+            try
+            {
+                var (remote, _) = await lexware.ContactsAsync(row, refresh: false, cancellationToken);
+                var parties = remote.Select(LexwareService.Party).ToList();
+                var linked = await db.Set<LexwareContactLink>().Where(l => ids.Contains(l.ContactId)).Select(l => l.ContactId).ToListAsync(cancellationToken);
+                foreach (var customer in customers.Where(c => c.ArchivedAt is null && !linked.Contains(c.Id)))
+                {
+                    if (LexwareMatching.Find(LexwareService.Party(customer), parties, 1).Count > 0)
+                    {
+                        withMatches++;
+                    }
+                    else
+                    {
+                        wouldCreate++;
+                    }
+                }
+            }
+            catch (LexwareException)
+            {
+                // Ohne Verbindung keine Vorschau der Zahlen; angelegt wird dann auch nichts, bis Lexware Office wieder erreichbar ist.
+            }
+        }
+
+        if (request.Preview)
+        {
+            return TypedResults.Ok(new EnableLexwareSyncResponse(customers.Count, wouldCreate, withMatches));
+        }
+
         foreach (var customer in customers)
         {
             customer.SetLexwareSync(true);
@@ -813,6 +914,9 @@ internal static class LexwareEndpoints
 
         if (customers.Count > 0)
         {
+            // Frühere Vermerke gelten nicht mehr: Die Kunden werden wie neu behandelt (ohne Treffer anlegen, sonst mögliche Dublette).
+            var changed = customers.Select(c => c.Id).ToList();
+            await db.Set<LexwareContactCreation>().Where(x => changed.Contains(x.ContactId)).ExecuteDeleteAsync(cancellationToken);
             audit.Record("lexware.sync_enabled_bulk", currentUser.UserId, "settings", "lexware", new Dictionary<string, string?>
             {
                 ["count"] = customers.Count.ToString(System.Globalization.CultureInfo.InvariantCulture),
@@ -820,7 +924,7 @@ internal static class LexwareEndpoints
             await db.SaveChangesAsync(cancellationToken);
         }
 
-        return TypedResults.Ok(new EnableLexwareSyncResponse(customers.Count));
+        return TypedResults.Ok(new EnableLexwareSyncResponse(customers.Count, wouldCreate, withMatches));
     }
 
     private static async Task<Results<Ok<CreateLexwareContactResponse>, ProblemHttpResult>> CreateContactAsync(Guid contactId,
@@ -849,6 +953,28 @@ internal static class LexwareEndpoints
 
         var row = await lexware.SettingsAsync(cancellationToken);
         var connection = lexware.Connection(row);
+
+        // Nicht gleichzeitig mit der automatischen Anlage im Hintergrund: sonst entstünde der Kontakt doppelt.
+        await lexware.SyncGate.WaitAsync(cancellationToken);
+        try
+        {
+            return await CreateContactCoreAsync(contactId, request, lexware, audit, currentUser, contact, row, connection, cancellationToken);
+        }
+        finally
+        {
+            lexware.SyncGate.Release();
+        }
+    }
+
+    private static async Task<Results<Ok<CreateLexwareContactResponse>, ProblemHttpResult>> CreateContactCoreAsync(Guid contactId,
+        CreateLexwareContactRequest request, LexwareService lexware, IAuditLog audit, ICurrentUser currentUser, Contact contact, LexwareSettingsRow row,
+        LexwareConnection connection, CancellationToken cancellationToken)
+    {
+        var db = lexware.Db;
+        if (await db.Set<LexwareContactLink>().AnyAsync(l => l.ContactId == contactId, cancellationToken))
+        {
+            return Problem(new LexwareException("ALREADY_LINKED", $"„{contact.Name}“ ist bereits mit einem Kontakt in Lexware Office verknüpft."));
+        }
 
         // Ohne Dublettenprüfung wird nie angelegt: Die Prüfung läuft hier auf dem Server, nicht nur in der Oberfläche.
         var (contacts, _) = await lexware.ContactsAsync(row, refresh: false, cancellationToken);
@@ -894,6 +1020,12 @@ internal static class LexwareEndpoints
         }
 
         db.Remove(link);
+        // Bewusst gelöst: Der Kunde wird danach nicht von selbst erneut in Lexware Office angelegt.
+        if (!await db.Set<LexwareContactCreation>().AnyAsync(x => x.ContactId == contactId, cancellationToken))
+        {
+            db.Add(new LexwareContactCreation { ContactId = contactId, State = LexwareContactCreation.Skipped, UpdatedAt = lexware.Clock.GetUtcNow() });
+        }
+
         audit.Record("lexware.contact_unlinked", currentUser.UserId, "contact", contactId.ToString(), new Dictionary<string, string?>
         {
             ["lexwareContact"] = link.LexwareName, ["lexwareNumber"] = link.LexwareNumber,
@@ -1128,8 +1260,18 @@ internal static class LexwareEndpoints
                 return new LexwareDeviationItem(Summary(c, link.LexwareContactId), link.LexwareContactId, link.LexwareName,
                     lexware.ContactUrl(row, link.LexwareContactId), DeviationFields(link), link.SyncedAt);
             }).ToList();
+        var notes = await lexware.Db.Set<LexwareContactCreation>().AsNoTracking().ToDictionaryAsync(x => x.ContactId, cancellationToken);
+        var auto = row.Configured && row.AutoCreate;
         var onlyLocal = data.Customers.Where(c => !data.Links.ContainsKey(c.Id) && c.ArchivedAt is null && c.LexwareSync)
-            .OrderBy(c => c.Name, StringComparer.OrdinalIgnoreCase).Select(c => Summary(c, null)).ToList();
+            .OrderBy(c => c.Name, StringComparer.OrdinalIgnoreCase).Select(c =>
+            {
+                var note = notes.GetValueOrDefault(c.Id);
+                return Summary(c, null) with
+                {
+                    Creation = note is null ? auto ? "pending" : "manual" : note.State == LexwareContactCreation.Skipped ? "manual" : note.State,
+                    CreationError = note?.Error,
+                };
+            }).ToList();
         var excluded = data.Customers.Where(c => !data.Links.ContainsKey(c.Id) && c.ArchivedAt is null && !c.LexwareSync)
             .OrderBy(c => c.Name, StringComparer.OrdinalIgnoreCase).Select(c => Summary(c, null)).ToList();
         var linkedRemote = data.Links.Values.ToHashSet(StringComparer.Ordinal);
@@ -1186,6 +1328,8 @@ internal static class LexwareEndpoints
                 ["count"] = linked.ToString(System.Globalization.CultureInfo.InvariantCulture),
             });
             await lexware.Db.SaveChangesAsync(cancellationToken);
+            await lexware.Db.Set<LexwareContactCreation>().Where(x => lexware.Db.Set<LexwareContactLink>().Any(l => l.ContactId == x.ContactId))
+                .ExecuteDeleteAsync(cancellationToken);
         }
 
         return TypedResults.Ok(new LinkUniqueLexwareResponse(linked, request.Pairs.Count - linked));

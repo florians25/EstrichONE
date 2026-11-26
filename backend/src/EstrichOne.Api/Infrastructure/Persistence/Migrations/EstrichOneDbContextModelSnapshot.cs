@@ -4506,6 +4506,42 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                     b.ToTable("user_two_factor", (string)null);
                 });
 
+            modelBuilder.Entity("EstrichOne.Api.Modules.Lexware.LexwareContactCreation", b =>
+                {
+                    b.Property<Guid>("ContactId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("contact_id");
+
+                    b.Property<int>("Attempts")
+                        .HasColumnType("integer")
+                        .HasColumnName("attempts");
+
+                    b.Property<string>("Error")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("error");
+
+                    b.Property<DateTimeOffset?>("NextAttemptAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("next_attempt_at");
+
+                    b.Property<string>("State")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("state");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("ContactId")
+                        .HasName("pk_lexware_contact_creations");
+
+                    b.ToTable("lexware_contact_creations", (string)null);
+                });
+
             modelBuilder.Entity("EstrichOne.Api.Modules.Lexware.LexwareContactLink", b =>
                 {
                     b.Property<Guid>("ContactId")
@@ -4608,6 +4644,12 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                     b.Property<int>("Id")
                         .HasColumnType("integer")
                         .HasColumnName("id");
+
+                    b.Property<bool>("AutoCreate")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true)
+                        .HasColumnName("auto_create");
 
                     b.Property<string>("BaseUrl")
                         .HasMaxLength(300)

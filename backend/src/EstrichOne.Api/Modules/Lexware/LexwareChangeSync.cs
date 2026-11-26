@@ -326,6 +326,12 @@ internal sealed class LexwareChangeSyncJob(IServiceScopeFactory scopes, TimeProv
         }
 
         var full = now - _lastFull >= options.Value.ChangeSyncInterval;
+        using (var creation = scopes.CreateScope())
+        {
+            // Neue Kunden ohne ähnlichen Kontakt zuerst anlegen; ihr Erstabgleich folgt im selben Lauf.
+            await creation.ServiceProvider.GetRequiredService<LexwareAutoCreateService>().RunAsync(cancellationToken);
+        }
+
         using var scope = scopes.CreateScope();
         var run = await scope.ServiceProvider.GetRequiredService<LexwareChangeSyncService>().RunAsync(full, cancellationToken, reload: true);
         if (run.Error is not null)

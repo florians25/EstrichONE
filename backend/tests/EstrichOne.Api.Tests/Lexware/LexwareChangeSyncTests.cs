@@ -493,6 +493,153 @@ public sealed class LexwareChangeSyncTests(PostgresFixture postgres) : IAsyncLif
         _lexware.Calls.ShouldAllBe(c => c.Method == "GET");
     }
 
+    // ---------- Neue Kunden automatisch in Lexware Office anlegen ----------
+
+    private async Task<int> AutoCreateAsync()
+    {
+        await using var scope = _factory.Services.CreateAsyncScope();
+        return await scope.ServiceProvider.GetRequiredService<LexwareAutoCreateService>().RunAsync(Ct);
+    }
+
+    private int Posts() => _lexware.CallsTo("POST", "/v1/contacts").Count();
+
+    [Fact]
+    public async Task NewCustomer_WithoutSimilarContact_IsCreatedInLexwareExactlyOnce_AndLinked()
+    {
+        (await SendAsync<LexwareSettingsResponse>(HttpMethod.Get, Settings)).AutoCreate.ShouldBeTrue();
+        _lexware.AddContact("Ganz Anderer Betrieb", email: "anders@example.org");
+        var customer = await CustomerAsync("Fliesen Brandl GmbH", email: "info@brandl.example", street: "Hofweg 2", postalCode: "83080", city: "Oberaudorf");
+        Posts().ShouldBe(0); // das Speichern des Kunden wartet nicht auf Lexware Office
+        (await StateAsync(customer)).Creation!.State.ShouldBe("pending");
+
+        (await AutoCreateAsync()).ShouldBe(1);
+
+        Posts().ShouldBe(1);
+        var state = await StateAsync(customer);
+        state.Creation.ShouldBeNull();
+        state.Link!.Origin.ShouldBe(LexwareLinkOrigin.CreatedInLexware);
+        var stored = _lexware.Contacts[state.Link.LexwareContactId];
+        stored["company"]!["name"]!.GetValue<string>().ShouldBe("Fliesen Brandl GmbH");
+        stored["addresses"]!["billing"]![0]!["zip"]!.GetValue<string>().ShouldBe("83080");
+        var audit = await DbAsync(db => db.Set<AuditEvent>().AsNoTracking().SingleAsync(e => e.Action == "lexware.contact_created", Ct));
+        audit.ActorUserId.ShouldBeNull();
+
+        // Weitere Läufe legen nichts mehr an; der Erstabgleich danach schreibt nichts.
+        (await AutoCreateAsync()).ShouldBe(0);
+        await RunAsync(full: true);
+        Posts().ShouldBe(1);
+        _lexware.CallsTo("PUT", "/v1/contacts/").ShouldBeEmpty();
+        (await StateAsync(customer)).Sync!.State.ShouldBe("synced");
+    }
+
+    [Fact]
+    public async Task NewCustomer_WithSimilarContact_OrSwitchOff_OrSettingOff_IsNotCreated()
+    {
+        _lexware.AddContact("HUBER BAU GMBH & Co. KG", email: "buero@huber.example", zip: "83022");
+        var similar = await CustomerAsync("Huber Bau GmbH", email: "buero@huber.example");
+        var off = await CustomerAsync("Nur Hier Bau GmbH", lexwareSync: false);
+
+        (await AutoCreateAsync()).ShouldBe(0);
+        Posts().ShouldBe(0);
+        (await StateAsync(similar)).Creation!.State.ShouldBe("duplicates");
+        (await StateAsync(off)).Creation.ShouldBeNull();
+        // Der Kunde mit Treffer steht in der Abgleichübersicht unter den möglichen Dubletten.
+        var overview = await SendAsync<LexwareReconciliationResponse>(HttpMethod.Get, Reconciliation);
+        overview.Suggestions.ShouldHaveSingleItem().Customer.Id.ShouldBe(similar);
+        overview.OnlyEstrichOneItems.ShouldHaveSingleItem().Creation.ShouldBe("duplicates");
+        (await AutoCreateAsync()).ShouldBe(0); // nicht bei jedem Lauf erneut
+
+        // Schalter später eingeschaltet: dieselbe Regel, ohne Treffer wird angelegt.
+        await SendAsync<CustomerLexwareResponse>(HttpMethod.Put, $"/api/v1/lexware/customers/{off}/sync", new { enabled = true });
+        (await AutoCreateAsync()).ShouldBe(1);
+        (await StateAsync(off)).Link.ShouldNotBeNull();
+        Posts().ShouldBe(1);
+
+        // Einstellung aus: nichts wird angelegt. Wieder ein: Die Kunden aus der Zwischenzeit gelten als Bestand.
+        (await SendAsync<LexwareSettingsResponse>(HttpMethod.Put, Settings, new { autoCreate = false })).AutoCreate.ShouldBeFalse();
+        var later = await CustomerAsync("Spätere Anlage GmbH");
+        (await AutoCreateAsync()).ShouldBe(0);
+        (await StateAsync(later)).Creation!.State.ShouldBe("manual");
+        await SendAsync<LexwareSettingsResponse>(HttpMethod.Put, Settings, new { autoCreate = true });
+        (await AutoCreateAsync()).ShouldBe(0);
+        (await StateAsync(later)).Creation!.State.ShouldBe("manual");
+        var afterwards = await CustomerAsync("Neu Danach GmbH");
+        (await AutoCreateAsync()).ShouldBe(1);
+        (await StateAsync(afterwards)).Link.ShouldNotBeNull();
+        Posts().ShouldBe(2);
+
+        // Bewusst gelöste Verknüpfung: kein erneutes Anlegen von selbst.
+        using var unlink = await _admin.DeleteAsync(new Uri($"/api/v1/lexware/customers/{afterwards}/link", UriKind.Relative), Ct);
+        unlink.StatusCode.ShouldBe(HttpStatusCode.NoContent);
+        (await AutoCreateAsync()).ShouldBe(0);
+        Posts().ShouldBe(2);
+    }
+
+    [Fact]
+    public async Task FailedCreation_IsShown_RetriedWithFreshDuplicateCheck_AndNeverCreatesTwice()
+    {
+        var customer = await CustomerAsync("Fliesen Brandl GmbH", email: "info@brandl.example");
+        _lexware.Raw["/v1/contacts"] = (422, """{"IssueList":[{"i18nKey":"missing_entity","source":"company.name","type":"validation_failure"}]}""");
+        await using (var scope = _factory.Services.CreateAsyncScope())
+        {
+            // Die Kontaktliste liegt schon vor; abgelehnt wird erst das Anlegen.
+            _lexware.Raw.Clear();
+            await scope.ServiceProvider.GetRequiredService<LexwareService>().ContactsAsync(
+                await scope.ServiceProvider.GetRequiredService<LexwareService>().SettingsAsync(Ct), refresh: true, Ct);
+            _lexware.Raw["/v1/contacts"] = (422, """{"IssueList":[{"i18nKey":"missing_entity","source":"company.name","type":"validation_failure"}]}""");
+        }
+
+        (await AutoCreateAsync()).ShouldBe(0);
+        var failed = await StateAsync(customer);
+        failed.Creation!.State.ShouldBe("failed");
+        failed.Creation.Error!.ShouldContain("company.name missing_entity");
+        (await GetCustomerAsync(customer))["name"]!.GetValue<string>().ShouldBe("Fliesen Brandl GmbH"); // der Kunde selbst ist unberührt
+
+        // Nicht bei jedem Lauf erneut. Inzwischen hat jemand den Kontakt in Lexware Office von Hand angelegt:
+        // Der neue Versuch prüft zuerst erneut und legt nichts doppelt an.
+        _lexware.Raw.Clear();
+        var posts = Posts();
+        (await AutoCreateAsync()).ShouldBe(0);
+        Posts().ShouldBe(posts);
+        _lexware.AddContact("Fliesen Brandl GmbH", email: "info@brandl.example");
+        var retried = await SendAsync<CustomerLexwareResponse>(HttpMethod.Post, $"/api/v1/lexware/customers/{customer}/create/retry");
+        retried.Creation!.State.ShouldBe("duplicates");
+        retried.Link.ShouldBeNull();
+        Posts().ShouldBe(posts);
+        _lexware.Contacts.Values.Count(c => c["company"]?["name"]?.GetValue<string>() == "Fliesen Brandl GmbH").ShouldBe(1);
+
+        // Ohne Treffer legt „Erneut versuchen“ an.
+        var second = await CustomerAsync("Estrich Sonnleitner");
+        _lexware.Raw["/v1/contacts"] = (503, "");
+        (await AutoCreateAsync()).ShouldBe(0);
+        _lexware.Raw.Clear();
+        var done = await SendAsync<CustomerLexwareResponse>(HttpMethod.Post, $"/api/v1/lexware/customers/{second}/create/retry");
+        done.Link.ShouldNotBeNull();
+        Posts().ShouldBe(posts + 2); // der abgelehnte Versuch und der erfolgreiche
+        _lexware.Contacts.Values.Count(c => c["company"]?["name"]?.GetValue<string>() == "Estrich Sonnleitner").ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task BulkEnable_ShowsBeforehandHowManyWouldBeCreated()
+    {
+        _lexware.AddContact("HUBER BAU GMBH & Co. KG", email: "buero@huber.example");
+        var similar = await CustomerAsync("Huber Bau GmbH", email: "buero@huber.example", lexwareSync: false);
+        var fresh = await CustomerAsync("Fliesen Brandl GmbH", lexwareSync: false);
+        const string enable = Reconciliation + "/enable-sync";
+
+        var preview = await SendAsync<EnableLexwareSyncResponse>(HttpMethod.Post, enable, new { contactIds = new[] { similar, fresh }, preview = true });
+        (preview.Changed, preview.WouldCreate, preview.WithMatches).ShouldBe((2, 1, 1));
+        (await GetCustomerAsync(fresh))["lexwareSync"]!.GetValue<bool>().ShouldBeFalse(); // die Vorschau ändert nichts
+        (await AutoCreateAsync()).ShouldBe(0);
+
+        var done = await SendAsync<EnableLexwareSyncResponse>(HttpMethod.Post, enable, new { contactIds = new[] { similar, fresh } });
+        (done.Changed, done.WouldCreate, done.WithMatches).ShouldBe((2, 1, 1));
+        (await AutoCreateAsync()).ShouldBe(1);
+        (await StateAsync(fresh)).Link.ShouldNotBeNull();
+        (await StateAsync(similar)).Creation!.State.ShouldBe("duplicates");
+        Posts().ShouldBe(1);
+    }
+
     // ---------- Prüfung beim Anlegen eines Kunden ----------
 
     [Fact]

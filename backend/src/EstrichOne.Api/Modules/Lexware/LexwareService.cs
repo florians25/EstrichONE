@@ -373,6 +373,12 @@ public sealed class LexwareService(
             LexwareNumber = Cut(lexware.CustomerNumber, 50), Origin = origin, LinkedByUserId = userId, LinkedAt = clock.GetUtcNow(),
         };
         db.Add(link);
+        // Mit der Verknüpfung ist ein Vermerk zur automatischen Anlage erledigt.
+        if (await db.Set<LexwareContactCreation>().SingleOrDefaultAsync(x => x.ContactId == contact.Id, cancellationToken) is { } creation)
+        {
+            db.Remove(creation);
+        }
+
         return link;
     }
 
@@ -531,6 +537,11 @@ internal sealed class LexwareCustomerReferences(EstrichOneDbContext db) : ICusto
         if (await db.Set<LexwareContactLink>().SingleOrDefaultAsync(l => l.ContactId == contactId, cancellationToken) is { } link)
         {
             db.Remove(link);
+        }
+
+        if (await db.Set<LexwareContactCreation>().SingleOrDefaultAsync(x => x.ContactId == contactId, cancellationToken) is { } creation)
+        {
+            db.Remove(creation);
         }
     }
 }

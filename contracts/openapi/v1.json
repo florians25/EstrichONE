@@ -24379,6 +24379,66 @@
         ]
       }
     },
+    "/api/v1/lexware/customers/{contactId}/create/retry": {
+      "post": {
+        "tags": [
+          "Lexware Office"
+        ],
+        "summary": "Automatische Anlage in Lexware Office erneut versuchen (prüft vorher erneut auf Dubletten; legt nur ohne Treffer an)",
+        "operationId": "RetryLexwareContactCreation",
+        "parameters": [
+          {
+            "name": "contactId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerLexwareResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/lexware/customers/{contactId}/sync/run": {
       "post": {
         "tags": [
@@ -35527,6 +35587,16 @@
                 "$ref": "#/components/schemas/LexwareSyncState"
               }
             ]
+          },
+          "creation": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/LexwareCreationState"
+              }
+            ]
           }
         }
       },
@@ -37854,6 +37924,10 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          "preview": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -37866,6 +37940,16 @@
           "changed": {
             "type": "integer",
             "format": "int32"
+          },
+          "wouldCreate": {
+            "type": "integer",
+            "format": "int32",
+            "default": 0
+          },
+          "withMatches": {
+            "type": "integer",
+            "format": "int32",
+            "default": 0
           }
         }
       },
@@ -40853,6 +40937,32 @@
           }
         }
       },
+      "LexwareCreationState": {
+        "required": [
+          "state",
+          "error",
+          "at"
+        ],
+        "type": "object",
+        "properties": {
+          "state": {
+            "type": "string"
+          },
+          "error": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "at": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
       "LexwareCustomerCandidate": {
         "required": [
           "customer",
@@ -40954,6 +41064,18 @@
           "syncEnabled": {
             "type": "boolean",
             "default": false
+          },
+          "creation": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "creationError": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -41346,6 +41468,10 @@
             "type": "integer",
             "format": "int32",
             "default": 0
+          },
+          "autoCreate": {
+            "type": "boolean",
+            "default": true
           }
         }
       },
@@ -48037,6 +48163,12 @@
               {
                 "$ref": "#/components/schemas/LexwareChangeSync"
               }
+            ]
+          },
+          "autoCreate": {
+            "type": [
+              "null",
+              "boolean"
             ]
           }
         }

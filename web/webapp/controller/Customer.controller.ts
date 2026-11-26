@@ -21,7 +21,7 @@ import { openCustomerRemoval, reactivateCustomer } from "../util/customerRemoval
 import { customerState } from "../util/customerRemoval";
 import { session } from "../util/session";
 import {
-	changeSyncState, deviationValue, euro, lexwareVisible, linkText, pdfAvailable, PDF_DRAFT_HINT, problemText, syncStateText, voucherNumber, voucherPdfPath, voucherStatus,
+	changeSyncState, creationStateText, deviationValue, euro, lexwareVisible, linkText, pdfAvailable, PDF_DRAFT_HINT, problemText, syncStateText, voucherNumber, voucherPdfPath, voucherStatus,
 	voucherSummary, voucherTitle, voucherTypeText, type CustomerLexware, type CustomerVouchers, type DeviationSource, type LexwareDeviationField, type LexwareVoucherItem,
 } from "../util/lexware";
 import {
@@ -55,7 +55,7 @@ export default class Customer extends BaseController {
 			primaryPhone: "", primaryEmail: "", routeUrl: null, mainPerson: "", kpis: [],
 			bauakten: [], shownBauakten: [], bauakteFilter: "", bauakteSearch: "", bauakteEmpty: "", counts: { all: 0, active: 0, inquiry: 0, old: 0 },
 			documents: [], reach: [], persons: [], history: [], lexware: { loaded: false, busy: false, link: null, canEdit: false, text: "", syncEnabled: false, syncText: "", syncState: "None", syncHint: "",
-				vouchers: [], vouchersBusy: false, vouchersSummary: "", vouchersError: "", change: { text: "", state: "None", icon: "", hint: "", canRun: false }, deviations: [] } });
+				vouchers: [], vouchersBusy: false, vouchersSummary: "", vouchersError: "", change: { text: "", state: "None", icon: "", hint: "", canRun: false }, deviations: [], creation: { text: "", state: "None", hint: "", retry: false } } });
 	}
 
 	async onRouteMatched(match: RouteMatch): Promise<void> {
@@ -301,7 +301,7 @@ export default class Customer extends BaseController {
 		const m = this.model();
 		if (!lexwareVisible(session.data.modules ?? {}, session.data.permissions ?? {})) {
 			m.setProperty("/lexware", { loaded: false, busy: false, link: null, canEdit: false, text: "", syncEnabled: false, syncText: "", syncState: "None", syncHint: "",
-				vouchers: [], vouchersBusy: false, vouchersSummary: "", vouchersError: "", change: { text: "", state: "None", icon: "", hint: "", canRun: false }, deviations: [] });
+				vouchers: [], vouchersBusy: false, vouchersSummary: "", vouchersError: "", change: { text: "", state: "None", icon: "", hint: "", canRun: false }, deviations: [], creation: { text: "", state: "None", hint: "", retry: false } });
 			return;
 		}
 		m.setProperty("/lexware/busy", true);
@@ -315,6 +315,7 @@ export default class Customer extends BaseController {
 		const hadLink = !!m.getProperty("/lexware/link");
 		m.setProperty("/lexware", { ...(m.getProperty("/lexware") as object), loaded: true, busy: false, link, canEdit: state?.canEdit === true, text: linkText(link),
 			syncEnabled: state?.syncEnabled === true, syncText: sync.text, syncState: sync.state, syncHint: sync.hint,
+			creation: creationStateText(link ? null : state?.creation?.state, state?.creation?.error),
 			change: { ...changeSyncState(link ? state?.sync : null, dateTime), canRun: !!link && ["synced", "deviations", "pending", "error"].includes(state?.sync?.state ?? "") },
 			deviations: (link ? state?.sync?.deviations ?? [] : []).map((d: LexwareDeviationField) => ({
 				...d, estrichOneText: deviationValue(d.estrichOne), lexwareText: deviationValue(d.lexware) })) });
@@ -409,6 +410,14 @@ export default class Customer extends BaseController {
 
 	onLexwareTakeRemote(): void {
 		void this.takeAll("lexware");
+	}
+
+	/** Automatische Anlage in Lexware Office erneut versuchen (der Server prüft vorher erneut auf Dubletten). */
+	async onLexwareCreateRetry(): Promise<void> {
+		const state = await this.run(() => post<CustomerLexware>(`lexware/customers/${this.id}/create/retry`));
+		if (!state) return;
+		this.applyLexware(state);
+		if (state.link) this.toast("In Lexware Office angelegt");
 	}
 
 	onLexwareVoucherBauakte(e: Event): void {

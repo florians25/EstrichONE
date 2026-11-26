@@ -158,6 +158,12 @@
 								enabled="{= ${session>/permissions/invoices.assign} === true }" class="sapUiSmallMarginEnd"/>
 							<ObjectStatus id="lexwareSyncState" text="{view>/lexware/syncText}" state="{view>/lexware/syncState}"/>
 						</HBox>
+						<HBox alignItems="Center" wrap="Wrap" renderType="Bare" class="sapUiSmallMarginBottom" visible="{= !!${view>/lexware/creation/text} }">
+							<ObjectStatus id="lexwareCreationState" text="{view>/lexware/creation/text}" state="{view>/lexware/creation/state}" class="sapUiSmallMarginEnd"/>
+							<Text text="{view>/lexware/creation/hint}" class="eoMuted sapUiSmallMarginEnd"/>
+							<Button id="lexwareCreateRetry" text="Erneut versuchen" icon="sap-icon://refresh" press=".onLexwareCreateRetry"
+								visible="{= ${view>/lexware/creation/retry} === true &amp;&amp; ${view>/lexware/canEdit} === true }"/>
+						</HBox>
 						<MessageStrip id="lexwareSyncHint" type="{= ${view>/lexware/link} ? 'Warning' : 'Information' }" showIcon="true" class="sapUiSmallMarginBottom"
 							visible="{= !!${view>/lexware/syncHint} }" text="{view>/lexware/syncHint}"/>
 						<form:SimpleForm editable="false" layout="ResponsiveGridLayout" labelSpanXL="3" labelSpanL="3" labelSpanM="4" labelSpanS="12" adjustLabelSpan="false"

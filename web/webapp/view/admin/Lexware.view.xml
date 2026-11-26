@@ -53,7 +53,12 @@
 								<Label text="Neue Kunden standardmäßig mit Lexware Office abgleichen" labelFor="lxNewSync"/>
 								<VBox>
 									<Switch id="lxNewSync" state="{view>/s/newCustomersSync}" customTextOn=" " customTextOff=" "/>
-									<Text text="Vorgabe für den Schalter „Mit Lexware Office abgleichen“ bei neuen Kunden in Web und Apps. Je Kunde lässt sich der Schalter ändern. Kunden, die es vor dem Einschalten des Moduls schon gab, bleiben zunächst nur in EstrichONE; den Abgleich schalten Sie im Kundenabgleich für ausgewählte Kunden ein. Übertragen wird erst, wenn Sie einen Kunden verknüpfen oder anlegen."/>
+									<Text text="Vorgabe für den Schalter „Mit Lexware Office abgleichen“ bei neuen Kunden in Web und Apps. Je Kunde lässt sich der Schalter ändern. Kunden, die es vor dem Einschalten des Moduls schon gab, bleiben zunächst nur in EstrichONE; den Abgleich schalten Sie im Kundenabgleich für ausgewählte Kunden ein."/>
+								</VBox>
+								<Label text="Neue Kunden ohne Treffer automatisch in Lexware Office anlegen" labelFor="lxAutoCreate"/>
+								<VBox>
+									<Switch id="lxAutoCreate" state="{view>/s/autoCreate}" customTextOn=" " customTextOff=" "/>
+									<Text text="Gilt für neu angelegte Kunden mit eingeschaltetem Abgleich und für Kunden, bei denen Sie den Abgleich später einschalten. EstrichONE prüft zuerst auf ähnliche Kontakte in Lexware Office. Ohne Treffer wird der Kunde im Hintergrund dort angelegt und verknüpft. Mit Treffern wird nichts angelegt; der Kunde steht dann im Kundenabgleich unter „Mögliche Dubletten“. Kunden, die es schon gibt, werden nicht nachträglich angelegt."/>
 								</VBox>
 								<Label text="Änderungen an verknüpften Kunden abgleichen" labelFor="lxChangeSync"/>
 								<VBox>
@@ -187,7 +192,8 @@
 									</columns>
 									<items>
 										<ColumnListItem>
-											<VBox><Link text="{view>name}" press=".onOpenCustomer" wrapping="true"/><Text text="{view>numberText}" class="eoMuted"/></VBox>
+											<VBox><Link text="{view>name}" press=".onOpenCustomer" wrapping="true"/><Text text="{view>numberText}" class="eoMuted"/>
+												<ObjectStatus text="{view>creationText}" state="{view>creationState}" tooltip="{view>creationHint}" visible="{= !!${view>creationText} }"/></VBox>
 											<Text text="{view>place}"/><Text text="{view>email}"/>
 											<Button text="Prüfen und verknüpfen" icon="sap-icon://chain-link" press=".onLinkCustomer"
 												tooltip="Dublettenprüfung in Lexware Office, danach verknüpfen oder bewusst neu anlegen"/>
@@ -203,7 +209,7 @@
 										<ToolbarSpacer/>
 										<Button id="lexwareEnableSync" text="{= 'Abgleich einschalten (' + ${view>/excludedSelected} + ')' }" icon="sap-icon://synchronize" press=".onEnableSync"
 											enabled="{= ${view>/excludedSelected} > 0 }"
-											tooltip="Schaltet „Mit Lexware Office abgleichen“ für die ausgewählten Kunden ein. Übertragen wird dabei nichts."/>
+											tooltip="Schaltet „Mit Lexware Office abgleichen“ für die ausgewählten Kunden ein. Vorher sehen Sie, wie viele Kunden dadurch in Lexware Office neu angelegt würden."/>
 									</OverflowToolbar></headerToolbar>
 									<columns>
 										<Column><Text text="Kunde in EstrichONE"/></Column><Column minScreenWidth="Tablet" demandPopin="true"><Text text="Anschrift"/></Column>

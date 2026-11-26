@@ -4,7 +4,7 @@ import {
   syncInitial, syncStateText, uniquePairs, voucherNumber, voucherStatus, voucherSummary, voucherTypeText, type LexwareReconciliation,
   changeSyncHelp, changeSyncOptions, changeSyncStand, changeSyncState, deviationSummary, deviationValue, pdfAvailable, PDF_DRAFT_HINT, resolveRequest,
   voucherPdfPath, voucherTitle, type LexwareSyncState, bauakteLexwareBlock, type BauakteLexware,
-  lexwareCandidateAction, lexwareCandidateLine, lexwareCheckActive, lexwareCheckRequest, lexwareCheckText, LEXWARE_EXISTS_WARNING,
+  creationStateText, enableSyncQuestion, lexwareCandidateAction, lexwareCandidateLine, lexwareCheckActive, lexwareCheckRequest, lexwareCheckText, LEXWARE_EXISTS_WARNING,
 } from '../webapp/util/lexware';
 import { adminAreas, matchesArea } from '../webapp/util/adminCatalog';
 import { routes } from '../webapp/util/routes';
@@ -324,5 +324,27 @@ describe('Lexware Office: Prüfung beim Anlegen eines Kunden', () => {
     expect(lexwareCandidateAction(contact, true)).toBe('import');
     expect(lexwareCandidateAction(contact, false)).toBe('none');
     expect(lexwareCandidateAction({ ...contact, linkedContactId: 'k9', linkedContactName: 'Kern' }, true)).toBe('linked');
+  });
+});
+
+describe('Lexware Office: automatische Anlage neuer Kunden', () => {
+  it('Stand am Kunden: ausstehend, ähnlicher Kontakt, fehlgeschlagen mit erneutem Versuch', () => {
+    expect(creationStateText('pending')).toMatchObject({ text: 'Anlage in Lexware Office ausstehend', state: 'Information', retry: false });
+    expect(creationStateText('duplicates')).toMatchObject({ state: 'Warning', retry: false });
+    expect(creationStateText('duplicates').text).toContain('ähnlicher Kontakt');
+    const failed = creationStateText('failed', 'Lexware Office hat die Angaben nicht angenommen.');
+    expect(failed).toMatchObject({ text: 'Anlage in Lexware Office fehlgeschlagen', state: 'Error', retry: true });
+    expect(failed.hint).toBe('Lexware Office hat die Angaben nicht angenommen. EstrichONE versucht es später erneut.');
+    expect(creationStateText('manual').text).toBe('');
+    expect(creationStateText(null).text).toBe('');
+  });
+
+  it('Massenaktion nennt vorher, wie viele Kunden neu angelegt würden', () => {
+    expect(enableSyncQuestion({ changed: 1, wouldCreate: 0, withMatches: 0 }))
+      .toBe('Abgleich mit Lexware Office für den ausgewählten Kunden einschalten? Dadurch wird in Lexware Office kein Kunde neu angelegt.');
+    expect(enableSyncQuestion({ changed: 5, wouldCreate: 3, withMatches: 2 })).toBe('Abgleich mit Lexware Office für 5 ausgewählte Kunden einschalten? '
+      + 'Dadurch werden 3 Kunden automatisch in Lexware Office neu angelegt, weil es dort keinen ähnlichen Kontakt gibt. '
+      + '2 Kunden haben dort einen ähnlichen Kontakt und erscheinen unter „Mögliche Dubletten“.');
+    expect(enableSyncQuestion({ changed: 2, wouldCreate: 1, withMatches: 1 })).toContain('wird 1 Kunde automatisch');
   });
 });

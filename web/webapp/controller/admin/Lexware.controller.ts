@@ -9,7 +9,7 @@ import { dateTime } from "../../util/format";
 import { session } from "../../util/session";
 import type { RouteMatch } from "../../util/router";
 import {
-	changeSyncHelp, changeSyncOptions, changeSyncStand, changeSyncState, deviationValue, lastTestText, matchLabel, placeText, reconciliationFigures, uniquePairs,
+	changeSyncHelp, changeSyncOptions, changeSyncStand, changeSyncState, creationStateText, deviationValue, enableSyncQuestion, lastTestText, matchLabel, placeText, reconciliationFigures, uniquePairs,
 	type DeviationSource, type LexwareContactSummary, type LexwareCustomerSummary, type LexwareDeviationItem, type LexwareInternalDuplicate, type LexwareLinkedPair,
 	type LexwareReconciliation, type LexwareSettings, type LexwareSuggestion, type LexwareTestResponse,
 } from "../../util/lexware";
@@ -86,7 +86,7 @@ export default class Lexware extends BaseController {
 		const s = m.getProperty("/s") as LexwareSettings;
 		const saved = await this.run(() => put<LexwareSettings>("settings/integrations/lexware", {
 			apiKey: String(m.getProperty("/apiKey") ?? "").trim() || null, baseUrl: String(m.getProperty("/baseUrl") ?? "").trim() || null,
-			version: s.version, newCustomersSync: s.newCustomersSync === true, changeSync: s.changeSync,
+			version: s.version, newCustomersSync: s.newCustomersSync === true, changeSync: s.changeSync, autoCreate: s.autoCreate === true,
 		}));
 		if (saved) {
 			this.apply(saved);
@@ -156,7 +156,10 @@ export default class Lexware extends BaseController {
 			...d, systemText: d.system === "lexware" ? "Lexware Office" : "EstrichONE", firstText: numberText(d.firstNumber), secondText: numberText(d.secondNumber),
 			matchText: d.reasons.join(", "),
 		})));
-		m.setProperty("/onlyEstrichOne", r.onlyEstrichOneItems.map((c) => ({ ...c, numberText: numberText(c.customerNumber), place: placeText(c) })));
+		m.setProperty("/onlyEstrichOne", r.onlyEstrichOneItems.map((c) => {
+			const creation = creationStateText(c.creation, c.creationError);
+			return { ...c, numberText: numberText(c.customerNumber), place: placeText(c), creationText: creation.text, creationState: creation.state, creationHint: creation.hint };
+		}));
 		m.setProperty("/onlyLexware", r.onlyLexwareItems.map((c) => ({ ...c, numberText: numberText(c.customerNumber), place: placeText(c) })));
 		m.setProperty("/excluded", (r.excludedItems ?? []).map((c) => ({ ...c, numberText: numberText(c.customerNumber), place: placeText(c) })));
 		m.setProperty("/excludedSelected", 0);
@@ -253,9 +256,11 @@ export default class Lexware extends BaseController {
 		const contactIds = (this.byId("lexwareExcluded") as Table).getSelectedItems()
 			.map((i) => (i.getBindingContext("view")?.getObject() as LexwareCustomerSummary).id);
 		if (contactIds.length === 0) return;
-		if (!await this.confirm(`Abgleich mit Lexware Office für ${contactIds.length === 1 ? "den ausgewählten Kunden" : `${contactIds.length} ausgewählte Kunden`} einschalten? `
-			+ "Übertragen wird dabei nichts. Die Kunden erscheinen danach unter „Nur in EstrichONE“ bzw. „Mögliche Dubletten“ und lassen sich verknüpfen.",
-		{ action: "Einschalten" })) return;
+		// Vorher zeigen, wie viele Kunden dadurch in Lexware Office neu angelegt würden.
+		const preview = await this.run(() => post<{ changed: number; wouldCreate: number; withMatches: number }>(
+			"settings/integrations/lexware/reconciliation/enable-sync", { contactIds, preview: true }));
+		if (!preview) return;
+		if (!await this.confirm(enableSyncQuestion(preview), { action: "Einschalten" })) return;
 		const result = await this.run(() => post<{ changed: number }>("settings/integrations/lexware/reconciliation/enable-sync", { contactIds }));
 		if (!result) return;
 		this.toast(`Abgleich für ${result.changed} Kunden eingeschaltet`);
