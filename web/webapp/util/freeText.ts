@@ -1,5 +1,5 @@
 /**
- * Freitextfelder der Bauakte (Hinweise, Beschreibung, Zugang und Besonderheiten sowie mehrzeilige Felder aus dem
+ * Freitextfelder der Bauakte (Hinweise und Zugang, Beschreibung sowie mehrzeilige Felder aus dem
  * Formular-Designer) als gut lesbare Textblöcke: Zeilenumbrüche bleiben, Links, E-Mail-Adressen und Telefonnummern
  * werden anklickbar, lange Texte zeigen zuerst nur den Anfang. Ohne UI5-Abhängigkeit (mit Vitest geprüft).
  */
@@ -16,13 +16,21 @@ export interface FreeTextBlock {
 	/** Lang genug für „Mehr anzeigen“. */
 	long: boolean;
 	expanded: boolean;
-	/** Hervorheben (Hinweise und Behinderungen). */
+	/** Hervorheben (Hinweise und Zugang). */
 	important: boolean;
 	/** Bauakte-Feld (siteNotes, description) oder Pfad im Formular-Schema. */
 	source: "bauakte" | "schema";
 	path: string;
 	maxLength: number;
 }
+
+/**
+ * „Hinweise und Zugang“ (siteNotes der Bauakte): ein Freitext für alles, was vor Ort wichtig ist. Das frühere zweite Feld
+ * „Zugang / Besonderheiten“ ist darin aufgegangen.
+ */
+export const SITE_NOTES_LABEL = "Hinweise und Zugang";
+export const SITE_NOTES_MAX = 3000;
+export const SITE_NOTES_PLACEHOLDER = "Zufahrt, Schlüssel, Strom, Wasser, Pumpenstandort, Behinderungen";
 
 /** Ab so vielen Zeichen bzw. Zeilen wird zunächst gekürzt. */
 export const LONG_CHARS = 320;
@@ -74,9 +82,9 @@ export function isLong(text: string | null | undefined): boolean {
 }
 
 /**
- * Textblöcke für die Übersicht: zuerst Hinweise und Behinderungen, dann Beschreibung, dann mehrzeilige Felder aus dem
- * Formular-Schema (z. B. „Zugang / Besonderheiten“). Beschreibung erscheint immer (leer = „Nicht erfasst“), Hinweise ebenfalls, außer „Zugang / Besonderheiten“ ist gefüllt,
- * Schema-Felder nur mit Inhalt, damit die Übersicht ruhig bleibt.
+ * Textblöcke für die Übersicht: zuerst Hinweise und Zugang (hervorgehoben), dann Beschreibung, dann eigene mehrzeilige
+ * Felder aus dem Formular-Schema. Hinweise und Beschreibung erscheinen immer (leer = „Nicht erfasst“), Schema-Felder nur
+ * mit Inhalt, damit die Übersicht ruhig bleibt.
  */
 export function freeTextBlocks(schema: FormSchema | null, b: { siteNotes?: string | null; description?: string | null } & Parameters<typeof readValue>[0]): FreeTextBlock[] {
 	const block = (key: string, label: string, text: string | null | undefined, source: FreeTextBlock["source"], path: string, maxLength: number,
@@ -85,7 +93,7 @@ export function freeTextBlocks(schema: FormSchema | null, b: { siteNotes?: strin
 		return { key, label, text: value, html: `<div class="eoFreeTextBody">${freeTextHtml(value)}</div>`, long: isLong(value), expanded: false, important, source, path, maxLength };
 	};
 	const out = [
-		block("siteNotes", "Hinweise und Behinderungen", b?.siteNotes, "bauakte", "siteNotes", 2000, true),
+		block("siteNotes", SITE_NOTES_LABEL, b?.siteNotes, "bauakte", "siteNotes", SITE_NOTES_MAX, true),
 		block("description", "Beschreibung", b?.description, "bauakte", "description", 4000),
 	];
 	for (const g of schema?.groups ?? []) {
@@ -96,8 +104,5 @@ export function freeTextBlocks(schema: FormSchema | null, b: { siteNotes?: strin
 			out.push(block(f.key, f.label, value, "schema", f.path, f.builtin ? 1000 : 2000));
 		}
 	}
-	// Sind die Hinweise leer, aber „Zugang / Besonderheiten“ gefüllt, entfällt der leere Block: sonst stehen zwei Felder
-	// für dasselbe nebeneinander, eines davon mit „Nicht erfasst“.
-	if (!out[0].text && out.some((x) => x.key === "siteAccess")) out.shift();
 	return out;
 }

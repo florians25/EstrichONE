@@ -29,6 +29,7 @@ import type ObjectController from "../Object.controller";
 import { isoDay } from "../../../util/days";
 import { teamCardText, teamCards, type TeamCard } from "../../../util/teamCards";
 import type { AssignmentView } from "../../../util/models";
+import { SITE_NOTES_LABEL, SITE_NOTES_MAX, SITE_NOTES_PLACEHOLDER } from "../../../util/freeText";
 
 export type PartyRole = "client" | "siteContact" | "siteManager" | "architect" | "planner" | "generalContractor" | "supplier" | "subcontractor" | "other";
 
@@ -413,7 +414,7 @@ export default class Contacts extends SectionBase {
 				{ key: "siteContactName", label: "Name", placeholder: "z. B. Herr Bauer (Bauleitung GU)", maxLength: 100 },
 				{ key: "siteContactPhone", label: "Telefon", maxLength: 50 },
 				{ key: "siteContactEmail", label: "E-Mail", type: "email", maxLength: 320 },
-				{ key: "siteNotes", label: "Hinweise / Behinderungen", type: "textarea", maxLength: 2000 },
+				{ key: "siteNotes", label: SITE_NOTES_LABEL, type: "textarea", maxLength: SITE_NOTES_MAX, placeholder: SITE_NOTES_PLACEHOLDER },
 			],
 			submit: async (v) => {
 				await saveBauakte(b, { siteContactName: (v.siteContactName as string) || null, siteContactPhone: (v.siteContactPhone as string) || null,

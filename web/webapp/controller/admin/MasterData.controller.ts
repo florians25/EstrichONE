@@ -40,7 +40,7 @@ const builtinFields: Record<string, { label: string; type: SchemaFieldType; list
 	nominalThicknessMm: { label: "Nenndicke", type: "integer", unit: "mm" }, strengthClass: { label: "Festigkeitsklasse", type: "select", list: "strengthClass" },
 	underfloorHeating: { label: "Fußbodenheizung", type: "boolean" }, heatingType: { label: "Art der Heizung", type: "select", list: "heatingType" },
 	insulation: { label: "Dämmung", type: "text", list: "insulation" }, insulationThicknessMm: { label: "Dämmdicke", type: "integer", unit: "mm" },
-	siteAccess: { label: "Zugang / Besonderheiten", type: "textarea" }, waterOnSite: { label: "Wasser vor Ort", type: "boolean" },
+	waterOnSite: { label: "Wasser vor Ort", type: "boolean" },
 	powerOnSite: { label: "Strom vor Ort", type: "boolean" },
 };
 
@@ -202,6 +202,8 @@ export default class MasterData extends BaseController {
 		this.schema = await formSchema(key, true);
 		this.targets = key === "erstbegehung" ? fieldsOf((await bauakteSchema()) ?? { groups: [] } as unknown as FormSchema).filter((f) => f.path)
 			.map((f) => ({ key: f.path, text: f.label })) : [];
+		// Freitext der Erstbegehung in „Hinweise und Zugang“ übernehmen: Der Server hängt den Text an die Hinweise an.
+		if (key === "erstbegehung") this.targets.push({ key: "project.siteAccess", text: "Hinweise und Zugang (Text wird angehängt)" });
 		this.model().setProperty("/formHint", formHints[key]);
 		this.model().setProperty("/formDirty", false);
 		this.showForm();

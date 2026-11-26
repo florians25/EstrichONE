@@ -41,6 +41,7 @@ import { openArchiveProof } from "../../util/archiveProof";
 import { akteContextOf } from "../../util/akteHeader";
 import { catalog, textBlocks, type BauakteTemplate, type TextBlock } from "../../util/catalog";
 import { projectBadges, projectView } from "../../util/project";
+import { SITE_NOTES_LABEL, SITE_NOTES_MAX, SITE_NOTES_PLACEHOLDER } from "../../util/freeText";
 import { badges, bauakteSchema, viewGroups, type FormSchema } from "../../util/formSchema";
 import { freeTextBlocks, type FreeTextBlock } from "../../util/freeText";
 import { openMapDialog } from "../../util/mapDialog";
@@ -506,7 +507,7 @@ export default class ObjectController extends BaseController {
 				{ key: "street", label: "Straße", maxLength: 200 },
 				{ key: "postalCode", label: "PLZ", maxLength: 10 },
 				{ key: "city", label: "Ort", maxLength: 100 },
-				{ key: "siteNotes", label: "Hinweise und Behinderungen", type: "textarea", rows: 5, maxLength: 2000 },
+				{ key: "siteNotes", label: SITE_NOTES_LABEL, type: "textarea", rows: 5, maxLength: SITE_NOTES_MAX, placeholder: SITE_NOTES_PLACEHOLDER },
 				{ key: "description", label: "Beschreibung", type: "textarea", rows: 8, maxLength: 4000 },
 			],
 			submit: async (v) => {

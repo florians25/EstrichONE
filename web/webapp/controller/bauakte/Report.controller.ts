@@ -68,7 +68,7 @@ export default class Report extends BaseController {
 <div>Kunde: <strong>${e(customer?.name ?? "–")}</strong></div><div>Status: ${e(bauakteStatus[b.status]?.text)}</div>
 <div>Zuständig: ${e(session.name(b.responsibleUserId))}</div><div>Ausführung: ${e(b.plannedStart || b.plannedEnd ? `${date(b.plannedStart)} bis ${date(b.plannedEnd)}` : "–")}</div>
 <div>Ansprechpartner vor Ort: ${e(b.siteContactName ?? "–")} ${e(b.siteContactPhone ?? "")}</div><div>Mitarbeiter: ${e(members.map((m) => m.displayName).join(", ") || "–")}</div>
-</div>${b.siteNotes ? `<p class="pre"><strong>Hinweise:</strong> ${e(b.siteNotes)}</p>` : ""}`;
+</div>${b.siteNotes ? `<p class="pre"><strong>Hinweise und Zugang:</strong> ${e(b.siteNotes)}</p>` : ""}`;
 		const roomTable = `<h2>Räume und Flächen</h2><table><thead><tr><th>Raum</th><th>Geschoss</th><th class="num">Fläche</th><th>Estrich</th><th class="num">Dicke</th><th>Heizung</th><th>Status</th>${kind === "abnahme" ? "<th>Abgenommen</th>" : ""}</tr></thead><tbody>
 ${rooms.rooms.map((r) => `<tr><td>${e(r.name)}</td><td>${e(r.floor ?? "")}</td><td class="num">${e(area(r.areaSquareMeters))}</td><td>${e(r.screedTypeName ?? "–")}</td><td class="num">${r.thicknessMillimeters ?? "–"} mm</td><td>${r.underfloorHeating ? "ja" : "nein"}</td><td>${e(roomStatus[r.status]?.text)}</td>${kind === "abnahme" ? "<td>☐ ja ☐ nein</td>" : ""}</tr>`).join("") || '<tr><td colspan="7">Keine Räume erfasst.</td></tr>'}
 </tbody><tfoot><tr><td colspan="2">Summe</td><td class="num">${e(area(rooms.totalAreaSquareMeters))}</td><td colspan="${kind === "abnahme" ? 5 : 4}">davon beheizt ${e(area(rooms.heatedAreaSquareMeters))}</td></tr></tfoot></table>`;

@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { adminPassword, apiCall, signIn, toast } from './helpers';
 
-// Bauakte: Freitexte (Hinweise, Beschreibung, Zugang und Besonderheiten) als Textblöcke mit Überschrift, Zeilenumbrüchen,
+// Bauakte: Freitexte (Hinweise und Zugang, Beschreibung) als Textblöcke mit Überschrift, Zeilenumbrüchen,
 // erkannten Links und Telefonnummern, „Mehr anzeigen“ und mehrzeiligem Editor.
 const shot = (page: Page, name: string) => process.env['SCREENSHOTS']
   ? page.waitForTimeout(700).then(() => page.screenshot({ path: `test-results/screenshots/${name}.png` }))
@@ -27,7 +27,7 @@ test('Bauakte: Freitexte als Textblöcke, Links, Mehr anzeigen, mehrzeilig bearb
   await page.goto(`/bauakten/${id}`);
   const blocks = page.locator('.eoFreeText').filter({ visible: true });
   await expect(blocks.first()).toBeVisible();
-  const notes = blocks.filter({ hasText: 'Hinweise und Behinderungen' });
+  const notes = blocks.filter({ hasText: 'Hinweise und Zugang' });
   const text = blocks.filter({ hasText: 'Beschreibung' });
   await expect(notes).toContainText('Nicht erfasst');
 
@@ -42,8 +42,8 @@ test('Bauakte: Freitexte als Textblöcke, Links, Mehr anzeigen, mehrzeilig bearb
   await expect(text.getByText('Weniger anzeigen')).toBeVisible();
 
   // Mehrzeiliger Editor: Text mit Zeilenumbruch speichern, Block wird hervorgehoben.
-  await notes.getByRole('button', { name: 'Hinweise und Behinderungen bearbeiten' }).click();
-  const dialog = page.getByRole('dialog', { name: 'Hinweise und Behinderungen bearbeiten' });
+  await notes.getByRole('button', { name: 'Hinweise und Zugang bearbeiten' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Hinweise und Zugang bearbeiten' });
   const area = dialog.getByRole('textbox');
   await expect(area).toBeVisible();
   expect((await area.boundingBox())!.height).toBeGreaterThan(150);

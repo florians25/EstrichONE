@@ -7,7 +7,7 @@
 			<ToolbarSpacer/>
 			<Button text="Kennwerte bearbeiten" icon="sap-icon://edit" type="Transparent" press=".onEditProject" visible="{= ${akte>/canEdit} === true }"/>
 		</OverflowToolbar>
-		<!-- Freitexte (Hinweise, Beschreibung, Zugang und Besonderheiten …) als lesbare Textblöcke: Zeilenumbrüche bleiben,
+		<!-- Freitexte (Hinweise und Zugang, Beschreibung …) als lesbare Textblöcke: Zeilenumbrüche bleiben,
 		     Links, E-Mail-Adressen und Telefonnummern sind anklickbar, lange Texte zuerst gekürzt (util/freeText.ts) -->
 		<grid:CSSGrid id="freeTextGrid" items="{path: 'akte>/freeTexts', templateShareable: false}" gridTemplateColumns="repeat(auto-fit, minmax(22rem, 1fr))"
 			gridGap="0.75rem 1.5rem" class="eoFreeTexts">
