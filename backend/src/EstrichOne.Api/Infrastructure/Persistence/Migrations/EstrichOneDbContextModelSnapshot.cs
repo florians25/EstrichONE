@@ -933,8 +933,8 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasColumnName("site_contact_phone");
 
                     b.Property<string>("SiteNotes")
-                        .HasMaxLength(2000)
-                        .HasColumnType("character varying(2000)")
+                        .HasMaxLength(3000)
+                        .HasColumnType("character varying(3000)")
                         .HasColumnName("site_notes");
 
                     b.Property<string>("Status")

@@ -72,7 +72,7 @@ public sealed record UpdateBauakteRequest(
     [property: MaxLength(100)] string? SiteContactName = null,
     [property: MaxLength(50)] string? SiteContactPhone = null,
     [property: MaxLength(320), EmailAddress] string? SiteContactEmail = null,
-    [property: MaxLength(2000)] string? SiteNotes = null,
+    [property: MaxLength(Bauakte.MaxSiteNotesLength)] string? SiteNotes = null,
     [property: MaxLength(500)] string? CancellationReason = null,
     BauakteProject? Project = null);
 
@@ -367,7 +367,15 @@ internal static class BauakteEndpoints
                 return Validation(projectError, "INVALID_PROJECT");
             }
 
-            bauakte.ChangeProject(project);
+            try
+            {
+                bauakte.ChangeProject(project);
+            }
+            catch (ArgumentException exception)
+            {
+                // Ältere App schreibt noch „Zugang / Besonderheiten“ und der Text passt nicht mehr in die Hinweise.
+                return Validation(exception.Message, "INVALID_PROJECT");
+            }
         }
 
         bauakte.ChangeAddress(request.Street, request.PostalCode, request.City, request.Latitude, request.Longitude);

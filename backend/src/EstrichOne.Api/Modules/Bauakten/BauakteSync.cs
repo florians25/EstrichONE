@@ -145,7 +145,9 @@ internal sealed class BauakteSync(
         string? waiverReason = bauakte.InitialInspectionWaivedReason;
         var waiverReasonChanged = false;
 
-        foreach (var field in accepted)
+        // „project“ zuletzt: Ein älteres Gerät kann darin noch „Zugang / Besonderheiten“ senden; der Text wird an die
+        // (ggf. im selben Vorgang geänderten) Hinweise angehängt.
+        foreach (var field in accepted.OrderBy(f => f == "project"))
         {
             var value = changes[field];
             switch (field)
@@ -197,10 +199,27 @@ internal sealed class BauakteSync(
                     bauakte.ChangeSiteContact(bauakte.SiteContactName, bauakte.SiteContactPhone, SyncPayload.Value<string>(value, field));
                     break;
                 case "siteNotes":
-                    bauakte.ChangeSiteNotes(SyncPayload.Value<string>(value, field));
+                    try
+                    {
+                        bauakte.ChangeSiteNotes(SyncPayload.Value<string>(value, field));
+                    }
+                    catch (ArgumentException exception)
+                    {
+                        throw new SyncValidationException(exception.Message);
+                    }
+
                     break;
                 case "project":
-                    bauakte.ChangeProject(await ReadProjectAsync(value, cancellationToken) ?? BauakteProject.Empty);
+                    var project = await ReadProjectAsync(value, cancellationToken) ?? BauakteProject.Empty;
+                    try
+                    {
+                        bauakte.ChangeProject(project);
+                    }
+                    catch (ArgumentException exception)
+                    {
+                        throw new SyncValidationException(exception.Message);
+                    }
+
                     break;
                 case "customerId":
                     var customerId = SyncPayload.Value<Guid?>(value, field);

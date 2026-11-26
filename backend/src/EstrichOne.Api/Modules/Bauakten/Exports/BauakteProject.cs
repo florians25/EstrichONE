@@ -4,9 +4,13 @@ using System.ComponentModel.DataAnnotations;
 namespace EstrichOne.Api.Modules.Bauakten.Exports;
 
 /// <summary>
-/// Kennwerte des Bauvorhabens, schon bei der Anlage erfasst (Fläche, Estrichart, Aufbau, Heizung, Dämmung, Zugang).
+/// Kennwerte des Bauvorhabens, schon bei der Anlage erfasst (Fläche, Estrichart, Aufbau, Heizung, Dämmung).
 /// Alle Felder sind optional; Auswahlwerte als Schlüssel (siehe <see cref="Allowed"/>), sonst freier Text.
 /// Sync-Feld „project“ der Entität „bauakte“ (docs/sync-protokoll.md).
+/// <para>
+/// <c>siteAccess</c> ist veraltet: Der Text steht in „Hinweise und Zugang“ (<c>siteNotes</c> der Bauakte). Der Server liefert
+/// das Feld immer leer; schreibt ein älterer Client es noch, hängt der Server den Text an <c>siteNotes</c> an.
+/// </para>
 /// </summary>
 public sealed record BauakteProject(
     [property: MaxLength(20)] string? ObjectType = null,
@@ -21,6 +25,7 @@ public sealed record BauakteProject(
     [property: Range(0, 1000)] int? InsulationThicknessMm = null,
     [property: MaxLength(100)] string? Floors = null,
     [property: MaxLength(20)] string? Priority = null,
+    // Veraltet (nur noch für ältere Apps im Vertrag): siehe Klassenkommentar.
     [property: MaxLength(1000)] string? SiteAccess = null,
     bool? WaterOnSite = null,
     bool? PowerOnSite = null,

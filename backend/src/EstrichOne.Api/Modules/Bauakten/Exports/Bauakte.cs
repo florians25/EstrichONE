@@ -49,7 +49,14 @@ public sealed class Bauakte : IVersionedEntity, ISoftDeletable
     public string? SiteContactPhone { get; private set; }
     public string? SiteContactEmail { get; private set; }
 
-    /// <summary>Hinweise und Behinderungen – werden in allen Ansichten hervorgehoben (Zufahrt, Schlüssel, Hund …).</summary>
+    /// <summary>Höchstlänge von „Hinweise und Zugang“ (<see cref="SiteNotes"/>).</summary>
+    public const int MaxSiteNotesLength = 3000;
+
+    /// <summary>
+    /// Hinweise und Zugang: ein Freitext für Zufahrt, Schlüssel, Strom, Wasser, Pumpenstandort und Behinderungen, in allen
+    /// Ansichten hervorgehoben. Enthält seit der Zusammenführung auch das frühere Feld „Zugang / Besonderheiten“
+    /// (<c>project.siteAccess</c>).
+    /// </summary>
     public string? SiteNotes { get; private set; }
 
     /// <summary>Begründung bei Status <see cref="BauakteStatus.Cancelled"/>.</summary>
@@ -162,7 +169,41 @@ public sealed class Bauakte : IVersionedEntity, ISoftDeletable
         SiteContactEmail = Blank(email);
     }
 
-    public void ChangeSiteNotes(string? notes) => SiteNotes = Blank(notes);
+    public void ChangeSiteNotes(string? notes)
+    {
+        var text = Blank(notes);
+        if (text is { Length: > MaxSiteNotesLength })
+        {
+            throw new ArgumentException(SiteNotesTooLong, nameof(notes));
+        }
+
+        SiteNotes = text;
+    }
+
+    private const string SiteNotesTooLong = "Hinweise und Zugang: höchstens 3000 Zeichen.";
+
+    /// <summary>
+    /// Früheres Feld „Zugang / Besonderheiten“ an die Hinweise anhängen (mit Leerzeile). Steht der Text schon wortgleich in den
+    /// Hinweisen, bleibt es dabei. Passt die Leerzeile nicht mehr in die Höchstlänge, wird enger getrennt; verloren geht nichts.
+    /// </summary>
+    public static string? MergeSiteAccess(string? notes, string? access)
+    {
+        var current = Blank(notes);
+        var added = Blank(access);
+        if (added is null || (current is not null && current.Contains(added, StringComparison.Ordinal)))
+        {
+            return current;
+        }
+
+        if (current is null)
+        {
+            return added;
+        }
+
+        var separator = current.Length + added.Length + 2 <= MaxSiteNotesLength ? "\n\n"
+            : current.Length + added.Length + 1 <= MaxSiteNotesLength ? "\n" : string.Empty;
+        return current + separator + added;
+    }
 
     private static string? Blank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
@@ -174,6 +215,19 @@ public sealed class Bauakte : IVersionedEntity, ISoftDeletable
         if (normalized.ValidateShape() is { } error)
         {
             throw new ArgumentException(error, nameof(project));
+        }
+
+        // Ältere Apps schreiben noch project.siteAccess: Der Text gehört seit der Zusammenführung in die Hinweise.
+        if (normalized.SiteAccess is not null)
+        {
+            var merged = MergeSiteAccess(SiteNotes, normalized.SiteAccess);
+            if (merged is { Length: > MaxSiteNotesLength })
+            {
+                throw new ArgumentException(SiteNotesTooLong, nameof(project));
+            }
+
+            SiteNotes = merged;
+            normalized = normalized with { SiteAccess = null };
         }
 
         Project = normalized;
