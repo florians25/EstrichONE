@@ -79,6 +79,7 @@ public sealed class EndpointAccessTests(PostgresFixture postgres) : IAsyncLifeti
         "GET /api/v1/chat/status",
         "GET /api/v1/teams/status", // Chat-Modus und Team-Link für Navigation und Startseite, keine Geheimnisse
         "GET /api/v1/teams/crews/mine", // Teams-Chats der eigenen Kolonnen (Apps), nur eigene Mitgliedschaften
+        "GET /api/v1/lexware/status", // Modul an, Schlüssel hinterlegt (ja/nein), eigene Rechte und Vorgabe für neue Kunden; keine Geheimnisse
     ];
 
     public async ValueTask InitializeAsync() => _factory = await ApiFactory.CreateMigratedAsync(postgres, new Dictionary<string, string>
