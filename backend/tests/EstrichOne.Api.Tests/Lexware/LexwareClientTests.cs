@@ -170,13 +170,20 @@ public sealed class LexwareClientTests : IDisposable
     public void Vouchers_AreReadOnly_ClientWritesNothingButContacts()
     {
         // Rechnungen und Angebote entstehen ausschließlich in Lexware Office: Der Client hat keine Methode, die einen Beleg
-        // anlegt oder ändert, und der Transport weist jeden schreibenden Aufruf außer „Kontakt anlegen“ ab.
+        // anlegt oder ändert, und der Transport weist jeden schreibenden Aufruf außer „Kontakt anlegen“ und „Kontakt ändern“ ab.
         var methods = typeof(LexwareClient).GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance
             | System.Reflection.BindingFlags.DeclaredOnly).Select(m => m.Name).Where(n => n != "Dispose").Order().ToList();
-        methods.ShouldBe(["CreateContactAsync", "GetContactAsync", "GetVoucherAsync", "ListCustomersAsync", "ListVouchersAsync", "ProfileAsync"]);
+        methods.ShouldBe(["CreateContactAsync", "GetContactAsync", "GetVoucherAsync", "GetVoucherDocumentAsync", "ListCustomersAsync", "ListVouchersAsync",
+            "ProfileAsync", "UpdateContactAsync"]);
 
         LexwareClient.WriteAllowed(HttpMethod.Post, "/v1/contacts").ShouldBeTrue();
-        foreach (var path in new[] { "/v1/invoices", "/v1/quotations", "/v1/credit-notes", "/v1/order-confirmations", "/v1/contacts/abc", "/v1/voucherlist", "/v1/files" })
+        LexwareClient.WriteAllowed(HttpMethod.Put, "/v1/contacts/abc").ShouldBeTrue();
+        foreach (var path in new[]
+                 {
+                     "/v1/invoices", "/v1/invoices/abc", "/v1/invoices/abc/document", "/v1/invoices/abc/file", "/v1/quotations", "/v1/quotations/abc",
+                     "/v1/credit-notes", "/v1/credit-notes/abc", "/v1/order-confirmations", "/v1/order-confirmations/abc", "/v1/voucherlist", "/v1/files",
+                     "/v1/files/abc", "/v1/contacts/abc/archive", "/v1/contacts/", "/v1/event-subscriptions",
+                 })
         {
             foreach (var method in new[] { HttpMethod.Post, HttpMethod.Put, HttpMethod.Patch, HttpMethod.Delete })
             {
@@ -186,8 +193,156 @@ public sealed class LexwareClientTests : IDisposable
             LexwareClient.WriteAllowed(HttpMethod.Get, path).ShouldBeTrue();
         }
 
+        // Kontakte: anlegen und einen einzelnen ändern, sonst nichts. Gelöscht oder archiviert wird in Lexware Office nie.
         LexwareClient.WriteAllowed(HttpMethod.Put, "/v1/contacts").ShouldBeFalse();
         LexwareClient.WriteAllowed(HttpMethod.Delete, "/v1/contacts").ShouldBeFalse();
+        foreach (var method in new[] { HttpMethod.Post, HttpMethod.Patch, HttpMethod.Delete })
+        {
+            LexwareClient.WriteAllowed(method, "/v1/contacts/abc").ShouldBeFalse($"{method} /v1/contacts/abc");
+        }
+    }
+
+    [Fact]
+    public async Task UpdateContact_ReadsFresh_PutsWithVersion_AndKeepsAllOtherFields()
+    {
+        var id = _fake.AddContact("Huber Bau GmbH", email: "alt@huber.example", phone: "08031 1111", street: "Altweg 1", zip: "83022", city: "Rosenheim",
+            vatId: "DE111111111");
+        _fake.Contacts[id]["emailAddresses"]!["office"] = new JsonArray("buero@huber.example");
+        _fake.Contacts[id]["phoneNumbers"]!["fax"] = new JsonArray("08031 9999");
+        _fake.Contacts[id]["addresses"]!["shipping"] = new JsonArray(new JsonObject { ["street"] = "Lager 5", ["zip"] = "83024", ["city"] = "Rosenheim", ["countryCode"] = "DE" });
+        _fake.Contacts[id]["company"]!["contactPersons"] = new JsonArray(new JsonObject { ["lastName"] = "Huber", ["primary"] = true });
+        var number = _fake.Contacts[id]["roles"]!["customer"]!["number"]!.GetValue<int>();
+        using var client = Client();
+
+        var update = await client.UpdateContactAsync(_connection, id, current =>
+        {
+            current.Version.ShouldBe(1);
+            return [new LexwareContactChange(LexwareSyncFields.Street, "Neuweg 2"), new LexwareContactChange(LexwareSyncFields.Email, "neu@huber.example", "alt@huber.example"),
+                new LexwareContactChange(LexwareSyncFields.Name, "Huber Bau GmbH & Co. KG"), new LexwareContactChange(LexwareSyncFields.Phone, null, "08031 1111")];
+        }, Ct);
+
+        update.Written.ShouldBeTrue();
+        update.Contact.Version.ShouldBe(2);
+        (update.Contact.Name, update.Contact.Street, update.Contact.PostalCode).ShouldBe(("Huber Bau GmbH & Co. KG", "Neuweg 2", "83022"));
+        _fake.Calls.Select(c => $"{c.Method} {c.Path}").ShouldBe([$"GET /v1/contacts/{id}", $"PUT /v1/contacts/{id}"]);
+        var sent = JsonNode.Parse(_fake.CallsTo("PUT", "/v1/contacts/").Single().Body!)!;
+        sent["version"]!.GetValue<int>().ShouldBe(1); // optimistische Sperre
+        sent["id"].ShouldBeNull();
+        sent["updatedDate"].ShouldBeNull();
+
+        var stored = _fake.Contacts[id];
+        stored["company"]!["name"]!.GetValue<string>().ShouldBe("Huber Bau GmbH & Co. KG");
+        stored["addresses"]!["billing"]![0]!.ToJsonString().ShouldBe("""{"street":"Neuweg 2","zip":"83022","city":"Rosenheim","countryCode":"DE"}""");
+        stored["emailAddresses"]!.ToJsonString().ShouldBe("""{"business":["neu@huber.example"],"office":["buero@huber.example"]}""");
+        // Alles andere geht unverändert zurück: Kundennummer, USt-ID, Lieferanschrift, Ansprechpartner, Notiz, Fax.
+        stored["roles"]!["customer"]!["number"]!.GetValue<int>().ShouldBe(number);
+        stored["company"]!["vatRegistrationId"]!.GetValue<string>().ShouldBe("DE111111111");
+        stored["company"]!["contactPersons"]![0]!["lastName"]!.GetValue<string>().ShouldBe("Huber");
+        stored["addresses"]!["shipping"]![0]!["street"]!.GetValue<string>().ShouldBe("Lager 5");
+        stored["note"]!.GetValue<string>().ShouldBe("Stammkunde");
+        stored["phoneNumbers"]!.ToJsonString().ShouldBe("""{"business":[],"fax":["08031 9999"]}""");
+    }
+
+    [Fact]
+    public async Task UpdateContact_WithoutChanges_WritesNothing()
+    {
+        var id = _fake.AddContact("Huber Bau GmbH");
+        using var client = Client();
+        var update = await client.UpdateContactAsync(_connection, id, _ => [], Ct);
+        update.Written.ShouldBeFalse();
+        _fake.Calls.ShouldAllBe(c => c.Method == "GET");
+    }
+
+    [Fact]
+    public async Task UpdateContact_VersionConflict_IsReadAgainAndDecidedAgain()
+    {
+        var id = _fake.AddContact("Huber Bau GmbH", street: "Altweg 1", zip: "83022", city: "Rosenheim");
+        // Zwischen Lesen und Schreiben ändert jemand den Kontakt in Lexware Office: Die Version passt nicht mehr (409).
+        _fake.BeforePut = stored =>
+        {
+            stored["version"] = 2;
+            stored["note"] = "inzwischen geändert";
+        };
+        var seen = new List<int?>();
+        using var client = Client();
+
+        var update = await client.UpdateContactAsync(_connection, id, current =>
+        {
+            seen.Add(current.Version);
+            return [new LexwareContactChange(LexwareSyncFields.City, "Kolbermoor")];
+        }, Ct);
+
+        seen.ShouldBe([1, 2]);
+        update.Written.ShouldBeTrue();
+        update.Contact.Version.ShouldBe(3);
+        _fake.Calls.Select(c => c.Method).ShouldBe(["GET", "PUT", "GET", "PUT"]);
+        _fake.Contacts[id]["note"]!.GetValue<string>().ShouldBe("inzwischen geändert"); // die fremde Änderung bleibt erhalten
+        _fake.Contacts[id]["addresses"]!["billing"]![0]!["city"]!.GetValue<string>().ShouldBe("Kolbermoor");
+    }
+
+    [Fact]
+    public async Task UpdateContact_GivesUpAfterRepeatedConflicts()
+    {
+        var id = _fake.AddContact("Huber Bau GmbH");
+        _fake.Raw["/v1/contacts/" + id] = (409, """{"status":409,"message":"Resource was modified"}""");
+        using var client = Client(o => o.UpdateAttempts = 2);
+        // Schon das Lesen scheitert hier mit 409; wichtig ist: kein endloser Neuversuch.
+        (await Should.ThrowAsync<LexwareException>(() => client.UpdateContactAsync(_connection, id,
+            _ => [new LexwareContactChange(LexwareSyncFields.City, "Kolbermoor")], Ct))).Code.ShouldBe("CONFLICT");
+        _fake.Calls.Count.ShouldBeLessThanOrEqualTo(4);
+    }
+
+    [Fact]
+    public void ApplyChanges_SplitsPersonNames_AndCreatesMissingBillingAddress()
+    {
+        var person = JsonNode.Parse("""{"id":"2","version":4,"roles":{"customer":{"number":10002}},"person":{"salutation":"Frau","firstName":"Inge","lastName":"Muster"}}""")!.AsObject();
+        var body = LexwareClient.ApplyChanges(person, [new LexwareContactChange(LexwareSyncFields.Name, "Inge Maria Musterfrau"),
+            new LexwareContactChange(LexwareSyncFields.Salutation, null), new LexwareContactChange(LexwareSyncFields.City, "Rosenheim"),
+            new LexwareContactChange(LexwareSyncFields.Email, "inge@example.org"), new LexwareContactChange(LexwareSyncFields.VatId, "DE1")]);
+        body.ToJsonString().ShouldBe("""{"version":4,"roles":{"customer":{"number":10002}},"person":{"firstName":"Inge Maria","lastName":"Musterfrau"},"addresses":{"billing":[{"countryCode":"DE","city":"Rosenheim"}]},"emailAddresses":{"business":["inge@example.org"]}}""");
+        person["person"]!["lastName"]!.GetValue<string>().ShouldBe("Muster"); // das Gelesene bleibt unverändert
+    }
+
+    [Theory]
+    [InlineData(LexwareDocumentRoute.Auto, true, "file")]
+    [InlineData(LexwareDocumentRoute.Auto, false, "file,document,files")]
+    [InlineData(LexwareDocumentRoute.File, true, "file")]
+    [InlineData(LexwareDocumentRoute.Document, true, "document,files")]
+    public async Task VoucherDocument_IsFetchedAsPdf_OnEitherRoute(LexwareDocumentRoute route, bool fileRoute, string expected)
+    {
+        var invoice = _fake.AddVoucher("invoice", "open", "RE1", "2026-07-15", "2026-07-29", 100m, 119m, "c1", "Huber");
+        _fake.FileRoute = fileRoute;
+        using var client = Client(o => o.VoucherDocumentRoute = route);
+
+        var document = await client.GetVoucherDocumentAsync(_connection, "invoice", invoice, Ct);
+
+        document.ContentType.ShouldBe("application/pdf");
+        document.Content.ShouldBe(FakeLexware.Pdf(invoice));
+        _fake.Calls.ShouldAllBe(c => c.Method == "GET");
+        _fake.Calls.Select(c => c.Path.Split('/')[^1] is "file" or "document" ? c.Path.Split('/')[^1] : "files").ShouldBe(expected.Split(','));
+        _fake.Calls.Where(c => !c.Path.EndsWith("/document", StringComparison.Ordinal)).ShouldAllBe(c => c.Accept == "application/pdf");
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task VoucherDocument_ForDrafts_IsExplained(bool fileRoute)
+    {
+        var draft = _fake.AddVoucher("quotation", "draft", null, "2026-07-15", null, 100m, 119m, "c1", "Huber");
+        _fake.FileRoute = fileRoute;
+        using var client = Client();
+        var exception = await Should.ThrowAsync<LexwareException>(() => client.GetVoucherDocumentAsync(_connection, "quotation", draft, Ct));
+        exception.Code.ShouldBe("NO_DOCUMENT");
+        exception.Message.ShouldBe("Für Entwürfe stellt Lexware Office kein PDF bereit.");
+    }
+
+    [Fact]
+    public async Task VoucherDocument_MissingVoucher_IsNotFound_AndNonPdfIsRejected()
+    {
+        using var client = Client();
+        (await Should.ThrowAsync<LexwareException>(() => client.GetVoucherDocumentAsync(_connection, "invoice", "gibt-es-nicht", Ct))).Code.ShouldBe("NOT_FOUND");
+        _fake.Raw["/v1/invoices/abc/file"] = (200, """{"hinweis":"kein PDF"}""");
+        (await Should.ThrowAsync<LexwareException>(() => client.GetVoucherDocumentAsync(_connection, "invoice", "abc", Ct))).Code.ShouldBe("NO_DOCUMENT");
     }
 
     [Fact]

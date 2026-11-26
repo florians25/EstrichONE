@@ -422,7 +422,7 @@ public sealed class LexwareClient(IHttpClientFactory http, IOptions<LexwareOptio
             Str(customer?["number"]), customer is not null, Flatten(node["emailAddresses"]), Flatten(node["phoneNumbers"]), Str(billing?["street"]),
             Str(billing?["zip"]), Str(billing?["city"]), Str(company?["vatRegistrationId"]), Str(company?["taxNumber"]),
             node["archived"] is JsonValue archived && archived.TryGetValue<bool>(out var isArchived) && isArchived, Int(node["version"]),
-            Str(node["updatedDate"]) is { } updated && DateTimeOffset.TryParse(updated, CultureInfo.InvariantCulture, DateTimeStyles.None, out var at) ? at : null,
+            Str(node["updatedDate"]) is { } updated && DateTimeOffset.TryParse(updated, CultureInfo.InvariantCulture, DateTimeStyles.None, out var at) ? at.ToUniversalTime() : null,
             ownBilling is not null);
     }
 

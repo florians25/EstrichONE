@@ -653,7 +653,7 @@ internal static class LexwareEndpoints
     }
 
     private static async Task<Results<Ok<CustomerLexwareResponse>, ProblemHttpResult>> LinkCustomerAsync(Guid contactId, LinkLexwareContactRequest request,
-        LexwareService lexware, IAuditLog audit, ICurrentUser currentUser, CancellationToken cancellationToken)
+        LexwareService lexware, LexwareChangeSyncService changes, IAuditLog audit, ICurrentUser currentUser, CancellationToken cancellationToken)
     {
         var db = lexware.Db;
         if (await CustomerEntityAsync(db, contactId, cancellationToken) is not { } contact)
@@ -680,7 +680,19 @@ internal static class LexwareEndpoints
             ["name"] = contact.Name, ["lexwareContact"] = remote.Name, ["lexwareNumber"] = remote.CustomerNumber,
         });
         await db.SaveChangesAsync(cancellationToken);
-        return TypedResults.Ok(new CustomerLexwareResponse(contactId, ToResponse(lexware, row, link), true, true));
+
+        // Erstabgleich gleich mit dem eben gelesenen Kontakt: Unterschiede erscheinen sofort als Abweichungen, übernommen wird nichts.
+        try
+        {
+            await changes.SyncCustomerAsync(contactId, remote, currentUser.UserId, null, cancellationToken);
+        }
+        catch (Exception exception) when (exception is LexwareException or DbUpdateConcurrencyException)
+        {
+            // Die Verknüpfung steht; den Abgleich holt der Hintergrunddienst nach.
+        }
+
+        db.ChangeTracker.Clear();
+        return TypedResults.Ok(await CustomerResponseAsync(lexware, contactId, true, cancellationToken));
     }
 
     private static async Task<Results<Ok<CustomerLexwareResponse>, ProblemHttpResult>> SetSyncAsync(Guid contactId, SetLexwareSyncRequest request,
@@ -704,9 +716,7 @@ internal static class LexwareEndpoints
 
         // Eine bestehende Verknüpfung bleibt beim Ausschalten bestehen: Der Kontakt und seine Rechnungen liegen bereits in
         // Lexware Office, und ein stilles Lösen würde die Belege der Bauakten vom Kunden trennen. Gelöst wird nur bewusst.
-        var row = await lexware.SettingsAsync(cancellationToken);
-        var link = await db.Set<LexwareContactLink>().AsNoTracking().SingleOrDefaultAsync(l => l.ContactId == contactId, cancellationToken);
-        return TypedResults.Ok(new CustomerLexwareResponse(contactId, link is null ? null : ToResponse(lexware, row, link), row.Configured, contact.LexwareSync));
+        return TypedResults.Ok(await CustomerResponseAsync(lexware, contactId, true, cancellationToken));
     }
 
     private static async Task<Ok<EnableLexwareSyncResponse>> EnableSyncAsync(EnableLexwareSyncRequest request, LexwareService lexware, IAuditLog audit,

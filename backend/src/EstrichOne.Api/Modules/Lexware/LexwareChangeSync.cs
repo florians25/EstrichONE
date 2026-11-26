@@ -172,7 +172,8 @@ public sealed class LexwareChangeSyncService(
     /// Abgleich geändert wurden (einzeln gegen Lexware Office). Mit <paramref name="full"/> wird die Kontaktliste aus
     /// Lexware Office gelesen und jede Verknüpfung verglichen, deren Kontakt dort eine andere Version hat.
     /// </summary>
-    public async Task<LexwareChangeSyncRun> RunAsync(bool full, CancellationToken cancellationToken)
+    /// <param name="reload">Kontaktliste für den vollständigen Lauf neu aus Lexware Office lesen (sonst gilt der kurze Cache).</param>
+    public async Task<LexwareChangeSyncRun> RunAsync(bool full, CancellationToken cancellationToken, bool reload = false)
     {
         var db = lexware.Db;
         var row = await lexware.SettingsAsync(cancellationToken);
@@ -209,7 +210,7 @@ public sealed class LexwareChangeSyncService(
             }
             else
             {
-                var (contacts, _) = await lexware.ContactsAsync(row, refresh: false, cancellationToken);
+                var (contacts, _) = await lexware.ContactsAsync(row, reload, cancellationToken);
                 var byId = contacts.ToDictionary(c => c.Id, StringComparer.Ordinal);
                 foreach (var l in due)
                 {
@@ -326,7 +327,7 @@ internal sealed class LexwareChangeSyncJob(IServiceScopeFactory scopes, TimeProv
 
         var full = now - _lastFull >= options.Value.ChangeSyncInterval;
         using var scope = scopes.CreateScope();
-        var run = await scope.ServiceProvider.GetRequiredService<LexwareChangeSyncService>().RunAsync(full, cancellationToken);
+        var run = await scope.ServiceProvider.GetRequiredService<LexwareChangeSyncService>().RunAsync(full, cancellationToken, reload: true);
         if (run.Error is not null)
         {
             _pausedUntil = now + options.Value.ChangeSyncPause;

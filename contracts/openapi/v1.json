@@ -24379,6 +24379,292 @@
         ]
       }
     },
+    "/api/v1/lexware/customers/{contactId}/sync/run": {
+      "post": {
+        "tags": [
+          "Lexware Office"
+        ],
+        "summary": "Änderungsabgleich für diesen Kunden jetzt ausführen (liest den Lexware-Kontakt frisch)",
+        "operationId": "RunCustomerLexwareSync",
+        "parameters": [
+          {
+            "name": "contactId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerLexwareResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "424": {
+            "description": "Failed Dependency",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/lexware/customers/{contactId}/sync/resolve": {
+      "post": {
+        "tags": [
+          "Lexware Office"
+        ],
+        "summary": "Abweichungen entscheiden: je Feld oder gesamt EstrichONE oder Lexware übernehmen (Lexware übernehmen verlangt zusätzlich contacts.edit)",
+        "operationId": "ResolveCustomerLexwareDeviations",
+        "parameters": [
+          {
+            "name": "contactId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResolveLexwareDeviationsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerLexwareResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "424": {
+            "description": "Failed Dependency",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/lexware/customers/{contactId}/vouchers/{lexwareId}/document": {
+      "get": {
+        "tags": [
+          "Lexware Office"
+        ],
+        "summary": "Beleg des verknüpften Lexware-Kontakts als PDF (nur lesend durchgereicht; download=true als Anhang). Für Entwürfe gibt es kein PDF",
+        "operationId": "GetCustomerLexwareVoucherDocument",
+        "parameters": [
+          {
+            "name": "contactId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "lexwareId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "download",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/pdf": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileContentHttpResult"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "424": {
+            "description": "Failed Dependency",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/lexware/contacts": {
       "get": {
         "tags": [
@@ -24852,6 +25138,103 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/LexwareVoucherResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "424": {
+            "description": "Failed Dependency",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/bauakten/{id}/lexware/vouchers/{linkId}/document": {
+      "get": {
+        "tags": [
+          "Lexware Office"
+        ],
+        "summary": "Der Bauakte zugeordneter Beleg als PDF (nur lesend durchgereicht; download=true als Anhang). Für Entwürfe gibt es kein PDF",
+        "operationId": "GetBauakteLexwareVoucherDocument",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "linkId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "download",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/pdf": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileContentHttpResult"
                 }
               }
             }
@@ -34986,6 +35369,16 @@
           "syncEnabled": {
             "type": "boolean",
             "default": false
+          },
+          "sync": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/LexwareSyncState"
+              }
+            ]
           }
         }
       },
@@ -37362,6 +37755,17 @@
           }
         }
       },
+      "EntityTagHeaderValue": {
+        "type": "object",
+        "properties": {
+          "tag": {
+            "$ref": "#/components/schemas/StringSegment"
+          },
+          "isWeak": {
+            "type": "boolean"
+          }
+        }
+      },
       "EquipmentView": {
         "required": [
           "id",
@@ -37950,6 +38354,50 @@
                 "$ref": "#/components/schemas/JsonNode"
               }
             ]
+          }
+        }
+      },
+      "FileContentHttpResult": {
+        "type": "object",
+        "properties": {
+          "contentType": {
+            "type": "string"
+          },
+          "fileDownloadName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "lastModified": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "entityTag": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/EntityTagHeaderValue"
+              }
+            ]
+          },
+          "enableRangeProcessing": {
+            "type": "boolean"
+          },
+          "fileLength": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int64"
+          },
+          "fileContents": {
+            "$ref": "#/components/schemas/ReadOnlyMemoryOfbyte"
           }
         }
       },
@@ -40001,6 +40449,15 @@
           }
         }
       },
+      "LexwareChangeSync": {
+        "enum": [
+          "both",
+          "toLexware",
+          "fromLexware",
+          "off"
+        ],
+        "default": "both"
+      },
       "LexwareContactCandidate": {
         "required": [
           "contact",
@@ -40284,6 +40741,76 @@
           }
         }
       },
+      "LexwareDeviationField": {
+        "required": [
+          "field",
+          "label",
+          "estrichOne",
+          "lexware"
+        ],
+        "type": "object",
+        "properties": {
+          "field": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "estrichOne": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "lexware": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "LexwareDeviationItem": {
+        "required": [
+          "customer",
+          "lexwareContactId",
+          "lexwareName",
+          "lexwareUrl",
+          "fields",
+          "syncedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "customer": {
+            "$ref": "#/components/schemas/LexwareCustomerSummary"
+          },
+          "lexwareContactId": {
+            "type": "string"
+          },
+          "lexwareName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "lexwareUrl": {
+            "type": "string"
+          },
+          "fields": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LexwareDeviationField"
+            }
+          },
+          "syncedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
       "LexwareInternalDuplicate": {
         "required": [
           "system",
@@ -40360,6 +40887,16 @@
           },
           "missingInLexware": {
             "type": "boolean"
+          },
+          "sync": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/LexwareSyncState"
+              }
+            ]
           }
         }
       },
@@ -40474,6 +41011,29 @@
             "items": {
               "$ref": "#/components/schemas/LexwareCustomerSummary"
             }
+          },
+          "deviations": {
+            "type": "integer",
+            "format": "int32",
+            "default": 0
+          },
+          "deviationItems": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/LexwareDeviationItem"
+            }
+          },
+          "changeSync": {
+            "$ref": "#/components/schemas/LexwareChangeSync"
+          },
+          "changeSyncError": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -40549,6 +41109,27 @@
           "newCustomersSync": {
             "type": "boolean",
             "default": true
+          },
+          "changeSync": {
+            "$ref": "#/components/schemas/LexwareChangeSync"
+          },
+          "lastChangeSyncAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "lastChangeSyncError": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "customersWithDeviations": {
+            "type": "integer",
+            "format": "int32",
+            "default": 0
           }
         }
       },
@@ -40611,6 +41192,39 @@
           },
           "unique": {
             "type": "boolean"
+          }
+        }
+      },
+      "LexwareSyncState": {
+        "required": [
+          "state",
+          "syncedAt",
+          "deviations",
+          "error"
+        ],
+        "type": "object",
+        "properties": {
+          "state": {
+            "type": "string"
+          },
+          "syncedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "deviations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LexwareDeviationField"
+            }
+          },
+          "error": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -44517,6 +45131,9 @@
           }
         }
       },
+      "ReadOnlyMemoryOfbyte": {
+        "type": "string"
+      },
       "RecurrenceFrequency": {
         "enum": [
           "none",
@@ -44916,6 +45533,27 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "ResolveLexwareDeviationsRequest": {
+        "type": "object",
+        "properties": {
+          "source": {
+            "maxLength": 20,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "fields": {
+            "type": [
+              "null",
+              "object"
+            ],
+            "additionalProperties": {
+              "type": "string"
+            }
           }
         }
       },
@@ -47174,6 +47812,16 @@
               "null",
               "boolean"
             ]
+          },
+          "changeSync": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/LexwareChangeSync"
+              }
+            ]
           }
         }
       },
@@ -49043,6 +49691,34 @@
       "Stream": {
         "type": "string",
         "format": "binary"
+      },
+      "StringSegment": {
+        "type": "object",
+        "properties": {
+          "buffer": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "offset": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "length": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "value": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "hasValue": {
+            "type": "boolean"
+          }
+        }
       },
       "SupplierResponse": {
         "required": [

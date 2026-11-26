@@ -9,8 +9,9 @@ namespace EstrichOne.Api.Tests.Support;
 /// <summary>
 /// Nachgebildete Public API von Lexware Office als <see cref="HttpMessageHandler"/> (kein echter Aufruf): Profil, Kontakte
 /// (Liste mit Filtern, Abruf, Anlage), Belege (Rechnungen, Angebote, Gutschriften, Auftragsbestätigungen: nur Abruf) und
-/// Belegliste. Schreibende Aufrufe für Belege kennt sie bewusst nicht (404). Zeichnet jede Anfrage auf; Schlüssel,
-/// Drosselung (429) und feste Fehlerantworten sind steuerbar.
+/// Belegliste, dazu das Ändern eines Kontakts (<c>PUT</c> mit <c>version</c>, sonst 409) und das Beleg-PDF (<c>/file</c> sowie
+/// <c>/document</c> mit <c>/v1/files</c>; für Entwürfe 406). Schreibende Aufrufe für Belege kennt sie bewusst nicht (404).
+/// Zeichnet jede Anfrage auf; Schlüssel, Drosselung (429) und feste Fehlerantworten sind steuerbar.
 /// </summary>
 public sealed class FakeLexware : HttpMessageHandler
 {
@@ -33,6 +34,29 @@ public sealed class FakeLexware : HttpMessageHandler
 
     public string CompanyName { get; set; } = "Estrichbau Muster GmbH";
 
+    /// <summary>Kennt die nachgebildete API den Pfad <c>/file</c>? Sonst nur den älteren Weg über <c>/document</c>.</summary>
+    public bool FileRoute { get; set; } = true;
+
+    /// <summary>Vor dem nächsten <c>PUT</c> auf einen Kontakt ausgeführt (z. B. zwischenzeitliche Änderung in Lexware Office).</summary>
+    public Action<JsonObject>? BeforePut { get; set; }
+
+    /// <summary>Jedes <c>PUT</c> auf einen Kontakt mit diesem Status und Text ablehnen.</summary>
+    public (int Status, string Text)? PutFailure { get; set; }
+
+    public static byte[] Pdf(string id) => Encoding.ASCII.GetBytes($"%PDF-1.4\n% Beleg {id}\n%%EOF\n");
+
+    /// <summary>Kontakt wie in der Lexware-Oberfläche ändern: Version und Änderungszeitpunkt steigen.</summary>
+    public void Edit(string id, Action<JsonObject> change)
+    {
+        var contact = Contacts[id];
+        lock (contact)
+        {
+            change(contact);
+            contact["version"] = contact["version"]!.GetValue<int>() + 1;
+            contact["updatedDate"] = DateTimeOffset.UtcNow.ToString("O", CultureInfo.InvariantCulture);
+        }
+    }
+
     private int _customerNumber = 10000;
 
     public IEnumerable<LexwareCall> CallsTo(string method, string pathStart) =>
@@ -42,7 +66,11 @@ public sealed class FakeLexware : HttpMessageHandler
         string? city = null, string? vatId = null, bool customer = true)
     {
         var id = Guid.NewGuid().ToString();
-        var contact = new JsonObject { ["id"] = id, ["version"] = 1, ["archived"] = false };
+        var contact = new JsonObject
+        {
+            ["id"] = id, ["organizationId"] = "aa93e8a8-2aa3-470b-b914-caad8a255dd8", ["version"] = 1, ["archived"] = false,
+            ["createdDate"] = "2026-01-10T09:00:00.000+01:00", ["updatedDate"] = "2026-01-10T09:00:00.000+01:00", ["note"] = "Stammkunde",
+        };
         contact["roles"] = customer
             ? new JsonObject { ["customer"] = new JsonObject { ["number"] = Interlocked.Increment(ref _customerNumber) } }
             : new JsonObject { ["vendor"] = new JsonObject { ["number"] = 70001 } };
@@ -167,6 +195,8 @@ public sealed class FakeLexware : HttpMessageHandler
                 var contact = JsonNode.Parse(body!)!.AsObject();
                 var id = Guid.NewGuid().ToString();
                 contact["id"] = id;
+                contact["version"] = 1;
+                contact["archived"] = false;
                 contact["roles"] = new JsonObject { ["customer"] = new JsonObject { ["number"] = Interlocked.Increment(ref _customerNumber) } };
                 Contacts[id] = contact;
                 return Json(HttpStatusCode.OK, new JsonObject { ["id"] = id, ["resourceUri"] = $"https://api.lexware.io/v1/contacts/{id}", ["version"] = 1 });
@@ -196,7 +226,74 @@ public sealed class FakeLexware : HttpMessageHandler
             return Contacts.TryGetValue(path["/v1/contacts/".Length..], out var contact) ? Json(HttpStatusCode.OK, contact.DeepClone()) : NotFound();
         }
 
+        if (method == "PUT" && path.StartsWith("/v1/contacts/", StringComparison.Ordinal))
+        {
+            if (!Contacts.TryGetValue(path["/v1/contacts/".Length..], out var stored))
+            {
+                return NotFound();
+            }
+
+            if (PutFailure is { } failure)
+            {
+                return new HttpResponseMessage((HttpStatusCode)failure.Status) { Content = new StringContent(failure.Text, Encoding.UTF8, "application/json") };
+            }
+
+            var before = BeforePut;
+            BeforePut = null;
+            before?.Invoke(stored);
+            var sent = JsonNode.Parse(body!)!.AsObject();
+            var version = stored["version"]!.GetValue<int>();
+            if (sent["version"]?.GetValue<int>() != version)
+            {
+                return Json(HttpStatusCode.Conflict, new JsonObject { ["status"] = 409, ["message"] = "Resource was modified" });
+            }
+
+            // Wie die echte API: Der gesendete Kontakt ersetzt den gespeicherten; ID, Organisation und Zeitpunkte führt der Server.
+            sent["id"] = stored["id"]!.DeepClone();
+            sent["organizationId"] = stored["organizationId"]?.DeepClone();
+            sent["createdDate"] = stored["createdDate"]?.DeepClone();
+            sent["archived"] = stored["archived"]?.DeepClone();
+            sent["version"] = version + 1;
+            sent["updatedDate"] = DateTimeOffset.UtcNow.ToString("O", CultureInfo.InvariantCulture);
+            Contacts[path["/v1/contacts/".Length..]] = sent;
+            return Json(HttpStatusCode.OK, new JsonObject
+            {
+                ["id"] = sent["id"]!.DeepClone(), ["resourceUri"] = $"https://api.lexware.io{path}", ["createdDate"] = sent["createdDate"]?.DeepClone(),
+                ["updatedDate"] = sent["updatedDate"]!.DeepClone(), ["version"] = version + 1,
+            });
+        }
+
         var parts = path.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        if (method == "GET" && parts.Length == 4 && Segments.ContainsKey(parts[1]) && parts[3] is "file" or "document")
+        {
+            if (parts[3] == "file" && !FileRoute)
+            {
+                return NotFound();
+            }
+
+            if (!Vouchers.TryGetValue(parts[2], out var owner) || owner["voucherType"]!.GetValue<string>() != Segments[parts[1]])
+            {
+                return NotFound();
+            }
+
+            if (owner["voucherStatus"]!.GetValue<string>() == "draft")
+            {
+                return Json(HttpStatusCode.NotAcceptable, new JsonObject { ["status"] = 406, ["message"] = "No document for drafts" });
+            }
+
+            return parts[3] == "file"
+                ? new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(Pdf(parts[2])) { Headers = { ContentType = new("application/pdf") } } }
+                : Json(HttpStatusCode.OK, new JsonObject { ["documentFileId"] = "file-" + parts[2] });
+        }
+
+        if (method == "GET" && parts.Length == 3 && parts[1] == "files" && parts[2].StartsWith("file-", StringComparison.Ordinal))
+        {
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new ByteArrayContent(Pdf(parts[2]["file-".Length..])) { Headers = { ContentType = new("application/pdf") } },
+            };
+        }
+
         if (method == "GET" && parts.Length == 3 && Segments.TryGetValue(parts[1], out var type))
         {
             return Vouchers.TryGetValue(parts[2], out var voucher) && voucher["voucherType"]!.GetValue<string>() == type

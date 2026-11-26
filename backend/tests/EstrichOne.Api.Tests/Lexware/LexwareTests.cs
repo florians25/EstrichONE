@@ -33,6 +33,7 @@ public sealed class LexwareTests(PostgresFixture postgres) : IAsyncLifetime
         _factory = await ApiFactory.CreateMigratedAsync(postgres, new Dictionary<string, string>
         {
             ["EstrichOne:Lexware:MinRequestInterval"] = "00:00:00", ["EstrichOne:Lexware:RetryDelay"] = "00:00:00.020",
+            ["EstrichOne:Lexware:BackgroundChangeSync"] = "false",
         }, services => services.AddHttpClient(LexwareClient.HttpClientName).ConfigurePrimaryHttpMessageHandler(() => _lexware));
         _admin = await _factory.CreateClientAsAsync("admin", StandardRoles.AdministratorId);
     }
