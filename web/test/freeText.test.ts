@@ -86,4 +86,11 @@ describe('Dateien und Fotos über Microsoft Teams', () => {
     expect(chatTeamsUrl({ teamsAvailable: false, teamsWebUrl: null })).toBe('');
     expect(chatTeamsUrl(status, { teamsWebUrl: 'https://boese.example.com' })).toBe('');
   });
+  it('lässt leere Hinweise weg, wenn Zugang und Besonderheiten gefüllt sind', () => {
+    const schema = { groups: [{ fields: [{ key: 'siteAccess', label: 'Zugang / Besonderheiten', type: 'textarea', path: 'project.siteAccess', builtin: true }] }] } as never;
+    const filled = freeTextBlocks(schema, { siteNotes: '', description: 'Text', project: { siteAccess: 'Schlüssel unter Matte' } } as never);
+    expect(filled.map((x) => x.key)).toEqual(['description', 'siteAccess']);
+    const empty = freeTextBlocks(schema, { siteNotes: '', description: '', project: { siteAccess: '' } } as never);
+    expect(empty.map((x) => x.key)).toEqual(['siteNotes', 'description']);
+  });
 });

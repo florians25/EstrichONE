@@ -75,7 +75,7 @@ export function isLong(text: string | null | undefined): boolean {
 
 /**
  * Textblöcke für die Übersicht: zuerst Hinweise und Behinderungen, dann Beschreibung, dann mehrzeilige Felder aus dem
- * Formular-Schema (z. B. „Zugang / Besonderheiten“). Hinweise und Beschreibung erscheinen immer (leer = „Nicht erfasst“),
+ * Formular-Schema (z. B. „Zugang / Besonderheiten“). Beschreibung erscheint immer (leer = „Nicht erfasst“), Hinweise ebenfalls, außer „Zugang / Besonderheiten“ ist gefüllt,
  * Schema-Felder nur mit Inhalt, damit die Übersicht ruhig bleibt.
  */
 export function freeTextBlocks(schema: FormSchema | null, b: { siteNotes?: string | null; description?: string | null } & Parameters<typeof readValue>[0]): FreeTextBlock[] {
@@ -96,5 +96,8 @@ export function freeTextBlocks(schema: FormSchema | null, b: { siteNotes?: strin
 			out.push(block(f.key, f.label, value, "schema", f.path, f.builtin ? 1000 : 2000));
 		}
 	}
+	// Sind die Hinweise leer, aber „Zugang / Besonderheiten“ gefüllt, entfällt der leere Block: sonst stehen zwei Felder
+	// für dasselbe nebeneinander, eines davon mit „Nicht erfasst“.
+	if (!out[0].text && out.some((x) => x.key === "siteAccess")) out.shift();
 	return out;
 }
