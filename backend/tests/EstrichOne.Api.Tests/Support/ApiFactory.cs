@@ -9,7 +9,8 @@ using Microsoft.Extensions.Time.Testing;
 namespace EstrichOne.Api.Tests.Support;
 
 /// <summary>Startet die API im Speicher gegen eine eigene Testdatenbank.</summary>
-public sealed class ApiFactory(string connectionString, IReadOnlyDictionary<string, string>? settings = null)
+public sealed class ApiFactory(string connectionString, IReadOnlyDictionary<string, string>? settings = null,
+    Action<IServiceCollection>? configureServices = null)
     : WebApplicationFactory<Program>
 {
     /// <summary>Steuerbare Uhr für Ablaufzeiten; startet bei der echten Zeit.</summary>
@@ -26,7 +27,11 @@ public sealed class ApiFactory(string connectionString, IReadOnlyDictionary<stri
             builder.UseSetting(key, value);
         }
 
-        builder.ConfigureServices(services => services.Replace(ServiceDescriptor.Singleton<TimeProvider>(Clock)));
+        builder.ConfigureServices(services =>
+        {
+            services.Replace(ServiceDescriptor.Singleton<TimeProvider>(Clock));
+            configureServices?.Invoke(services);
+        });
         builder.UseSetting("ConnectionStrings:Default", connectionString);
         builder.UseSetting("EstrichOne:ServerName", "Estrichbau Test GmbH");
         builder.UseSetting("Serilog:MinimumLevel:Default", "Warning");
@@ -34,9 +39,9 @@ public sealed class ApiFactory(string connectionString, IReadOnlyDictionary<stri
     }
 
     public static async Task<ApiFactory> CreateMigratedAsync(PostgresFixture postgres,
-        IReadOnlyDictionary<string, string>? settings = null)
+        IReadOnlyDictionary<string, string>? settings = null, Action<IServiceCollection>? configureServices = null)
     {
-        var factory = new ApiFactory(await postgres.CreateDatabaseAsync(), settings);
+        var factory = new ApiFactory(await postgres.CreateDatabaseAsync(), settings, configureServices);
         await factory.MigrateAsync();
         return factory;
     }

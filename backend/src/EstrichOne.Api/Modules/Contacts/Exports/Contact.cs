@@ -75,6 +75,12 @@ public sealed class Contact : IVersionedEntity, ISoftDeletable
     public string? Website { get; private set; }
     public List<ContactPerson> Persons { get; private set; } = [];
 
+    /// <summary>
+    /// „Mit Lexware Office abgleichen“: Nur dann darf der Kunde mit Lexware Office verknüpft oder dort angelegt werden.
+    /// Aus = der Kunde bleibt bewusst nur in EstrichONE. Wirksam, solange das Modul Lexware Office eingeschaltet ist.
+    /// </summary>
+    public bool LexwareSync { get; private set; }
+
     public long Version { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
@@ -140,6 +146,8 @@ public sealed class Contact : IVersionedEntity, ISoftDeletable
         Birthday = Kind == ContactKind.Person ? details.Birthday : null;
         Website = Clean(details.Website);
     }
+
+    public void SetLexwareSync(bool enabled) => LexwareSync = enabled;
 
     private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 

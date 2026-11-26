@@ -13,6 +13,7 @@ using EstrichOne.Api.Modules.Feedback;
 using EstrichOne.Api.Modules.Fuel;
 using EstrichOne.Api.Modules.Helpdesk;
 using EstrichOne.Api.Modules.Identity;
+using EstrichOne.Api.Modules.Lexware;
 using EstrichOne.Api.Modules.Mail;
 using EstrichOne.Api.Modules.Materials;
 using EstrichOne.Api.Modules.Notices;
@@ -54,6 +55,7 @@ public static class ModuleCatalog
         new NotificationsModule(),
         new ChatModule(),
         new TeamsModule(),
+        new LexwareModule(),
         new BackupModule(),
         new MailModule(),
         new ArchiveModule(),

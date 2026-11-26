@@ -341,6 +341,9 @@ public sealed record ModuleSettings
     /// <summary>Tankbelege (setzt Maschinen und Fahrzeuge voraus).</summary>
     public bool Fuel { get; init; } = true;
 
+    /// <summary>Lexware Office (Kundenverknüpfung, Rechnungsentwürfe, Belegstatus). Anders als die übrigen Module zunächst aus.</summary>
+    public bool Lexware { get; init; }
+
     /// <summary>Eingeschaltet? Kernmodule und unbekannte Schlüssel gelten als eingeschaltet.</summary>
     public bool IsEnabled(string key) => key switch
     {
@@ -362,6 +365,7 @@ public sealed record ModuleSettings
         AppModules.Helpdesk => Helpdesk,
         AppModules.Feedback => Feedback,
         AppModules.Fuel => Fuel,
+        AppModules.Lexware => Lexware,
         _ => true,
     };
 
@@ -386,6 +390,7 @@ public sealed record ModuleSettings
         AppModules.Helpdesk => this with { Helpdesk = on },
         AppModules.Feedback => this with { Feedback = on },
         AppModules.Fuel => this with { Fuel = on },
+        AppModules.Lexware => this with { Lexware = on },
         _ => this,
     };
 

@@ -17,7 +17,7 @@ public sealed record ContactImportResult(
 /// Pflicht ist nur „Name“. Fehlerhafte Zeilen und Dubletten werden gemeldet und nie importiert; alle übrigen
 /// Zeilen werden in einer Transaktion übernommen. Mit <c>dryRun</c> wird nur geprüft.
 /// </summary>
-internal sealed class ContactImport(EstrichOneDbContext db, ICustomerNumbers numbers)
+internal sealed class ContactImport(EstrichOneDbContext db, ICustomerNumbers numbers, ICustomerSyncDefault syncDefault)
 {
     public const int MaxRows = 5_000;
 
@@ -135,6 +135,12 @@ internal sealed class ContactImport(EstrichOneDbContext db, ICustomerNumbers num
                 }
                 while (byNumber.ContainsKey(next.ToUpperInvariant()));
                 contact.AssignCustomerNumber(next);
+            }
+
+            var lexwareSync = await syncDefault.NewCustomersAsync(cancellationToken);
+            foreach (var contact in accepted)
+            {
+                contact.SetLexwareSync(lexwareSync);
             }
 
             db.AddRange(accepted);

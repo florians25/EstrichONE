@@ -36,6 +36,8 @@ public static class Permissions
     public const string FuelRecord = "fuel.record";
     public const string FuelManage = "fuel.manage";
     public const string FuelExport = "fuel.export";
+    public const string InvoicesRead = "invoices.read";
+    public const string InvoicesCreate = "invoices.create";
     public const string UsersManage = "users.manage";
     public const string RolesManage = "roles.manage";
     public const string DevicesRead = "devices.read";
@@ -87,6 +89,8 @@ public static class Permissions
         new(FuelRecord, "Tankbelege", "Eigene Tankbelege erfassen und sehen (Apps und Web; für das Belegfoto zusätzlich „Fotos, Videos und Dokumente hochladen“)"),
         new(FuelManage, "Tankbelege", "Alle Tankbelege sehen, prüfen, freigeben, ablehnen, als erstattet bzw. gebucht markieren; Auswertung je Fahrzeug"),
         new(FuelExport, "Tankbelege", "Tankbelege als CSV für die Buchhaltung exportieren"),
+        new(InvoicesRead, "Rechnungen", "Rechnungen der Bauakten und die Verknüpfung der Kunden mit Lexware Office sehen (wenn das Modul aktiv ist)"),
+        new(InvoicesCreate, "Rechnungen", "Rechnungsentwürfe in Lexware Office anlegen, vorhandene Rechnungen zuordnen und Kunden mit Lexware Office verknüpfen"),
         new(UsersManage, "Verwaltung", "Benutzer verwalten"),
         new(RolesManage, "Verwaltung", "Rollen und Rechte verwalten"),
         new(DevicesRead, "IT Center", "Geräte sehen"),
@@ -101,7 +105,7 @@ public static class Permissions
         new(ChatAdmin, "Chat", "Chat verwalten: Gruppen anlegen, Einstellungen, Export und Löschung für Betroffenenrechte"),
         new(BackupManage, "System", "Backups verwalten"),
         new(SettingsManage, "System", "Firmendaten und Einstellungen ändern"),
-        new(SettingsIntegrations, "System", "Integrationen einrichten: Microsoft Teams (App-Registrierung, Kontenzuordnung, Chat-Modus)"),
+        new(SettingsIntegrations, "System", "Integrationen einrichten: Microsoft Teams (App-Registrierung, Kontenzuordnung, Chat-Modus) und Lexware Office (API-Schlüssel, Kundenabgleich)"),
         new(TeamsDelete, "System", "Microsoft Teams: Kanäle und Gruppenchats von Bauakten in Teams archivieren und löschen"),
         new(AuditRead, "System", "Audit-Log einsehen"),
         new(ArchiveUnlock, "System", "Archivierte Bauakten zum Bearbeiten entsperren (mit Passwort)"),

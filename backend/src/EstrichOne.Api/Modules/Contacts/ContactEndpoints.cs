@@ -15,7 +15,7 @@ public sealed record ContactResponse(
     IReadOnlyList<ContactPhone> Phones, IReadOnlyList<ContactEmail> Emails, string? Salutation, string? Title,
     ContactAddress? BillingAddress, ContactAddress? DeliveryAddress, string? VatId, string? TaxNumber,
     ContactChannel? PreferredChannel, DateOnly? Birthday, string? Website,
-    DateTimeOffset? ArchivedAt = null, DateTimeOffset? AnonymizedAt = null);
+    DateTimeOffset? ArchivedAt = null, DateTimeOffset? AnonymizedAt = null, bool LexwareSync = false);
 
 /// <summary>
 /// Erweiterte Kundendaten im Anlegen/Ändern. Sendet ein Client keines dieser Felder (ältere App), bleiben sie
@@ -59,7 +59,8 @@ public sealed record SaveContactRequest(
     [property: MaxLength(30)] string? TaxNumber = null,
     ContactChannel? PreferredChannel = null,
     DateOnly? Birthday = null,
-    [property: MaxLength(200)] string? Website = null) : IContactDetailsRequest;
+    [property: MaxLength(200)] string? Website = null,
+    bool? LexwareSync = null) : IContactDetailsRequest;
 
 public sealed record UpdateContactRequest(
     long Version,
@@ -82,7 +83,8 @@ public sealed record UpdateContactRequest(
     [property: MaxLength(30)] string? TaxNumber = null,
     ContactChannel? PreferredChannel = null,
     DateOnly? Birthday = null,
-    [property: MaxLength(200)] string? Website = null) : IContactDetailsRequest;
+    [property: MaxLength(200)] string? Website = null,
+    bool? LexwareSync = null) : IContactDetailsRequest;
 
 internal static class ContactEndpoints
 {
@@ -185,7 +187,7 @@ internal static class ContactEndpoints
     }
 
     private static async Task<Results<Created<ContactResponse>, Ok<ContactResponse>, ProblemHttpResult>> CreateAsync(
-        SaveContactRequest request, EstrichOneDbContext db, ICustomerNumbers numbers, CancellationToken cancellationToken)
+        SaveContactRequest request, EstrichOneDbContext db, ICustomerNumbers numbers, ICustomerSyncDefault syncDefault, CancellationToken cancellationToken)
     {
         var existing = await db.Set<Contact>().IgnoreQueryFilters([QueryFilters.NotDeleted]).AsNoTracking()
             .SingleOrDefaultAsync(c => c.Id == request.Id, cancellationToken);
@@ -212,6 +214,8 @@ internal static class ContactEndpoints
         contact.Update(request.Kind, request.Name, null, request.Street, request.PostalCode, request.City,
             request.Phone, request.Email, request.Notes);
         ApplyDetails(contact, request);
+        // Ohne Angabe (ältere Apps) gilt die Vorgabe aus den Lexware-Einstellungen.
+        contact.SetLexwareSync(request.LexwareSync ?? await syncDefault.NewCustomersAsync(cancellationToken));
         // Der Server vergibt die nächste Nummer aus dem Kunden-Nummernkreis.
         try
         {
@@ -271,6 +275,11 @@ internal static class ContactEndpoints
         contact.Update(request.Kind, request.Name, number, Clean(request.Street), Clean(request.PostalCode), Clean(request.City),
             Clean(request.Phone), Clean(request.Email), Clean(request.Notes));
         ApplyDetails(contact, request);
+        if (request.LexwareSync is { } lexwareSync)
+        {
+            contact.SetLexwareSync(lexwareSync);
+        }
+
         await db.SaveChangesAsync(cancellationToken);
         return TypedResults.Ok(ToResponse(contact));
     }
@@ -304,7 +313,7 @@ internal static class ContactEndpoints
 
     internal static ContactResponse ToResponse(Contact c) => new(c.Id, c.Kind, c.Name, c.CustomerNumber, c.Street, c.PostalCode,
         c.City, c.Phone, c.Email, c.Notes, c.Version, c.Phones, c.Emails, c.Salutation, c.Title, c.BillingAddress, c.DeliveryAddress,
-        c.VatId, c.TaxNumber, c.PreferredChannel, c.Birthday, c.Website, c.ArchivedAt, c.AnonymizedAt);
+        c.VatId, c.TaxNumber, c.PreferredChannel, c.Birthday, c.Website, c.ArchivedAt, c.AnonymizedAt, c.LexwareSync);
 
     private static bool HasDetails(IContactDetailsRequest r) =>
         r.Phones is not null || r.Emails is not null || r.Salutation is not null || r.Title is not null || r.BillingAddress is not null

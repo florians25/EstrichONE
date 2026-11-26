@@ -16,7 +16,11 @@ public sealed record ModuleStateResponse(
     string Key, string Area, string Title, string Description, bool Enabled, bool Core, IReadOnlyList<string> Requires, IReadOnlyList<string> RequiredBy);
 
 /// <param name="Version">Version der Einstellungen (für <see cref="SaveModulesRequest.Version"/>).</param>
-public sealed record ModulesResponse(IReadOnlyList<ModuleStateResponse> Modules, long Version);
+/// <param name="LexwareSyncDefault">
+/// Vorgabe für „Mit Lexware Office abgleichen“ bei neuen Kunden (Modul Lexware Office eingeschaltet und Einstellung gesetzt).
+/// Web und Apps belegen damit den Schalter im Kunden-Formular vor.
+/// </param>
+public sealed record ModulesResponse(IReadOnlyList<ModuleStateResponse> Modules, long Version, bool LexwareSyncDefault = false);
 
 /// <param name="Modules">Zu ändernde Schalter (Schlüssel → an/aus); nicht genannte Module bleiben unverändert.</param>
 public sealed record SaveModulesRequest([property: Required] IReadOnlyDictionary<string, bool> Modules, long? Version = null);
@@ -35,19 +39,21 @@ internal static class ModuleEndpoints
             .RequirePermission(Permissions.SettingsManage);
     }
 
-    internal static ModulesResponse Overview(ModuleSettings settings, long version) => new(
+    internal static ModulesResponse Overview(ModuleSettings settings, long version, bool lexwareSyncPreference = false) => new(
         AppModules.All.Select(m => new ModuleStateResponse(m.Key, m.Area, m.Title, m.Description, m.Core || settings.IsEnabled(m.Key), m.Core,
             m.Requires, AppModules.Dependents(m.Key).Select(d => d.Key).ToList())).ToList(),
-        version);
+        version, settings.IsEnabled(AppModules.Lexware) && lexwareSyncPreference);
 
-    private static async Task<Ok<ModulesResponse>> GetAsync(EstrichOneDbContext db, CancellationToken cancellationToken)
+    private static async Task<Ok<ModulesResponse>> GetAsync(EstrichOneDbContext db, Contacts.Exports.ICustomerSyncDefault syncDefault,
+        CancellationToken cancellationToken)
     {
         var row = await db.Set<SystemSettingsRow>().AsNoTracking().SingleOrDefaultAsync(cancellationToken);
-        return TypedResults.Ok(Overview(SystemSettingsStore.Parse(row?.Data).Modules, row?.Version ?? 0));
+        return TypedResults.Ok(Overview(SystemSettingsStore.Parse(row?.Data).Modules, row?.Version ?? 0, await syncDefault.PreferenceAsync(cancellationToken)));
     }
 
     private static async Task<Results<Ok<ModulesResponse>, ProblemHttpResult>> SaveAsync(
-        SaveModulesRequest request, EstrichOneDbContext db, IAuditLog audit, ICurrentUser currentUser, CancellationToken cancellationToken)
+        SaveModulesRequest request, EstrichOneDbContext db, IAuditLog audit, ICurrentUser currentUser, Contacts.Exports.ICustomerSyncDefault syncDefault,
+        CancellationToken cancellationToken)
     {
         var row = await db.Set<SystemSettingsRow>().SingleOrDefaultAsync(cancellationToken);
         if (row is not null && request.Version is { } version && version != row.Version)
@@ -95,7 +101,7 @@ internal static class ModuleEndpoints
         RecordChanges(audit, currentUser.UserId, settings.Modules, modules);
         row.Update(JsonSerializer.Serialize(saved, SystemSettingsStore.Json));
         await db.SaveChangesAsync(cancellationToken);
-        return TypedResults.Ok(Overview(modules, row.Version));
+        return TypedResults.Ok(Overview(modules, row.Version, await syncDefault.PreferenceAsync(cancellationToken)));
     }
 
     /// <summary>Erste verletzte Abhängigkeit als verständlicher Satz, sonst <c>null</c>.</summary>

@@ -14,11 +14,13 @@ namespace EstrichOne.Api.Modules.Contacts;
 /// vorfindet. Erlaubt mit <c>contacts.edit</c> oder – für die Baustelle – mit <c>bauakten.create</c> und
 /// <c>contacts.read</c>. Kundennummern vergibt das Büro; hier wird keine gesetzt.
 /// </summary>
-internal sealed class ContactSync(EstrichOneDbContext db, IUserPermissions permissions, ICustomerNumbers numbers) : ISyncOperationHandler
+internal sealed class ContactSync(EstrichOneDbContext db, IUserPermissions permissions, ICustomerNumbers numbers, ICustomerSyncDefault syncDefault)
+    : ISyncOperationHandler
 {
     /// <summary>Felder, die <c>contact.update</c> ändern darf (feldweise zusammengeführt wie bei der Bauakte).</summary>
     private static readonly HashSet<string> EditableFields =
-        ["kind", "name", "street", "postalCode", "city", "notes", "phones", "emails", "salutation", "title", "preferredChannel", "website"];
+        ["kind", "name", "street", "postalCode", "city", "notes", "phones", "emails", "salutation", "title", "preferredChannel", "website",
+            "lexwareSync"];
 
     public IReadOnlyCollection<string> OperationTypes { get; } = ["contact.create", "contact.update"];
 
@@ -83,6 +85,9 @@ internal sealed class ContactSync(EstrichOneDbContext db, IUserPermissions permi
         }
 
         ContactEndpoints.ApplyDetails(contact, details);
+        // „Mit Lexware Office abgleichen“: Angabe der App, sonst (ältere Apps) die Vorgabe aus den Lexware-Einstellungen.
+        contact.SetLexwareSync(p.ContainsKey("lexwareSync") && SyncPayload.Read<bool?>(p, "lexwareSync") is { } wanted
+            ? wanted : await syncDefault.NewCustomersAsync(cancellationToken));
         // Anlage aus der App: Kundennummer vergibt der Server.
         try
         {
@@ -151,6 +156,7 @@ internal sealed class ContactSync(EstrichOneDbContext db, IUserPermissions permi
         contact.Update(kind, name, contact.CustomerNumber, street, postalCode, city, contact.Phone, contact.Email, notes);
         contact.UpdateDetails(new ContactDetails(phones, emails, salutation, title, contact.BillingAddress, contact.DeliveryAddress,
             contact.VatId, contact.TaxNumber, channel, contact.Birthday, website));
+        contact.SetLexwareSync(Value("lexwareSync", contact.LexwareSync));
         await db.SaveChangesAsync(cancellationToken);
         return new SyncOperationResult(op.OpId, conflicts.Count == 0 ? SyncOperationStatus.Applied : SyncOperationStatus.Conflict,
             Code: conflicts.Count == 0 ? null : "FIELD_CONFLICT",

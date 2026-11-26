@@ -1902,6 +1902,10 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(20)")
                         .HasColumnName("kind");
 
+                    b.Property<bool>("LexwareSync")
+                        .HasColumnType("boolean")
+                        .HasColumnName("lexware_sync");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -4500,6 +4504,220 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasName("pk_user_two_factor");
 
                     b.ToTable("user_two_factor", (string)null);
+                });
+
+            modelBuilder.Entity("EstrichOne.Api.Modules.Lexware.LexwareContactLink", b =>
+                {
+                    b.Property<Guid>("ContactId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("contact_id");
+
+                    b.Property<string>("LexwareContactId")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("lexware_contact_id");
+
+                    b.Property<string>("LexwareName")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("lexware_name");
+
+                    b.Property<string>("LexwareNumber")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("lexware_number");
+
+                    b.Property<DateTimeOffset>("LinkedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("linked_at");
+
+                    b.Property<Guid>("LinkedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("linked_by_user_id");
+
+                    b.Property<string>("Origin")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("origin");
+
+                    b.HasKey("ContactId")
+                        .HasName("pk_lexware_contact_links");
+
+                    b.HasIndex("LexwareContactId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_lexware_contact_links_lexware_contact_id");
+
+                    b.ToTable("lexware_contact_links", (string)null);
+                });
+
+            modelBuilder.Entity("EstrichOne.Api.Modules.Lexware.LexwareSettingsRow", b =>
+                {
+                    b.Property<int>("Id")
+                        .HasColumnType("integer")
+                        .HasColumnName("id");
+
+                    b.Property<string>("BaseUrl")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("base_url");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTimeOffset?>("LastTestAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_test_at");
+
+                    b.Property<string>("LastTestError")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("last_test_error");
+
+                    b.Property<bool?>("LastTestOk")
+                        .HasColumnType("boolean")
+                        .HasColumnName("last_test_ok");
+
+                    b.Property<bool>("NewCustomersSync")
+                        .HasColumnType("boolean")
+                        .HasColumnName("new_customers_sync");
+
+                    b.Property<string>("OrganizationId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("organization_id");
+
+                    b.Property<string>("OrganizationName")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("organization_name");
+
+                    b.Property<int>("PaymentTermDays")
+                        .HasColumnType("integer")
+                        .HasColumnName("payment_term_days");
+
+                    b.Property<string>("PaymentTermLabel")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("payment_term_label");
+
+                    b.Property<string>("ProtectedApiKey")
+                        .HasColumnType("text")
+                        .HasColumnName("protected_api_key");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("pk_lexware_settings");
+
+                    b.ToTable("lexware_settings", (string)null);
+                });
+
+            modelBuilder.Entity("EstrichOne.Api.Modules.Lexware.LexwareVoucherLink", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("BauakteId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("bauakte_id");
+
+                    b.Property<bool>("Created")
+                        .HasColumnType("boolean")
+                        .HasColumnName("created");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)")
+                        .HasColumnName("currency");
+
+                    b.Property<DateOnly?>("DueDate")
+                        .HasColumnType("date")
+                        .HasColumnName("due_date");
+
+                    b.Property<decimal?>("GrossAmount")
+                        .HasPrecision(14, 2)
+                        .HasColumnType("numeric(14,2)")
+                        .HasColumnName("gross_amount");
+
+                    b.Property<string>("LexwareId")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("lexware_id");
+
+                    b.Property<DateTimeOffset>("LinkedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("linked_at");
+
+                    b.Property<Guid>("LinkedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("linked_by_user_id");
+
+                    b.Property<decimal?>("NetAmount")
+                        .HasPrecision(14, 2)
+                        .HasColumnType("numeric(14,2)")
+                        .HasColumnName("net_amount");
+
+                    b.Property<string>("Number")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("number");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
+
+                    b.Property<string>("SyncError")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("sync_error");
+
+                    b.Property<DateTimeOffset?>("SyncedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("synced_at");
+
+                    b.Property<string>("Title")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("title");
+
+                    b.Property<DateOnly?>("VoucherDate")
+                        .HasColumnType("date")
+                        .HasColumnName("voucher_date");
+
+                    b.Property<string>("VoucherType")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("voucher_type");
+
+                    b.HasKey("Id")
+                        .HasName("pk_lexware_voucher_links");
+
+                    b.HasIndex("BauakteId")
+                        .HasDatabaseName("ix_lexware_voucher_links_bauakte_id");
+
+                    b.HasIndex("LexwareId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_lexware_voucher_links_lexware_id");
+
+                    b.ToTable("lexware_voucher_links", (string)null);
                 });
 
             modelBuilder.Entity("EstrichOne.Api.Modules.Mail.MailAccount", b =>
