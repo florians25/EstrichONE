@@ -70,7 +70,7 @@ public sealed class BauakteDetailsTests(PostgresFixture postgres) : IAsyncLifeti
         var history = await office.GetFromJsonAsync<List<BauakteHistoryEntry>>($"/api/v1/bauakten/{bauakte.Id}/history", TestJson.Options, Ct);
         history![0].Text.ShouldBe("Max Huber hat den Zeitraum, den Baustellenkontakt und die Hinweise zur Baustelle geändert.");
         var hints = await office.GetFromJsonAsync<List<BauakteHint>>($"/api/v1/bauakten/{bauakte.Id}/hints", TestJson.Options, Ct);
-        hints!.ShouldContain(h => h.Kind == "site_notes" && h.Text == "Schlüssel beim Nachbarn, Hund im Garten");
+        hints!.ShouldNotContain(h => h.Kind == "site_notes");
         hints!.ShouldContain(h => h.Kind == "initial_inspection_missing");
     }
 

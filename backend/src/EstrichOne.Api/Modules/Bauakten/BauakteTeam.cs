@@ -281,10 +281,7 @@ internal sealed class BauakteOwnHints : IBauakteHintSource
                 bauakte.CancellationReason is null ? "Storniert." : $"Storniert: {bauakte.CancellationReason}"));
         }
 
-        if (bauakte.SiteNotes is { } notes)
-        {
-            hints.Add(new("site_notes", BauakteHintSeverity.Warning, notes));
-        }
+        // „Hinweise und Zugang“ steht im eigenen Feld der Übersicht, nicht als Hinweis im Kopf der Bauakte.
 
         if (bauakte.Status is BauakteStatus.Planned or BauakteStatus.InProgress && bauakte.Street is null && bauakte.City is null && bauakte.Latitude is null)
         {
