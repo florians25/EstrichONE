@@ -4509,12 +4509,58 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                     b.ToTable("user_two_factor", (string)null);
                 });
 
+            modelBuilder.Entity("EstrichOne.Api.Modules.Lexware.LexwareContactCreation", b =>
+                {
+                    b.Property<Guid>("ContactId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("contact_id");
+
+                    b.Property<int>("Attempts")
+                        .HasColumnType("integer")
+                        .HasColumnName("attempts");
+
+                    b.Property<string>("Error")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("error");
+
+                    b.Property<DateTimeOffset?>("NextAttemptAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("next_attempt_at");
+
+                    b.Property<string>("State")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("state");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("ContactId")
+                        .HasName("pk_lexware_contact_creations");
+
+                    b.ToTable("lexware_contact_creations", (string)null);
+                });
+
             modelBuilder.Entity("EstrichOne.Api.Modules.Lexware.LexwareContactLink", b =>
                 {
                     b.Property<Guid>("ContactId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
                         .HasColumnName("contact_id");
+
+                    b.Property<int>("DeviationCount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("deviation_count");
+
+                    b.Property<string>("Deviations")
+                        .HasColumnType("text")
+                        .HasColumnName("deviations");
 
                     b.Property<string>("LexwareContactId")
                         .IsRequired()
@@ -4532,6 +4578,14 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(50)")
                         .HasColumnName("lexware_number");
 
+                    b.Property<DateTimeOffset?>("LexwareUpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("lexware_updated_at");
+
+                    b.Property<int?>("LexwareVersion")
+                        .HasColumnType("integer")
+                        .HasColumnName("lexware_version");
+
                     b.Property<DateTimeOffset>("LinkedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("linked_at");
@@ -4540,11 +4594,43 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("linked_by_user_id");
 
+                    b.Property<long?>("LocalVersion")
+                        .HasColumnType("bigint")
+                        .HasColumnName("local_version");
+
+                    b.Property<DateTimeOffset?>("NextSyncAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("next_sync_at");
+
                     b.Property<string>("Origin")
                         .IsRequired()
                         .HasMaxLength(30)
                         .HasColumnType("character varying(30)")
                         .HasColumnName("origin");
+
+                    b.Property<string>("RemoteState")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("remote_state");
+
+                    b.Property<int>("SyncAttempts")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("sync_attempts");
+
+                    b.Property<string>("SyncError")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("sync_error");
+
+                    b.Property<DateTimeOffset?>("SyncedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("synced_at");
+
+                    b.Property<string>("SyncedFields")
+                        .HasColumnType("text")
+                        .HasColumnName("synced_fields");
 
                     b.HasKey("ContactId")
                         .HasName("pk_lexware_contact_links");
@@ -4562,14 +4648,37 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("id");
 
+                    b.Property<bool>("AutoCreate")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true)
+                        .HasColumnName("auto_create");
+
                     b.Property<string>("BaseUrl")
                         .HasMaxLength(300)
                         .HasColumnType("character varying(300)")
                         .HasColumnName("base_url");
 
+                    b.Property<string>("ChangeSync")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("Both")
+                        .HasColumnName("change_sync");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
+
+                    b.Property<DateTimeOffset?>("LastChangeSyncAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_change_sync_at");
+
+                    b.Property<string>("LastChangeSyncError")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("last_change_sync_error");
 
                     b.Property<DateTimeOffset?>("LastTestAt")
                         .HasColumnType("timestamp with time zone")

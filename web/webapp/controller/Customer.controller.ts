@@ -3,13 +3,13 @@ import type Event from "sap/ui/base/Event";
 import type Control from "sap/ui/core/Control";
 import type ObjectPageLayout from "sap/uxap/ObjectPageLayout";
 import type ObjectPageSection from "sap/uxap/ObjectPageSection";
-import { del, get, put } from "../util/api";
+import { del, get, post, put } from "../util/api";
 import { approvalStatus, type ApprovalStatus } from "../util/approvals";
 import { openBauakteWizard } from "../util/bauakteWizard";
 import { openCustomerForm } from "../util/customerForm";
 import { filterByStatus, latest, routeUrl, type KeyFigures } from "../util/customerMatch";
 import { fileIcon } from "../util/documents";
-import { area, date } from "../util/format";
+import { area, date, dateTime } from "../util/format";
 import { documentCategories } from "../util/labels";
 import type { BauaktePage, BauakteListItem, CallResponse, ContactAddress, ContactResponse, FileResponse } from "../util/models";
 import { openPreview } from "../util/previewDialog";
@@ -21,10 +21,12 @@ import { openCustomerRemoval, reactivateCustomer } from "../util/customerRemoval
 import { customerState } from "../util/customerRemoval";
 import { session } from "../util/session";
 import {
-	euro, lexwareVisible, linkText, problemText, syncStateText, voucherNumber, voucherStatus, voucherSummary, voucherTypeText, type CustomerLexware, type CustomerVouchers,
-	type LexwareVoucherItem,
+	changeSyncState, creationStateText, deviationValue, euro, lexwareVisible, linkText, pdfAvailable, PDF_DRAFT_HINT, problemText, syncStateText, voucherNumber, voucherPdfPath, voucherStatus,
+	voucherSummary, voucherTitle, voucherTypeText, type CustomerLexware, type CustomerVouchers, type DeviationSource, type LexwareDeviationField, type LexwareVoucherItem,
 } from "../util/lexware";
-import { openCustomerLinkDialog, openExternal } from "../util/lexwareDialogs";
+import {
+	downloadVoucherPdf, openCustomerLinkDialog, openDeviationDialog, openExternal, openVoucherPdf, resolveAllDeviations, type VoucherPdf,
+} from "../util/lexwareDialogs";
 
 interface DocumentListItem { file: FileResponse; bauakteNumber: string | null; bauakteTitle: string; approvalStatus: ApprovalStatus | null }
 interface Person { id: string; name: string; function: string | null; phone: string | null; email: string | null }
@@ -53,7 +55,7 @@ export default class Customer extends BaseController {
 			primaryPhone: "", primaryEmail: "", routeUrl: null, mainPerson: "", kpis: [],
 			bauakten: [], shownBauakten: [], bauakteFilter: "", bauakteSearch: "", bauakteEmpty: "", counts: { all: 0, active: 0, inquiry: 0, old: 0 },
 			documents: [], reach: [], persons: [], history: [], lexware: { loaded: false, busy: false, link: null, canEdit: false, text: "", syncEnabled: false, syncText: "", syncState: "None", syncHint: "",
-				vouchers: [], vouchersBusy: false, vouchersSummary: "", vouchersError: "" } });
+				vouchers: [], vouchersBusy: false, vouchersSummary: "", vouchersError: "", change: { text: "", state: "None", icon: "", hint: "", canRun: false }, deviations: [], creation: { text: "", state: "None", hint: "", retry: false } } });
 	}
 
 	async onRouteMatched(match: RouteMatch): Promise<void> {
@@ -299,7 +301,7 @@ export default class Customer extends BaseController {
 		const m = this.model();
 		if (!lexwareVisible(session.data.modules ?? {}, session.data.permissions ?? {})) {
 			m.setProperty("/lexware", { loaded: false, busy: false, link: null, canEdit: false, text: "", syncEnabled: false, syncText: "", syncState: "None", syncHint: "",
-				vouchers: [], vouchersBusy: false, vouchersSummary: "", vouchersError: "" });
+				vouchers: [], vouchersBusy: false, vouchersSummary: "", vouchersError: "", change: { text: "", state: "None", icon: "", hint: "", canRun: false }, deviations: [], creation: { text: "", state: "None", hint: "", retry: false } });
 			return;
 		}
 		m.setProperty("/lexware/busy", true);
@@ -312,7 +314,11 @@ export default class Customer extends BaseController {
 		const m = this.model();
 		const hadLink = !!m.getProperty("/lexware/link");
 		m.setProperty("/lexware", { ...(m.getProperty("/lexware") as object), loaded: true, busy: false, link, canEdit: state?.canEdit === true, text: linkText(link),
-			syncEnabled: state?.syncEnabled === true, syncText: sync.text, syncState: sync.state, syncHint: sync.hint });
+			syncEnabled: state?.syncEnabled === true, syncText: sync.text, syncState: sync.state, syncHint: sync.hint,
+			creation: creationStateText(link ? null : state?.creation?.state, state?.creation?.error),
+			change: { ...changeSyncState(link ? state?.sync : null, dateTime), canRun: !!link && ["synced", "deviations", "pending", "error"].includes(state?.sync?.state ?? "") },
+			deviations: (link ? state?.sync?.deviations ?? [] : []).map((d: LexwareDeviationField) => ({
+				...d, estrichOneText: deviationValue(d.estrichOne), lexwareText: deviationValue(d.lexware) })) });
 		m.setProperty("/c/lexwareSync", state?.syncEnabled === true);
 		if (!link) {
 			m.setProperty("/lexware/vouchers", []);
@@ -337,7 +343,8 @@ export default class Customer extends BaseController {
 			m.setProperty("/lexware/vouchers", result.vouchers.map((v: LexwareVoucherItem) => {
 				const status = voucherStatus(v.status);
 				return { ...v, typeText: voucherTypeText(v.type), numberText: voucherNumber(v), dateText: date(v.voucherDate), dueText: date(v.dueDate),
-					amountText: euro(v.grossAmount, v.currency), statusText: status.text, statusState: status.state, statusIcon: status.icon };
+					amountText: euro(v.grossAmount, v.currency), statusText: status.text, statusState: status.state, statusIcon: status.icon,
+					pdf: pdfAvailable(v), pdfHint: pdfAvailable(v) ? "Beleg als PDF anzeigen" : PDF_DRAFT_HINT };
 			}));
 			m.setProperty("/lexware/vouchersSummary", voucherSummary(result.vouchers));
 		} catch (error) {
@@ -355,6 +362,62 @@ export default class Customer extends BaseController {
 
 	onLexwareVoucherOpen(e: Event): void {
 		openExternal(this.obj<LexwareVoucherItem>(e).url);
+	}
+
+	private voucherPdf(e: Event): VoucherPdf {
+		const v = this.obj<LexwareVoucherItem>(e);
+		return { path: voucherPdfPath({ customerId: this.id, lexwareId: v.lexwareId }), title: voucherTitle(v), lexwareUrl: v.url };
+	}
+
+	onLexwareVoucherPdf(e: Event): void {
+		void openVoucherPdf(this.voucherPdf(e));
+	}
+
+	onLexwareVoucherDownload(e: Event): void {
+		void downloadVoucherPdf(this.voucherPdf(e));
+	}
+
+	/** Änderungsabgleich für diesen Kunden sofort ausführen. */
+	async onLexwareSyncNow(): Promise<void> {
+		const state = await this.run(() => post<CustomerLexware>(`lexware/customers/${this.id}/sync/run`));
+		if (!state) return;
+		await this.afterLexwareSync(state);
+		this.toast(state.sync?.state === "deviations" ? "Abgeglichen, es gibt Abweichungen" : "Mit Lexware Office abgeglichen");
+	}
+
+	/** Nach einem Abgleich können sich Kundendaten geändert haben: Kunde neu laden, Stand anzeigen. */
+	private async afterLexwareSync(state: CustomerLexware): Promise<void> {
+		const c = await get<ContactResponse>(`contacts/${this.id}`).catch(() => null);
+		if (c) this.showContact(c);
+		this.applyLexware(state);
+	}
+
+	async onLexwareResolve(): Promise<void> {
+		const c = this.model().getProperty("/c") as ContactResponse;
+		const state = await openDeviationDialog({ id: c.id, name: c.name }, this.model().getProperty("/lexware/deviations") as LexwareDeviationField[]);
+		if (state) await this.afterLexwareSync(state);
+	}
+
+	private async takeAll(source: DeviationSource): Promise<void> {
+		const c = this.model().getProperty("/c") as ContactResponse;
+		const state = await resolveAllDeviations({ id: c.id, name: c.name }, source);
+		if (state) await this.afterLexwareSync(state);
+	}
+
+	onLexwareTakeLocal(): void {
+		void this.takeAll("estrichOne");
+	}
+
+	onLexwareTakeRemote(): void {
+		void this.takeAll("lexware");
+	}
+
+	/** Automatische Anlage in Lexware Office erneut versuchen (der Server prüft vorher erneut auf Dubletten). */
+	async onLexwareCreateRetry(): Promise<void> {
+		const state = await this.run(() => post<CustomerLexware>(`lexware/customers/${this.id}/create/retry`));
+		if (!state) return;
+		this.applyLexware(state);
+		if (state.link) this.toast("In Lexware Office angelegt");
 	}
 
 	onLexwareVoucherBauakte(e: Event): void {

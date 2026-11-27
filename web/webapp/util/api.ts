@@ -327,3 +327,16 @@ export async function postForBlob(path: string, body: unknown): Promise<Blob> {
 	if (!response.ok) throw await toError(response);
 	return response.blob();
 }
+
+/** GET, Antwort als Datei (z. B. PDF); Fehler wie bei api(). */
+export async function getBlob(path: string, query?: Query): Promise<Blob> {
+	const send = () => fetch(apiUrl(path, query), {
+		method: "GET", credentials: "same-origin", headers: { Accept: "application/pdf, application/problem+json" },
+	}).catch(() => {
+		throw new NetworkError();
+	});
+	let response = await send();
+	if (response.status === 401 && (await refreshSession())) response = await send();
+	if (!response.ok) throw await toError(response);
+	return response.blob();
+}

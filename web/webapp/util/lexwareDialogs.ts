@@ -1,7 +1,8 @@
 /**
  * Lexware Office: Dialoge der Weboberfläche. Kunde verknüpfen bzw. in Lexware anlegen (immer mit Dublettenprüfung),
  * Lexware-Kunden nach EstrichONE übernehmen (ebenfalls mit Dublettenprüfung) und einen Beleg (Rechnung, Angebot) einer
- * Bauakte zuordnen. Belege werden nur gelesen: Es gibt keinen Dialog, der in Lexware Office einen Beleg anlegt oder ändert.
+ * Bauakte zuordnen, dazu Abweichungen zwischen Kunde und Lexware-Kontakt entscheiden und einen Beleg als PDF anzeigen.
+ * Belege werden nur gelesen: Es gibt keinen Dialog, der in Lexware Office einen Beleg anlegt oder ändert.
  */
 import Dialog from "sap/m/Dialog";
 import MessageBox from "sap/m/MessageBox";
@@ -21,12 +22,17 @@ import ObjectStatus from "sap/m/ObjectStatus";
 import ObjectIdentifier from "sap/m/ObjectIdentifier";
 import JSONModel from "sap/ui/model/json/JSONModel";
 import type Control from "sap/ui/core/Control";
-import { get, post, problemMessage } from "./api";
+import SegmentedButton from "sap/m/SegmentedButton";
+import SegmentedButtonItem from "sap/m/SegmentedButtonItem";
+import HTML from "sap/ui/core/HTML";
+import BusyIndicator from "sap/ui/core/BusyIndicator";
+import { apiUrl, get, getBlob, post, problemMessage } from "./api";
 import { date } from "./format";
 import { largeDialogSize } from "./dialogSize";
 import { showToast } from "./toast";
 import {
-	assignedText, createAnywayQuestion, euro, matchLabel, placeText, voucherNumber, voucherStatus, voucherTypeText,
+	assignedText, createAnywayQuestion, deviationValue, euro, matchLabel, placeText, resolveRequest, voucherNumber, voucherStatus, voucherTypeText,
+	type DeviationSource, type LexwareDeviationField,
 	type BauakteVoucherCandidates, type CreateLexwareContactResponse, type CustomerLexware, type ImportLexwareContactResponse, type LexwareCandidates,
 	type LexwareContactCandidate, type LexwareContactList, type LexwareContactSummary, type LexwareCustomerCandidate, type LexwareVoucher,
 	type LexwareVoucherItem,
@@ -414,4 +420,166 @@ export function openAssignVoucherDialog(bauakteId: string): Promise<boolean> {
 		dialog.open();
 		void load("");
 	});
+}
+
+// ---------- Abweichungen entscheiden ----------
+
+interface DeviationRow extends LexwareDeviationField { estrichOneText: string; lexwareText: string; choice: DeviationSource | "open" }
+
+/** Entscheidung für alle offenen Abweichungen eines Kunden: Werte aus EstrichONE oder aus Lexware Office übernehmen. */
+export async function resolveAllDeviations(customer: { id: string; name: string }, source: DeviationSource): Promise<CustomerLexware | null> {
+	const text = source === "estrichOne"
+		? `Für „${customer.name}“ alle abweichenden Angaben aus EstrichONE nach Lexware Office übernehmen? Die Angaben im Lexware-Kontakt werden überschrieben.`
+		: `Für „${customer.name}“ alle abweichenden Angaben aus Lexware Office nach EstrichONE übernehmen? Die Angaben am Kunden werden überschrieben.`;
+	if (!await ask(text, source === "estrichOne" ? "EstrichONE übernehmen" : "Lexware übernehmen", "Abweichungen")) return null;
+	try {
+		const state = await post<CustomerLexware>(`lexware/customers/${customer.id}/sync/resolve`, { source });
+		showToast("Abweichungen übernommen");
+		return state;
+	} catch (error) {
+		fail(error, "Abweichungen");
+		return null;
+	}
+}
+
+/**
+ * Abweichungen zwischen Kunde und Lexware-Kontakt je Feld entscheiden: beide Werte nebeneinander, je Feld „EstrichONE“,
+ * „Lexware“ oder offen lassen. Liefert den neuen Stand, wenn etwas übernommen wurde.
+ */
+export function openDeviationDialog(customer: { id: string; name: string }, fields: LexwareDeviationField[]): Promise<CustomerLexware | null> {
+	return new Promise((resolve) => {
+		let result: CustomerLexware | null = null;
+		const model = new JSONModel({
+			rows: fields.map((f): DeviationRow => ({ ...f, estrichOneText: deviationValue(f.estrichOne), lexwareText: deviationValue(f.lexware), choice: "open" })),
+		});
+		const table = new Table({
+			columns: [column("Feld", { width: "9rem" }), column("EstrichONE"), column("Lexware Office"), column("Übernehmen aus", { width: "19rem" })],
+			items: {
+				path: "/rows",
+				template: new ColumnListItem({
+					vAlign: "Middle",
+					cells: [
+						new Text({ text: "{label}" }).addStyleClass("eoStrong"), new Text({ text: "{estrichOneText}" }), new Text({ text: "{lexwareText}" }),
+						new SegmentedButton({
+							selectedKey: "{choice}",
+							items: [new SegmentedButtonItem({ key: "estrichOne", text: "EstrichONE" }), new SegmentedButtonItem({ key: "lexware", text: "Lexware" }),
+								new SegmentedButtonItem({ key: "open", text: "Offen" })],
+						}),
+					],
+				}),
+			},
+		});
+		table.setModel(model);
+		const send = async (body: { source: DeviationSource } | { fields: Record<string, DeviationSource> } | null): Promise<void> => {
+			if (!body) { MessageBox.information("Bitte wählen Sie für mindestens ein Feld, welcher Wert übernommen wird.", { title: "Abweichungen" }); return; }
+			dialog.setBusy(true);
+			try {
+				result = await post<CustomerLexware>(`lexware/customers/${customer.id}/sync/resolve`, body);
+				showToast("Abweichungen übernommen");
+				dialog.close();
+			} catch (error) {
+				fail(error, "Abweichungen");
+			} finally {
+				dialog.setBusy(false);
+			}
+		};
+		const chosen = () => resolveRequest(Object.fromEntries((model.getProperty("/rows") as DeviationRow[]).map((r) => [r.field, r.choice])));
+		const dialog = new Dialog({
+			title: `Abweichungen: ${customer.name}`, ...largeDialogSize(Math.min(window.innerWidth, 1000)), resizable: true, draggable: true,
+			content: [new VBox({ items: [
+				new MessageStrip({ type: "Information", showIcon: true,
+					text: "Kunde und Lexware-Kontakt haben in diesen Feldern unterschiedliche Angaben. EstrichONE hat nichts überschrieben. Wählen Sie je Feld, welcher Wert gilt. Kundennummern werden nie geändert." })
+					.addStyleClass("sapUiSmallMarginBottom"),
+				table,
+			] }).addStyleClass("sapUiSmallMargin")],
+			buttons: [
+				new Button({ text: "Auswahl übernehmen", type: "Emphasized", press: () => void send(chosen()) }),
+				new Button({ text: "EstrichONE übernehmen", tooltip: "Für alle Felder die Werte aus EstrichONE nach Lexware Office übernehmen", press: () => void send({ source: "estrichOne" }) }),
+				new Button({ text: "Lexware übernehmen", tooltip: "Für alle Felder die Werte aus Lexware Office nach EstrichONE übernehmen", press: () => void send({ source: "lexware" }) }),
+				new Button({ text: "Abbrechen", press: () => dialog.close() }),
+			],
+			afterClose: () => { dialog.destroy(); model.destroy(); resolve(result); },
+		});
+		dialog.open();
+	});
+}
+
+// ---------- Beleg als PDF ----------
+
+export interface VoucherPdf {
+	/** Pfad der EstrichONE-API, der das PDF aus Lexware Office durchreicht. */
+	path: string;
+	/** Anzeigename, z. B. „Rechnung RE1042“. */
+	title: string;
+	/** Adresse des Belegs in der Lexware-Oberfläche. */
+	lexwareUrl: string;
+}
+
+/** Abruf fehlgeschlagen oder kein PDF vorhanden: verständliche Meldung, der Weg nach Lexware Office bleibt. */
+function pdfFailed(error: unknown, voucher: VoucherPdf): void {
+	const open = "In Lexware öffnen";
+	MessageBox.warning(`${problemMessage(error)}\n\nSie können den Beleg in Lexware Office öffnen.`, {
+		title: "PDF nicht verfügbar", actions: [open, MessageBox.Action.CLOSE], emphasizedAction: open,
+		onClose: (action: string | null) => { if (action === open) openExternal(voucher.lexwareUrl); },
+	});
+}
+
+async function loadPdf(voucher: VoucherPdf): Promise<Blob | null> {
+	BusyIndicator.show(200);
+	try {
+		return await getBlob(voucher.path);
+	} catch (error) {
+		pdfFailed(error, voucher);
+		return null;
+	} finally {
+		BusyIndicator.hide();
+	}
+}
+
+const fileName = (title: string) => `${title.replace(/[^\wäöüÄÖÜß-]+/g, "-").replace(/^-+|-+$/g, "") || "Beleg"}.pdf`;
+
+function save(blob: Blob, title: string): void {
+	const url = URL.createObjectURL(blob);
+	const a = document.createElement("a");
+	a.href = url;
+	a.download = fileName(title);
+	document.body.appendChild(a);
+	a.click();
+	a.remove();
+	window.setTimeout(() => URL.revokeObjectURL(url), 10_000);
+}
+
+/** Beleg-PDF aus Lexware Office herunterladen (über EstrichONE durchgereicht, nichts wird gespeichert). */
+export async function downloadVoucherPdf(voucher: VoucherPdf): Promise<void> {
+	const blob = await loadPdf(voucher);
+	if (blob) save(blob, voucher.title);
+}
+
+const escapeHtml = (value: string) => value.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+
+/**
+ * Beleg-PDF direkt anzeigen (große Vorschau wie bei Dokumenten), mit Herunterladen, neuem Tab und „In Lexware öffnen“.
+ * Erst wenn der Abruf gelungen ist, öffnet sich die Vorschau; sonst erscheint eine verständliche Meldung.
+ */
+export async function openVoucherPdf(voucher: VoucherPdf): Promise<void> {
+	const blob = await loadPdf(voucher);
+	if (!blob) return;
+	const url = apiUrl(voucher.path);
+	const dialog = new Dialog({
+		contentWidth: "96vw", contentHeight: "90vh", resizable: true, draggable: true, horizontalScrolling: false, verticalScrolling: false,
+		customHeader: new Toolbar({ content: [
+			new Title({ text: voucher.title, level: "H2" }), new ToolbarSpacer(),
+			new Button({ text: "Herunterladen", icon: "sap-icon://download", press: () => save(blob, voucher.title) }),
+			new Button({ text: "Neuer Tab", icon: "sap-icon://action", tooltip: "PDF in neuem Tab öffnen", press: () => window.open(url, "_blank", "noopener") }),
+			new Button({ text: "In Lexware öffnen", press: () => openExternal(voucher.lexwareUrl) }),
+			new Button({ icon: "sap-icon://decline", tooltip: "Schließen", type: "Transparent", press: () => dialog.close() }),
+		] }),
+		content: [new VBox({ height: "100%", renderType: "Bare", items: [
+			new HTML({ sanitizeContent: false, preferDOM: false,
+				content: `<iframe class="eoPreviewLarge eoVoucherPdf" title="${escapeHtml(voucher.title)}" src="${escapeHtml(url)}"></iframe>` }),
+		] }).addStyleClass("eoPreviewBody")],
+		afterClose: () => dialog.destroy(),
+	});
+	dialog.addStyleClass("eoPreviewDialog");
+	dialog.open();
 }

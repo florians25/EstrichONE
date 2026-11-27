@@ -41,7 +41,10 @@ import {
 import type { ContactEmail, ContactPhone, ContactResponse } from "./models";
 import { candidateUsable, useCandidateText } from "./customerRemoval";
 import Switch from "sap/m/Switch";
-import { SYNC_HELP, SYNC_LABEL, syncFieldVisible, syncInitial } from "./lexware";
+import {
+	lexwareCandidateAction, lexwareCandidateLine, lexwareCheckActive, lexwareCheckRequest, lexwareCheckText, SYNC_HELP, SYNC_LABEL, syncFieldVisible, syncInitial,
+	type ImportLexwareContactResponse, type LexwareContactCandidate, type LexwareContactCheck,
+} from "./lexware";
 import { ensureActive } from "./customerRemovalDialog";
 
 export interface NewCustomerOptions {
@@ -163,7 +166,15 @@ export function openNewCustomerDialog(options: NewCustomerOptions = {}): Promise
 	const dupList = new List("ncDuplicates", { visible: false, showSeparators: "Inner" });
 	const forceNew = new CheckBox("ncForceNew", { text: "Keiner davon: als neuen Kunden anlegen", visible: false });
 	const checking = new Text({ text: "Ähnliche Kunden werden gesucht …", visible: false }).addStyleClass("eoMuted");
-	const dupBox = new VBox({ renderType: "Bare", items: [checking, dupStrip, dupList, forceNew] }).addStyleClass("eoDupBox");
+	// Prüfung gegen Lexware Office (Modul an, Schlüssel hinterlegt), unabhängig vom Schalter „Mit Lexware Office abgleichen“.
+	const lexwareCheck = lexwareCheckActive(session.data.modules ?? {}, session.data.lexware);
+	let lexwareHits: LexwareContactCandidate[] = [];
+	let lexwareRequest = 0;
+	const lxStrip = new MessageStrip("ncLexwareWarning", { type: "Warning", showIcon: true, visible: false });
+	const lxList = new List("ncLexwareHits", { visible: false, showSeparators: "Inner" });
+	const lxForce = new CheckBox("ncLexwareForce", { text: "Trotzdem neu anlegen (ohne Verknüpfung mit Lexware Office)", visible: false });
+	const lxNote = new Text("ncLexwareNote", { visible: false }).addStyleClass("eoMuted");
+	const dupBox = new VBox({ renderType: "Bare", items: [checking, dupStrip, dupList, forceNew, lxStrip, lxList, lxForce, lxNote] }).addStyleClass("eoDupBox");
 
 	const phoneList = () => ((phones.read() as ContactPhone[]) ?? []);
 	const emailList = () => ((emails.read() as ContactEmail[]) ?? []);
@@ -208,7 +219,80 @@ export function openNewCustomerDialog(options: NewCustomerOptions = {}): Promise
 		if (!any) forceNew.setSelected(false);
 	};
 
+	/** Kontakt aus Lexware Office als Kunde übernehmen: angelegt mit den Daten aus Lexware Office, verknüpft, Abgleich eingeschaltet. */
+	const importFromLexware = async (candidate: LexwareContactCandidate): Promise<void> => {
+		try {
+			const result = await post<ImportLexwareContactResponse>(`lexware/contacts/${encodeURIComponent(candidate.contact.id)}/import`, { createAnyway: false });
+			if (!result.imported || !result.contactId) {
+				const first = result.candidates[0]?.customer;
+				MessageBox.warning(first
+					? `In EstrichONE gibt es bereits einen ähnlichen Kunden: ${first.name}${first.customerNumber ? ` (Kundennummer ${first.customerNumber})` : ""}. `
+						+ "Verwenden Sie diesen Kunden und verknüpfen Sie ihn in der Kundenansicht mit Lexware Office."
+					: "Der Kontakt konnte nicht übernommen werden.", { title: "Lexware Office" });
+				return;
+			}
+			finish({ contact: await get<ContactResponse>(`contacts/${result.contactId}`), existing: false, createBauakte: false });
+		} catch (error) {
+			MessageBox.error(problemMessage(error), { title: "Lexware Office" });
+		}
+	};
+	const showLexware = (result: LexwareContactCheck | null) => {
+		lexwareHits = result?.checked ? result.candidates : [];
+		lxList.destroyItems();
+		for (const d of lexwareHits) {
+			const c = d.contact;
+			const action = lexwareCandidateAction(c, result?.canImport === true);
+			lxList.addItem(new CustomListItem({ content: [new HBox({
+				alignItems: "Center", justifyContent: "SpaceBetween", width: "100%", wrap: "Wrap",
+				items: [
+					new VBox({ renderType: "Bare", items: [
+						new Link({ text: c.name, href: c.url, target: "_blank", tooltip: "Kontakt in Lexware Office öffnen" }),
+						new Text({ text: lexwareCandidateLine(c) }).addStyleClass("eoMuted"),
+						new ObjectStatus({ text: d.reasons.join(", "), state: d.strong ? "Error" : "Warning" }),
+						new Link({ text: `Bereits verknüpft mit dem Kunden ${c.linkedContactName ?? ""}`.trim(), href: `/kunden/${c.linkedContactId}`, target: "_blank",
+							visible: action === "linked" }),
+						new Text({ text: "Zum Übernehmen fehlt Ihnen das Recht, Kunden mit Lexware Office zu verknüpfen.", visible: action === "none" }).addStyleClass("eoMuted"),
+					] }).setLayoutData(new FlexItemData({ growFactor: 1, shrinkFactor: 1, baseSize: "50%" })),
+					new Button({ text: "Aus Lexware Office übernehmen", type: "Emphasized", visible: action === "import",
+						tooltip: "Kunde mit den Daten aus Lexware Office anlegen und verknüpfen", press: () => void importFromLexware(d) }).addStyleClass("sapUiTinyMarginBegin"),
+				],
+			}).addStyleClass("sapUiTinyMarginTopBottom sapUiSmallMarginBeginEnd")] }));
+		}
+		const text = lexwareCheckText(result);
+		const any = lexwareHits.length > 0;
+		lxStrip.setText(text.warning);
+		lxStrip.setVisible(any);
+		lxList.setVisible(any);
+		lxForce.setVisible(any);
+		if (!any) lxForce.setSelected(false);
+		lxNote.setText(text.note);
+		lxNote.setVisible(!!text.note);
+	};
+	let lexwareKey = "";
+	const checkLexware = async (): Promise<void> => {
+		if (!lexwareCheck) return;
+		const body = lexwareCheckRequest({ ...draft(), kind: kind.getSelectedKey(), vatId: vatId.getValue() });
+		const key = JSON.stringify(body);
+		if (key === lexwareKey) return;
+		const mine = ++lexwareRequest;
+		if (!body) {
+			lexwareKey = key;
+			showLexware(null);
+			return;
+		}
+		try {
+			const result = await post<LexwareContactCheck>("lexware/contacts/check", body);
+			if (mine !== lexwareRequest) return;
+			lexwareKey = key;
+			showLexware(result);
+		} catch {
+			// Die Prüfung blockiert nie: ohne Antwort bleibt das Anlegen möglich.
+			if (mine === lexwareRequest) showLexware({ checked: false, message: "Die Prüfung in Lexware Office ist derzeit nicht möglich.", candidates: [], canImport: false });
+		}
+	};
+
 	const check = async () => {
+		void checkLexware();
 		const key = draftKey(draft());
 		if (key === checkedKey) return;
 		const queries = duplicateQueries(draft());
@@ -264,7 +348,13 @@ export function openNewCustomerDialog(options: NewCustomerOptions = {}): Promise
 		strip.setVisible(false);
 		// Letzte Prüfung vor dem Anlegen; offene Treffer müssen bewusst übergangen werden.
 		clearTimeout(pending);
-		await check();
+		await Promise.all([check(), checkLexware()]);
+		if (lexwareHits.length > 0 && !lxForce.getSelected()) {
+			strip.setText("Dieser Kunde ist bereits in Lexware Office vorhanden. Bitte aus Lexware Office übernehmen oder „Trotzdem neu anlegen“ wählen.");
+			strip.setVisible(true);
+			lxStrip.getDomRef()?.scrollIntoView({ block: "nearest" });
+			return null;
+		}
 		if (candidates.length > 0 && !forceNew.getSelected()) {
 			strip.setText("Es gibt ähnliche Kunden. Bitte einen vorhandenen Kunden verwenden oder „Keiner davon: als neuen Kunden anlegen“ wählen.");
 			strip.setVisible(true);

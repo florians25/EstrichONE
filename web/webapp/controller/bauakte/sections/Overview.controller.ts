@@ -20,6 +20,7 @@ import { openForm } from "../../../util/forms";
 import { openMapDialog } from "../../../util/mapDialog";
 import { bauakteSchema, formFields, initialValues, writeValues } from "../../../util/formSchema";
 import { SITE_NOTES_PLACEHOLDER, type FreeTextBlock } from "../../../util/freeText";
+import { bauakteLexwareBlock, lexwareVisible, type BauakteLexware } from "../../../util/lexware";
 
 /** Übersicht: Objektbilder, Standort (im Büro per Klick setzen), Kennzahlen, Notizen, Aufgaben, Stammdaten, Aktivitäten. @namespace estrichone.controller.bauakte.sections */
 export default class Overview extends SectionBase {
@@ -27,7 +28,8 @@ export default class Overview extends SectionBase {
 	private photos: FileResponse[] = [];
 
 	protected init(): void {
-		const model = new JSONModel({ hero: [], upcoming: [], markers: [], picking: false, picked: null, hasLocation: false, pinned: [], work: [], activity: [], approvals: [], latestDocs: [] });
+		const model = new JSONModel({ hero: [], upcoming: [], markers: [], picking: false, picked: null, hasLocation: false, pinned: [], work: [], activity: [], approvals: [], latestDocs: [],
+			lx: bauakteLexwareBlock(null, dateTime) });
 		model.setSizeLimit(1000);
 		this.v().setModel(model, "ov");
 	}
@@ -55,6 +57,13 @@ export default class Overview extends SectionBase {
 		const today = isoDay(new Date());
 		this.location(this.bauakte());
 		m.setProperty("/picking", false);
+		// Lexware Office: Kontaktdaten und Abgleichstand des verknüpften Kunden, nur mit eingeschaltetem Modul und Leserecht.
+		if (lexwareVisible(session.data.modules ?? {}, session.data.permissions ?? {})) {
+			void get<BauakteLexware>(`bauakten/${id}/lexware`).then((data) => { if (id === this.bauakteId) m.setProperty("/lx", bauakteLexwareBlock(data, dateTime)); })
+				.catch(() => m.setProperty("/lx", bauakteLexwareBlock(null, dateTime)));
+		} else {
+			m.setProperty("/lx", bauakteLexwareBlock(null, dateTime));
+		}
 		const [files, work, notes, inspections, planning, history, diary] = await Promise.allSettled([
 			akte.files(id), session.has("work.read") ? akte.work(id) : Promise.resolve([]), akte.notes(id), akte.inspections(id),
 			session.has("planning.read") ? akte.planning(id) : Promise.resolve(null), akte.history(id), akte.diary(id),
@@ -256,5 +265,14 @@ export default class Overview extends SectionBase {
 	onOpenPhoto(event: Event): void {
 		const id = (event.getSource() as Control).getBindingContext("ov")?.getProperty("id") as string;
 		openLightbox(this.photos, Math.max(0, this.photos.findIndex((p) => p.id === id)));
+	}
+
+	onToInvoices(): void {
+		navTo(`/bauakten/${this.bauakteId}?abschnitt=rechnungen`);
+	}
+
+	onToLexwareCustomer(): void {
+		const customerId = this.ov().getProperty("/lx/customerId") as string;
+		if (customerId) navTo(`/kunden/${customerId}?abschnitt=lexware`);
 	}
 }
