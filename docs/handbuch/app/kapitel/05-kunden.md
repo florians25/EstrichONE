@@ -50,6 +50,18 @@ Kunden.
 > **Hinweis:** Kunden erscheinen nach der Synchronisation in der Liste. Beim Anlegen einer Bauakte sucht die App mit
 > Verbindung zusätzlich auf dem Server (Kapitel 4).
 
+### Kunde ist bereits in Lexware Office vorhanden
+
+Nutzt Ihr Betrieb Lexware Office, prüft die App beim Anlegen eines Kunden mit Verbindung zum Server, ob es ihn dort
+schon gibt. Bei Treffern erscheint **Achtung: Dieser Kunde ist bereits in Lexware Office vorhanden.** mit Name,
+Kundennummer, Anschrift und dem Grund der Übereinstimmung.
+
+- **Aus Lexware Office übernehmen** legt den Kunden mit den Daten aus Lexware Office an und verknüpft ihn.
+- **Trotzdem neu anlegen** legt den Kunden bewusst ohne Verknüpfung an.
+
+Ohne Verbindung prüft die App nicht. Der Server prüft dann nach der Synchronisation: Gibt es keinen ähnlichen Kontakt,
+legt er den Kunden in Lexware Office an, sonst steht der Kunde im Büro unter den möglichen Dubletten.
+
 ## Kunden archivieren oder löschen
 
 Mit dem Recht **Kunden bearbeiten** bzw. **Kunden löschen** steht im Aktionsmenü der Kundenkarte (iPhone/iPad: **…**,

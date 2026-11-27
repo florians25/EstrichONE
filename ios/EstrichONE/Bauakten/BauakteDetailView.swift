@@ -35,6 +35,8 @@ struct BauakteDetailView: View {
     @State private var viewing: FileItem?
     @State private var playing: FileItem?
     @State private var pdfURL: URL?
+    /// Lexware Office (nur lesend, nur online): Kontakt, Abgleichstand und zugeordnete Belege des verknüpften Kunden.
+    @State private var lexware: BauakteLexware?
     @State private var loadingPDF = false
     @State private var pdfMessage: String?
     @State private var showsNavigationTitle = false
@@ -122,6 +124,7 @@ struct BauakteDetailView: View {
                     await loadTeams()
                     await loadMembership()
                     await loadPlanned()
+                    await loadLexware()
                 }
                 .alert("Bauakte stornieren?", isPresented: $cancelling) {
                     TextField("Grund (Pflicht)", text: $cancelReason)
@@ -198,6 +201,9 @@ struct BauakteDetailView: View {
                 highlights(content)
                 appointment(content)
                 keyData(content, wide: wide)
+                if let lexware, lexware.contact != nil {
+                    LexwareBauakteSections(bauakteId: bauakteId, data: lexware)
+                }
                 siteNotes(content)
                 openPoints(content, wide: wide)
                 documentation(content, wide: wide)
@@ -1170,6 +1176,15 @@ struct BauakteDetailView: View {
         } catch {
             toast = error == .offline ? "Ohne Verbindung nicht möglich. Bitte später erneut versuchen." : error.message
         }
+    }
+
+    /// Lexware-Daten der Bauakte vom Server; ohne Modul, ohne Verbindung oder ohne Verknüpfung bleibt der Block aus.
+    private func loadLexware() async {
+        guard modules.lexwareOn, let client = model.active?.client else {
+            lexware = nil
+            return
+        }
+        lexware = try? await client.bauakteLexware(bauakteId)
     }
 
     /// Bauakte-PDF vom Server (alle Teile), angezeigt mit QuickLook (Teilen über QuickLook).

@@ -173,6 +173,7 @@ struct NewCustomerForm: View {
     @State private var similar: [Contact] = []
     @State private var errorMessage: String?
     @State private var saving = false
+    @State private var lexware = LexwareCheckState()
 
     var body: some View {
         Form {
@@ -182,6 +183,7 @@ struct NewCustomerForm: View {
                 Text("Der Kunde wird mit der nächsten Synchronisation übertragen.")
             }
             SimilarCustomersSection(similar: similar) { onCreated($0) }
+            LexwareCheckSection(state: $lexware) { onCreated($0) }
             if let errorMessage {
                 Section { StatusMessage(kind: .error, text: errorMessage) }
             }
@@ -201,11 +203,19 @@ struct NewCustomerForm: View {
             guard !Task.isCancelled else { return }
             similar = (try? await model.active?.service?.similarCustomers(to: customer)) ?? []
         }
+        .task(id: LexwareCustomerCheck.key(customer)) {
+            let result = await LexwareCustomerCheck.run(model, customer)
+            if !Task.isCancelled { lexware = LexwareCheckState(check: result) }
+        }
         .sensoryFeedback(.error, trigger: errorMessage) { _, new in new != nil }
     }
 
     private func save() async {
         guard let service = model.active?.service else { return }
+        if lexware.blocking {
+            errorMessage = "Dieser Kunde ist bereits in Lexware Office vorhanden. Bitte übernehmen Sie ihn oder wählen Sie „Trotzdem neu anlegen“."
+            return
+        }
         saving = true
         defer { saving = false }
         do throws(BauakteError) {
@@ -258,11 +268,19 @@ struct CustomerChooser: View {
     @State private var results: [Contact] = []
     @State private var recent: [Contact] = []
     @State private var similar: [Contact] = []
+    @State private var lexware = LexwareCheckState()
 
     var body: some View {
         // Dublettenhinweis oberhalb der Eingabefelder, damit er nicht unter der Tastatur verschwindet.
         if newCustomer != nil {
             SimilarCustomersSection(similar: similar) { contact in
+                withAnimation {
+                    newCustomer = nil
+                    customer = contact
+                }
+            }
+            // Gibt es den Kunden in Lexware Office schon: Warnung mit „Aus Lexware Office übernehmen“ oder bewusst neu anlegen.
+            LexwareCheckSection(state: $lexware) { contact in
                 withAnimation {
                     newCustomer = nil
                     customer = contact
@@ -341,6 +359,10 @@ struct CustomerChooser: View {
         .task { recent = (try? await model.active?.service?.recentCustomers()) ?? [] }
         .task(id: search) { await find() }
         .task(id: "\(newCustomer?.name ?? "")|\(newCustomer?.phone ?? "")|\(newCustomer?.email ?? "")") { await checkDuplicates() }
+        .task(id: LexwareCustomerCheck.key(newCustomer)) {
+            let result = await LexwareCustomerCheck.run(model, newCustomer)
+            if !Task.isCancelled { lexware = LexwareCheckState(check: result) }
+        }
 
     }
 

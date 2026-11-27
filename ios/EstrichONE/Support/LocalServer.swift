@@ -118,6 +118,10 @@ final class FakeServer: HTTPTransport, @unchecked Sendable {
     private func demoFile(_ path: String, method: String) -> Data? {
         guard let demo, method == "GET" else { return nil }
         if path.hasPrefix("/api/v1/bauakten/"), path.hasSuffix("/report.pdf") { return demo.pdf }
+        // Beleg-PDF aus Lexware Office im Demomodus; für den Entwurf gibt es keines (Meldung in demoLexware).
+        if path.hasPrefix("/api/v1/bauakten/"), path.contains("/lexware/vouchers/"), path.hasSuffix("/document"), !path.contains("-entwurf/") {
+            return demo.pdf
+        }
         let parts = path.split(separator: "/")
         guard parts.count >= 5, parts[2] == "files", parts.last == "content" else { return nil }
         let id = String(parts[3]).lowercased()
@@ -126,6 +130,7 @@ final class FakeServer: HTTPTransport, @unchecked Sendable {
 
     private func route(_ path: String, method: String, body: [String: Any], cursor: String?) -> (Int, String) {
         counter += 1
+        if demo != nil, let lexware = demoLexware(path, body: body) { return lexware }
         switch path {
         case "/api/v1/server-info":
             return (serverInfoStatus, serverInfoBody)
@@ -465,6 +470,57 @@ final class FakeServer: HTTPTransport, @unchecked Sendable {
          "status":"\(status)","model":null,"osVersion":null,"appVersion":null,"assignedUserId":null,
          "registeredAt":"2026-10-20T06:10:24.7660538+00:00","approvedAt":null,"lastSeenAt":null,"version":1}
         """
+    }
+
+    /// Lexware Office im Demomodus (nur lesend): Modul eingeschaltet, Daten und Belege der Beispielbauakte, Prüfung beim Anlegen.
+    private func demoLexware(_ path: String, body: [String: Any]) -> (Int, String)? {
+        if path == "/api/v1/settings/modules" {
+            let module: [String: Any] = ["key": "lexware", "enabled": true, "core": false]
+            let response: [String: Any] = ["version": 1, "lexwareSyncDefault": true, "modules": [module]]
+            return json(200, response)
+        }
+        if path == "/api/v1/lexware/contacts/check" {
+            let name = (body["name"] as? String ?? "").lowercased()
+            var candidates: [[String: Any]] = []
+            if name.contains("huber") {
+                let contact: [String: Any] = ["id": "lx-kontakt-7", "name": "Huber Wohnbau GmbH & Co. KG", "isCompany": true, "customerNumber": "10001",
+                                              "street": "Am Anger 7", "postalCode": "83022", "city": "Rosenheim"]
+                candidates = [["contact": contact, "score": 80, "reasons": ["gleicher Name und PLZ"], "strong": false]]
+            }
+            let response: [String: Any] = ["checked": true, "canImport": true, "candidates": candidates]
+            return json(200, response)
+        }
+        guard path.hasPrefix("/api/v1/bauakten/") else { return nil }
+        if path.contains("/lexware/vouchers/"), path.hasSuffix("/document") {
+            return problem(409, "LEXWARE_NO_DOCUMENT", "Für Entwürfe stellt Lexware Office kein PDF bereit.")
+        }
+        guard path.hasSuffix("/lexware") else { return nil }
+        let parts = path.split(separator: "/")
+        guard parts.count == 5, String(parts[3]).lowercased() == DemoContent.efh else {
+            let empty: [String: Any] = ["vouchers": [[String: Any]]()]
+            return json(200, empty)
+        }
+        func voucher(_ id: String, _ type: String, _ number: String?, _ date: String, _ gross: Double, _ status: String) -> [String: Any] {
+            var item: [String: Any] = ["id": id, "type": type, "voucherDate": date, "grossAmount": gross, "status": status]
+            if let number { item["number"] = number }
+            return item
+        }
+        let deviation: [String: Any] = ["field": "email", "label": "E-Mail-Adresse", "estrichOne": "mueller@example.org",
+                                        "lexware": "rechnung@familie-mueller.example"]
+        let sync: [String: Any] = ["state": "deviations", "syncedAt": APIDate.format(Date().addingTimeInterval(-5400)), "deviations": [deviation]]
+        let contact: [String: Any] = ["lexwareContactId": "lx-kontakt-1", "name": "Familie Müller", "number": "10042",
+                                      "url": "https://app.lexware.de/permalink/contacts/view/lx-kontakt-1", "street": "Lindenweg 12",
+                                      "postalCode": "83022", "city": "Rosenheim", "email": "rechnung@familie-mueller.example",
+                                      "differingFields": ["email"], "sync": sync]
+        let vouchers: [[String: Any]] = [
+            voucher("0193a1b2-de00-7000-8000-00000000e003-entwurf", "invoice", nil, "2026-11-26", 14415.48, "draft"),
+            voucher("0193a1b2-de00-7000-8000-00000000e002", "invoice", "RE2026-0903", "2026-10-06", 5176.5, "overdue"),
+            voucher("0193a1b2-de00-7000-8000-00000000e001", "invoice", "RE2026-0871", "2026-09-18", 7378.0, "paid"),
+            voucher("0193a1b2-de00-7000-8000-00000000e000", "quotation", "AG2026-0311", "2026-08-04", 25585.0, "accepted"),
+        ]
+        let response: [String: Any] = ["contact": contact, "vouchers": vouchers,
+                                       "summary": "2 Rechnungen: offen 5.176,50 €, bezahlt 7.378,00 €, 1 im Entwurf. 1 Angebot: angenommen 25.585,00 €"]
+        return json(200, response)
     }
 
     private func json(_ status: Int, _ object: Any) -> (Int, String) {

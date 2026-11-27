@@ -339,6 +339,18 @@ vorhandener, schlägt die App **Verwenden** vor, damit keine Dublette entsteht. 
 Bauakte** sein (höchstens einer). **Aus der Bauakte entfernen** löst ihn nur von dieser Bauakte; im Kundenstamm bleibt
 er erhalten.
 
+## Lexware Office in der Bauakte
+
+Nutzt Ihr Betrieb Lexware Office und ist der Kunde der Bauakte dort verknüpft, zeigt die Bauakte nach **Leistung und
+Kennwerte** den Abschnitt **Lexware Office**: Name und Kundennummer des Kontakts, Rechnungsanschrift und E-Mail-Adresse
+aus Lexware Office, den Stand des Abgleichs und eine Zeile mit den Summen der Belege. Weicht eine Angabe von EstrichONE
+ab, steht das darunter.
+
+Darunter stehen unter **Rechnungen und Angebote** die Belege, die das Büro dieser Bauakte zugeordnet hat, mit Art, Nummer,
+Datum, Betrag und Status. Tippen Sie auf einen Beleg, öffnet sich das PDF. Für Entwürfe stellt Lexware Office kein PDF
+bereit. Der Abschnitt ist nur mit Verbindung zum Server sichtbar. In der App ordnen Sie keine Belege zu und bearbeiten
+nichts; das geschieht im Büro bzw. in Lexware Office.
+
 ## Stand, PDF und Stornieren
 
 - **Status ändern** (Weitere Aktionen oder Antippen des Stands im Kopf): **Anfrage**, **Geplant**, **In Ausführung**,
