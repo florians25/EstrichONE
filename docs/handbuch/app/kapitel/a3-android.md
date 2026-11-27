@@ -38,8 +38,8 @@ Listen auf **Heute**, **Baustellen**, **Chat** und **Kunden** aktualisieren Sie,
    Planer sehen den nächsten Einsatz jeder Kolonne und darunter **Einplanen** und **Verschieben**.
 3. **Leistung und Kennwerte**: Estrichart, Dicke, Fläche und Termin zuerst, dazu die Räume mit Gesamtfläche; **Alle
    Kennwerte** klappt die übrigen Basisdaten auf, **Bearbeiten** öffnet sie.
-4. **Beschreibung und Hinweise** als zusammenhängender Block: Beschreibung, **Hinweise und Behinderungen**, **Zugang /
-   Besonderheiten** und **angeheftete Notizen**, bei Bedarf der Hinweis auf eine fehlende Erstbegehung.
+4. **Beschreibung und Hinweise** als zusammenhängender Block: Beschreibung, **Hinweise und Zugang** und
+   **angeheftete Notizen**, bei Bedarf der Hinweis auf eine fehlende Erstbegehung.
 5. **Offene Aufgaben und Mängel**, Mängel zuerst; der Kreis hakt einen Punkt ab.
 6. **Fotos und Dokumentation**: neueste Fotos, darunter Fotos und Videos, Dokumente, Bautagebuch, Notizen, Protokolle,
    Erstbegehung und Räume mit Anzahl.
@@ -64,8 +64,8 @@ Verbindung gilt der zuletzt geladene Tagesplan und die Änderung wird vorgemerkt
 Gerät, sagt das Blatt das. **Baustelle zuweisen** in der Disposition nutzt dasselbe Blatt, Kolonne und Tag sind dort
 vorbelegt.
 
-**Freitexte in der Bauakte.** Hinweise und Behinderungen (farbig markiert), Beschreibung und mehrzeilige Felder wie
-**Zugang / Besonderheiten** stehen als eigene Karten mit Überschrift. Zeilenumbrüche bleiben erhalten, Links,
+**Freitexte in der Bauakte.** **Hinweise und Zugang** (farbig markiert), Beschreibung und eigene mehrzeilige Felder
+Ihres Betriebs stehen als eigene Karten mit Überschrift. Zeilenumbrüche bleiben erhalten, Links,
 E-Mail-Adressen und Telefonnummern lassen sich antippen, lange Texte zeigen zuerst den Anfang (**Mehr anzeigen**). Der
 Stift öffnet die Basisdaten mit mehrzeiligen Feldern.
 

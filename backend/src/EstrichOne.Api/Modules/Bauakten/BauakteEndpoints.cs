@@ -53,7 +53,8 @@ public sealed record CreateBauakteRequest(
     BauakteStatus? Status = null,
     BauakteProject? Project = null,
     DateOnly? PlannedStart = null,
-    DateOnly? PlannedEnd = null);
+    DateOnly? PlannedEnd = null,
+    [property: MaxLength(Bauakte.MaxSiteNotesLength)] string? SiteNotes = null);
 
 /// <summary>Ersetzt alle bearbeitbaren Felder. Version per <c>If-Match</c>.</summary>
 public sealed record UpdateBauakteRequest(
@@ -72,7 +73,7 @@ public sealed record UpdateBauakteRequest(
     [property: MaxLength(100)] string? SiteContactName = null,
     [property: MaxLength(50)] string? SiteContactPhone = null,
     [property: MaxLength(320), EmailAddress] string? SiteContactEmail = null,
-    [property: MaxLength(2000)] string? SiteNotes = null,
+    [property: MaxLength(Bauakte.MaxSiteNotesLength)] string? SiteNotes = null,
     [property: MaxLength(500)] string? CancellationReason = null,
     BauakteProject? Project = null);
 
@@ -277,10 +278,15 @@ internal static class BauakteEndpoints
             return Validation(projectError, "INVALID_PROJECT");
         }
 
+        if (Bauakte.MergeSiteAccess(request.SiteNotes, request.Project?.SiteAccess) is { Length: > Bauakte.MaxSiteNotesLength })
+        {
+            return Validation($"Hinweise und Zugang: höchstens {Bauakte.MaxSiteNotesLength} Zeichen.", "INVALID_PROJECT");
+        }
+
         var (bauakte, outcome) = await commands.CreateAsync(new NewBauakte(request.Id, request.Title, request.Street,
             request.PostalCode, request.City, request.Latitude, request.Longitude, request.Description, request.CustomerId,
             request.TemplateKey, request.Status == BauakteStatus.Inquiry ? BauakteStatus.Inquiry : BauakteStatus.Planned,
-            request.Project, request.PlannedStart, request.PlannedEnd), cancellationToken);
+            request.Project, request.PlannedStart, request.PlannedEnd, request.SiteNotes), cancellationToken);
 
         switch (outcome)
         {
@@ -367,7 +373,15 @@ internal static class BauakteEndpoints
                 return Validation(projectError, "INVALID_PROJECT");
             }
 
-            bauakte.ChangeProject(project);
+            try
+            {
+                bauakte.ChangeProject(project);
+            }
+            catch (ArgumentException exception)
+            {
+                // Ältere App schreibt noch „Zugang / Besonderheiten“ und der Text passt nicht mehr in die Hinweise.
+                return Validation(exception.Message, "INVALID_PROJECT");
+            }
         }
 
         bauakte.ChangeAddress(request.Street, request.PostalCode, request.City, request.Latitude, request.Longitude);

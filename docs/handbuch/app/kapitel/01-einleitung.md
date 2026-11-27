@@ -37,7 +37,7 @@ Unten auf dem iPhone (auf dem iPad oben) sitzt die **Tab-Leiste** mit fünf Bere
 
 | Tab | Inhalt |
 |---|---|
-| **Heute** | „Ihr Tag“ (Einsätze, Beginn, Fläche, Kolonne mit Besetzung, Fahrzeuge, Abwesende), alle Einsätze von heute mit Adresse, Route, Ansprechpartner, Leistung, Zugang, angehefteten Notizen und letzter Chatnachricht der Baustelle, offene Mängel, Belegreife und Wetter, Überblick, morgen, zuletzt geöffnete Bauakten |
+| **Heute** | „Ihr Tag“ (Einsätze, Beginn, Fläche, Kolonne mit Besetzung, Fahrzeuge, Abwesende), alle Einsätze von heute mit Adresse, Route, Ansprechpartner, Leistung, Hinweisen und Zugang, angehefteten Notizen und letzter Chatnachricht der Baustelle, offene Mängel, Belegreife und Wetter, Überblick, morgen, zuletzt geöffnete Bauakten |
 | **Baustellen** | alle Bauakten, die Sie sehen dürfen (laufende sowie abgeschlossene und stornierte), Suche, neue Bauakte; erfasst wird in der Bauakte über **Foto** und **„+“** (Erfassen) |
 | **Chat** | alle Unterhaltungen mit Zahl ungelesener Nachrichten am Tab; Dateien und Fotos tauschen Sie über Microsoft Teams aus |
 | **Kunden** | Kundenstamm mit Anrufen, Nachricht, E-Mail und Route |

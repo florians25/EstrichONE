@@ -182,7 +182,7 @@ struct TodayJobCard: View {
             actionBar
             if let visit, canCapture { visitBar(visit) }
 
-            // Unter den Schnellaktionen: Kennzahlen, Zugang, Hinweise und der Chat der Baustelle.
+            // Unter den Schnellaktionen: Kennzahlen, Hinweise und Zugang, Hinweis der Disposition und der Chat der Baustelle.
             if let glance, !glance.isEmpty {
                 GlanceChips(glance: glance)
                     .accessibilityIdentifier("todayJobGlance")
@@ -190,7 +190,7 @@ struct TodayJobCard: View {
             if extras?.access != nil || job.notes?.compactText != nil || extras?.pinned.first != nil {
                 VStack(alignment: .leading, spacing: Space.s) {
                     if let access = extras?.access {
-                        line(symbol: "key", text: access, caption: "Zugang", limit: 2)
+                        line(symbol: "key", text: access, caption: "Hinweise und Zugang", limit: 3)
                     }
                     if let notes = job.notes?.compactText {
                         line(symbol: "text.bubble", text: notes, caption: "Hinweis der Disposition", limit: 2)

@@ -37,7 +37,7 @@ Legende: ✅ umgesetzt · 🟡 teilweise (siehe Bemerkung) · ❌ fehlt noch
 | Mein Tag: drei Kennzahlen (Einsätze ab Uhrzeit, offene Aufgaben mit Mängeln, Freigaben bzw. weitere Einsätze) | ✅ | ✅ | `TodayOverview` (unit-getestet) |
 | Mitteilungen (Störung, Wartung, Neuigkeiten) als eine Zeile, aufklappbar; Störungen rot, Ausblenden bleibt | ✅ | ✅ | `TodayOverview.noticeSummary` |
 | Ausfall-Hinweise Backup/Archiv nur, wenn der Server sie liefert | ✅ | ✅ | |
-| Jetzt im Einsatz bzw. Nächster Einsatz als Hauptkarte (Zeit, Status, Adresse, Leistung mit Kennwerten, Kolonne, Fahrzeuge, Zugang) | ✅ | ✅ | Plan offline aus dem letzten Abruf |
+| Jetzt im Einsatz bzw. Nächster Einsatz als Hauptkarte (Zeit, Status, Adresse, Leistung mit Kennwerten, Kolonne, Fahrzeuge, Hinweise und Zugang) | ✅ | ✅ | Plan offline aus dem letzten Abruf |
 | Schnellaktionen der Hauptkarte: Route, Anrufen, Chat, Bauakte; Foto, Tagebuch, Mangel im Menü „⋮“ | ✅ | ✅ | |
 | Weitere Einsätze heute als kompakte Zeilen mit Route | ✅ | ✅ | |
 | Offene Aufgaben (drei, mit Bauakte) bzw. Aufgaben und Freigaben | ✅ | ✅ | |
@@ -74,11 +74,11 @@ Legende: ✅ umgesetzt · 🟡 teilweise (siehe Bemerkung) · ❌ fehlt noch
 | Liste mit Suche, Filter (Heute, Laufend, Status, Alle) mit Anzahl, „Heute im Einsatz“ zuerst, dann Status und nächster Termin | ✅ | ✅ | `SiteList` (unit-getestet); kompakte Zeilen mit Status-Kennzeichen und nächstem Termin; Suche auch nach Kunde und Kundennummer, Ziehen zum Abgleichen |
 | Schnellanlage mit Art, Adresse, Kunde (vorhanden oder neu) – offline | ✅ | ✅ | |
 | Dublettenprüfung beim neuen Kunden | ✅ | 🟡 | Hinweis auf ähnliche Kunden aus dem Bestand auf dem Gerät (offline); Serverprüfung `contacts/duplicates` nicht genutzt |
-| Aufbau der Bauakte: Kopf mit Aktionsleiste (Route, Anrufen mit Kontaktauswahl, Chat, Einplanen für Planer, Teams), heute bzw. nächster Termin, Leistung und Kennwerte, Beschreibung und Hinweise (Beschreibung, Hinweise und Behinderungen, Zugang, angeheftete Notiz), Aufgaben und Mängel, Fotos und Dokumentation, Kontakte (einklappbar), Verlauf | ✅ | ✅ | ab 1.0.38; der Abschnitt „Ablauf“ ist entfallen (`SiteWorkflow` entfernt), Erfassen über „Erfassen“ und „Fotos und Dokumentation“ |
+| Aufbau der Bauakte: Kopf mit Aktionsleiste (Route, Anrufen mit Kontaktauswahl, Chat, Einplanen für Planer, Teams), heute bzw. nächster Termin, Leistung und Kennwerte, Beschreibung und Hinweise (Beschreibung, Hinweise und Zugang, angeheftete Notiz), Aufgaben und Mängel, Fotos und Dokumentation, Kontakte (einklappbar), Verlauf | ✅ | ✅ | ab 1.0.38; der Abschnitt „Ablauf“ ist entfallen (`SiteWorkflow` entfernt), Erfassen über „Erfassen“ und „Fotos und Dokumentation“ |
 | Einplanen vom Handy für Planer: in der Bauakte (Aktionsleiste, Menü, „Nächster Termin“) und im Langdruck-Menü der Baustellenliste; kompaktes Blatt mit Tag (Heute, Morgen, Übermorgen, Datum), Kolonne mit Auslastung, Tätigkeit, Uhrzeit, Konfliktprüfung; „Verschieben“ des nächsten Einsatzes | ✅ | ✅ | Android `QuickPlan` in core/DayPlan.kt (unit-getestet), Blatt `QuickPlanSheet` in ui/Dispatch.kt, auch für „Baustelle zuweisen“; gleiche Endpunkte (`POST /planning/batch`), offline vorgemerkt |
 | „Erfassen“ unten rechts (klappt beim Scrollen ein, verdeckt nichts) | ✅ | ✅ | Blatt mit Fotos zuerst, dann Video, Scan, Datei, Tagebuch, Erstbegehung, CM-Messung, Abnahme, Mangel, Aufgabe, Notiz für diese Bauakte |
 | Menü „…“/„⋮“: Basisdaten, PDF, Teams-Chat, Austragen, Stornieren | ✅ | ✅ | Chat und Teams stehen in der Aktionsleiste |
-| Freitexte (Hinweise und Behinderungen, Beschreibung, mehrzeilige Schema-Felder) als Textblöcke mit Überschrift, Links/Telefon antippbar, „Mehr anzeigen“ | ✅ | ✅ | `FreeText` im Kern, unit-getestet |
+| Freitexte (Hinweise und Zugang als ein Block, Beschreibung, mehrzeilige Schema-Felder) als Textblöcke mit Überschrift, Links/Telefon antippbar, „Mehr anzeigen“ | ✅ | ✅ | `FreeText` im Kern, unit-getestet |
 | Basisdaten: vier Kennwerte direkt (zuerst Estrichart, Dicke, Fläche, Termin), „Alle Basisdaten“ klappt auf | ✅ | ✅ | unit-getestet |
 | Angeheftete Notiz, Hinweise nur bei Bedarf; Offene Punkte und neueste Fotos nur, wenn vorhanden | ✅ | ✅ | |
 | Basisdaten nach Formular-Schema bearbeiten | ✅ | ✅ | |

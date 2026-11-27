@@ -97,7 +97,6 @@ internal static class BauakteFormFields
         new FormSchemaField("heatingType", "Art der Heizung", "select", "project.heatingType", ValueLists.HeatingType, Builtin: true),
         new FormSchemaField("insulation", "Dämmung", "text", "project.insulation", ValueLists.Insulation, Help: "z. B. EPS 035 DEO", Builtin: true),
         new FormSchemaField("insulationThicknessMm", "Dämmdicke", "integer", "project.insulationThicknessMm", Unit: "mm", Builtin: true),
-        new FormSchemaField("siteAccess", "Zugang / Besonderheiten", "textarea", "project.siteAccess", Help: "Pumpenstandort, Zufahrt, Etage", Builtin: true),
         new FormSchemaField("waterOnSite", "Wasser vor Ort", "boolean", "project.waterOnSite", Builtin: true),
         new FormSchemaField("powerOnSite", "Strom vor Ort", "boolean", "project.powerOnSite", Builtin: true),
     }.ToDictionary(f => f.Key);
@@ -105,7 +104,16 @@ internal static class BauakteFormFields
     private static readonly string[] ProjectKeys = ["objectType", "floors", "totalArea", "plannedStart", "plannedEnd", "priority"];
     private static readonly string[] ScreedKeys = ["screedType", "construction", "nominalThicknessMm", "strengthClass", "underfloorHeating", "heatingType",
         "insulation", "insulationThicknessMm"];
-    private static readonly string[] SiteKeys = ["siteAccess", "waterOnSite", "powerOnSite"];
+    private static readonly string[] SiteKeys = ["waterOnSite", "powerOnSite"];
+
+    /// <summary>
+    /// Früheres eingebautes Feld „Zugang / Besonderheiten“: aufgegangen in „Hinweise und Zugang“ (siteNotes der Bauakte).
+    /// Aus gespeicherten Formularen entfernt es die Migration SiteNotesAndAccess; beim Speichern wird es übergangen.
+    /// </summary>
+    public const string RetiredSiteAccessKey = "siteAccess";
+
+    /// <summary>Ziel für Angaben der Erstbegehung: Der Server hängt den Text an „Hinweise und Zugang“ an.</summary>
+    public const string SiteAccessTarget = "project.siteAccess";
 
     public static IReadOnlyList<FormSchemaGroup> Default() =>
     [
@@ -235,6 +243,13 @@ internal static partial class FormSchemaEndpoints
                     return Problem("INVALID_FIELD", $"Feld „{f.Key}“: Schlüssel fehlt, ist ungültig oder doppelt.");
                 }
 
+                if (!inspection && f.Key == BauakteFormFields.RetiredSiteAccessKey)
+                {
+                    // Aufgegangen in „Hinweise und Zugang“: kein eigenes Feld mehr (auch nicht als eigenes Feld gleichen Namens).
+                    seen.Remove(f.Key);
+                    continue;
+                }
+
                 if (builtins.TryGetValue(f.Key, out var builtin))
                 {
                     // Eingebaut: Typ, Ablage und Liste bleiben fest.
@@ -288,6 +303,7 @@ internal static partial class FormSchemaEndpoints
     /// <summary>Ziel einer Erstbegehungs-Angabe: eingebautes Basisdaten-Feld oder eigenes Feld (project.custom.x).</summary>
     private static bool ValidTarget(string target) =>
         BauakteFormFields.Builtin.Values.Any(b => b.Path == target)
+        || target == BauakteFormFields.SiteAccessTarget
         || (target.StartsWith("project.custom.", StringComparison.Ordinal) && KeyPattern().IsMatch(target["project.custom.".Length..]));
 
     private static ProblemHttpResult Problem(string code, string detail) =>

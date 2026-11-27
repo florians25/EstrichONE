@@ -152,10 +152,12 @@ der Mitte klappen Sie den Kopf ein, damit mehr Platz für den Inhalt bleibt.
 **Übersicht** fasst Basisdaten, Baustellendaten, Termine, den Stand der Dokumentation, offene Aufgaben, die nächsten
 Einsätze, neueste Dokumente, Freigaben, angeheftete Notizen, den Standort auf der Karte und die neuesten Bilder
 zusammen. Ganz oben stehen die **Freitexte** als eigene Textblöcke mit Überschrift: **Hinweise und
-Behinderungen** (farbig markiert, z. B. Zufahrt, Schlüssel, Hund), **Beschreibung** und mehrzeilige Felder aus dem
-Formular, etwa **Zugang / Besonderheiten**. Zeilenumbrüche bleiben erhalten, Links, E-Mail-Adressen und Telefonnummern
+Zugang** (farbig markiert, ein Feld für Zufahrt, Schlüssel, Strom, Wasser, Pumpenstandort und Behinderungen, bis
+3000 Zeichen), **Beschreibung** und eigene mehrzeilige Felder aus dem Formular. Das frühere zweite Feld
+**Zugang / Besonderheiten** ist in **Hinweise und Zugang** aufgegangen; vorhandene Texte wurden dorthin übernommen.
+Zeilenumbrüche bleiben erhalten, Links, E-Mail-Adressen und Telefonnummern
 sind anklickbar, lange Texte zeigen zuerst den Anfang (**Mehr anzeigen**). Der Stift am Block öffnet einen großen,
-mehrzeiligen Editor, der mit dem Text mitwächst. **Kennwerte bearbeiten** ändert Objektart, Estrichart, Fläche, Dicke, Dämmung, Heizung, Zufahrt usw. im großen,
+mehrzeiligen Editor, der mit dem Text mitwächst. **Kennwerte bearbeiten** ändert Objektart, Estrichart, Fläche, Dicke, Dämmung, Heizung usw. im großen,
 zweispaltigen Fenster. Fehlt der
 Standort, klicken Sie in die Karte und speichern ihn.
 

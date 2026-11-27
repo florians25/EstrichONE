@@ -1154,7 +1154,7 @@ li[data-dot] { display: flex; align-items: center; }
 .eoFuelImage img, img.eoFuelImage { max-height: 60vh; width: 100%; object-fit: contain; border: 1px solid var(--sapList_BorderColor); border-radius: 0.5rem;
 	background: var(--sapGroup_ContentBackground); cursor: zoom-in; }
 
-/* Bauakte: Freitexte als Textblöcke (Hinweise, Beschreibung, Zugang und Besonderheiten) */
+/* Bauakte: Freitexte als Textblöcke (Hinweise und Zugang, Beschreibung) */
 .eoFreeTexts { margin: 0.25rem 0 0.75rem; }
 .eoFreeText { padding: 0.5rem 0.75rem 0.625rem; border: 1px solid var(--sapGroup_ContentBorderColor); border-radius: var(--sapElement_BorderCornerRadius);
 	background: var(--sapGroup_ContentBackground); min-width: 0; }

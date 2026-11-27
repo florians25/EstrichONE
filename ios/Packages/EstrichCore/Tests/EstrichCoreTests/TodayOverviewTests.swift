@@ -81,5 +81,18 @@ struct TodayOverviewTests {
         #expect(!FreeText.isLong("Zufahrt nur bis 7,5 t"))
         #expect(FreeText.isLong((1...8).map { "Zeile \($0)" }.joined(separator: "\n")))
         #expect(FreeText.isLong(String(repeating: "Estrich ", count: 60)))
+        // „Hinweise und Zugang“: ältere Server liefern den Zugang getrennt; ein Block, nichts doppelt.
+        #expect(FreeText.merged("Hund im Hof", " Pumpe vorne ") == "Hund im Hof\n\nPumpe vorne")
+        #expect(FreeText.merged("Hund im Hof\n\nPumpe vorne", "Pumpe vorne") == "Hund im Hof\n\nPumpe vorne")
+        #expect(FreeText.merged(nil, "Pumpe vorne") == "Pumpe vorne")
+        #expect(FreeText.merged("Hund im Hof", "  ") == "Hund im Hof")
+        #expect(FreeText.merged(" ", nil) == nil)
+        // Das frühere Formularfeld älterer Server erscheint nicht mehr als eigenes Feld.
+        let json: JSONValue = ["key": "bauakte", "version": 3, "groups": [["key": "baustelle", "label": "Baustelle", "fields": [
+            ["key": "siteAccess", "label": "Zugang / Besonderheiten", "type": "textarea", "path": "project.siteAccess", "builtin": true],
+            ["key": "waterOnSite", "label": "Wasser vor Ort", "type": "boolean", "path": "project.waterOnSite", "builtin": true],
+        ]]]]
+        let schema = FormSchema(json)
+        #expect(schema?.fields.map(\.key) == ["waterOnSite"])
     }
 }

@@ -28,7 +28,6 @@ export interface BauakteProject {
 	insulationThicknessMm?: number | null;
 	floors?: string | null;
 	priority?: string | null;
-	siteAccess?: string | null;
 	waterOnSite?: boolean | null;
 	powerOnSite?: boolean | null;
 	/** Eigene Felder aus dem Formular-Designer. */
@@ -73,7 +72,6 @@ export function projectFields(): Field[] {
 		{ key: "insulation", label: "Dämmung", maxLength: 100, placeholder: "z. B. EPS 035 DEO" },
 		{ key: "insulationThicknessMm", label: "Dämmdicke", type: "integer", min: 0, max: 1000, unit: "mm" },
 		{ key: "s2", label: "Baustelle", type: "section" },
-		{ key: "siteAccess", label: "Zugang / Besonderheiten", type: "textarea", rows: 2, maxLength: 1000, placeholder: "Pumpenstandort, Zufahrt, Etage …" },
 		{ key: "waterOnSite", label: "Wasser vor Ort", type: "switch" },
 		{ key: "powerOnSite", label: "Strom vor Ort", type: "switch" },
 	];
@@ -88,7 +86,7 @@ export function projectFromValues(v: Record<string, unknown>): BauakteProject {
 		objectType: s("objectType"), totalArea: n("totalArea"), screedType: s("screedType"), construction: s("construction"),
 		nominalThicknessMm: n("nominalThicknessMm"), strengthClass: s("strengthClass"), underfloorHeating: b("underfloorHeating"),
 		heatingType: s("heatingType"), insulation: s("insulation"), insulationThicknessMm: n("insulationThicknessMm"),
-		floors: s("floors"), priority: s("priority"), siteAccess: s("siteAccess"), waterOnSite: b("waterOnSite"), powerOnSite: b("powerOnSite"),
+		floors: s("floors"), priority: s("priority"), waterOnSite: b("waterOnSite"), powerOnSite: b("powerOnSite"),
 	};
 }
 
@@ -106,7 +104,6 @@ export function projectView(p: BauakteProject | null | undefined): Record<string
 		insulation: [q.insulation, q.insulationThicknessMm != null ? `${q.insulationThicknessMm} mm` : null].filter(Boolean).join(", ") || "–",
 		floors: q.floors || "–",
 		priority: q.priority ? priorities[q.priority]?.text ?? q.priority : "–",
-		siteAccess: q.siteAccess || "–",
 		utilities: `Wasser ${yesNo(q.waterOnSite)}, Strom ${yesNo(q.powerOnSite)}`,
 	};
 }
@@ -145,7 +142,6 @@ export function projectWizardControls(prefix: string): { content: Control[]; rea
 	const floors = new Input(`${prefix}Floors`, { width: "100%", maxLength: 100, placeholder: "z. B. KG, EG, OG" });
 	const start = new DatePicker(`${prefix}Start`, { width: "100%", valueFormat: "yyyy-MM-dd", displayFormat: "dd.MM.yyyy" });
 	const end = new DatePicker(`${prefix}End`, { width: "100%", valueFormat: "yyyy-MM-dd", displayFormat: "dd.MM.yyyy" });
-	const access = new TextArea(`${prefix}Access`, { rows: 2, width: "100%", maxLength: 1000, placeholder: "Pumpenstandort, Zufahrt, Etage, Besonderheiten" });
 	const water = new CheckBox(`${prefix}Water`, { text: "Wasser vor Ort" });
 	const power = new CheckBox(`${prefix}Power`, { text: "Strom vor Ort" });
 	const l = (text: string, c: Control) => new Label({ text, labelFor: c });
@@ -166,7 +162,6 @@ export function projectWizardControls(prefix: string): { content: Control[]; rea
 			l("Ausführung von", start), start,
 			l("bis", end), end,
 			l("Priorität", priority), priority,
-			l("Zugang / Besonderheiten", access), access,
 			new Label({ text: "Vor Ort" }), water, power,
 		],
 		read: () => ({
@@ -177,7 +172,7 @@ export function projectWizardControls(prefix: string): { content: Control[]; rea
 			underfloorHeating: heating.getSelected() ? true : null, heatingType: null,
 			insulation: insulation.getValue().trim() || null, insulationThicknessMm: int(insulationMm),
 			floors: floors.getValue().trim() || null, priority: priority.getSelectedKey() || null,
-			siteAccess: access.getValue().trim() || null, waterOnSite: water.getSelected() ? true : null, powerOnSite: power.getSelected() ? true : null,
+			waterOnSite: water.getSelected() ? true : null, powerOnSite: power.getSelected() ? true : null,
 		}),
 		period: () => ({ start: start.getValue() || null, end: end.getValue() || null }),
 	};

@@ -13,6 +13,7 @@
  * „Anlegen“ steht ab Schritt 2 zur Verfügung: die Schritte 3 und 4 sind Ergänzungen und können entfallen.
  */
 import { schemaWizardControls } from "./project";
+import { SITE_NOTES_LABEL, SITE_NOTES_MAX, SITE_NOTES_PLACEHOLDER } from "./freeText";
 import Link from "sap/m/Link";
 import { openNewCustomerDialog } from "./customerDialog";
 import { addressLine, atSameAddress, draftKey, duplicateQueries, hasAddress, mergeCandidates, siteFromCustomer, type DuplicateCandidate } from "./customerMatch";
@@ -481,8 +482,8 @@ export function openBauakteWizard(options: WizardOptions): Promise<(BauakteDetai
 		name: input("newSiteContactName", 100, "Text", "z. B. Herr Bauer (Polier)"),
 		phone: input("newSiteContactPhone", 50, "Tel"),
 		email: input("newSiteContactEmail", 320, "Email"),
-		notes: new TextArea("newSiteNotes", { rows: 3, width: "100%", maxLength: 2000, growing: true, growingMaxLines: 6,
-			placeholder: "Zufahrt, Schlüssel, Anlieferung, Behinderungen" }),
+		notes: new TextArea("newSiteNotes", { rows: 3, width: "100%", maxLength: SITE_NOTES_MAX, growing: true, growingMaxLines: 6,
+			placeholder: SITE_NOTES_PLACEHOLDER }),
 	};
 	onSite.notes.attachLiveChange(() => refreshSummary());
 	const takeCustomer = new Button("newSiteFromCustomer", {
@@ -528,7 +529,7 @@ export function openBauakteWizard(options: WizardOptions): Promise<(BauakteDetai
 					new Label({ text: "Name", labelFor: onSite.name }), onSite.name,
 					new Label({ text: "Telefon", labelFor: onSite.phone }), onSite.phone,
 					new Label({ text: "E-Mail", labelFor: onSite.email }), onSite.email,
-					new Label({ text: "Hinweise zur Baustelle", labelFor: onSite.notes }), onSite.notes,
+					new Label({ text: SITE_NOTES_LABEL, labelFor: onSite.notes }), onSite.notes,
 				]),
 				partyForm("Bauleitung", manager),
 				partyForm("Architekt oder Planer", architect, [new Label({ text: "Rolle", labelFor: partyRole }), partyRole]),
@@ -647,7 +648,7 @@ export function openBauakteWizard(options: WizardOptions): Promise<(BauakteDetai
 		const people: [string, string][] = [];
 		const vorOrt = person({ name: onSite.name.getValue(), company: "", phone: onSite.phone.getValue(), email: onSite.email.getValue() });
 		if (vorOrt) people.push(["Vor Ort", vorOrt]);
-		if (onSite.notes.getValue().trim()) people.push(["Hinweise", onSite.notes.getValue().trim()]);
+		if (onSite.notes.getValue().trim()) people.push([SITE_NOTES_LABEL, onSite.notes.getValue().trim()]);
 		if (person(partyDraft(manager))) people.push(["Bauleitung", person(partyDraft(manager))]);
 		if (person(partyDraft(architect))) people.push([partyRole.getSelectedKey() === "planner" ? "Planer" : "Architekt", person(partyDraft(architect))]);
 		out.push({ title: "Beteiligte", rows: people });

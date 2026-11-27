@@ -7,11 +7,11 @@ const schema: FormSchema = {
   id: 's', key: 'bauakte', version: 1, lists: {},
   groups: [
     { key: 'site', label: 'Baustelle', fields: [
-      { key: 'siteAccess', label: 'Zugang / Besonderheiten', type: 'textarea', path: 'project.siteAccess', builtin: true },
       { key: 'floors', label: 'Geschosse', type: 'text', path: 'project.floors', builtin: true },
     ] },
     { key: 'extra', label: 'Sonstiges', fields: [
       { key: 'remarks', label: 'Bemerkungen', type: 'textarea', path: 'project.custom.remarks' },
+      { key: 'gate', label: 'Anlieferung', type: 'textarea', path: 'project.custom.gate' },
     ] },
   ],
 };
@@ -49,14 +49,20 @@ describe('Freitext als HTML', () => {
 });
 
 describe('Textblöcke der Bauakte', () => {
-  const b = { siteNotes: 'Hund im Hof', description: null, project: { siteAccess: 'Pumpe vorne', floors: 'EG', custom: { remarks: '' } }, plannedStart: null, plannedEnd: null };
+  const b = { siteNotes: 'Hund im Hof', description: null, project: { floors: 'EG', custom: { remarks: '', gate: 'Tor 3' } }, plannedStart: null, plannedEnd: null };
 
   it('Hinweise und Beschreibung immer, Schema-Freitexte nur mit Inhalt', () => {
     const blocks = freeTextBlocks(schema, b as never);
-    expect(blocks.map((x) => x.key)).toEqual(['siteNotes', 'description', 'siteAccess']);
-    expect(blocks[0]).toMatchObject({ label: 'Hinweise und Behinderungen', important: true, source: 'bauakte', text: 'Hund im Hof' });
+    expect(blocks.map((x) => x.key)).toEqual(['siteNotes', 'description', 'gate']);
+    expect(blocks[0]).toMatchObject({ label: 'Hinweise und Zugang', important: true, source: 'bauakte', text: 'Hund im Hof', maxLength: 3000 });
     expect(blocks[1].text).toBe('');
-    expect(blocks[2]).toMatchObject({ label: 'Zugang / Besonderheiten', source: 'schema', path: 'project.siteAccess', maxLength: 1000 });
+    expect(blocks[2]).toMatchObject({ label: 'Anlieferung', source: 'schema', path: 'project.custom.gate', maxLength: 2000 });
+  });
+
+  it('leere Hinweise bleiben als ein Block „Hinweise und Zugang“ sichtbar', () => {
+    const blocks = freeTextBlocks(schema, { siteNotes: '', description: 'Text', project: {} } as never);
+    expect(blocks.map((x) => x.key)).toEqual(['siteNotes', 'description']);
+    expect(blocks[0]).toMatchObject({ label: 'Hinweise und Zugang', text: '' });
   });
 
   it('ohne Schema nur die Felder der Bauakte', () => {
@@ -85,12 +91,5 @@ describe('Dateien und Fotos über Microsoft Teams', () => {
     expect(chatTeamsUrl(status, { teamsWebUrl: 'https://teams.microsoft.com/l/chat/19%3a1/0' })).toBe('https://teams.microsoft.com/l/chat/19%3a1/0');
     expect(chatTeamsUrl({ teamsAvailable: false, teamsWebUrl: null })).toBe('');
     expect(chatTeamsUrl(status, { teamsWebUrl: 'https://boese.example.com' })).toBe('');
-  });
-  it('lässt leere Hinweise weg, wenn Zugang und Besonderheiten gefüllt sind', () => {
-    const schema = { groups: [{ fields: [{ key: 'siteAccess', label: 'Zugang / Besonderheiten', type: 'textarea', path: 'project.siteAccess', builtin: true }] }] } as never;
-    const filled = freeTextBlocks(schema, { siteNotes: '', description: 'Text', project: { siteAccess: 'Schlüssel unter Matte' } } as never);
-    expect(filled.map((x) => x.key)).toEqual(['description', 'siteAccess']);
-    const empty = freeTextBlocks(schema, { siteNotes: '', description: '', project: { siteAccess: '' } } as never);
-    expect(empty.map((x) => x.key)).toEqual(['siteNotes', 'description']);
   });
 });

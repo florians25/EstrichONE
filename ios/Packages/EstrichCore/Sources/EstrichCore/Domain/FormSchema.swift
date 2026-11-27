@@ -132,6 +132,9 @@ public struct FormSchema: Equatable, Sendable {
             guard let key = group["key"]?.string else { return nil }
             let fields = (group["fields"]?.array ?? []).compactMap { field -> Field? in
                 guard let key = field["key"]?.string, let type = field["type"]?.string.flatMap(FieldType.init(rawValue:)) else { return nil }
+                // Früheres Feld „Zugang / Besonderheiten“ (ältere Server): Der Text gehört zu „Hinweise und Zugang“
+                // der Bauakte (`Bauakte.siteNotesAndAccess`) und ist kein eigenes Formularfeld mehr.
+                if field["path"]?.string == "project.siteAccess" { return nil }
                 return Field(key: key, label: field["label"]?.string ?? key, type: type, list: field["list"]?.string,
                              path: field["path"]?.string ?? "project.custom.\(key)", required: field["required"]?.bool ?? false,
                              unit: field["unit"]?.string, help: field["help"]?.string, badge: field["badge"]?.bool ?? false,

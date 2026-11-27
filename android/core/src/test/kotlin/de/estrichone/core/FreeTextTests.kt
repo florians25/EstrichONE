@@ -35,20 +35,39 @@ class FreeTextTests {
     }
 
     @Test
-    @DisplayName("Bauakte: Hinweise, Beschreibung und mehrzeilige Schema-Felder als Textblöcke, leere entfallen")
+    @DisplayName("Bauakte: Hinweise und Zugang als ein Block, Beschreibung und eigene mehrzeilige Felder, leere entfallen")
     fun blocks() {
         val schema = FormSchema("bauakte", 1, listOf(FormGroup("site", "Baustelle", listOf(
-            FormField("siteAccess", "Zugang / Besonderheiten", "textarea", null, null, null, false, "project.siteAccess", null, false),
             FormField("remarks", "Bemerkungen", "textarea", null, null, null, false, "project.custom.remarks", null, false),
             FormField("floors", "Geschosse", "text", null, null, null, false, "project.floors", null, false),
         ))))
-        val b = bauakte("siteNotes" to "Hund im Hof", "description" to " ", "project" to JsonObject(mapOf(
-            "siteAccess" to JsonPrimitive("Pumpe vorne"), "floors" to JsonPrimitive("EG"),
-            "custom" to JsonObject(mapOf("remarks" to JsonPrimitive("Schlüssel beim Nachbarn"))))))
+        val b = bauakte("siteNotes" to "Hund im Hof\n\nPumpe vorne", "description" to " ", "project" to JsonObject(mapOf(
+            "floors" to JsonPrimitive("EG"), "custom" to JsonObject(mapOf("remarks" to JsonPrimitive("Schlüssel beim Nachbarn"))))))
         val blocks = FreeText.blocks(b, schema)
-        assertEquals(listOf("siteNotes", "siteAccess", "remarks"), blocks.map { it.key })
+        assertEquals(listOf("siteNotes", "remarks"), blocks.map { it.key })
         assertTrue(blocks.first().important)
+        assertEquals("Hinweise und Zugang", blocks.first().label)
+        assertEquals("Hund im Hof\n\nPumpe vorne", blocks.first().text)
         assertEquals("Schlüssel beim Nachbarn", blocks.last().text)
         assertEquals(listOf("siteNotes"), FreeText.blocks(b, null).map { it.key })
+    }
+
+    @Test
+    @DisplayName("Älterer Server: Hinweise und Zugang / Besonderheiten erscheinen zusammen in einem Block, nichts doppelt")
+    fun olderServer() {
+        val schema = FormSchema("bauakte", 1, listOf(FormGroup("site", "Baustelle", listOf(
+            FormField("siteAccess", "Zugang / Besonderheiten", "textarea", null, null, null, false, "project.siteAccess", null, false),
+        ))))
+        fun akte(notes: String?, access: String?) = bauakte("siteNotes" to notes, "project" to JsonObject(
+            if (access == null) emptyMap() else mapOf("siteAccess" to JsonPrimitive(access))))
+
+        val both = FreeText.blocks(akte("Hund im Hof", " Pumpe vorne "), schema)
+        assertEquals(listOf("siteNotes"), both.map { it.key })
+        assertEquals("Hund im Hof\n\nPumpe vorne", both.single().text)
+        assertEquals("Pumpe vorne", akte(null, "Pumpe vorne").siteNotesAndAccess)
+        assertEquals("Hund im Hof, Pumpe vorne", akte("Hund im Hof, Pumpe vorne", "Pumpe vorne").siteNotesAndAccess)
+        assertEquals("Hund im Hof", akte("Hund im Hof", "  ").siteNotesAndAccess)
+        assertEquals(null, akte(" ", null).siteNotesAndAccess)
+        assertTrue(FreeText.blocks(akte(null, null), schema).isEmpty())
     }
 }

@@ -34790,6 +34790,13 @@
               "string"
             ],
             "format": "date"
+          },
+          "siteNotes": {
+            "maxLength": 3000,
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -52732,7 +52739,7 @@
             ]
           },
           "siteNotes": {
-            "maxLength": 2000,
+            "maxLength": 3000,
             "type": [
               "null",
               "string"

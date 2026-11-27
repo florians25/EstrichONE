@@ -157,7 +157,7 @@ enum class AreaKind(val title: String, val icon: ImageVector) {
 
 /**
  * Bauakte (gleiches Konzept wie iOS): 1. Kopf mit Aktionsleiste, 2. heute bzw. nächster Termin, 3. Leistung und Kennwerte,
- * 4. Beschreibung und Hinweise (Beschreibung, Hinweise und Behinderungen, Zugang, angeheftete Notiz), 5. offene Aufgaben
+ * 4. Beschreibung und Hinweise (Beschreibung, Hinweise und Zugang, angeheftete Notiz), 5. offene Aufgaben
  * und Mängel, 6. Fotos und Dokumentation, 7. Kontakte, 8. Verlauf. Oben rechts das Symbol zur Offline-Verfügbarkeit und
  * das Menü. Planer planen die Baustelle über „Einplanen“ direkt ein. Erfassen als „Erfassen“ unten rechts (klappt beim
  * Scrollen ein und verdeckt keinen Inhalt).
@@ -297,7 +297,7 @@ fun BauakteScreen(id: String, showBack: Boolean = true) {
             }
             // 3. Leistung und Kennwerte
             item(key = "keyData") { KeyData(session, b) }
-            // 4. Beschreibung und Hinweise: Beschreibung, Hinweise und Behinderungen, Zugang, angeheftete Notiz, fehlende Erstbegehung
+            // 4. Beschreibung und Hinweise: Beschreibung, Hinweise und Zugang, angeheftete Notiz, fehlende Erstbegehung
             item(key = "texts") { DescriptionAndHints(session, b, viewOnly) }
             // 5. Offene Aufgaben und Mängel
             if (modules.anyOn(AppModules.TASKS, AppModules.DEFECTS)) item(key = "tasks") { OpenPoints(session, id) }
@@ -471,16 +471,12 @@ private fun NextAppointment(b: Bauakte, session: Session, planned: SiteAppointme
     }
 }
 
-/** Reihenfolge im Block „Beschreibung und Hinweise“: Beschreibung und weitere Freitexte, Hinweise und Behinderungen, Zugang. */
-private fun textRank(block: de.estrichone.core.FreeText.Block): Int = when {
-    block.important -> 1
-    block.label.contains("zugang", ignoreCase = true) -> 2
-    else -> 0
-}
+/** Reihenfolge im Block „Beschreibung und Hinweise“: Beschreibung und weitere Freitexte, danach Hinweise und Zugang. */
+private fun textRank(block: de.estrichone.core.FreeText.Block): Int = if (block.important) 1 else 0
 
 /**
- * Beschreibung und Hinweise als zusammenhängender Block nach den Kennwerten: Beschreibung, Hinweise und Behinderungen,
- * Zugang und Besonderheiten, angeheftete Notizen; darunter bei Bedarf der Hinweis auf die fehlende Erstbegehung.
+ * Beschreibung und Hinweise als zusammenhängender Block nach den Kennwerten: Beschreibung, Hinweise und Zugang (ein
+ * Block), angeheftete Notizen; darunter bei Bedarf der Hinweis auf die fehlende Erstbegehung.
  */
 @Composable
 private fun DescriptionAndHints(session: Session, b: Bauakte, viewOnly: Boolean) {

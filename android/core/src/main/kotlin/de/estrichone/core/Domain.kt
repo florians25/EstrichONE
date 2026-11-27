@@ -60,10 +60,16 @@ data class Bauakte(val entity: LocalEntity) {
     val templateKey: String? = d.str("templateKey")
     val siteContactName: String? = d.str("siteContactName")
     val siteContactPhone: String? = d.str("siteContactPhone")
-    /** Hinweise und Behinderungen (Zufahrt, Schlüssel, Hund …), in allen Ansichten hervorgehoben. */
+    /** „Hinweise und Zugang“ (Zufahrt, Schlüssel, Strom, Wasser, Pumpenstandort, Behinderungen), in allen Ansichten hervorgehoben. */
     val siteNotes: String? = d.str("siteNotes")
     val cancellationReason: String? = d.str("cancellationReason")
     val project: JsonObject = d.obj("project") ?: JsonObject(emptyMap())
+
+    /** Früheres Feld „Zugang / Besonderheiten“ (`project.siteAccess`); neue Server liefern es leer. */
+    val legacySiteAccess: String? get() = (project["siteAccess"] as? kotlinx.serialization.json.JsonPrimitive)?.takeIf { it.isString }?.content?.trim()?.takeIf { it.isNotEmpty() }
+
+    /** Text des einen Blocks „Hinweise und Zugang“: bei älteren Servern Hinweise und Zugang zusammen, ohne Doppelung. */
+    val siteNotesAndAccess: String? get() = FreeText.merged(siteNotes, legacySiteAccess)
     val plannedStart: LocalDate? = ApiDate.day(d.str("plannedStart"))
     val plannedEnd: LocalDate? = ApiDate.day(d.str("plannedEnd"))
     val updatedAt: Instant? = ApiDate.parse(d.str("updatedAt"))
@@ -433,7 +439,8 @@ data class FormSchema(val key: String, val version: Long, val groups: List<FormG
             val groups = d.arr("groups")?.mapNotNull { it as? JsonObject }?.map { g ->
                 FormGroup(
                     g.str("key") ?: "", g.str("label") ?: "",
-                    g.arr("fields")?.mapNotNull { it as? JsonObject }?.map { f ->
+                    // Das frühere Feld „Zugang / Besonderheiten“ (ältere Server) ist kein eigenes Formularfeld mehr.
+                    g.arr("fields")?.mapNotNull { it as? JsonObject }?.filter { it.str("path") != FreeText.RETIRED_ACCESS_PATH }?.map { f ->
                         val key = f.str("key") ?: ""
                         FormField(
                             key, f.str("label") ?: key, f.str("type") ?: "text", f.str("list"), f.str("unit"), f.str("help"), f.bool("badge") ?: false,

@@ -19,7 +19,7 @@ import { akteContextOf } from "../../../util/akteHeader";
 import { openForm } from "../../../util/forms";
 import { openMapDialog } from "../../../util/mapDialog";
 import { bauakteSchema, formFields, initialValues, writeValues } from "../../../util/formSchema";
-import type { FreeTextBlock } from "../../../util/freeText";
+import { SITE_NOTES_PLACEHOLDER, type FreeTextBlock } from "../../../util/freeText";
 import { bauakteLexwareBlock, lexwareVisible, type BauakteLexware } from "../../../util/lexware";
 
 /** Übersicht: Objektbilder, Standort (im Büro per Klick setzen), Kennzahlen, Notizen, Aufgaben, Stammdaten, Aktivitäten. @namespace estrichone.controller.bauakte.sections */
@@ -228,7 +228,7 @@ export default class Overview extends SectionBase {
 		if (block.source === "schema" && !schema) return;
 		const saved = await openForm<BauakteDetail>({
 			title: `${block.label} bearbeiten`, width: "56rem", initial: { value: block.text },
-			fields: [{ key: "value", type: "textarea", rows: 16, maxLength: block.maxLength }],
+			fields: [{ key: "value", type: "textarea", rows: 16, maxLength: block.maxLength, placeholder: block.key === "siteNotes" ? SITE_NOTES_PLACEHOLDER : undefined }],
 			submit: (v) => {
 				const current = this.bauakte();
 				const value = typeof v.value === "string" && v.value.trim() ? v.value.trim() : null;
