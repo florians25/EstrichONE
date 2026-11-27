@@ -1179,9 +1179,10 @@ struct BauakteDetailView: View {
         }
     }
 
-    /// Lexware-Daten der Bauakte vom Server; ohne Modul, ohne Verbindung oder ohne Verknüpfung bleibt der Block aus.
+    /// Lexware-Daten der Bauakte vom Server. Der Server entscheidet: Ist das Modul aus, fehlt das Recht oder ist der Kunde
+    /// nicht verknüpft, kommt kein Kontakt zurück und der Block bleibt aus. Ohne Verbindung ebenso.
     private func loadLexware() async {
-        guard modules.lexwareOn, let client = model.active?.client else {
+        guard let client = model.active?.client else {
             lexware = nil
             return
         }
