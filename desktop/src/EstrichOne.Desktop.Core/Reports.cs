@@ -117,7 +117,7 @@ public static class Reports
         html.Append("</div>");
         if (!string.IsNullOrWhiteSpace(b.SiteNotes))
         {
-            html.Append(CultureInfo.InvariantCulture, $"<div class=\"hint\" style=\"margin-top:8px\"><strong>Hinweise / Behinderungen:</strong> <span class=\"pre\">{Encode(b.SiteNotes)}</span></div>");
+            html.Append(CultureInfo.InvariantCulture, $"<div class=\"hint\" style=\"margin-top:8px\"><strong>Hinweise und Zugang:</strong> <span class=\"pre\">{Encode(b.SiteNotes)}</span></div>");
         }
 
         if (!string.IsNullOrWhiteSpace(b.Description))

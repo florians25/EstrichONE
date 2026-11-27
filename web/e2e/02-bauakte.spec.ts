@@ -487,7 +487,7 @@ test('Kontakte, Zuweisung, Storno mit Begründung, Löschen mit Passwort', async
   const contact = page.getByRole('dialog', { name: 'Ansprechpartner vor Ort bearbeiten' });
   await contact.getByLabel('Name', { exact: true }).fill('Herr Bauer (Bauleitung)');
   await contact.getByLabel('Telefon').fill('0171 2345678');
-  await contact.getByLabel('Hinweise / Behinderungen').fill('Schlüssel beim Nachbarn Nr. 5');
+  await contact.getByLabel('Hinweise und Zugang').fill('Schlüssel beim Nachbarn Nr. 5');
   await contact.getByRole('button', { name: 'Speichern' }).click();
   await expect(page.locator('.sapFCard').filter({ hasText: 'Herr Bauer (Bauleitung)' }).first()).toContainText('Schlüssel beim Nachbarn Nr. 5');
 
