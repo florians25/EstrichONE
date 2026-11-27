@@ -255,6 +255,9 @@ fun NewBauakteSheet(onDismiss: () -> Unit, onCreated: (String) -> Unit) {
     // „Mit Lexware Office abgleichen“ nur mit eingeschaltetem Modul, vorbelegt mit der Vorgabe aus den Einstellungen.
     val modules by session.modules.collectAsState()
     var lexwareSync by remember(modules) { mutableStateOf(modules.lexwareSyncDefault) }
+    // Prüfung gegen Lexware Office beim Anlegen eines Kunden: offene Treffer und ein von dort übernommener Kunde.
+    var lexwareBlocking by remember { mutableStateOf(false) }
+    var imported by remember { mutableStateOf<Pair<String, String>?>(null) }
 
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true), containerColor = tones.canvas) {
         Column(Modifier.verticalScroll(rememberScrollState()).imePadding().padding(horizontal = 20.dp).padding(bottom = 32.dp),
@@ -279,7 +282,15 @@ fun NewBauakteSheet(onDismiss: () -> Unit, onCreated: (String) -> Unit) {
             Text("Kunde", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 4.dp))
             if (!newCustomer) {
                 val chosen = contacts.firstOrNull { it.id == customerId }
-                if (chosen != null) {
+                val fromLexware = imported?.takeIf { it.first == customerId }
+                if (chosen == null && fromLexware != null) {
+                    // Eben aus Lexware Office übernommen: Der Kunde steht auf dem Server und kommt mit dem Abgleich auf das Gerät.
+                    SectionCard {
+                        RowItem(fromLexware.second, icon = Icons.Filled.PersonAdd, subtitle = "Aus Lexware Office übernommen", trailing = {
+                            IconButton(onClick = { customerId = null; imported = null }) { Icon(Icons.Filled.Close, "Kunde entfernen") }
+                        })
+                    }
+                } else if (chosen != null) {
                     SectionCard {
                         RowItem(chosen.name, icon = Icons.Filled.PersonAdd, subtitle = chosen.subtitle, trailing = {
                             IconButton(onClick = { customerId = null }) { Icon(Icons.Filled.Close, "Kunde entfernen") }
@@ -318,6 +329,9 @@ fun NewBauakteSheet(onDismiss: () -> Unit, onCreated: (String) -> Unit) {
                     Text("Firma", modifier = Modifier.weight(1f))
                     Switch(company, { company = it })
                 }
+                LexwareCustomerCheck(session, customerName, company, street, postalCode, city, phone,
+                    onImported = { id, name -> imported = id to name; customerId = id; newCustomer = false; lexwareBlocking = false },
+                    onBlocking = { lexwareBlocking = it })
                 if (modules.lexwareOn) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
@@ -334,6 +348,10 @@ fun NewBauakteSheet(onDismiss: () -> Unit, onCreated: (String) -> Unit) {
             }
             error?.let { Text(it, color = tones.danger) }
             Button(onClick = {
+                if (newCustomer && lexwareBlocking) {
+                    error = "Dieser Kunde ist bereits in Lexware Office vorhanden. Bitte übernehmen Sie ihn oder wählen Sie „Trotzdem neu anlegen“."
+                    return@Button
+                }
                 try {
                     val id = session.service.createBauakte(title, street, postalCode, city, template, customerId,
                         if (newCustomer && customerName.isNotBlank()) NewCustomer(customerName, company, street, postalCode, city, phone,

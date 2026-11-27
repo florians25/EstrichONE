@@ -213,6 +213,45 @@ abstract class ScreenshotBase(private val device: String, private val appearance
         }
     }
 
+    /** Demomodus mit geladenen Modulen (Lexware Office ist dort eingeschaltet). */
+    private fun lexwareDemo(): Pair<AppModel, de.estrichone.android.Session> {
+        val model = demo()
+        val session = model.session.value!!
+        session.refreshSettings()
+        val deadline = System.currentTimeMillis() + 20_000
+        while (!(session.modules.value.lexwareOn && "invoices.read" in session.permissions.value) && System.currentTimeMillis() < deadline) {
+            ShadowLooper.idleMainLooper()
+            Thread.sleep(50)
+        }
+        return model to session
+    }
+
+    private fun lexwareShot(name: String, content: @Composable (AppModel, de.estrichone.android.Session) -> Unit) {
+        val (model, session) = lexwareDemo()
+        shot(name) {
+            androidx.compose.runtime.CompositionLocalProvider(de.estrichone.android.ui.LocalModel provides model,
+                de.estrichone.android.ui.LocalSession provides session) {
+                androidx.compose.foundation.layout.Column(androidx.compose.ui.Modifier.fillMaxSize().background(de.estrichone.android.ui.tones.canvas)
+                    .padding(horizontal = 16.dp, vertical = 24.dp), verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(12.dp)) {
+                    content(model, session)
+                }
+            }
+        }
+    }
+
+    /** Lexware Office in der Bauakte: Kontakt, Abgleichstand und zugeordnete Belege (nur lesend). */
+    @Test
+    fun bauakteLexware() = lexwareShot("bauakte-lexware") { _, session ->
+        de.estrichone.android.ui.LexwareSection(session, session.service.bauakte(DemoData.EFH)!!)
+    }
+
+    /** Neuer Kunde: Warnung, wenn es den Kunden in Lexware Office schon gibt. */
+    @Test
+    fun kundeLexwareWarnung() = lexwareShot("kunde-lexware-warnung") { _, session ->
+        androidx.compose.material3.Text("Neuer Kunde: Huber Wohnbau", style = androidx.compose.material3.MaterialTheme.typography.titleMedium)
+        de.estrichone.android.ui.LexwareCustomerCheck(session, "Huber Wohnbau", true, "", "83022", "Rosenheim", "", onImported = { _, _ -> }, onBlocking = {})
+    }
+
     /** Bauakte für Planer: „Einplanen“ öffnet das kompakte Blatt mit Tag, Kolonne (mit Auslastung), Tätigkeit und Uhrzeit. */
     @Test
     fun bauakteEinplanen() {

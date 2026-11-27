@@ -11,6 +11,35 @@ import java.time.ZonedDateTime
  * Beteiligten. Alles im Format des Änderungsfeeds.
  */
 object DemoData {
+    /** Lexware Office im Demomodus: Die Bauakte „EFH“ gehört zu einem verknüpften Kunden mit Belegen; alle anderen sind nicht verknüpft. */
+    fun lexware(bauakteId: String): JsonObject {
+        if (bauakteId != EFH) return json("bauakteId" to bauakteId, "configured" to true, "vouchers" to emptyList<String>())
+        fun voucher(id: String, type: String, number: String?, date: String, gross: Double, status: String) = mapOf(
+            "id" to id, "lexwareId" to "lx-$id", "type" to type, "number" to number, "voucherDate" to date, "grossAmount" to gross, "currency" to "EUR",
+            "status" to status, "url" to "https://app.lexware.de/permalink/invoices/view/lx-$id")
+        return json("bauakteId" to bauakteId, "configured" to true,
+            "contact" to mapOf("lexwareContactId" to "lx-kontakt-1", "name" to "Familie Müller", "number" to "10042",
+                "url" to "https://app.lexware.de/permalink/contacts/view/lx-kontakt-1", "street" to "Lindenweg 12", "postalCode" to "83022", "city" to "Rosenheim",
+                "email" to "rechnung@familie-mueller.example", "differingFields" to listOf("email"),
+                "sync" to mapOf("state" to "deviations", "syncedAt" to ApiDate.format(java.time.Instant.now().minusSeconds(5400)),
+                    "deviations" to listOf(mapOf("field" to "email", "label" to "E-Mail-Adresse", "estrichOne" to "mueller@example.org",
+                        "lexware" to "rechnung@familie-mueller.example")))),
+            "summary" to "2 Rechnungen: offen 5.176,50 €, bezahlt 7.378,00 €, 1 im Entwurf. 1 Angebot: angenommen 25.585,00 €",
+            "vouchers" to listOf(
+                voucher("0193a1b2-de00-7000-8000-00000000e003-entwurf", "invoice", null, "2026-11-26", 14415.48, "draft"),
+                voucher("0193a1b2-de00-7000-8000-00000000e002", "invoice", "RE2026-0903", "2026-10-06", 5176.5, "overdue"),
+                voucher("0193a1b2-de00-7000-8000-00000000e001", "invoice", "RE2026-0871", "2026-09-18", 7378.0, "paid"),
+                voucher("0193a1b2-de00-7000-8000-00000000e000", "quotation", "AG2026-0311", "2026-08-04", 25585.0, "accepted")))
+    }
+
+    /** Prüfung beim Anlegen eines Kunden im Demomodus: „Huber“ gibt es in Lexware Office bereits. */
+    fun lexwareCheck(name: String): JsonObject = json("checked" to true, "canImport" to true,
+        "candidates" to if (!name.contains("huber", ignoreCase = true)) emptyList() else listOf(mapOf(
+            "contact" to mapOf("id" to "lx-kontakt-7", "name" to "Huber Wohnbau GmbH & Co. KG", "isCompany" to true, "customerNumber" to "10001",
+                "street" to "Am Anger 7", "postalCode" to "83022", "city" to "Rosenheim", "email" to "buero@huber-wohnbau.example",
+                "url" to "https://app.lexware.de/permalink/contacts/view/lx-kontakt-7"),
+            "score" to 80, "reasons" to listOf("gleicher Name und PLZ"), "strong" to false)))
+
     const val USER_ID = "0193a1b2-0000-7000-8000-00000000aaaa"
     const val USER_NAME = "Max Huber"
     const val EFH = "0193a1b2-de00-7000-8000-0000000b0001"

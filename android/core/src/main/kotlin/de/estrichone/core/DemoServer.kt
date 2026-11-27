@@ -101,7 +101,11 @@ class DemoServer(private val content: (String) -> ByteArray? = { null }) : Inter
                     "createdAt" to ApiDate.format(now.minusSeconds(86_400)), "lastSeenAt" to ApiDate.format(now.minusSeconds(7200)), "current" to false))
             path == "auth/two-factor" -> 200 to json("enabled" to false, "recoveryCodesRemaining" to 0, "requiredByPolicy" to false)
             path == "access/me/permissions" -> 200 to listOf("bauakten.read", "bauakten.create", "bauakten.edit", "notes.write", "files.upload", "work.edit",
-                "contacts.read", "contacts.edit", "chat.use", "absence.request", "absence.approve", "fuel.record", "planning.read", "planning.manage") + (if (itAgent) listOf("helpdesk.agent") else emptyList())
+                "contacts.read", "contacts.edit", "chat.use", "absence.request", "absence.approve", "fuel.record", "planning.read", "planning.manage",
+                "invoices.read", "invoices.assign") + (if (itAgent) listOf("helpdesk.agent") else emptyList())
+            // Module: alles an wie ohne Antwort; Lexware Office ist im Demomodus eingeschaltet (Block in der Bauakte, Prüfung beim Anlegen).
+            path == "settings/modules" -> 200 to json("version" to 1, "lexwareSyncDefault" to true,
+                "modules" to listOf(mapOf("key" to "lexware", "enabled" to true, "core" to false)))
             path == "settings" -> 200 to json("settings" to json("bauakte" to json("warnMissingInspection" to true)), "version" to 1)
             path == "sync/push" -> 200 to push(body)
             path == "sync/pull" -> 200 to json("changes" to entities.values.map { EstrichOneApi.json.encodeToJsonElement(SyncChange.serializer(), it) },
@@ -124,6 +128,12 @@ class DemoServer(private val content: (String) -> ByteArray? = { null }) : Inter
             parts.size == 3 && parts[0] == "files" && parts[2] == "content" -> (uploaded[parts[1]] ?: content(parts[1]))?.let { 200 to it }
                 ?: problem(404, "NOT_FOUND", "Datei nicht gefunden")
             path.startsWith("bauakten/") && path.endsWith("/members/me") -> 200 to emptyList<String>()
+            // Lexware Office (nur lesend): Daten des verknüpften Kontakts und Belege der Bauakte, Beleg-PDF, Prüfung beim Anlegen.
+            parts.size == 3 && parts[0] == "bauakten" && parts[2] == "lexware" -> 200 to DemoData.lexware(parts[1])
+            parts.size == 6 && parts[0] == "bauakten" && parts[2] == "lexware" && parts[5] == "document" ->
+                if (parts[4].endsWith("-entwurf")) problem(409, "LEXWARE_NO_DOCUMENT", Lexware.DRAFT_HINT)
+                else content(DemoData.PDF)?.let { 200 to it } ?: problem(404, "NOT_FOUND", "Nicht gefunden")
+            path == "lexware/contacts/check" -> 200 to DemoData.lexwareCheck(body["name"]?.toString().orEmpty())
             path.startsWith("bauakten/") && path.endsWith(".pdf") -> content(DemoData.PDF)?.let { 200 to it } ?: problem(404, "NOT_FOUND", "Nicht gefunden")
             path == "planning/mine" -> 200 to DemoData.myPlanning(LocalDate.parse(query["from"] ?: LocalDate.now(Dates.zone).toString()))
             path.startsWith("planning/dispatch/") -> 200 to DemoData.dispatch(parts.last())

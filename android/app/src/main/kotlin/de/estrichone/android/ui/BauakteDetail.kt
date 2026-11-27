@@ -297,6 +297,8 @@ fun BauakteScreen(id: String, showBack: Boolean = true) {
             }
             // 3. Leistung und Kennwerte
             item(key = "keyData") { KeyData(session, b) }
+            // Lexware Office (nur lesend): Kontakt, Abgleichstand und zugeordnete Belege, wenn der Kunde verknüpft ist.
+            item(key = "lexware") { LexwareSection(session, b) }
             // 4. Beschreibung und Hinweise: Beschreibung, Hinweise und Zugang, angeheftete Notiz, fehlende Erstbegehung
             item(key = "texts") { DescriptionAndHints(session, b, viewOnly) }
             // 5. Offene Aufgaben und Mängel
