@@ -124,8 +124,9 @@ struct BauakteDetailView: View {
                     await loadTeams()
                     await loadMembership()
                     await loadPlanned()
-                    await loadLexware()
                 }
+                // Eigener Auslöser: Die Module kommen nach dem Start vom Server und können beim ersten Laden noch fehlen.
+                .task(id: "\(bauakteId.uuidString)|\(modules.lexwareOn)") { await loadLexware() }
                 .alert("Bauakte stornieren?", isPresented: $cancelling) {
                     TextField("Grund (Pflicht)", text: $cancelReason)
                         .accessibilityIdentifier("cancelReasonField")
