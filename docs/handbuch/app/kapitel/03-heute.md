@@ -46,12 +46,12 @@ Die Karte enthält alles, was Sie auf der Baustelle brauchen:
 | **Tätigkeit** mit **Leistung** laut Basisdaten | z. B. „Estrich einbringen OG“ und „142,5 m², Zementestrich CT, 65 mm, Fußbodenheizung“ |
 | **Kolonne** mit Besetzung, **Fahrzeuge und Geräte** | z. B. Kolonne Huber, Estrichpumpe 1 |
 | **Vor Ort**: Ansprechpartner mit Telefonnummer | |
-| **Zugang**, **Hinweis der Disposition**, **angeheftete Notiz** | jeweils höchstens drei Zeilen |
+| **Hinweise und Zugang**, **Hinweis der Disposition**, **angeheftete Notiz** | jeweils höchstens drei Zeilen |
 | **Kennzahlen** als kleine Kapseln | offene **Mängel** (rot) und **Aufgaben**, **Belegreife**, **Wetter** laut heutigem Bautagebuch |
 | **Chat der Baustelle** mit der letzten Nachricht | Antippen öffnet die Unterhaltung im Tab **Chat**. |
 
 Direkt unter Adresse, Leistung, Kolonne und Ansprechpartner liegen vier gleich große Schnellaktionen, gut mit
-Handschuhen und mit einer Hand. Kennzahlen, Zugang, Hinweise und der Chat der Baustelle folgen darunter.
+Handschuhen und mit einer Hand. Kennzahlen, Hinweise und Zugang und der Chat der Baustelle folgen darunter.
 
 | Schaltfläche | Was passiert |
 |---|---|

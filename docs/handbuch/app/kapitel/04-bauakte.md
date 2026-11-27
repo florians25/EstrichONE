@@ -70,8 +70,8 @@ Stand auf dem Gerät (verfügbar, wird geladen, nur Daten); Antippen zeigt die E
 4. **Leistung und Kennwerte**: die vier wichtigsten Kennwerte, zuerst **Estrichart**, **Dicke**, **Fläche** und
    **Termin** (soweit erfasst), dazu **Räume & Flächen** mit Fortschritt und **Alle Basisdaten**.
 5. **Beschreibung und Hinweise**: direkt nach den Kennwerten als gut lesbare Textblöcke mit Überschrift: die
-   **Beschreibung**, **Hinweise und Behinderungen**, **Zugang und Besonderheiten** (und weitere mehrzeilige Felder
-   Ihres Betriebs), angeheftete Notizen und der Hinweis der Disposition für heute. Zeilenumbrüche bleiben erhalten,
+   **Beschreibung**, **Hinweise und Zugang** (ein Feld für Zufahrt, Schlüssel, Strom, Wasser, Pumpenstandort und
+   Behinderungen), weitere mehrzeilige Felder Ihres Betriebs, angeheftete Notizen und der Hinweis der Disposition für heute. Zeilenumbrüche bleiben erhalten,
    Telefonnummern, E-Mail-Adressen und Links lassen sich antippen, lange Texte öffnet **Mehr anzeigen**.
    **Bearbeiten** ändert sie.
 6. **Offene Aufgaben und Mängel**: die drei wichtigsten, Mängel zuerst; **Alle anzeigen** öffnet den Bereich.
@@ -319,9 +319,9 @@ ihn aus der Bauakte, auch im Büro.
 ![Basisdaten bearbeiten](bilder/iphone-basisdaten-neu.jpg "Basisdaten bearbeiten")
 
 Die **Basisdaten** fassen die Kenndaten des Bauvorhabens zusammen, für Kolonne und Büro auf einen Blick:
-Beschreibung, **geplanter Zeitraum**, **Objektart**, **Geschosse**, **Gesamtfläche**, **Priorität**, **Estrichart**,
+Beschreibung, **Hinweise und Zugang** (z. B. „Zufahrt nur bis 7,5 t“, Schlüssel, Pumpenstandort), **geplanter Zeitraum**, **Objektart**, **Geschosse**, **Gesamtfläche**, **Priorität**, **Estrichart**,
 **Konstruktion**, **Nenndicke**, **Festigkeitsklasse**, **Fußbodenheizung** und **Art der Heizung**, **Dämmung** und
-**Dämmdicke** sowie **Vor Ort**: **Zufahrt** (z. B. „nur bis 7,5 t“), **Strom vorhanden** und **Wasser vorhanden**.
+**Dämmdicke** sowie **Vor Ort**: **Strom vorhanden** und **Wasser vorhanden**.
 Mit **Bearbeiten** ändern Sie die Angaben.
 
 ## Kontakte der Bauakte
