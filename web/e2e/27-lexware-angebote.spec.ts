@@ -15,7 +15,7 @@ let quotation = '';
 
 test.beforeAll(async () => {
   await stub.start();
-  contact = stub.addContact({ name: 'Bauträger Sonnenhang GmbH', email: 'einkauf@sonnenhang.example', street: 'Talweg 2', zip: '83022', city: 'Rosenheim' });
+  contact = stub.addContact({ name: 'Sonnenhang GmbH', email: 'einkauf@sonnenhang.example', street: 'Talweg 2', zip: '83022', city: 'Rosenheim' });
   stub.addArticle({ title: 'Zementestrich CT-C25-F4 liefern und einbauen', number: 'L-100', net: 24.5, unit: 'm²', description: 'Nenndicke 65 mm, auf Dämmung' });
   stub.addArticle({ title: 'Randdämmstreifen 8 mm', type: 'PRODUCT', number: 'L-200', net: 0.95, unit: 'lfm' });
 });
@@ -53,7 +53,7 @@ test('Artikel und Leistungen: Abgleich aus Lexware Office', async ({ page }) => 
 test('Angebot (Beta): aus der Bauakte vorbereiten und als Entwurf senden', async ({ page }) => {
   await signIn(page, 'admin', adminPassword);
   customer = crypto.randomUUID();
-  expect((await apiCall(page, 'POST', '/api/v1/contacts', { id: customer, kind: 'company', name: 'Bauträger Sonnenhang GmbH', lexwareCreateAnyway: true })).status)
+  expect((await apiCall(page, 'POST', '/api/v1/contacts', { id: customer, kind: 'company', name: 'Sonnenhang GmbH', lexwareCreateAnyway: true })).status)
     .toBe(201);
   bauakte = crypto.randomUUID();
   expect((await apiCall(page, 'POST', '/api/v1/bauakten', {
