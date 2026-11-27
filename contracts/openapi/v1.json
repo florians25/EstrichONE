@@ -5175,7 +5175,7 @@
         "tags": [
           "Bauakten"
         ],
-        "summary": "Alle Bauakten, neueste Änderung zuerst; Filter: search, status (all|active|old|Status), responsibleUserId, customerId, postalCode, assigned (nur zugeteilte). isAssigned/canEdit je Zeile",
+        "summary": "Alle Bauakten, neueste Änderung zuerst; Filter: search, status (all|active|old|Status), responsibleUserId, customerId, postalCode, assigned (nur zugeteilte), review (nur „Zur Abschlussprüfung“). isAssigned/canEdit je Zeile",
         "operationId": "ListBauakten",
         "parameters": [
           {
@@ -5232,6 +5232,13 @@
           },
           {
             "name": "assigned",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "review",
             "in": "query",
             "schema": {
               "type": "boolean"
@@ -5578,6 +5585,66 @@
           },
           "422": {
             "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/bauakten/{id}/review/dismiss": {
+      "post": {
+        "tags": [
+          "Bauakten"
+        ],
+        "summary": "„Prüfung zurückstellen“: Merkmal „Zur Abschlussprüfung“ entfernen (wird bei geändertem Zahlstatus erneut gesetzt)",
+        "operationId": "DismissBauakteReview",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BauakteDetail"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -25441,6 +25508,1086 @@
         ]
       }
     },
+    "/api/v1/lexware/articles": {
+      "get": {
+        "tags": [
+          "Lexware Office"
+        ],
+        "summary": "Artikel und Leistungen mit Abgleichstand (ohne Aufruf bei Lexware Office)",
+        "operationId": "ListCatalogItems",
+        "parameters": [
+          {
+            "name": "includeInactive",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/lexware/articles/{id}": {
+      "put": {
+        "tags": [
+          "Lexware Office"
+        ],
+        "summary": "Eintrag anlegen oder ändern (nur in EstrichONE; der Abgleich überträgt Änderungen, wenn die Richtung es erlaubt)",
+        "operationId": "SaveCatalogItem",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveCatalogItemRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogItemResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/lexware/articles/sync": {
+      "post": {
+        "tags": [
+          "Lexware Office"
+        ],
+        "summary": "Artikelabgleich jetzt ausführen (liest alle Artikel aus Lexware Office)",
+        "operationId": "RunLexwareArticleSync",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LexwareArticleSyncResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "424": {
+            "description": "Failed Dependency",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/lexware/articles/reconciliation": {
+      "get": {
+        "tags": [
+          "Lexware Office"
+        ],
+        "summary": "Nicht verknüpfte Artikel beider Seiten mit möglichen Treffern (Artikelnummer, Bezeichnung)",
+        "operationId": "GetLexwareArticleReconciliation",
+        "parameters": [
+          {
+            "name": "refresh",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LexwareArticleReconciliationResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "424": {
+            "description": "Failed Dependency",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/lexware/articles/import": {
+      "post": {
+        "tags": [
+          "Lexware Office"
+        ],
+        "summary": "Artikel aus Lexware Office übernehmen; bei möglichen Treffern nur mit createAnyway",
+        "operationId": "ImportLexwareArticle",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportLexwareArticleRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogItemResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "424": {
+            "description": "Failed Dependency",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/lexware/articles/{id}/link": {
+      "post": {
+        "tags": [
+          "Lexware Office"
+        ],
+        "summary": "Eintrag mit einem vorhandenen Artikel in Lexware Office verknüpfen; der erste Abgleich zeigt Unterschiede als Abweichungen",
+        "operationId": "LinkCatalogItemToLexware",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LinkCatalogItemRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogItemResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "424": {
+            "description": "Failed Dependency",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/lexware/articles/{id}/create": {
+      "post": {
+        "tags": [
+          "Lexware Office"
+        ],
+        "summary": "Eintrag in Lexware Office anlegen (nur bei Richtung „beide“); bei möglichen Treffern nur mit createAnyway",
+        "operationId": "CreateLexwareArticle",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateLexwareArticleRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogItemResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "424": {
+            "description": "Failed Dependency",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/lexware/articles/{id}/resolve": {
+      "post": {
+        "tags": [
+          "Lexware Office"
+        ],
+        "summary": "Abweichungen entscheiden: je Feld oder gesamt EstrichONE oder Lexware übernehmen (EstrichONE nur bei Richtung „beide“)",
+        "operationId": "ResolveCatalogItemDeviations",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResolveLexwareDeviationsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogItemResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "424": {
+            "description": "Failed Dependency",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/lexware/quotations": {
+      "get": {
+        "tags": [
+          "Angebote (Beta)"
+        ],
+        "summary": "Angebotsentwürfe einer Bauakte oder eines Kunden",
+        "operationId": "ListQuotationDrafts",
+        "parameters": [
+          {
+            "name": "bauakteId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "contactId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/QuotationSummary"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Angebote (Beta)"
+        ],
+        "summary": "Angebotsentwurf anlegen (zur Bauakte oder zum Kunden); der Kunde muss mit Lexware Office verknüpft sein",
+        "operationId": "CreateQuotationDraft",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateQuotationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotationResponse"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotationResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/lexware/quotations/options": {
+      "get": {
+        "tags": [
+          "Angebote (Beta)"
+        ],
+        "summary": "Auswahlwerte: Zahlungsbedingungen aus Lexware Office (falls verfügbar), Artikel und Leistungen, Steuersätze",
+        "operationId": "GetQuotationOptions",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotationOptionsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/lexware/quotations/suggestions": {
+      "get": {
+        "tags": [
+          "Angebote (Beta)"
+        ],
+        "summary": "Positionsvorschläge aus der Bauakte (Fläche aus Räume und Flächen bzw. Kennwerten); nur Vorschläge",
+        "operationId": "GetQuotationSuggestions",
+        "parameters": [
+          {
+            "name": "bauakteId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotationSuggestionsResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/lexware/quotations/{id}": {
+      "get": {
+        "tags": [
+          "Angebote (Beta)"
+        ],
+        "operationId": "GetQuotationDraft",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotationResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "Angebote (Beta)"
+        ],
+        "summary": "Entwurf speichern (nur vor dem Senden; Version aus dem letzten Abruf)",
+        "operationId": "SaveQuotationDraft",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveQuotationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotationResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Angebote (Beta)"
+        ],
+        "summary": "Entwurf in EstrichONE verwerfen (nur vor dem Senden; in Lexware Office wird nichts gelöscht)",
+        "operationId": "DeleteQuotationDraft",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/lexware/quotations/{id}/send": {
+      "post": {
+        "tags": [
+          "Angebote (Beta)"
+        ],
+        "summary": "Als Entwurf an Lexware Office senden (POST /v1/quotations ohne finalize). Mehrfaches Senden legt kein zweites Angebot an",
+        "operationId": "SendQuotationDraftToLexware",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotationResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "424": {
+            "description": "Failed Dependency",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/backup/status": {
       "get": {
         "tags": [
@@ -30837,6 +31984,19 @@
               "null",
               "boolean"
             ]
+          },
+          "reviewRequestedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "reviewReason": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -31096,6 +32256,13 @@
           "canEdit": {
             "type": "boolean",
             "default": false
+          },
+          "reviewRequestedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
           }
         }
       },
@@ -32514,6 +33681,205 @@
           "version": {
             "type": "integer",
             "format": "int64"
+          }
+        }
+      },
+      "CatalogItemKind": {
+        "enum": [
+          "product",
+          "service"
+        ]
+      },
+      "CatalogItemResponse": {
+        "required": [
+          "id",
+          "title",
+          "description",
+          "kind",
+          "articleNumber",
+          "gtin",
+          "unit",
+          "netPrice",
+          "grossPrice",
+          "taxRate",
+          "materialId",
+          "materialName",
+          "isActive",
+          "origin",
+          "lexwareId",
+          "lexwareUrl",
+          "sync",
+          "version"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "kind": {
+            "$ref": "#/components/schemas/CatalogItemKind"
+          },
+          "articleNumber": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "gtin": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "unit": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "netPrice": {
+            "type": "number",
+            "format": "double"
+          },
+          "grossPrice": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "taxRate": {
+            "type": "number",
+            "format": "double"
+          },
+          "materialId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "materialName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "origin": {
+            "type": "string"
+          },
+          "lexwareId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "lexwareUrl": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "sync": {
+            "$ref": "#/components/schemas/CatalogItemSyncState"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "CatalogItemSyncState": {
+        "required": [
+          "state",
+          "syncedAt",
+          "deviations",
+          "error"
+        ],
+        "type": "object",
+        "properties": {
+          "state": {
+            "type": "string"
+          },
+          "syncedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "deviations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LexwareDeviationField"
+            }
+          },
+          "error": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "CatalogListResponse": {
+        "required": [
+          "items",
+          "syncEnabled",
+          "direction",
+          "canPush",
+          "lastSyncAt",
+          "lastSyncError",
+          "materials"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CatalogItemResponse"
+            }
+          },
+          "syncEnabled": {
+            "type": "boolean"
+          },
+          "direction": {
+            "$ref": "#/components/schemas/LexwareArticleSync"
+          },
+          "canPush": {
+            "type": "boolean"
+          },
+          "lastSyncAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "lastSyncError": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "materials": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MaterialSummary"
+            }
           }
         }
       },
@@ -34979,6 +36345,15 @@
           }
         }
       },
+      "CreateLexwareArticleRequest": {
+        "type": "object",
+        "properties": {
+          "createAnyway": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      },
       "CreateLexwareContactRequest": {
         "type": "object",
         "properties": {
@@ -35031,6 +36406,32 @@
           "text": {
             "maxLength": 10000,
             "type": "string"
+          }
+        }
+      },
+      "CreateQuotationRequest": {
+        "required": [
+          "id"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "contactId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "bauakteId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
           }
         }
       },
@@ -40199,6 +41600,22 @@
           }
         }
       },
+      "ImportLexwareArticleRequest": {
+        "required": [
+          "lexwareId"
+        ],
+        "type": "object",
+        "properties": {
+          "lexwareId": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "createAnyway": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      },
       "ImportLexwareContactRequest": {
         "type": "object",
         "properties": {
@@ -40634,6 +42051,195 @@
             "format": "int32"
           },
           "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "LexwareArticleCandidate": {
+        "required": [
+          "item",
+          "reasons"
+        ],
+        "type": "object",
+        "properties": {
+          "item": {
+            "$ref": "#/components/schemas/CatalogItemResponse"
+          },
+          "reasons": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "LexwareArticleOnlyLocal": {
+        "required": [
+          "item",
+          "candidates"
+        ],
+        "type": "object",
+        "properties": {
+          "item": {
+            "$ref": "#/components/schemas/CatalogItemResponse"
+          },
+          "candidates": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LexwareArticleSummary"
+            }
+          }
+        }
+      },
+      "LexwareArticleOnlyRemote": {
+        "required": [
+          "article",
+          "candidates"
+        ],
+        "type": "object",
+        "properties": {
+          "article": {
+            "$ref": "#/components/schemas/LexwareArticleSummary"
+          },
+          "candidates": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LexwareArticleCandidate"
+            }
+          }
+        }
+      },
+      "LexwareArticleReconciliationResponse": {
+        "required": [
+          "loadedAt",
+          "onlyLexware",
+          "onlyEstrichOne"
+        ],
+        "type": "object",
+        "properties": {
+          "loadedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "onlyLexware": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LexwareArticleOnlyRemote"
+            }
+          },
+          "onlyEstrichOne": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LexwareArticleOnlyLocal"
+            }
+          }
+        }
+      },
+      "LexwareArticleSummary": {
+        "required": [
+          "id",
+          "title",
+          "description",
+          "type",
+          "articleNumber",
+          "unitName",
+          "netPrice",
+          "taxRate",
+          "archived",
+          "url"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "type": {
+            "type": "string"
+          },
+          "articleNumber": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "unitName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "netPrice": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "taxRate": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "archived": {
+            "type": "boolean"
+          },
+          "url": {
+            "type": "string"
+          }
+        }
+      },
+      "LexwareArticleSync": {
+        "enum": [
+          "fromLexware",
+          "both",
+          "off"
+        ],
+        "default": "fromLexware"
+      },
+      "LexwareArticleSyncResponse": {
+        "required": [
+          "imported",
+          "created",
+          "updated",
+          "deviations",
+          "duplicates",
+          "at"
+        ],
+        "type": "object",
+        "properties": {
+          "imported": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "created": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "updated": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "deviations": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "duplicates": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "at": {
             "type": "string",
             "format": "date-time"
           }
@@ -41269,6 +42875,52 @@
           }
         }
       },
+      "LexwarePaymentCondition": {
+        "required": [
+          "id",
+          "label",
+          "duration",
+          "discountPercent",
+          "discountRange",
+          "isDefault"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "label": {
+            "type": "string"
+          },
+          "duration": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          },
+          "discountPercent": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "discountRange": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          },
+          "isDefault": {
+            "type": "boolean"
+          }
+        }
+      },
       "LexwareReconciliationResponse": {
         "required": [
           "loadedAt",
@@ -41477,6 +43129,40 @@
             "default": 0
           },
           "autoCreate": {
+            "type": "boolean",
+            "default": true
+          },
+          "articleSync": {
+            "$ref": "#/components/schemas/LexwareArticleSync"
+          },
+          "lastArticleSyncAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "lastArticleSyncError": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "catalogItems": {
+            "type": "integer",
+            "format": "int32",
+            "default": 0
+          },
+          "articlesWithDeviations": {
+            "type": "integer",
+            "format": "int32",
+            "default": 0
+          },
+          "statusOnQuotationAccepted": {
+            "type": "boolean",
+            "default": true
+          },
+          "statusOnInvoicesPaid": {
             "type": "boolean",
             "default": true
           }
@@ -41852,6 +43538,18 @@
             "items": {
               "type": "string"
             }
+          }
+        }
+      },
+      "LinkCatalogItemRequest": {
+        "required": [
+          "lexwareId"
+        ],
+        "type": "object",
+        "properties": {
+          "lexwareId": {
+            "maxLength": 100,
+            "type": "string"
           }
         }
       },
@@ -42366,6 +44064,37 @@
           }
         }
       },
+      "MaterialSummary": {
+        "required": [
+          "id",
+          "name",
+          "number",
+          "unit",
+          "isActive"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "number": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "unit": {
+            "type": "string"
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        }
+      },
       "MediaSettings": {
         "type": "object",
         "properties": {
@@ -42488,6 +44217,15 @@
             "type": "boolean"
           },
           "lexware": {
+            "type": "boolean"
+          },
+          "lexwareArticles": {
+            "type": "boolean"
+          },
+          "quotations": {
+            "type": "boolean"
+          },
+          "lexwareStatus": {
             "type": "boolean"
           }
         }
@@ -45459,6 +47197,564 @@
           }
         }
       },
+      "QuotationCatalogItem": {
+        "required": [
+          "id",
+          "title",
+          "description",
+          "kind",
+          "articleNumber",
+          "unit",
+          "netPrice",
+          "taxRate",
+          "inLexware"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "kind": {
+            "$ref": "#/components/schemas/CatalogItemKind"
+          },
+          "articleNumber": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "unit": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "netPrice": {
+            "type": "number",
+            "format": "double"
+          },
+          "taxRate": {
+            "type": "number",
+            "format": "double"
+          },
+          "inLexware": {
+            "type": "boolean"
+          }
+        }
+      },
+      "QuotationLineDto": {
+        "required": [
+          "kind",
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "maxLength": 10,
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 255,
+            "type": "string"
+          },
+          "description": {
+            "maxLength": 2000,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "catalogItemId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "quantity": {
+            "maximum": 10000000,
+            "minimum": 0,
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "unit": {
+            "maxLength": 50,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "netPrice": {
+            "maximum": 10000000,
+            "minimum": -10000000,
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "taxRate": {
+            "maximum": 100,
+            "minimum": 0,
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "discountPercent": {
+            "maximum": 100,
+            "minimum": 0,
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "lineNet": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          }
+        }
+      },
+      "QuotationLineSuggestion": {
+        "required": [
+          "source",
+          "hint",
+          "name",
+          "description",
+          "quantity",
+          "unit"
+        ],
+        "type": "object",
+        "properties": {
+          "source": {
+            "type": "string"
+          },
+          "hint": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "quantity": {
+            "type": "number",
+            "format": "double"
+          },
+          "unit": {
+            "type": "string"
+          },
+          "catalogItemId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "netPrice": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "taxRate": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          }
+        }
+      },
+      "QuotationOptionsResponse": {
+        "required": [
+          "paymentConditions",
+          "paymentConditionsError",
+          "catalog",
+          "taxRates",
+          "defaultValidDays"
+        ],
+        "type": "object",
+        "properties": {
+          "paymentConditions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LexwarePaymentCondition"
+            }
+          },
+          "paymentConditionsError": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "catalog": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QuotationCatalogItem"
+            }
+          },
+          "taxRates": {
+            "type": "array",
+            "items": {
+              "type": "number",
+              "format": "double"
+            }
+          },
+          "defaultValidDays": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "QuotationResponse": {
+        "required": [
+          "id",
+          "contactId",
+          "customerName",
+          "customerLinked",
+          "bauakteId",
+          "bauakteNumber",
+          "bauakteTitle",
+          "title",
+          "introduction",
+          "remark",
+          "validUntil",
+          "taxType",
+          "paymentConditionId",
+          "paymentLabel",
+          "paymentDuration",
+          "paymentDiscountPercent",
+          "paymentDiscountRange",
+          "state",
+          "editable",
+          "lexwareId",
+          "lexwareUrl",
+          "sentAt",
+          "sendError",
+          "lines",
+          "totals",
+          "problems",
+          "version",
+          "updatedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "contactId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "customerName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "customerLinked": {
+            "type": "boolean"
+          },
+          "bauakteId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "bauakteNumber": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "bauakteTitle": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "title": {
+            "type": "string"
+          },
+          "introduction": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "remark": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "validUntil": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "taxType": {
+            "type": "string"
+          },
+          "paymentConditionId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "paymentLabel": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "paymentDuration": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          },
+          "paymentDiscountPercent": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "paymentDiscountRange": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          },
+          "state": {
+            "type": "string"
+          },
+          "editable": {
+            "type": "boolean"
+          },
+          "lexwareId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "lexwareUrl": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "sentAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "sendError": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "lines": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QuotationLineDto"
+            }
+          },
+          "totals": {
+            "$ref": "#/components/schemas/QuotationTotals"
+          },
+          "problems": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "QuotationSuggestionsResponse": {
+        "required": [
+          "lines",
+          "hints"
+        ],
+        "type": "object",
+        "properties": {
+          "lines": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QuotationLineSuggestion"
+            }
+          },
+          "hints": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "QuotationSummary": {
+        "required": [
+          "id",
+          "title",
+          "contactId",
+          "customerName",
+          "bauakteId",
+          "state",
+          "net",
+          "gross",
+          "validUntil",
+          "lexwareUrl",
+          "updatedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "contactId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "customerName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "bauakteId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "state": {
+            "type": "string"
+          },
+          "net": {
+            "type": "number",
+            "format": "double"
+          },
+          "gross": {
+            "type": "number",
+            "format": "double"
+          },
+          "validUntil": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "lexwareUrl": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "QuotationTaxLine": {
+        "required": [
+          "rate",
+          "net",
+          "tax"
+        ],
+        "type": "object",
+        "properties": {
+          "rate": {
+            "type": "number",
+            "format": "double"
+          },
+          "net": {
+            "type": "number",
+            "format": "double"
+          },
+          "tax": {
+            "type": "number",
+            "format": "double"
+          }
+        }
+      },
+      "QuotationTotals": {
+        "required": [
+          "net",
+          "tax",
+          "gross",
+          "taxLines"
+        ],
+        "type": "object",
+        "properties": {
+          "net": {
+            "type": "number",
+            "format": "double"
+          },
+          "tax": {
+            "type": "number",
+            "format": "double"
+          },
+          "gross": {
+            "type": "number",
+            "format": "double"
+          },
+          "taxLines": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QuotationTaxLine"
+            }
+          }
+        }
+      },
       "RateTicketRequest": {
         "required": [
           "rating"
@@ -47099,6 +49395,86 @@
           }
         }
       },
+      "SaveCatalogItemRequest": {
+        "required": [
+          "id",
+          "title"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "maxLength": 255,
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/CatalogItemKind"
+          },
+          "description": {
+            "maxLength": 2000,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "articleNumber": {
+            "maxLength": 50,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "gtin": {
+            "maxLength": 20,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "unit": {
+            "maxLength": 50,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "netPrice": {
+            "maximum": 10000000,
+            "minimum": -1000000,
+            "type": "number",
+            "format": "double",
+            "default": 0
+          },
+          "taxRate": {
+            "maximum": 100,
+            "minimum": 0,
+            "type": "number",
+            "format": "double",
+            "default": 19
+          },
+          "materialId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "isActive": {
+            "type": "boolean",
+            "default": true
+          },
+          "version": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int64"
+          }
+        }
+      },
       "SaveChatMySettingsRequest": {
         "type": "object",
         "properties": {
@@ -48185,6 +50561,28 @@
               "null",
               "boolean"
             ]
+          },
+          "articleSync": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/LexwareArticleSync"
+              }
+            ]
+          },
+          "statusOnQuotationAccepted": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "statusOnInvoicesPaid": {
+            "type": [
+              "null",
+              "boolean"
+            ]
           }
         }
       },
@@ -48574,6 +50972,100 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "SaveQuotationRequest": {
+        "required": [
+          "version",
+          "title"
+        ],
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "title": {
+            "maxLength": 200,
+            "type": "string"
+          },
+          "introduction": {
+            "maxLength": 4000,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "remark": {
+            "maxLength": 4000,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "validUntil": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "taxType": {
+            "maxLength": 30,
+            "type": "string",
+            "default": "net"
+          },
+          "paymentConditionId": {
+            "maxLength": 100,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "paymentLabel": {
+            "maxLength": 300,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "paymentDuration": {
+            "maximum": 365,
+            "minimum": 0,
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          },
+          "paymentDiscountPercent": {
+            "maximum": 100,
+            "minimum": 0,
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "paymentDiscountRange": {
+            "maximum": 365,
+            "minimum": 0,
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          },
+          "lines": {
+            "maxItems": 200,
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/QuotationLineDto"
+            }
           }
         }
       },
@@ -54446,6 +56938,9 @@
     },
     {
       "name": "Chat"
+    },
+    {
+      "name": "Angebote (Beta)"
     },
     {
       "name": "Backup-Spiegel"

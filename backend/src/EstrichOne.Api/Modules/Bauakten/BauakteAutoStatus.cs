@@ -62,6 +62,49 @@ internal sealed class BauakteAutoStatus(EstrichOneDbContext db, ISystemSettings 
     }
 }
 
+internal sealed class BauakteExternalStatus(EstrichOneDbContext db, IAuditLog audit, TimeProvider clock) : IBauakteExternalStatus
+{
+    public async Task<bool> AdvanceToPlannedAsync(Guid bauakteId, BauakteAutoTrigger trigger, string source, string? detail, CancellationToken cancellationToken)
+    {
+        var bauakte = await db.Set<Bauakte>().SingleOrDefaultAsync(b => b.Id == bauakteId, cancellationToken);
+        if (bauakte is null || bauakte.Status != BauakteStatus.Inquiry)
+        {
+            return false;
+        }
+
+        bauakte.ChangeStatus(BauakteStatus.Planned);
+        audit.Record($"bauakte.{BauakteHistoryActions.StatusChanged}", null, "bauakte", bauakte.Id.ToString(), new Dictionary<string, string?>
+        {
+            ["from"] = nameof(BauakteStatus.Inquiry), ["to"] = nameof(BauakteStatus.Planned), ["auto"] = "true", ["trigger"] = trigger.ToString(),
+            ["source"] = source, ["reason"] = detail,
+        });
+        return true;
+    }
+
+    public async Task<bool> RequestReviewAsync(Guid bauakteId, string reason, string stamp, string source, CancellationToken cancellationToken)
+    {
+        var bauakte = await db.Set<Bauakte>().SingleOrDefaultAsync(b => b.Id == bauakteId, cancellationToken);
+        if (bauakte is null || !bauakte.RequestReview(reason, stamp, clock.GetUtcNow()))
+        {
+            return false;
+        }
+
+        audit.Record($"bauakte.{BauakteHistoryActions.ReviewRequested}", null, "bauakte", bauakte.Id.ToString(), new Dictionary<string, string?>
+        {
+            ["auto"] = "true", ["source"] = source, ["reason"] = reason,
+        });
+        return true;
+    }
+
+    public async Task ForgetReviewStampAsync(Guid bauakteId, CancellationToken cancellationToken)
+    {
+        if (await db.Set<Bauakte>().SingleOrDefaultAsync(b => b.Id == bauakteId, cancellationToken) is { } bauakte)
+        {
+            bauakte.ForgetReviewStamp();
+        }
+    }
+}
+
 /// <summary>Prüft regelmäßig, welche geplanten Bauakten heute ihren ersten Einsatztag haben.</summary>
 internal sealed class BauakteAutoStartJob(IServiceScopeFactory scopes, TimeProvider clock, ILogger<BauakteAutoStartJob> logger) : BackgroundService
 {

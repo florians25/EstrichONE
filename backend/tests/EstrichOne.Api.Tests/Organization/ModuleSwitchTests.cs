@@ -30,9 +30,11 @@ public sealed class ModuleSwitchTests(PostgresFixture postgres) : IAsyncLifetime
     {
         using var site = await _factory.CreateClientAsAsync("baustelle", StandardRoles.SiteWorkerId);
         var modules = (await site.GetFromJsonAsync<ModulesResponse>("/api/v1/settings/modules", TestJson.Options, Ct))!;
-        // Lexware Office braucht einen API-Schlüssel und ist deshalb als einziges Modul zunächst aus.
-        modules.Modules.Where(m => !m.Core && m.Key != AppModules.Lexware).ShouldAllBe(m => m.Enabled);
-        modules.Modules.Single(m => m.Key == AppModules.Lexware).Enabled.ShouldBeFalse();
+        // Lexware Office braucht einen API-Schlüssel und ist deshalb mit seinen Zusatzmodulen zunächst aus.
+        string[] lexware = [AppModules.Lexware, AppModules.LexwareArticles, AppModules.Quotations, AppModules.LexwareStatus];
+        modules.Modules.Where(m => !m.Core && !lexware.Contains(m.Key)).ShouldAllBe(m => m.Enabled);
+        modules.Modules.Where(m => lexware.Contains(m.Key)).ShouldAllBe(m => !m.Enabled);
+        modules.Modules.Single(m => m.Key == AppModules.Quotations).Requires.ShouldBe([AppModules.Lexware]);
         modules.Modules.Single(m => m.Key == AppModules.Absence).Requires.ShouldBe([AppModules.Staff]);
         modules.Modules.Single(m => m.Key == AppModules.Staff).RequiredBy.ShouldBe([AppModules.Absence]);
         modules.Modules.Single(m => m.Key == "bauakten").Core.ShouldBeTrue();

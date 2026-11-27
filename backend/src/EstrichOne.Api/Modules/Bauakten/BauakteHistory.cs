@@ -115,6 +115,11 @@ internal static class BauakteHistoryEndpoints
         {
             "bauakte.created" => $"{actor} hat die Bauakte angelegt.",
             "bauakte.updated" => $"{actor} hat {DescribeFields(Detail("fields"))} geändert.",
+            "bauakte.status_changed" when Detail("auto") == "true" && Detail("source").Length > 0 =>
+                $"Automatisch durch {Detail("source")}: Status von „{Status(Detail("from"))}“ auf „{Status(Detail("to"))}“ gesetzt (Auslöser: {Trigger(Detail("trigger"))}).",
+            "bauakte.review_requested" =>
+                $"Automatisch durch {(Detail("source") is { Length: > 0 } source ? source : "EstrichONE")}: zur Abschlussprüfung gestellt ({Detail("reason")}).",
+            "bauakte.review_dismissed" => $"{actor} hat die Abschlussprüfung zurückgestellt.",
             "bauakte.status_changed" when Detail("auto") == "true" =>
                 $"Automatisch: Status von „{Status(Detail("from"))}“ auf „{Status(Detail("to"))}“ gesetzt (Auslöser: {Trigger(Detail("trigger"))}).",
             "bauakte.status_changed" => $"{actor} hat den Status von „{Status(Detail("from"))}“ auf „{Status(Detail("to"))}“ gesetzt.",
@@ -177,6 +182,7 @@ internal static class BauakteHistoryEndpoints
         "Diary" => "erster Bautagebucheintrag",
         "Inspection" => "Erstbegehung",
         "Acceptance" => "Abnahme ohne Vorbehalt",
+        "LexwareQuotationAccepted" => "Angebot in Lexware Office angenommen",
         _ => value,
     };
 

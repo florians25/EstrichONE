@@ -102,6 +102,7 @@ public static class NotificationEvents
     public const string ApprovalRequested = "approval.requested";
     public const string ApprovalDecided = "approval.decided";
     public const string AcceptanceSigned = "acceptance.signed";
+    public const string BauakteLexwareStatus = "bauakte.lexware_status";
     public const string PlanReleased = "planning.released";
     public const string PlanChanged = "planning.changed";
     public const string AbsenceDecided = "absence.decided";
@@ -139,6 +140,8 @@ public static class NotificationEvents
         new(BauakteMemberJoined, "Bauakten", "Kollege trägt sich ein", "Jemand hat sich selbst als Beteiligter in eine Bauakte eingetragen oder ausgetragen, die Sie leiten (Disposition: in jede Bauakte)."),
         new(BauakteComment, "Bauakten", "Notiz in meiner Bauakte", "Neue Notiz in einer Bauakte, in der Sie Mitglied oder zuständig sind."),
         new(AcceptanceSigned, "Bauakten", "Abnahme unterschrieben", "Ein Abnahmeprotokoll Ihrer Bauakte wurde unterschrieben."),
+        new(BauakteLexwareStatus, "Bauakten", "Status aus Lexware Office",
+            "Ihre Bauakte wurde nach einem angenommenen Angebot auf „Geplant“ gesetzt oder nach bezahlten Rechnungen zur Abschlussprüfung gestellt."),
         new(WorkAssigned, "Aufgaben", "Aufgabe oder Mangel mir zugewiesen", "Ihnen wurde eine Aufgabe oder ein Mangel zugewiesen."),
         new(Deadline, "Aufgaben", "Fristen", "Zugewiesene Aufgaben und Mängel sind heute oder morgen fällig oder überfällig."),
         new(ApprovalRequested, "Freigaben", "Dokument zur Genehmigung", "Ein Dokument wartet auf Ihre Freigabe."),

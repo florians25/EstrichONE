@@ -1,5 +1,6 @@
 using EstrichOne.Api.Infrastructure.Modules;
 using EstrichOne.Api.Modules.Bauakten.Exports;
+using EstrichOne.Api.Modules.Materials.Exports;
 
 namespace EstrichOne.Api.Modules.Materials;
 
@@ -10,6 +11,7 @@ public sealed class MaterialsModule : IModule
     {
         services.AddScoped<IBauakteHintSource, MaterialHints>();
         services.AddScoped<OrderPdf>();
+        services.AddScoped<IMaterialDirectory, MaterialDirectory>();
     }
 
     public void MapEndpoints(IEndpointRouteBuilder api)

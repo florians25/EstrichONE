@@ -61,7 +61,51 @@ internal sealed class LexwareDirectory : IDisposable
         _customerVouchers.Clear();
         _voucherTexts.Clear();
         _documents.Clear();
+        ClearArticles();
     }
+
+    private (string Stamp, DateTimeOffset LoadedAt, IReadOnlyList<LexwareArticle> Articles)? _articles;
+    private (string Stamp, DateTimeOffset LoadedAt, IReadOnlyList<LexwarePaymentCondition> Conditions)? _payment;
+
+    public void ClearArticles()
+    {
+        _articles = null;
+        _payment = null;
+    }
+
+    /// <summary>Artikel aus Lexware Office, kurz zwischengespeichert (Abgleichübersicht und Auswahl im Angebot).</summary>
+    public async Task<(IReadOnlyList<LexwareArticle> Articles, DateTimeOffset LoadedAt)> ArticlesAsync(string stamp, DateTimeOffset now, TimeSpan maxAge,
+        bool refresh, Func<Task<IReadOnlyList<LexwareArticle>>> load)
+    {
+        if (!refresh && _articles is { } cached && cached.Stamp == stamp && now - cached.LoadedAt < maxAge)
+        {
+            return (cached.Articles, cached.LoadedAt);
+        }
+
+        var articles = await load();
+        _articles = (stamp, now, articles);
+        return (articles, now);
+    }
+
+    /// <summary>Zahlungsbedingungen aus Lexware Office, zwischengespeichert.</summary>
+    public async Task<IReadOnlyList<LexwarePaymentCondition>> PaymentConditionsAsync(string stamp, DateTimeOffset now, TimeSpan maxAge,
+        Func<Task<IReadOnlyList<LexwarePaymentCondition>>> load)
+    {
+        if (_payment is { } cached && cached.Stamp == stamp && now - cached.LoadedAt < maxAge)
+        {
+            return cached.Conditions;
+        }
+
+        var conditions = await load();
+        _payment = (stamp, now, conditions);
+        return conditions;
+    }
+
+    /// <summary>Ein Artikelabgleich zur selben Zeit (Hintergrunddienst und „Jetzt abgleichen“).</summary>
+    public SemaphoreSlim ArticleGate { get; } = new(1, 1);
+
+    /// <summary>Ein Sendevorgang je Angebot zur selben Zeit (zusätzlich zur Sperre über den Status in der Datenbank).</summary>
+    public SemaphoreSlim QuotationGate { get; } = new(1, 1);
 
     private readonly System.Collections.Concurrent.ConcurrentDictionary<string, (DateTimeOffset LoadedAt, IReadOnlyList<LexwareVoucher> Vouchers)> _customerVouchers = new();
     private readonly System.Collections.Concurrent.ConcurrentDictionary<string, (DateTimeOffset LoadedAt, string Text)> _voucherTexts = new();
@@ -132,6 +176,8 @@ internal sealed class LexwareDirectory : IDisposable
     {
         _gate.Dispose();
         SyncGate.Dispose();
+        ArticleGate.Dispose();
+        QuotationGate.Dispose();
     }
 }
 
@@ -254,6 +300,44 @@ public sealed class LexwareService(
         Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes($"{row.BaseUrl}|{row.ProtectedApiKey}")))[..16];
 
     public void ForgetContacts() => Directory.Clear();
+
+    public void ForgetArticles() => Directory.ClearArticles();
+
+    /// <summary>Ein Artikelabgleich zur selben Zeit je Server.</summary>
+    public SemaphoreSlim ArticleGate => Directory.ArticleGate;
+
+    /// <summary>Ein Sendevorgang eines Angebots zur selben Zeit je Server.</summary>
+    public SemaphoreSlim QuotationGate => Directory.QuotationGate;
+
+    /// <summary>Alle Artikel aus Lexware Office (alle Seiten, archivierte eingeschlossen), kurz zwischengespeichert.</summary>
+    public Task<(IReadOnlyList<LexwareArticle> Articles, DateTimeOffset LoadedAt)> ArticlesAsync(LexwareSettingsRow row, bool refresh,
+        CancellationToken cancellationToken)
+    {
+        var connection = Connection(row);
+        return Directory.ArticlesAsync(Stamp(row), clock.GetUtcNow(), Options.ContactCacheDuration, refresh, async () =>
+        {
+            var all = new List<LexwareArticle>();
+            for (var page = 0; page < Options.MaxArticlePages; page++)
+            {
+                var result = await client.ListArticlesAsync(connection, page, Options.ArticlePageSize, cancellationToken);
+                all.AddRange(result.Items);
+                if (result.Last || result.Items.Count == 0)
+                {
+                    break;
+                }
+            }
+
+            return all;
+        });
+    }
+
+    /// <summary>Zahlungsbedingungen aus Lexware Office (zwischengespeichert).</summary>
+    public Task<IReadOnlyList<LexwarePaymentCondition>> PaymentConditionsAsync(LexwareSettingsRow row, CancellationToken cancellationToken)
+    {
+        var connection = Connection(row);
+        return Directory.PaymentConditionsAsync(Stamp(row), clock.GetUtcNow(), Options.PaymentConditionCacheDuration,
+            () => client.ListPaymentConditionsAsync(connection, cancellationToken));
+    }
 
     // ---------- Kontakte ----------
 

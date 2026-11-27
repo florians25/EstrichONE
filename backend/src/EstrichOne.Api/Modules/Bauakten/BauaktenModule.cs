@@ -21,6 +21,7 @@ public sealed class BauaktenModule : IModule
         services.AddScoped<IBauakteSummaries, BauakteSummaries>();
         services.AddScoped<IBauakteFactory, BauakteFactory>();
         services.AddScoped<IBauakteAutoStatus, BauakteAutoStatus>();
+        services.AddScoped<IBauakteExternalStatus, BauakteExternalStatus>();
         services.AddSingleton<BauakteAutoStartJob>();
         services.AddHostedService(sp => sp.GetRequiredService<BauakteAutoStartJob>());
         services.AddScoped<IBauakteRooms, BauakteRooms>();

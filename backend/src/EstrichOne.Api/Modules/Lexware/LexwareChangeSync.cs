@@ -292,6 +292,8 @@ internal sealed class LexwareChangeSyncJob(IServiceScopeFactory scopes, TimeProv
     : BackgroundService
 {
     private DateTimeOffset _lastFull = DateTimeOffset.MinValue;
+    private DateTimeOffset _lastArticles = DateTimeOffset.MinValue;
+    private DateTimeOffset _lastStatus = DateTimeOffset.MinValue;
     private DateTimeOffset _pausedUntil = DateTimeOffset.MinValue;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -330,6 +332,23 @@ internal sealed class LexwareChangeSyncJob(IServiceScopeFactory scopes, TimeProv
         {
             // Neue Kunden ohne ähnlichen Kontakt zuerst anlegen; ihr Erstabgleich folgt im selben Lauf.
             await creation.ServiceProvider.GetRequiredService<LexwareAutoCreateService>().RunAsync(cancellationToken);
+        }
+
+        if (now - _lastArticles >= options.Value.ArticleSyncInterval)
+        {
+            using var articles = scopes.CreateScope();
+            var articleRun = await articles.ServiceProvider.GetRequiredService<LexwareArticleSyncService>().RunAsync(null, cancellationToken);
+            if (articleRun.Error is null)
+            {
+                _lastArticles = now;
+            }
+        }
+
+        if (now - _lastStatus >= options.Value.ChangeSyncInterval)
+        {
+            using var status = scopes.CreateScope();
+            await status.ServiceProvider.GetRequiredService<LexwareBauakteStatusService>().RunAsync(cancellationToken);
+            _lastStatus = now;
         }
 
         using var scope = scopes.CreateScope();

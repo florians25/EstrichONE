@@ -917,6 +917,20 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("responsible_user_id");
 
+                    b.Property<string>("ReviewReason")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("review_reason");
+
+                    b.Property<DateTimeOffset?>("ReviewRequestedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("review_requested_at");
+
+                    b.Property<string>("ReviewStamp")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("review_stamp");
+
                     b.Property<string>("SiteContactEmail")
                         .HasMaxLength(320)
                         .HasColumnType("character varying(320)")
@@ -4506,6 +4520,140 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                     b.ToTable("user_two_factor", (string)null);
                 });
 
+            modelBuilder.Entity("EstrichOne.Api.Modules.Lexware.CatalogItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("ArticleNumber")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("article_number");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("description");
+
+                    b.Property<int>("DeviationCount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("deviation_count");
+
+                    b.Property<string>("Deviations")
+                        .HasColumnType("text")
+                        .HasColumnName("deviations");
+
+                    b.Property<decimal?>("GrossPrice")
+                        .HasPrecision(14, 4)
+                        .HasColumnType("numeric(14,4)")
+                        .HasColumnName("gross_price");
+
+                    b.Property<string>("Gtin")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("gtin");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("kind");
+
+                    b.Property<string>("LexwareId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("lexware_id");
+
+                    b.Property<int?>("LexwareVersion")
+                        .HasColumnType("integer")
+                        .HasColumnName("lexware_version");
+
+                    b.Property<Guid?>("MaterialId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("material_id");
+
+                    b.Property<decimal>("NetPrice")
+                        .HasPrecision(14, 4)
+                        .HasColumnType("numeric(14,4)")
+                        .HasColumnName("net_price");
+
+                    b.Property<string>("Origin")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("origin");
+
+                    b.Property<string>("RemoteState")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("remote_state");
+
+                    b.Property<string>("SyncError")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("sync_error");
+
+                    b.Property<DateTimeOffset?>("SyncedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("synced_at");
+
+                    b.Property<string>("SyncedFields")
+                        .HasColumnType("text")
+                        .HasColumnName("synced_fields");
+
+                    b.Property<decimal>("TaxRate")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)")
+                        .HasColumnName("tax_rate");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("title");
+
+                    b.Property<string>("Unit")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("unit");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("pk_catalog_items");
+
+                    b.HasIndex("ArticleNumber")
+                        .HasDatabaseName("ix_catalog_items_article_number");
+
+                    b.HasIndex("LexwareId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_catalog_items_lexware_id")
+                        .HasFilter("lexware_id IS NOT NULL");
+
+                    b.HasIndex("Title")
+                        .HasDatabaseName("ix_catalog_items_title");
+
+                    b.ToTable("catalog_items", (string)null);
+                });
+
             modelBuilder.Entity("EstrichOne.Api.Modules.Lexware.LexwareContactCreation", b =>
                 {
                     b.Property<Guid>("ContactId")
@@ -4645,6 +4793,14 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("id");
 
+                    b.Property<string>("ArticleSync")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("FromLexware")
+                        .HasColumnName("article_sync");
+
                     b.Property<bool>("AutoCreate")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
@@ -4667,6 +4823,15 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
+
+                    b.Property<DateTimeOffset?>("LastArticleSyncAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_article_sync_at");
+
+                    b.Property<string>("LastArticleSyncError")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("last_article_sync_error");
 
                     b.Property<DateTimeOffset?>("LastChangeSyncAt")
                         .HasColumnType("timestamp with time zone")
@@ -4707,6 +4872,18 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                     b.Property<string>("ProtectedApiKey")
                         .HasColumnType("text")
                         .HasColumnName("protected_api_key");
+
+                    b.Property<bool>("StatusOnInvoicesPaid")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true)
+                        .HasColumnName("status_on_invoices_paid");
+
+                    b.Property<bool>("StatusOnQuotationAccepted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true)
+                        .HasColumnName("status_on_quotation_accepted");
 
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
@@ -4819,6 +4996,204 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasDatabaseName("ix_lexware_voucher_links_lexware_id");
 
                     b.ToTable("lexware_voucher_links", (string)null);
+                });
+
+            modelBuilder.Entity("EstrichOne.Api.Modules.Lexware.QuotationDraft", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid?>("BauakteId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("bauakte_id");
+
+                    b.Property<Guid>("ContactId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("contact_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<string>("Introduction")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)")
+                        .HasColumnName("introduction");
+
+                    b.Property<string>("LexwareId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("lexware_id");
+
+                    b.Property<string>("PaymentConditionId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("payment_condition_id");
+
+                    b.Property<decimal?>("PaymentDiscountPercent")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)")
+                        .HasColumnName("payment_discount_percent");
+
+                    b.Property<int?>("PaymentDiscountRange")
+                        .HasColumnType("integer")
+                        .HasColumnName("payment_discount_range");
+
+                    b.Property<int?>("PaymentDuration")
+                        .HasColumnType("integer")
+                        .HasColumnName("payment_duration");
+
+                    b.Property<string>("PaymentLabel")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("payment_label");
+
+                    b.Property<string>("Remark")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)")
+                        .HasColumnName("remark");
+
+                    b.Property<string>("SendError")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("send_error");
+
+                    b.Property<DateTimeOffset?>("SendStartedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("send_started_at");
+
+                    b.Property<bool>("SendUncertain")
+                        .HasColumnType("boolean")
+                        .HasColumnName("send_uncertain");
+
+                    b.Property<DateTimeOffset?>("SentAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("sent_at");
+
+                    b.Property<Guid?>("SentByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("sent_by_user_id");
+
+                    b.Property<string>("State")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("state");
+
+                    b.Property<string>("TaxType")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("tax_type");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("title");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<DateOnly?>("ValidUntil")
+                        .HasColumnType("date")
+                        .HasColumnName("valid_until");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("pk_quotation_drafts");
+
+                    b.HasIndex("BauakteId")
+                        .HasDatabaseName("ix_quotation_drafts_bauakte_id");
+
+                    b.HasIndex("ContactId")
+                        .HasDatabaseName("ix_quotation_drafts_contact_id");
+
+                    b.HasIndex("LexwareId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_quotation_drafts_lexware_id")
+                        .HasFilter("lexware_id IS NOT NULL");
+
+                    b.ToTable("quotation_drafts", (string)null);
+                });
+
+            modelBuilder.Entity("EstrichOne.Api.Modules.Lexware.QuotationDraftLine", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid?>("CatalogItemId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("catalog_item_id");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("description");
+
+                    b.Property<decimal?>("DiscountPercent")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)")
+                        .HasColumnName("discount_percent");
+
+                    b.Property<Guid>("DraftId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("draft_id");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("kind");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("name");
+
+                    b.Property<decimal?>("NetPrice")
+                        .HasPrecision(14, 4)
+                        .HasColumnType("numeric(14,4)")
+                        .HasColumnName("net_price");
+
+                    b.Property<int>("Position")
+                        .HasColumnType("integer")
+                        .HasColumnName("position");
+
+                    b.Property<decimal?>("Quantity")
+                        .HasPrecision(14, 3)
+                        .HasColumnType("numeric(14,3)")
+                        .HasColumnName("quantity");
+
+                    b.Property<decimal?>("TaxRate")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)")
+                        .HasColumnName("tax_rate");
+
+                    b.Property<string>("Unit")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("unit");
+
+                    b.HasKey("Id")
+                        .HasName("pk_quotation_draft_lines");
+
+                    b.HasIndex("DraftId", "Position")
+                        .HasDatabaseName("ix_quotation_draft_lines_draft_id_position");
+
+                    b.ToTable("quotation_draft_lines", (string)null);
                 });
 
             modelBuilder.Entity("EstrichOne.Api.Modules.Mail.MailAccount", b =>
@@ -8881,6 +9256,16 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasConstraintName("fk_user_two_factor_user_user_id");
                 });
 
+            modelBuilder.Entity("EstrichOne.Api.Modules.Lexware.QuotationDraftLine", b =>
+                {
+                    b.HasOne("EstrichOne.Api.Modules.Lexware.QuotationDraft", null)
+                        .WithMany("Lines")
+                        .HasForeignKey("DraftId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_quotation_draft_lines_quotation_drafts_draft_id");
+                });
+
             modelBuilder.Entity("EstrichOne.Api.Modules.Materials.Material", b =>
                 {
                     b.HasOne("EstrichOne.Api.Modules.Materials.Supplier", null)
@@ -9130,6 +9515,11 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("EstrichOne.Api.Modules.Contacts.Exports.Contact", b =>
                 {
                     b.Navigation("Persons");
+                });
+
+            modelBuilder.Entity("EstrichOne.Api.Modules.Lexware.QuotationDraft", b =>
+                {
+                    b.Navigation("Lines");
                 });
 
             modelBuilder.Entity("EstrichOne.Api.Modules.Materials.MaterialOrder", b =>

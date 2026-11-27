@@ -341,8 +341,17 @@ public sealed record ModuleSettings
     /// <summary>Tankbelege (setzt Maschinen und Fahrzeuge voraus).</summary>
     public bool Fuel { get; init; } = true;
 
-    /// <summary>Lexware Office (Kundenverknüpfung, Rechnungsentwürfe, Belegstatus). Anders als die übrigen Module zunächst aus.</summary>
+    /// <summary>Lexware Office (Kundenverknüpfung, Belegliste, Belegstatus). Anders als die übrigen Module zunächst aus.</summary>
     public bool Lexware { get; init; }
+
+    /// <summary>Lexware Office: Artikelabgleich (setzt Lexware Office voraus). Zunächst aus.</summary>
+    public bool LexwareArticles { get; init; }
+
+    /// <summary>Angebote (Beta): Angebote vorbereiten und als Entwurf an Lexware Office senden (setzt Lexware Office voraus). Zunächst aus.</summary>
+    public bool Quotations { get; init; }
+
+    /// <summary>Lexware Office: Status der Bauakte automatisch aus Angebots- und Rechnungsstatus (setzt Lexware Office voraus). Zunächst aus.</summary>
+    public bool LexwareStatus { get; init; }
 
     /// <summary>Eingeschaltet? Kernmodule und unbekannte Schlüssel gelten als eingeschaltet.</summary>
     public bool IsEnabled(string key) => key switch
@@ -366,6 +375,9 @@ public sealed record ModuleSettings
         AppModules.Feedback => Feedback,
         AppModules.Fuel => Fuel,
         AppModules.Lexware => Lexware,
+        AppModules.LexwareArticles => LexwareArticles,
+        AppModules.Quotations => Quotations,
+        AppModules.LexwareStatus => LexwareStatus,
         _ => true,
     };
 
@@ -391,6 +403,9 @@ public sealed record ModuleSettings
         AppModules.Feedback => this with { Feedback = on },
         AppModules.Fuel => this with { Fuel = on },
         AppModules.Lexware => this with { Lexware = on },
+        AppModules.LexwareArticles => this with { LexwareArticles = on },
+        AppModules.Quotations => this with { Quotations = on },
+        AppModules.LexwareStatus => this with { LexwareStatus = on },
         _ => this,
     };
 

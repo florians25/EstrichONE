@@ -29,7 +29,9 @@ public sealed record LexwareSettingsResponse(
     bool ModuleEnabled, bool HasApiKey, string BaseUrl, bool CustomBaseUrl, string? OrganizationName,
     DateTimeOffset? LastTestAt, bool? LastTestOk, string? LastTestError, int LinkedCustomers, int LinkedInvoices, string KeyHelpUrl, long Version,
     bool NewCustomersSync = true, LexwareChangeSync ChangeSync = LexwareChangeSync.Both, DateTimeOffset? LastChangeSyncAt = null,
-    string? LastChangeSyncError = null, int CustomersWithDeviations = 0, bool AutoCreate = true);
+    string? LastChangeSyncError = null, int CustomersWithDeviations = 0, bool AutoCreate = true,
+    LexwareArticleSync ArticleSync = LexwareArticleSync.FromLexware, DateTimeOffset? LastArticleSyncAt = null, string? LastArticleSyncError = null,
+    int CatalogItems = 0, int ArticlesWithDeviations = 0, bool StatusOnQuotationAccepted = true, bool StatusOnInvoicesPaid = true);
 
 /// <param name="ApiKey">Neuer Schlüssel; <c>null</c> oder leer lässt den gespeicherten unverändert.</param>
 /// <param name="ClearApiKey">Gespeicherten Schlüssel entfernen.</param>
@@ -37,9 +39,13 @@ public sealed record LexwareSettingsResponse(
 /// <param name="NewCustomersSync">Neue Kunden standardmäßig mit Lexware Office abgleichen; ohne Angabe unverändert.</param>
 /// <param name="ChangeSync">Richtung des Änderungsabgleichs verknüpfter Kunden; ohne Angabe unverändert.</param>
 /// <param name="AutoCreate">Neue Kunden ohne Treffer automatisch in Lexware Office anlegen; ohne Angabe unverändert.</param>
+/// <param name="ArticleSync">Richtung des Artikelabgleichs; ohne Angabe unverändert.</param>
+/// <param name="StatusOnQuotationAccepted">Regel „Angebot angenommen: Anfrage wird Geplant“; ohne Angabe unverändert.</param>
+/// <param name="StatusOnInvoicesPaid">Regel „Alle Rechnungen bezahlt: zur Abschlussprüfung“; ohne Angabe unverändert.</param>
 public sealed record SaveLexwareSettingsRequest(
     [property: MaxLength(500)] string? ApiKey = null, bool ClearApiKey = false, [property: MaxLength(LexwareSettingsRow.MaxUrl)] string? BaseUrl = null,
-    long? Version = null, bool? NewCustomersSync = null, LexwareChangeSync? ChangeSync = null, bool? AutoCreate = null);
+    long? Version = null, bool? NewCustomersSync = null, LexwareChangeSync? ChangeSync = null, bool? AutoCreate = null, LexwareArticleSync? ArticleSync = null,
+    bool? StatusOnQuotationAccepted = null, bool? StatusOnInvoicesPaid = null);
 
 public sealed record LexwareTestResponse(bool Ok, string? OrganizationName, string? Error, DateTimeOffset At);
 
@@ -442,7 +448,8 @@ internal static class LexwareEndpoints
             await db.Set<LexwareVoucherLink>().CountAsync(cancellationToken), LexwareService.KeyHelpUrl, row.Version, row.NewCustomersSync, row.ChangeSync,
             row.LastChangeSyncAt, row.LastChangeSyncError,
             row.ChangeSync == LexwareChangeSync.Off ? 0 : await db.Set<LexwareContactLink>().CountAsync(l => l.DeviationCount > 0, cancellationToken),
-            row.AutoCreate);
+            row.AutoCreate, row.ArticleSync, row.LastArticleSyncAt, row.LastArticleSyncError, await db.Set<CatalogItem>().CountAsync(cancellationToken),
+            await db.Set<CatalogItem>().CountAsync(c => c.DeviationCount > 0, cancellationToken), row.StatusOnQuotationAccepted, row.StatusOnInvoicesPaid);
     }
 
     private static async Task<Ok<LexwareSettingsResponse>> GetSettingsAsync(LexwareService lexware, ISystemSettings system, CancellationToken cancellationToken) =>
@@ -503,6 +510,16 @@ internal static class LexwareEndpoints
         var keepExisting = request.AutoCreate == true && !row.AutoCreate;
         row.AutoCreate = request.AutoCreate ?? row.AutoCreate;
         row.ChangeSync = changeSync;
+        var articleSync = request.ArticleSync ?? row.ArticleSync;
+        if (!Enum.IsDefined(articleSync))
+        {
+            return TypedResults.Problem(statusCode: StatusCodes.Status422UnprocessableEntity, title: Tag,
+                detail: "Die Richtung des Artikelabgleichs ist unbekannt.", extensions: Code("LEXWARE_INVALID_ARTICLE_SYNC"));
+        }
+
+        row.ArticleSync = articleSync;
+        row.StatusOnQuotationAccepted = request.StatusOnQuotationAccepted ?? row.StatusOnQuotationAccepted;
+        row.StatusOnInvoicesPaid = request.StatusOnInvoicesPaid ?? row.StatusOnInvoicesPaid;
         if (connectionChanged)
         {
             row.LastTestAt = null;
@@ -517,7 +534,8 @@ internal static class LexwareEndpoints
         audit.Record("lexware.settings_changed", currentUser.UserId, "settings", "lexware", new Dictionary<string, string?>
         {
             ["apiKey"] = keyChange, ["baseUrl"] = baseUrl ?? LexwareOptions.DefaultBaseUrl, ["newCustomersSync"] = row.NewCustomersSync ? "ja" : "nein",
-            ["changeSync"] = row.ChangeSync.ToString(), ["autoCreate"] = row.AutoCreate ? "ja" : "nein",
+            ["changeSync"] = row.ChangeSync.ToString(), ["autoCreate"] = row.AutoCreate ? "ja" : "nein", ["articleSync"] = row.ArticleSync.ToString(),
+            ["statusOnQuotationAccepted"] = row.StatusOnQuotationAccepted ? "ja" : "nein", ["statusOnInvoicesPaid"] = row.StatusOnInvoicesPaid ? "ja" : "nein",
         });
         if (keepExisting)
         {
@@ -1408,7 +1426,7 @@ internal static class LexwareEndpoints
     }
 
     private static async Task<Results<Ok<BauakteLexwareResponse>, ProblemHttpResult>> BauakteAsync(Guid id, LexwareService lexware, IBauakteAccess access,
-        IUserPermissions permissions, CancellationToken cancellationToken, [FromQuery] bool refresh = false)
+        IUserPermissions permissions, LexwareBauakteStatusService automation, CancellationToken cancellationToken, [FromQuery] bool refresh = false)
     {
         if (await BauakteEntityAsync(lexware, access, id, cancellationToken) is not { } bauakte)
         {
@@ -1419,6 +1437,11 @@ internal static class LexwareEndpoints
         var row = await lexware.SettingsAsync(cancellationToken);
         var links = await db.Set<LexwareVoucherLink>().Where(l => l.BauakteId == id).ToListAsync(cancellationToken);
         var error = await lexware.SyncAsync(row, links, refresh, cancellationToken);
+        if (error is null && links.Count > 0)
+        {
+            await automation.EvaluateAsync(row, id, links, cancellationToken);
+        }
+
         var vouchers = links.OrderByDescending(l => l.VoucherDate ?? DateOnly.FromDateTime(l.LinkedAt.UtcDateTime)).ThenByDescending(l => l.LinkedAt)
             .Select(l => ToResponse(lexware, row, l)).ToList();
         return TypedResults.Ok(new BauakteLexwareResponse(id, row.Configured,
@@ -1666,8 +1689,10 @@ internal static class LexwareEndpoints
         var (status, title) = exception.Code switch
         {
             "NOT_CONFIGURED" or "KEY_UNREADABLE" => (StatusCodes.Status409Conflict, "Lexware Office ist nicht eingerichtet"),
-            "ALREADY_LINKED" or "NOT_A_CUSTOMER" or "ANONYMIZED" or "SYNC_DISABLED" or "SYNC_PAUSED" or "CHANGE_SYNC_OFF" or "CUSTOMER_CHANGED" =>
+            "ALREADY_LINKED" or "NOT_A_CUSTOMER" or "ANONYMIZED" or "SYNC_DISABLED" or "SYNC_PAUSED" or "CHANGE_SYNC_OFF" or "CUSTOMER_CHANGED"
+                or "ARTICLE_SYNC_OFF" or "ARTICLE_SYNC_DIRECTION" or "CUSTOMER_NOT_LINKED" or "QUOTATION_SENDING" or "QUOTATION_SENT" =>
                 (StatusCodes.Status409Conflict, Tag),
+            "QUOTATION_INCOMPLETE" => (StatusCodes.Status422UnprocessableEntity, Tag),
             "NO_DOCUMENT" or "DOCUMENT_TOO_LARGE" => (StatusCodes.Status409Conflict, "Kein PDF verfügbar"),
             "INVALID_BASE_URL" or "UNKNOWN_VOUCHER_TYPE" => (StatusCodes.Status422UnprocessableEntity, Tag),
             "OFFLINE" or "TIMEOUT" or "UNAVAILABLE" or "RATE_LIMITED" => (StatusCodes.Status503ServiceUnavailable, "Lexware Office ist nicht erreichbar"),
@@ -1676,7 +1701,7 @@ internal static class LexwareEndpoints
         return TypedResults.Problem(statusCode: status, title: title, detail: exception.Message, extensions: Code("LEXWARE_" + exception.Code));
     }
 
-    private static async ValueTask<object?> GuardAsync(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
+    internal static async ValueTask<object?> GuardAsync(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
     {
         try
         {

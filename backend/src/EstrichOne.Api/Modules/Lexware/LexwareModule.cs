@@ -5,8 +5,9 @@ namespace EstrichOne.Api.Modules.Lexware;
 
 /// <summary>
 /// Lexware Office (früher lexoffice): API-Schlüssel des Betriebs, Kundenverknüpfung mit beidseitiger Dublettenprüfung,
-/// Abgleich späterer Änderungen an verknüpften Kunden und Anzeige der Belege (Liste, Status, PDF). Belege werden nur
-/// gelesen. Ohne Schlüssel bzw. abgeschaltet wirkungslos (docs/lexware-office.md).
+/// Abgleich späterer Änderungen an verknüpften Kunden und Anzeige der Belege (Liste, Status, PDF), dazu Artikelabgleich
+/// („Lexware Office: Artikel“) und Angebote als Entwurf („Angebote (Beta)“). Rechnungen werden nur gelesen. Ohne Schlüssel
+/// bzw. abgeschaltet wirkungslos (docs/lexware-office.md).
 /// </summary>
 public sealed class LexwareModule : IModule
 {
@@ -21,6 +22,9 @@ public sealed class LexwareModule : IModule
         services.AddScoped<LexwareService>();
         services.AddScoped<LexwareChangeSyncService>();
         services.AddScoped<LexwareAutoCreateService>();
+        services.AddScoped<LexwareArticleSyncService>();
+        services.AddScoped<LexwareQuotationService>();
+        services.AddScoped<LexwareBauakteStatusService>();
         services.AddSingleton<LexwareChangeSyncJob>();
         services.AddHostedService(provider => provider.GetRequiredService<LexwareChangeSyncJob>());
         services.AddScoped<ICustomerReferenceSource, LexwareCustomerReferences>();
@@ -28,5 +32,10 @@ public sealed class LexwareModule : IModule
         services.AddScoped<ICustomerCreationCheck, LexwareCustomerCreationCheck>();
     }
 
-    public void MapEndpoints(IEndpointRouteBuilder api) => LexwareEndpoints.Map(api);
+    public void MapEndpoints(IEndpointRouteBuilder api)
+    {
+        LexwareEndpoints.Map(api);
+        LexwareArticleEndpoints.Map(api);
+        LexwareQuotationEndpoints.Map(api);
+    }
 }

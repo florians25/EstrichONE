@@ -31,6 +31,19 @@ public sealed class LexwareSettingsRow : IVersionedEntity
     public DateTimeOffset? LastChangeSyncAt { get; set; }
     public string? LastChangeSyncError { get; set; }
 
+    /// <summary>Richtung des Artikelabgleichs (Modul „Lexware Office: Artikel“); Vorgabe: aus Lexware Office nach EstrichONE.</summary>
+    public LexwareArticleSync ArticleSync { get; set; } = LexwareArticleSync.FromLexware;
+
+    /// <summary>Letzter Artikelabgleich und sein Fehler (ohne Versionswechsel geschrieben).</summary>
+    public DateTimeOffset? LastArticleSyncAt { get; set; }
+    public string? LastArticleSyncError { get; set; }
+
+    /// <summary>Regel des Moduls „Status der Bauakte automatisch“: angenommenes Angebot setzt eine Anfrage auf „Geplant“.</summary>
+    public bool StatusOnQuotationAccepted { get; set; } = true;
+
+    /// <summary>Regel: alle Rechnungen bezahlt stellt die Bauakte zur Abschlussprüfung.</summary>
+    public bool StatusOnInvoicesPaid { get; set; } = true;
+
     public string? OrganizationId { get; set; }
     public string? OrganizationName { get; set; }
     public DateTimeOffset? LastTestAt { get; set; }
@@ -151,6 +164,10 @@ internal sealed class LexwareSettingsRowConfiguration : IEntityTypeConfiguration
         builder.Property(s => s.ChangeSync).HasConversion<string>().HasMaxLength(20).HasDefaultValue(LexwareChangeSync.Both);
         builder.Property(s => s.LastChangeSyncError).HasMaxLength(2000);
         builder.Property(s => s.AutoCreate).HasDefaultValue(true);
+        builder.Property(s => s.ArticleSync).HasConversion<string>().HasMaxLength(20).HasDefaultValue(LexwareArticleSync.FromLexware);
+        builder.Property(s => s.LastArticleSyncError).HasMaxLength(2000);
+        builder.Property(s => s.StatusOnQuotationAccepted).HasDefaultValue(true);
+        builder.Property(s => s.StatusOnInvoicesPaid).HasDefaultValue(true);
         builder.Ignore(s => s.Configured);
     }
 }

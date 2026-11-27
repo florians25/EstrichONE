@@ -16,7 +16,7 @@ namespace EstrichOne.Api.Modules.Bauakten;
 public sealed record BauakteListItem(
     Guid Id, string? Number, string Title, BauakteStatus Status, string? Street, string? PostalCode, string? City,
     Guid? CustomerId, DateTimeOffset UpdatedAt, long Version, Guid? ResponsibleUserId, double? Latitude, double? Longitude,
-    bool IsAssigned = false, bool CanEdit = false);
+    bool IsAssigned = false, bool CanEdit = false, DateTimeOffset? ReviewRequestedAt = null);
 
 /// <summary>Baustelle mit Standort für die Kartenansicht.</summary>
 public sealed record BauakteMapPoint(
@@ -33,7 +33,7 @@ public sealed record BauakteDetail(
     string? SiteContactEmail = null, string? SiteNotes = null, string? CancellationReason = null, BauakteProject? Project = null,
     bool InitialInspectionWaived = false, string? InitialInspectionWaivedReason = null, Guid? InitialInspectionWaivedByUserId = null,
     string? InitialInspectionWaivedByName = null, DateTimeOffset? InitialInspectionWaivedAt = null,
-    bool? IsAssigned = null, bool? CanEdit = null);
+    bool? IsAssigned = null, bool? CanEdit = null, DateTimeOffset? ReviewRequestedAt = null, string? ReviewReason = null);
 
 /// <summary>„Erstbegehung nicht erforderlich“ setzen (<see cref="Waived"/> = true, Begründung optional) oder aufheben.</summary>
 public sealed record InitialInspectionWaiverRequest(bool Waived, [property: MaxLength(Bauakte.MaxWaiverReasonLength)] string? Reason = null);
@@ -90,7 +90,7 @@ internal static class BauakteEndpoints
         var group = api.MapGroup("/bauakten").WithTags("Bauakten");
 
         group.MapGet("/", ListAsync).WithName("ListBauakten")
-            .WithSummary("Alle Bauakten, neueste Änderung zuerst; Filter: search, status (all|active|old|Status), responsibleUserId, customerId, postalCode, assigned (nur zugeteilte). isAssigned/canEdit je Zeile")
+            .WithSummary("Alle Bauakten, neueste Änderung zuerst; Filter: search, status (all|active|old|Status), responsibleUserId, customerId, postalCode, assigned (nur zugeteilte), review (nur „Zur Abschlussprüfung“). isAssigned/canEdit je Zeile")
             .RequirePermission(Permissions.BauaktenRead);
 
         group.MapGet("/map", MapPointsAsync).WithName("ListBauakteMapPoints")
@@ -124,6 +124,12 @@ internal static class BauakteEndpoints
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
             .RequirePermission(Permissions.BauaktenEdit);
 
+        group.MapPost("/{id:guid}/review/dismiss", DismissReviewAsync).WithName("DismissBauakteReview")
+            .WithSummary("„Prüfung zurückstellen“: Merkmal „Zur Abschlussprüfung“ entfernen (wird bei geändertem Zahlstatus erneut gesetzt)")
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .RequirePermission(Permissions.BauaktenEdit);
+
         group.MapPost("/{id:guid}/delete", DeleteAsync).WithName("DeleteBauakte")
             .WithSummary("Bauakte in den Papierkorb legen; bestätigt mit dem eigenen Passwort")
             .ProducesProblem(StatusCodes.Status403Forbidden)
@@ -136,7 +142,7 @@ internal static class BauakteEndpoints
         [FromQuery] string? search = null, [FromQuery] string? status = null,
         [FromQuery] string? cursor = null, [FromQuery] int? limit = null,
         [FromQuery] Guid? responsibleUserId = null, [FromQuery] Guid? customerId = null, [FromQuery] string? postalCode = null,
-        [FromQuery] bool? assigned = null)
+        [FromQuery] bool? assigned = null, [FromQuery] bool? review = null)
     {
         var pageSize = Math.Clamp(limit ?? DefaultPageSize, 1, MaxPageSize);
         var query = assigned == true
@@ -189,6 +195,11 @@ internal static class BauakteEndpoints
             query = query.Where(b => b.CustomerId == customer);
         }
 
+        if (review == true)
+        {
+            query = query.Where(b => b.ReviewRequestedAt != null);
+        }
+
         // Baustellen an derselben Adresse (Hinweis beim Anlegen einer Bauakte).
         if (!string.IsNullOrWhiteSpace(postalCode))
         {
@@ -210,7 +221,7 @@ internal static class BauakteEndpoints
         var rows = await query.OrderByDescending(b => b.UpdatedAt).ThenByDescending(b => b.Id)
             .Take(pageSize + 1)
             .Select(b => new BauakteListItem(b.Id, b.Number, b.Title, b.Status, b.Street, b.PostalCode, b.City, b.CustomerId, b.UpdatedAt, b.Version,
-                b.ResponsibleUserId, b.Latitude, b.Longitude))
+                b.ResponsibleUserId, b.Latitude, b.Longitude, false, false, b.ReviewRequestedAt))
             .ToListAsync(cancellationToken);
 
         var hasMore = rows.Count > pageSize;
@@ -453,6 +464,30 @@ internal static class BauakteEndpoints
         return TypedResults.Ok(await WithAccessAsync(ToDetail(bauakte), access, db, cancellationToken));
     }
 
+    private static async Task<Results<Ok<BauakteDetail>, ProblemHttpResult>> DismissReviewAsync(
+        Guid id, EstrichOneDbContext db, IBauakteAccess access, IBauakteHistory history, HttpContext http, CancellationToken cancellationToken)
+    {
+        if (BauakteWriteProblems.For(await access.CheckWriteAsync(id, cancellationToken)) is { } denied)
+        {
+            return denied;
+        }
+
+        var bauakte = await (await access.VisibleAsync(db.Set<Bauakte>(), cancellationToken)).SingleOrDefaultAsync(b => b.Id == id, cancellationToken);
+        if (bauakte is null)
+        {
+            return NotFound();
+        }
+
+        if (bauakte.DismissReview())
+        {
+            history.Record(id, BauakteHistoryActions.ReviewDismissed);
+            await db.SaveChangesAsync(cancellationToken);
+        }
+
+        SetETag(http, bauakte.Version);
+        return TypedResults.Ok(await WithAccessAsync(ToDetail(bauakte), access, db, cancellationToken));
+    }
+
     private static async Task<Results<NoContent, ProblemHttpResult>> DeleteAsync(
         Guid id, DeleteBauakteRequest request, EstrichOneDbContext db, IBauakteAccess access, IBauakteHistory history, IUserAccounts accounts,
         ICurrentUser currentUser, TimeProvider clock, CancellationToken cancellationToken)
@@ -540,7 +575,7 @@ internal static class BauakteEndpoints
         b.CustomerId, b.TemplateKey, b.ResponsibleUserId, b.CreatedByUserId, b.CreatedAt, b.UpdatedAt, b.Version,
         b.PlannedStart, b.PlannedEnd, b.SiteContactName, b.SiteContactPhone, b.SiteContactEmail, b.SiteNotes, b.CancellationReason, b.Project,
         b.InitialInspectionWaived, b.InitialInspectionWaivedReason, b.InitialInspectionWaivedByUserId, b.InitialInspectionWaivedByName,
-        b.InitialInspectionWaivedAt);
+        b.InitialInspectionWaivedAt, null, null, b.ReviewRequestedAt, b.ReviewReason);
 
     /// <summary>Nicht sichtbare und nicht vorhandene Bauakten sind von außen nicht unterscheidbar.</summary>
     private static ProblemHttpResult NotFound() =>

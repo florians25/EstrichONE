@@ -41,6 +41,9 @@ public static class AppModules
     public const string Feedback = "feedback";
     public const string Fuel = "fuel";
     public const string Lexware = "lexware";
+    public const string LexwareArticles = "lexwareArticles";
+    public const string Quotations = "quotations";
+    public const string LexwareStatus = "lexwareStatus";
 
     /// <summary>Fehlercode der Endpunkte abgeschalteter Module.</summary>
     public const string DisabledCode = "MODULE_DISABLED";
@@ -65,8 +68,17 @@ public static class AppModules
             "Tankbelege in den Apps fotografieren und erfassen, im Büro prüfen, private Auslagen erstatten und für die Buchhaltung exportieren.",
             [Machines]),
         new(Lexware, "office", "Lexware Office",
-            "Kunden mit Lexware Office verknüpfen und Rechnungen und Angebote aus Lexware Office an Kunden und Bauakten anzeigen. Belege entstehen nur in Lexware Office. Benötigt einen API-Schlüssel (Verwaltung › Integrationen).",
+            "Kunden mit Lexware Office verknüpfen und Rechnungen und Angebote aus Lexware Office an Kunden und Bauakten anzeigen. Benötigt einen API-Schlüssel (Verwaltung › Integrationen).",
             []),
+        new(LexwareArticles, "office", "Lexware Office: Artikel",
+            "Artikel und Leistungen mit den Artikeln in Lexware Office abgleichen (Vorgabe: Übernahme aus Lexware Office), regelmäßig im Hintergrund und auf Knopfdruck.",
+            [Lexware]),
+        new(LexwareStatus, "office", "Lexware Office: Status der Bauakte automatisch",
+            "Angenommenes Angebot setzt eine Anfrage auf „Geplant“; sind alle Rechnungen bezahlt, wird die Bauakte zur Abschlussprüfung gestellt. Abschließen bleibt eine Handlung im Büro. Regeln einzeln unter Verwaltung › Integrationen › Lexware Office.",
+            [Lexware], NotificationEvents: ["bauakte.lexware_status"]),
+        new(Quotations, "office", "Angebote (Beta)",
+            "Angebote in EstrichONE vorbereiten und als Entwurf an Lexware Office senden. Nummer, Festschreiben und Versand bleiben in Lexware Office.",
+            [Lexware]),
 
         new(Materials, "material", "Material und Lieferanten", "Materialstamm, Lieferanten und Materialhinweise in Bauakten.", []),
         new(Orders, "material", "Bestellungen", "Materialbestellungen mit Bestell-PDF und Lieferstatus.", [Materials]),

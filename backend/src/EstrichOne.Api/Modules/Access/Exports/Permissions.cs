@@ -38,6 +38,7 @@ public static class Permissions
     public const string FuelExport = "fuel.export";
     public const string InvoicesRead = "invoices.read";
     public const string InvoicesAssign = "invoices.assign";
+    public const string QuotationsPrepare = "quotations.prepare";
     public const string UsersManage = "users.manage";
     public const string RolesManage = "roles.manage";
     public const string DevicesRead = "devices.read";
@@ -90,7 +91,8 @@ public static class Permissions
         new(FuelManage, "Tankbelege", "Alle Tankbelege sehen, prüfen, freigeben, ablehnen, als erstattet bzw. gebucht markieren; Auswertung je Fahrzeug"),
         new(FuelExport, "Tankbelege", "Tankbelege als CSV für die Buchhaltung exportieren"),
         new(InvoicesRead, "Rechnungen", "Rechnungen und Angebote aus Lexware Office an Kunden und Bauakten sehen (wenn das Modul aktiv ist)"),
-        new(InvoicesAssign, "Rechnungen", "Rechnungen und Angebote aus Lexware Office Bauakten zuordnen und Kunden mit Lexware Office verknüpfen (Belege entstehen nur in Lexware Office)"),
+        new(InvoicesAssign, "Rechnungen", "Rechnungen und Angebote aus Lexware Office Bauakten zuordnen und Kunden mit Lexware Office verknüpfen"),
+        new(QuotationsPrepare, "Rechnungen", "Angebote vorbereiten: Angebote in EstrichONE erfassen und als Entwurf an Lexware Office senden (wenn das Modul „Angebote (Beta)“ aktiv ist)"),
         new(UsersManage, "Verwaltung", "Benutzer verwalten"),
         new(RolesManage, "Verwaltung", "Rollen und Rechte verwalten"),
         new(DevicesRead, "IT Center", "Geräte sehen"),

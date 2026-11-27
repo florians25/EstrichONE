@@ -191,7 +191,11 @@ public sealed class SiteNotesAndAccessTests(PostgresFixture postgres) : IAsyncLi
                 WHERE key = 'bauakte';
             """, Ct);
         var versionsBefore = await VersionsAsync(db);
+        // Der ältere Stand kennt die Spalten späterer Migrationen nicht; für das Lesen des Änderungsfeeds kurz ergänzen.
+        await db.Database.ExecuteSqlRawAsync(
+            "ALTER TABLE bauakten ADD COLUMN review_requested_at timestamptz, ADD COLUMN review_reason varchar(300), ADD COLUMN review_stamp varchar(1000)", Ct);
         var cursor = (await office.PullUntilAsync(null, changes => changes.Any(c => c.Id == longTexts.Id))).Cursor;
+        await db.Database.ExecuteSqlRawAsync("ALTER TABLE bauakten DROP COLUMN review_requested_at, DROP COLUMN review_reason, DROP COLUMN review_stamp", Ct);
 
         await migrator.MigrateAsync(cancellationToken: Ct);
         await AssertMigratedAsync();
@@ -232,6 +236,13 @@ public sealed class SiteNotesAndAccessTests(PostgresFixture postgres) : IAsyncLi
         }
     }
 
+    // Ohne die Entität: Vor der Migration fehlen Spalten späterer Migrationen (z. B. review_requested_at).
     private static async Task<Dictionary<Guid, long>> VersionsAsync(EstrichOneDbContext db) =>
-        await db.Set<Bauakte>().AsNoTracking().IgnoreQueryFilters().ToDictionaryAsync(b => b.Id, b => b.Version, Ct);
+        await db.Database.SqlQueryRaw<VersionRow>("SELECT id AS \"Id\", version AS \"Version\" FROM bauakten").ToDictionaryAsync(b => b.Id, b => b.Version, Ct);
+
+    private sealed class VersionRow
+    {
+        public Guid Id { get; set; }
+        public long Version { get; set; }
+    }
 }

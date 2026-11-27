@@ -136,6 +136,65 @@ public sealed class Bauakte : IVersionedEntity, ISoftDeletable
         {
             CancellationReason = null;
         }
+
+        if (status is BauakteStatus.Completed or BauakteStatus.Cancelled)
+        {
+            ReviewRequestedAt = null;
+            ReviewReason = null;
+        }
+    }
+
+    public const int MaxReviewReasonLength = 300;
+
+    /// <summary>
+    /// Merkmal „Zur Abschlussprüfung“: gesetzt von einer Automatik (z. B. alle Rechnungen in Lexware Office bezahlt). Kein
+    /// eigener Status, damit ältere Apps den Status weiter verstehen. Abgeschlossen wird immer von Hand.
+    /// </summary>
+    public DateTimeOffset? ReviewRequestedAt { get; private set; }
+
+    /// <summary>Grund des Merkmals, z. B. „Rechnungen vollständig bezahlt, bitte prüfen und abschließen“.</summary>
+    public string? ReviewReason { get; private set; }
+
+    /// <summary>
+    /// Stand, zu dem das Merkmal zuletzt gesetzt oder zurückgestellt wurde (z. B. bezahlte Rechnungen). Nach „Prüfung
+    /// zurückstellen“ wird es erst bei einem anderen Stand erneut gesetzt.
+    /// </summary>
+    public string? ReviewStamp { get; private set; }
+
+    /// <summary>Zur Abschlussprüfung stellen; liefert <c>false</c>, wenn nichts zu tun ist (schon gesetzt, gleicher Stand, abgeschlossen oder storniert).</summary>
+    public bool RequestReview(string reason, string stamp, DateTimeOffset at)
+    {
+        if (Status is BauakteStatus.Completed or BauakteStatus.Cancelled || ReviewRequestedAt is not null || ReviewStamp == stamp)
+        {
+            return false;
+        }
+
+        ReviewRequestedAt = at;
+        ReviewReason = reason.Length > MaxReviewReasonLength ? reason[..MaxReviewReasonLength] : reason;
+        ReviewStamp = stamp.Length > 1000 ? stamp[..1000] : stamp;
+        return true;
+    }
+
+    /// <summary>„Prüfung zurückstellen“: Merkmal entfernen, der Stand bleibt gemerkt.</summary>
+    public bool DismissReview()
+    {
+        if (ReviewRequestedAt is null)
+        {
+            return false;
+        }
+
+        ReviewRequestedAt = null;
+        ReviewReason = null;
+        return true;
+    }
+
+    /// <summary>Die Voraussetzung ist entfallen (z. B. neue offene Rechnung): Ein späterer gleicher Stand setzt das Merkmal wieder.</summary>
+    public void ForgetReviewStamp()
+    {
+        if (ReviewRequestedAt is null)
+        {
+            ReviewStamp = null;
+        }
     }
 
     /// <summary>Stornieren mit Begründung; die Bauakte bleibt mit Verlauf erhalten.</summary>
@@ -149,6 +208,8 @@ public sealed class Bauakte : IVersionedEntity, ISoftDeletable
 
         Status = BauakteStatus.Cancelled;
         CancellationReason = trimmed.Length > 500 ? trimmed[..500] : trimmed;
+        ReviewRequestedAt = null;
+        ReviewReason = null;
     }
 
     public void Schedule(DateOnly? start, DateOnly? end)

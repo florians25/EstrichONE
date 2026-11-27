@@ -25,6 +25,28 @@ public enum BauakteAutoTrigger
     Diary,
     Inspection,
     Acceptance,
+
+    /// <summary>Angebot in Lexware Office angenommen.</summary>
+    LexwareQuotationAccepted,
+}
+
+/// <summary>
+/// Status- und Merkmaländerungen an Bauakten aus anderen Modulen (z. B. Lexware Office), nur vorwärts. Speichert mit dem
+/// nächsten <c>SaveChanges</c>; Verlauf und Protokoll vermerken „automatisch“ mit der Quelle.
+/// </summary>
+public interface IBauakteExternalStatus
+{
+    /// <summary>„Anfrage“ auf „Geplant“ (nur aus „Anfrage“; jeder andere Status bleibt unberührt).</summary>
+    Task<bool> AdvanceToPlannedAsync(Guid bauakteId, BauakteAutoTrigger trigger, string source, string? detail, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Merkmal „Zur Abschlussprüfung“ setzen (nicht bei abgeschlossenen oder stornierten Bauakten, nicht erneut beim
+    /// selben <paramref name="stamp"/> nach „Prüfung zurückstellen“).
+    /// </summary>
+    Task<bool> RequestReviewAsync(Guid bauakteId, string reason, string stamp, string source, CancellationToken cancellationToken);
+
+    /// <summary>Voraussetzung entfallen: gemerkten Stand verwerfen (das Merkmal selbst bleibt, bis jemand es zurückstellt).</summary>
+    Task ForgetReviewStampAsync(Guid bauakteId, CancellationToken cancellationToken);
 }
 
 /// <summary>Automatische Statuswechsel nach den Einstellungen (Bereich Bauakte).</summary>

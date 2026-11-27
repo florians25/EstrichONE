@@ -34,4 +34,10 @@ public static class BauakteHistoryActions
 
     /// <summary>„Erstbegehung nicht erforderlich“ gesetzt (waived=true) oder aufgehoben.</summary>
     public const string InitialInspectionWaiver = "initial_inspection_waiver";
+
+    /// <summary>Merkmal „Zur Abschlussprüfung“ automatisch gesetzt.</summary>
+    public const string ReviewRequested = "review_requested";
+
+    /// <summary>„Prüfung zurückstellen“: Merkmal von Hand entfernt.</summary>
+    public const string ReviewDismissed = "review_dismissed";
 }

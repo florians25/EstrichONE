@@ -10,7 +10,9 @@ namespace EstrichOne.Api.Tests.Support;
 /// Nachgebildete Public API von Lexware Office als <see cref="HttpMessageHandler"/> (kein echter Aufruf): Profil, Kontakte
 /// (Liste mit Filtern, Abruf, Anlage), Belege (Rechnungen, Angebote, Gutschriften, Auftragsbestätigungen: nur Abruf) und
 /// Belegliste, dazu das Ändern eines Kontakts (<c>PUT</c> mit <c>version</c>, sonst 409) und das Beleg-PDF (<c>/file</c> sowie
-/// <c>/document</c> mit <c>/v1/files</c>; für Entwürfe 406). Schreibende Aufrufe für Belege kennt sie bewusst nicht (404).
+/// <c>/document</c> mit <c>/v1/files</c>; für Entwürfe 406), Artikel (Liste, Abruf, Anlage, Ändern mit <c>version</c>),
+/// Zahlungsbedingungen und das Anlegen eines Angebotsentwurfs (<c>POST /v1/quotations</c>, mit Abfrage abgelehnt). Andere
+/// schreibende Aufrufe für Belege kennt sie bewusst nicht (404).
 /// Zeichnet jede Anfrage auf; Schlüssel, Drosselung (429) und feste Fehlerantworten sind steuerbar.
 /// </summary>
 public sealed class FakeLexware : HttpMessageHandler
@@ -33,6 +35,50 @@ public sealed class FakeLexware : HttpMessageHandler
     public ConcurrentDictionary<string, (int Status, string Text)> Raw { get; } = new();
 
     public string CompanyName { get; set; } = "Estrichbau Muster GmbH";
+
+    /// <summary>Artikel: ID → Artikel wie in <c>/v1/articles</c>.</summary>
+    public ConcurrentDictionary<string, JsonObject> Articles { get; } = new();
+
+    /// <summary>Zahlungsbedingungen wie in <c>GET /v1/payment-conditions</c>.</summary>
+    public JsonArray PaymentConditions { get; set; } = new(
+        new JsonObject
+        {
+            ["id"] = "pc-14", ["organizationDefault"] = true, ["paymentTermLabelTemplate"] = "Zahlbar innerhalb von 14 Tagen ohne Abzug.", ["paymentTermDuration"] = 14,
+        },
+        new JsonObject
+        {
+            ["id"] = "pc-30", ["organizationDefault"] = false, ["paymentTermLabelTemplate"] = "Zahlbar innerhalb von 30 Tagen, bei Zahlung innerhalb von 8 Tagen 2 % Skonto.",
+            ["paymentTermDuration"] = 30, ["paymentDiscountConditions"] = new JsonObject { ["discountPercentage"] = 2, ["discountRange"] = 8 },
+        });
+
+    /// <summary>Nächste Anlage eines Angebots: angelegt, aber mit diesem Status beantwortet (Antwort geht verloren).</summary>
+    public int? QuotationLostAnswer { get; set; }
+
+    public string AddArticle(string title, string type = "SERVICE", string? number = null, decimal net = 10m, decimal tax = 19m, string unit = "m²",
+        bool archived = false, string? description = null)
+    {
+        var id = Guid.NewGuid().ToString();
+        Articles[id] = new JsonObject
+        {
+            ["id"] = id, ["organizationId"] = "aa93e8a8-2aa3-470b-b914-caad8a255dd8", ["createdDate"] = "2026-01-10T09:00:00.000+01:00",
+            ["updatedDate"] = "2026-01-10T09:00:00.000+01:00", ["archived"] = archived, ["title"] = title, ["description"] = description, ["type"] = type,
+            ["articleNumber"] = number, ["unitName"] = unit, ["note"] = "intern",
+            ["price"] = new JsonObject { ["netPrice"] = net, ["grossPrice"] = Math.Round(net * (1 + tax / 100), 2), ["leadingPrice"] = "NET", ["taxRate"] = tax },
+            ["version"] = 1,
+        };
+        return id;
+    }
+
+    /// <summary>Artikel wie in der Lexware-Oberfläche ändern: Version steigt.</summary>
+    public void EditArticle(string id, Action<JsonObject> change)
+    {
+        var article = Articles[id];
+        lock (article)
+        {
+            change(article);
+            article["version"] = article["version"]!.GetValue<int>() + 1;
+        }
+    }
 
     /// <summary>Kennt die nachgebildete API den Pfad <c>/file</c>? Sonst nur den älteren Weg über <c>/document</c>.</summary>
     public bool FileRoute { get; set; } = true;
@@ -202,6 +248,72 @@ public sealed class FakeLexware : HttpMessageHandler
                 return Json(HttpStatusCode.OK, new JsonObject { ["id"] = id, ["resourceUri"] = $"https://api.lexware.io/v1/contacts/{id}", ["version"] = 1 });
             }
 
+            case ("GET", "/v1/articles"):
+            {
+                var all = Articles.Values.OrderBy(a => a["id"]!.GetValue<string>(), StringComparer.Ordinal).ToList();
+                var page = int.Parse(parameters.GetValueOrDefault("page", "0"), CultureInfo.InvariantCulture);
+                var size = int.Parse(parameters.GetValueOrDefault("size", "25"), CultureInfo.InvariantCulture);
+                var content = new JsonArray(all.Skip(page * size).Take(size).Select(a => a.DeepClone()).ToArray());
+                var totalPages = Math.Max(1, (int)Math.Ceiling(all.Count / (double)size));
+                return Json(HttpStatusCode.OK, new JsonObject
+                {
+                    ["content"] = content, ["first"] = page == 0, ["last"] = page + 1 >= totalPages, ["totalPages"] = totalPages, ["totalElements"] = all.Count,
+                });
+            }
+
+            case ("POST", "/v1/articles"):
+            {
+                var article = JsonNode.Parse(body!)!.AsObject();
+                var id = Guid.NewGuid().ToString();
+                article["id"] = id;
+                article["version"] = 1;
+                article["archived"] = false;
+                Articles[id] = article;
+                return Json(HttpStatusCode.OK, new JsonObject { ["id"] = id, ["resourceUri"] = $"https://api.lexware.io/v1/articles/{id}", ["version"] = 1 });
+            }
+
+            case ("GET", "/v1/payment-conditions"):
+                return Json(HttpStatusCode.OK, PaymentConditions.DeepClone());
+
+            case ("POST", "/v1/quotations"):
+            {
+                if (query.Length > 0)
+                {
+                    return Json(HttpStatusCode.BadRequest, new JsonObject { ["status"] = 400, ["message"] = "Unexpected query" });
+                }
+
+                var sent = JsonNode.Parse(body!)!.AsObject();
+                var id = Guid.NewGuid().ToString();
+                var net = 0m;
+                var gross = 0m;
+                foreach (var line in (sent["lineItems"] as JsonArray ?? []).OfType<JsonObject>().Where(l => l["type"]!.GetValue<string>() != "text"))
+                {
+                    var amount = Math.Round(line["quantity"]!.GetValue<decimal>() * line["unitPrice"]!["netAmount"]!.GetValue<decimal>()
+                        * (1 - (line["discountPercentage"]?.GetValue<decimal>() ?? 0) / 100), 2);
+                    net += amount;
+                    gross += Math.Round(amount * (1 + line["unitPrice"]!["taxRatePercentage"]!.GetValue<decimal>() / 100), 2);
+                }
+
+                var voucher = (JsonObject)sent.DeepClone();
+                voucher["id"] = id;
+                voucher["voucherType"] = "quotation";
+                voucher["voucherStatus"] = "draft";
+                voucher["voucherNumber"] = null;
+                voucher["totalPrice"] = new JsonObject { ["currency"] = "EUR", ["totalNetAmount"] = net, ["totalGrossAmount"] = gross };
+                Vouchers[id] = voucher;
+                if (QuotationLostAnswer is { } lost)
+                {
+                    QuotationLostAnswer = null;
+                    return Json((HttpStatusCode)lost, new JsonObject { ["status"] = lost, ["message"] = "Gateway Timeout" });
+                }
+
+                return Json(HttpStatusCode.OK, new JsonObject
+                {
+                    ["id"] = id, ["resourceUri"] = $"https://api.lexware.io/v1/quotations/{id}", ["createdDate"] = DateTimeOffset.UtcNow.ToString("O", CultureInfo.InvariantCulture),
+                    ["updatedDate"] = DateTimeOffset.UtcNow.ToString("O", CultureInfo.InvariantCulture), ["version"] = 1,
+                });
+            }
+
             case ("GET", "/v1/voucherlist"):
             {
                 var types = parameters.GetValueOrDefault("voucherType", string.Empty).Split(',');
@@ -219,6 +331,32 @@ public sealed class FakeLexware : HttpMessageHandler
                     }).ToArray();
                 return Json(HttpStatusCode.OK, new JsonObject { ["content"] = new JsonArray(hits), ["last"] = true, ["totalPages"] = 1 });
             }
+        }
+
+        if (method == "GET" && path.StartsWith("/v1/articles/", StringComparison.Ordinal))
+        {
+            return Articles.TryGetValue(path["/v1/articles/".Length..], out var article) ? Json(HttpStatusCode.OK, article.DeepClone()) : NotFound();
+        }
+
+        if (method == "PUT" && path.StartsWith("/v1/articles/", StringComparison.Ordinal))
+        {
+            if (!Articles.TryGetValue(path["/v1/articles/".Length..], out var stored))
+            {
+                return NotFound();
+            }
+
+            var sent = JsonNode.Parse(body!)!.AsObject();
+            var version = stored["version"]!.GetValue<int>();
+            if (sent["version"]?.GetValue<int>() != version)
+            {
+                return Json(HttpStatusCode.Conflict, new JsonObject { ["status"] = 409, ["message"] = "Resource was modified" });
+            }
+
+            sent["id"] = stored["id"]!.DeepClone();
+            sent["archived"] = stored["archived"]?.DeepClone();
+            sent["version"] = version + 1;
+            Articles[path["/v1/articles/".Length..]] = sent;
+            return Json(HttpStatusCode.OK, new JsonObject { ["id"] = sent["id"]!.DeepClone(), ["version"] = version + 1 });
         }
 
         if (method == "GET" && path.StartsWith("/v1/contacts/", StringComparison.Ordinal))

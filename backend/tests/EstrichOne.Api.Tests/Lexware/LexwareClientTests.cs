@@ -173,14 +173,16 @@ public sealed class LexwareClientTests : IDisposable
         // anlegt oder ändert, und der Transport weist jeden schreibenden Aufruf außer „Kontakt anlegen“ und „Kontakt ändern“ ab.
         var methods = typeof(LexwareClient).GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance
             | System.Reflection.BindingFlags.DeclaredOnly).Select(m => m.Name).Where(n => n != "Dispose").Order().ToList();
-        methods.ShouldBe(["CreateContactAsync", "GetContactAsync", "GetVoucherAsync", "GetVoucherDocumentAsync", "ListCustomersAsync", "ListVouchersAsync",
-            "ProfileAsync", "UpdateContactAsync"]);
+        methods.ShouldBe(["CreateArticleAsync", "CreateContactAsync", "CreateQuotationDraftAsync", "GetArticleAsync", "GetContactAsync", "GetVoucherAsync",
+            "GetVoucherDocumentAsync", "ListArticlesAsync", "ListCustomersAsync", "ListPaymentConditionsAsync", "ListVouchersAsync", "ProfileAsync",
+            "UpdateArticleAsync", "UpdateContactAsync"]);
 
         LexwareClient.WriteAllowed(HttpMethod.Post, "/v1/contacts").ShouldBeTrue();
         LexwareClient.WriteAllowed(HttpMethod.Put, "/v1/contacts/abc").ShouldBeTrue();
         foreach (var path in new[]
                  {
-                     "/v1/invoices", "/v1/invoices/abc", "/v1/invoices/abc/document", "/v1/invoices/abc/file", "/v1/quotations", "/v1/quotations/abc",
+                     "/v1/invoices", "/v1/invoices/abc", "/v1/invoices/abc/document", "/v1/invoices/abc/file", "/v1/quotations/abc",
+                     "/v1/quotations/abc/document", "/v1/articles/abc/archive",
                      "/v1/credit-notes", "/v1/credit-notes/abc", "/v1/order-confirmations", "/v1/order-confirmations/abc", "/v1/voucherlist", "/v1/files",
                      "/v1/files/abc", "/v1/contacts/abc/archive", "/v1/contacts/", "/v1/event-subscriptions",
                  })
@@ -191,6 +193,25 @@ public sealed class LexwareClientTests : IDisposable
             }
 
             LexwareClient.WriteAllowed(HttpMethod.Get, path).ShouldBeTrue();
+        }
+
+        // Artikel: anlegen und einen einzelnen ändern, nie löschen. Angebote: nur als Entwurf anlegen, nie festschreiben oder ändern.
+        LexwareClient.WriteAllowed(HttpMethod.Post, "/v1/articles").ShouldBeTrue();
+        LexwareClient.WriteAllowed(HttpMethod.Put, "/v1/articles/abc").ShouldBeTrue();
+        LexwareClient.WriteAllowed(HttpMethod.Post, "/v1/quotations").ShouldBeTrue();
+        LexwareClient.WriteAllowed(HttpMethod.Post, "/v1/quotations", "?finalize=true").ShouldBeFalse();
+        LexwareClient.WriteAllowed(HttpMethod.Post, "/v1/articles", "?x=1").ShouldBeFalse();
+        LexwareClient.WriteAllowed(HttpMethod.Put, "/v1/quotations").ShouldBeFalse();
+        LexwareClient.WriteAllowed(HttpMethod.Put, "/v1/articles").ShouldBeFalse();
+        LexwareClient.WriteAllowed(HttpMethod.Post, "/v1/invoices").ShouldBeFalse();
+        foreach (var method in new[] { HttpMethod.Post, HttpMethod.Patch, HttpMethod.Delete })
+        {
+            LexwareClient.WriteAllowed(method, "/v1/articles/abc").ShouldBeFalse($"{method} /v1/articles/abc");
+        }
+
+        foreach (var method in new[] { HttpMethod.Put, HttpMethod.Patch, HttpMethod.Delete })
+        {
+            LexwareClient.WriteAllowed(method, "/v1/quotations").ShouldBeFalse($"{method} /v1/quotations");
         }
 
         // Kontakte: anlegen und einen einzelnen ändern, sonst nichts. Gelöscht oder archiviert wird in Lexware Office nie.
