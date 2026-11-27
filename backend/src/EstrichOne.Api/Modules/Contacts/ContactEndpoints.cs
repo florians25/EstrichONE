@@ -60,7 +60,9 @@ public sealed record SaveContactRequest(
     ContactChannel? PreferredChannel = null,
     DateOnly? Birthday = null,
     [property: MaxLength(200)] string? Website = null,
-    bool? LexwareSync = null) : IContactDetailsRequest;
+    bool? LexwareSync = null,
+    bool LexwareCreateAnyway = false,
+    bool LexwareSkipCheck = false) : IContactDetailsRequest;
 
 public sealed record UpdateContactRequest(
     long Version,
@@ -90,6 +92,12 @@ internal static class ContactEndpoints
 {
     private const long MaxImportBytes = 5 * 1024 * 1024;
 
+    /// <summary>Kundenanlage abgelehnt: In Lexware Office gibt es bereits einen ähnlichen Kontakt (Treffer unter <c>candidates</c>).</summary>
+    public const string LexwareCustomerExistsCode = "LEXWARE_CUSTOMER_EXISTS";
+
+    /// <summary>Kundenanlage abgelehnt: Die Prüfung in Lexware Office war nicht möglich.</summary>
+    public const string LexwareCheckUnavailableCode = "LEXWARE_CHECK_UNAVAILABLE";
+
     public static void Map(IEndpointRouteBuilder api)
     {
         var contacts = api.MapGroup("/contacts").WithTags("Kontakte");
@@ -112,7 +120,7 @@ internal static class ContactEndpoints
             .RequirePermission(Permissions.ContactsRead);
 
         contacts.MapPost("/", CreateAsync).WithName("CreateContact")
-            .WithSummary("Kontakt anlegen (idempotent über die ID)")
+            .WithSummary("Kontakt anlegen (idempotent über die ID). Mit Lexware Office prüft der Server vor dem Speichern, ob es den Kunden dort schon gibt: bei Treffern 409 LEXWARE_CUSTOMER_EXISTS mit candidates (anlegen nur mit lexwareCreateAnyway), ohne Antwort 409 LEXWARE_CHECK_UNAVAILABLE (anlegen nur mit lexwareSkipCheck)")
             .ProducesProblem(StatusCodes.Status409Conflict)
             .RequirePermission(Permissions.ContactsEdit);
 
@@ -187,7 +195,8 @@ internal static class ContactEndpoints
     }
 
     private static async Task<Results<Created<ContactResponse>, Ok<ContactResponse>, ProblemHttpResult>> CreateAsync(
-        SaveContactRequest request, EstrichOneDbContext db, ICustomerNumbers numbers, ICustomerSyncDefault syncDefault, CancellationToken cancellationToken)
+        SaveContactRequest request, EstrichOneDbContext db, ICustomerNumbers numbers, ICustomerSyncDefault syncDefault,
+        [FromServices] IEnumerable<ICustomerCreationCheck> creationChecks, CancellationToken cancellationToken)
     {
         var existing = await db.Set<Contact>().IgnoreQueryFilters([QueryFilters.NotDeleted]).AsNoTracking()
             .SingleOrDefaultAsync(c => c.Id == request.Id, cancellationToken);
@@ -216,6 +225,39 @@ internal static class ContactEndpoints
         ApplyDetails(contact, request);
         // Ohne Angabe (ältere Apps) gilt die Vorgabe aus den Lexware-Einstellungen.
         contact.SetLexwareSync(request.LexwareSync ?? await syncDefault.NewCustomersAsync(cancellationToken));
+        // Vor dem Speichern: Gibt es den Kunden in Lexware Office schon? Geprüft wird hier auf dem Server mit den endgültigen
+        // Angaben. Bei Treffern oder ohne Antwort wird nichts gespeichert, außer der Nutzer hat ausdrücklich bestätigt.
+        if (!request.LexwareCreateAnyway)
+        {
+            foreach (var check in creationChecks)
+            {
+                var result = await check.CheckAsync(contact, cancellationToken);
+                if (!result.Active)
+                {
+                    continue;
+                }
+
+                if (!result.Available && !request.LexwareSkipCheck)
+                {
+                    return TypedResults.Problem(statusCode: StatusCodes.Status409Conflict, title: "Prüfung in Lexware Office nicht möglich",
+                        detail: $"{result.Message ?? "Die Prüfung in Lexware Office ist derzeit nicht möglich."} Der Kunde wurde nicht angelegt. "
+                            + "Versuchen Sie es später erneut oder legen Sie ihn bewusst ohne Prüfung an.",
+                        extensions: new Dictionary<string, object?> { ["code"] = LexwareCheckUnavailableCode });
+                }
+
+                if (result.Candidates.Count > 0)
+                {
+                    return TypedResults.Problem(statusCode: StatusCodes.Status409Conflict, title: "Kunde in Lexware Office vorhanden",
+                        detail: "Achtung: Dieser Kunde ist bereits in Lexware Office vorhanden. Der Kunde wurde nicht angelegt. "
+                            + "Übernehmen Sie ihn aus Lexware Office oder legen Sie ihn bewusst neu an.",
+                        extensions: new Dictionary<string, object?>
+                        {
+                            ["code"] = LexwareCustomerExistsCode, ["candidates"] = result.Candidates, ["canImport"] = result.CanImport,
+                        });
+                }
+            }
+        }
+
         // Der Server vergibt die nächste Nummer aus dem Kunden-Nummernkreis.
         try
         {

@@ -286,6 +286,51 @@ public sealed class LexwareService(
 
     public void Remember(LexwareSettingsRow row, LexwareContact contact) => Directory.Add(Stamp(row), contact);
 
+    /// <summary>
+    /// Kontakte für die verbindliche Prüfung vor dem Anlegen eines Kunden: die vollständige Kontaktliste (alle Seiten, kurz
+    /// zwischengespeichert) und dazu frische, gezielte Abfragen nach Name und E-Mail-Adresse, jeweils über alle Seiten der
+    /// Treffer. So fällt auch ein Kontakt auf, der erst vor wenigen Minuten in Lexware Office entstanden ist.
+    /// </summary>
+    public async Task<IReadOnlyList<LexwareContact>> PreciseContactsAsync(LexwareSettingsRow row, MatchParty subject, CancellationToken cancellationToken)
+    {
+        var connection = Connection(row);
+        var (cached, _) = await ContactsAsync(row, refresh: false, cancellationToken);
+        var byId = cached.ToDictionary(c => c.Id, StringComparer.Ordinal);
+        var name = subject.Name.Trim();
+        var word = LexwareMatching.Normalize(name).Split(' ', StringSplitOptions.RemoveEmptyEntries).OrderByDescending(w => w.Length).FirstOrDefault();
+        var queries = new List<(string? Name, string? Email)>();
+        if (name.Length >= 3)
+        {
+            queries.Add((name, null));
+        }
+
+        if (word is { Length: >= 3 } && !string.Equals(word, name, StringComparison.OrdinalIgnoreCase))
+        {
+            queries.Add((word, null));
+        }
+
+        queries.AddRange(subject.Emails.Where(e => !string.IsNullOrWhiteSpace(e)).Distinct(StringComparer.OrdinalIgnoreCase).Take(3)
+            .Select(e => ((string?)null, (string?)e.Trim())));
+        foreach (var (byName, byEmail) in queries)
+        {
+            for (var page = 0; page < Options.MaxContactPages; page++)
+            {
+                var result = await client.ListCustomersAsync(connection, page, 100, byName, byEmail, null, cancellationToken);
+                foreach (var contact in result.Items.Where(c => !c.Archived))
+                {
+                    byId[contact.Id] = contact;
+                }
+
+                if (result.Last || result.Items.Count == 0)
+                {
+                    break;
+                }
+            }
+        }
+
+        return byId.Values.ToList();
+    }
+
     /// <summary>Gezielte Suche in Lexware Office: E-Mail-Adresse, Kundennummer (nur Ziffern) oder Name (mindestens drei Zeichen).</summary>
     public async Task<IReadOnlyList<LexwareContact>> SearchAsync(LexwareSettingsRow row, string query, CancellationToken cancellationToken)
     {
@@ -524,6 +569,39 @@ internal sealed class LexwareCustomerSyncDefault(EstrichOneDbContext db, ISystem
 
     public async Task<bool> PreferenceAsync(CancellationToken cancellationToken) =>
         await db.Set<LexwareSettingsRow>().AsNoTracking().Select(s => (bool?)s.NewCustomersSync).SingleOrDefaultAsync(cancellationToken) ?? true;
+}
+
+/// <summary>
+/// Verbindliche Prüfung vor dem Anlegen eines Kunden: Gibt es ihn in Lexware Office schon? Läuft mit eingeschaltetem
+/// Modul und hinterlegtem Schlüssel, unabhängig vom Schalter „Mit Lexware Office abgleichen“.
+/// </summary>
+internal sealed class LexwareCustomerCreationCheck(LexwareService lexware, ISystemSettings system, Access.Exports.IUserPermissions permissions)
+    : ICustomerCreationCheck
+{
+    public async Task<CustomerCreationCheck> CheckAsync(Contact draft, CancellationToken cancellationToken)
+    {
+        if (!(await system.GetAsync(cancellationToken)).Modules.IsEnabled(AppModules.Lexware))
+        {
+            return CustomerCreationCheck.Inactive;
+        }
+
+        var row = await lexware.SettingsAsync(cancellationToken);
+        if (!row.Configured)
+        {
+            return CustomerCreationCheck.Inactive;
+        }
+
+        var canImport = await permissions.HasAsync(Access.Exports.Permissions.InvoicesAssign, cancellationToken);
+        try
+        {
+            var candidates = await LexwareEndpoints.CheckCandidatesAsync(lexware, row, LexwareService.Party(draft), cancellationToken);
+            return new CustomerCreationCheck(true, true, null, candidates, canImport);
+        }
+        catch (LexwareException exception)
+        {
+            return new CustomerCreationCheck(true, false, "Die Prüfung in Lexware Office ist derzeit nicht möglich. " + exception.Message, [], canImport);
+        }
+    }
 }
 
 /// <summary>Beim Löschen bzw. Anonymisieren eines Kunden endet die Verknüpfung (in Lexware Office bleibt der Kontakt unverändert).</summary>

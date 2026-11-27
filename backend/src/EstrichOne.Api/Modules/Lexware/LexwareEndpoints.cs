@@ -1078,27 +1078,34 @@ internal static class LexwareEndpoints
             return TypedResults.Ok(new CheckLexwareContactResponse(false, null, [], canImport));
         }
 
-        IReadOnlyList<LexwareContact> contacts;
+        static List<string> One(string? value) => string.IsNullOrWhiteSpace(value) ? [] : [value.Trim()];
+        var subject = new MatchParty("neu", name, request.Kind != ContactKind.Person, One(request.Email), One(request.Phone), request.Street, request.PostalCode,
+            request.City, null, request.VatId);
         try
         {
-            (contacts, _) = await lexware.ContactsAsync(row, refresh: false, cancellationToken);
+            return TypedResults.Ok(new CheckLexwareContactResponse(true, null, await CheckCandidatesAsync(lexware, row, subject, cancellationToken), canImport));
         }
         catch (LexwareException)
         {
             return TypedResults.Ok(new CheckLexwareContactResponse(false, "Die Prüfung in Lexware Office ist derzeit nicht möglich.", [], canImport));
         }
+    }
 
-        static List<string> One(string? value) => string.IsNullOrWhiteSpace(value) ? [] : [value.Trim()];
-        var subject = new MatchParty("neu", name, request.Kind != ContactKind.Person, One(request.Email), One(request.Phone), request.Street, request.PostalCode,
-            request.City, null, request.VatId);
+    /// <summary>
+    /// Treffer in Lexware Office für einen Kunden, der angelegt werden soll: vollständige Kontaktliste und frische, gezielte
+    /// Abfragen nach Name und E-Mail-Adresse (<see cref="LexwareService.PreciseContactsAsync"/>), bewertet wie die übrige Dublettenprüfung.
+    /// </summary>
+    internal static async Task<List<LexwareContactCandidate>> CheckCandidatesAsync(LexwareService lexware, LexwareSettingsRow row, MatchParty subject,
+        CancellationToken cancellationToken)
+    {
+        var contacts = await lexware.PreciseContactsAsync(row, subject, cancellationToken);
         var linked = await LinkedAsync(lexware.Db, cancellationToken);
         var byId = contacts.ToDictionary(c => c.Id, StringComparer.Ordinal);
-        var candidates = LexwareMatching.Find(subject, contacts.Select(LexwareService.Party), 10).Select(r =>
+        return LexwareMatching.Find(subject, contacts.Select(LexwareService.Party), 10).Select(r =>
         {
             var owner = linked.TryGetValue(r.Party.Key, out var found) ? found : ((Guid Id, string Name)?)null;
             return new LexwareContactCandidate(Summary(lexware, row, byId[r.Party.Key], owner?.Id, owner?.Name), r.Match.Score, r.Match.Reasons, r.Match.Strong);
         }).ToList();
-        return TypedResults.Ok(new CheckLexwareContactResponse(true, null, candidates, canImport));
     }
 
     private static async Task<(List<Contact> Customers, Dictionary<Guid, string> Links)> CustomersAsync(EstrichOneDbContext db, CancellationToken cancellationToken)

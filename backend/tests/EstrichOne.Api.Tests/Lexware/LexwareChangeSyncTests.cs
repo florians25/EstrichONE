@@ -94,7 +94,7 @@ public sealed class LexwareChangeSyncTests(PostgresFixture postgres) : IAsyncLif
         string? postalCode = null, string? city = null, bool lexwareSync = true)
     {
         var id = Guid.CreateVersion7();
-        await SendAsync<JsonObject>(HttpMethod.Post, "/api/v1/contacts", new { id, kind, name, email, phone, street, postalCode, city, lexwareSync },
+        await SendAsync<JsonObject>(HttpMethod.Post, "/api/v1/contacts", new { lexwareCreateAnyway = true, id, kind, name, email, phone, street, postalCode, city, lexwareSync },
             HttpStatusCode.Created);
         return id;
     }
@@ -638,6 +638,77 @@ public sealed class LexwareChangeSyncTests(PostgresFixture postgres) : IAsyncLif
         (await StateAsync(fresh)).Link.ShouldNotBeNull();
         (await StateAsync(similar)).Creation!.State.ShouldBe("duplicates");
         Posts().ShouldBe(1);
+    }
+
+    // ---------- Verbindliche Prüfung vor dem Anlegen eines Kunden ----------
+
+    [Fact]
+    public async Task CreatingACustomer_ChecksLexwareFirst_WithFinalData_AndSavesOnlyWithoutHitsOrAfterConfirmation()
+    {
+        const string contacts = "/api/v1/contacts";
+        for (var i = 0; i < 300; i++)
+        {
+            _lexware.AddContact($"Reihenhaus {i:000} GmbH", email: $"haus{i}@example.org");
+        }
+
+        var huber = _lexware.AddContact("HUBER BAU GMBH & Co. KG", email: "buero@huber.example", street: "Am Anger 7", zip: "83022", city: "Rosenheim");
+        async Task<(HttpStatusCode Status, JsonNode Body)> PostAsync(object body)
+        {
+            using var response = await _admin.PostAsJsonAsync(contacts, body, TestJson.Options, Ct);
+            return (response.StatusCode, JsonNode.Parse(await response.Content.ReadAsStringAsync(Ct))!);
+        }
+
+        // Treffer: nichts wird gespeichert, die Antwort nennt die Kandidaten.
+        var id = Guid.CreateVersion7();
+        var (status, body) = await PostAsync(new { id, kind = "company", name = "Huber Bau GmbH", postalCode = "83022" });
+        status.ShouldBe(HttpStatusCode.Conflict);
+        body["code"]!.GetValue<string>().ShouldBe("LEXWARE_CUSTOMER_EXISTS");
+        body["detail"]!.GetValue<string>().ShouldStartWith("Achtung: Dieser Kunde ist bereits in Lexware Office vorhanden.");
+        body["candidates"]![0]!["contact"]!["id"]!.GetValue<string>().ShouldBe(huber);
+        body["candidates"]![0]!["reasons"]!.ToJsonString().ShouldContain("gleicher Name und PLZ");
+        body["canImport"]!.GetValue<bool>().ShouldBeTrue();
+        (await DbAsync(db => db.Set<Modules.Contacts.Exports.Contact>().AnyAsync(c => c.Id == id, Ct))).ShouldBeFalse();
+        // Präzise: die ganze Kontaktliste (mehrere Seiten) und gezielte Abfragen nach dem Namen, alles nur lesend.
+        _lexware.CallsTo("GET", "/v1/contacts").Count(c => c.Query.Contains("page=1")).ShouldBeGreaterThan(0);
+        _lexware.CallsTo("GET", "/v1/contacts").ShouldContain(c => c.Query.Contains("name=Huber Bau GmbH"));
+        _lexware.Calls.ShouldAllBe(c => c.Method == "GET");
+
+        // Ein Kontakt, der eben erst in Lexware Office entstanden ist (noch nicht in der zwischengespeicherten Liste), wird gefunden.
+        _lexware.AddContact("Fliesen Brandl GmbH", email: "info@brandl.example");
+        (await PostAsync(new { id = Guid.CreateVersion7(), kind = "company", name = "Fliesen Brandl" })).Status.ShouldBe(HttpStatusCode.Conflict);
+        (await PostAsync(new { id = Guid.CreateVersion7(), kind = "person", name = "Jemand Anderes", email = "INFO@brandl.example" })).Body["code"]!
+            .GetValue<string>().ShouldBe("LEXWARE_CUSTOMER_EXISTS");
+
+        // Ausdrückliche Bestätigung: Der Kunde wird angelegt. Wiederholung derselben Anfrage bleibt ohne Folgen.
+        (await PostAsync(new { id, kind = "company", name = "Huber Bau GmbH", postalCode = "83022", lexwareCreateAnyway = true })).Status
+            .ShouldBe(HttpStatusCode.Created);
+        (await PostAsync(new { id, kind = "company", name = "Huber Bau GmbH", postalCode = "83022" })).Status.ShouldBe(HttpStatusCode.OK);
+
+        // Kein Treffer: wird ohne Bestätigung angelegt. Auch mit ausgeschaltetem Abgleich wird geprüft.
+        (await PostAsync(new { id = Guid.CreateVersion7(), kind = "company", name = "Malerbetrieb Kern" })).Status.ShouldBe(HttpStatusCode.Created);
+        (await PostAsync(new { id = Guid.CreateVersion7(), kind = "company", name = "Reihenhaus 077 GmbH", lexwareSync = false })).Body["code"]!
+            .GetValue<string>().ShouldBe("LEXWARE_CUSTOMER_EXISTS");
+
+        // Lexware Office nicht erreichbar: nicht stillschweigend anlegen, sondern eigener Fehler; mit Bestätigung ohne Prüfung.
+        _lexware.Raw["/v1/contacts"] = (503, "");
+        var blocked = Guid.CreateVersion7();
+        var (downStatus, down) = await PostAsync(new { id = blocked, kind = "company", name = "Estrich Sonnleitner" });
+        downStatus.ShouldBe(HttpStatusCode.Conflict);
+        down["code"]!.GetValue<string>().ShouldBe("LEXWARE_CHECK_UNAVAILABLE");
+        down["detail"]!.GetValue<string>().ShouldContain("Der Kunde wurde nicht angelegt.");
+        (await DbAsync(db => db.Set<Modules.Contacts.Exports.Contact>().AnyAsync(c => c.Id == blocked, Ct))).ShouldBeFalse();
+        (await PostAsync(new { id = blocked, kind = "company", name = "Estrich Sonnleitner", lexwareSkipCheck = true })).Status.ShouldBe(HttpStatusCode.Created);
+
+        // „Ohne Prüfung“ gilt nur, wenn die Prüfung nicht möglich war: Ist Lexware erreichbar, zählen die Treffer.
+        _lexware.Raw.Clear();
+        (await PostAsync(new { id = Guid.CreateVersion7(), kind = "company", name = "Reihenhaus 012 GmbH", lexwareSkipCheck = true })).Body["code"]!
+            .GetValue<string>().ShouldBe("LEXWARE_CUSTOMER_EXISTS");
+
+        // Modul aus: Die Anlage läuft wie bisher, ohne Aufruf bei Lexware Office.
+        await SendAsync<JsonObject>(HttpMethod.Put, "/api/v1/settings/modules", new { modules = new Dictionary<string, bool> { ["lexware"] = false } });
+        var calls = _lexware.Calls.Count;
+        (await PostAsync(new { id = Guid.CreateVersion7(), kind = "company", name = "Reihenhaus 013 GmbH" })).Status.ShouldBe(HttpStatusCode.Created);
+        _lexware.Calls.Count.ShouldBe(calls);
     }
 
     // ---------- Prüfung beim Anlegen eines Kunden ----------

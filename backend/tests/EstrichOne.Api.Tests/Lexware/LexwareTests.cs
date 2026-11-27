@@ -77,7 +77,7 @@ public sealed class LexwareTests(PostgresFixture postgres) : IAsyncLifetime
         string? postalCode = null, string? city = null)
     {
         var id = Guid.CreateVersion7();
-        await SendAsync<JsonObject>(_admin, HttpMethod.Post, "/api/v1/contacts", new { id, kind, name, email, phone, street, postalCode, city },
+        await SendAsync<JsonObject>(_admin, HttpMethod.Post, "/api/v1/contacts", new { lexwareCreateAnyway = true, id, kind, name, email, phone, street, postalCode, city },
             HttpStatusCode.Created);
         return id;
     }
@@ -522,7 +522,7 @@ public sealed class LexwareTests(PostgresFixture postgres) : IAsyncLifetime
         // Ausdrücklich „einseitiger Kunde“ beim Anlegen; beim Ändern ohne Angabe unverändert, mit Angabe gesetzt.
         var oneSided = Guid.CreateVersion7();
         var created = await SendAsync<JsonObject>(_admin, HttpMethod.Post, "/api/v1/contacts",
-            new { id = oneSided, kind = "person", name = "Privat Einseitig", lexwareSync = false }, HttpStatusCode.Created);
+            new { lexwareCreateAnyway = true, id = oneSided, kind = "person", name = "Privat Einseitig", lexwareSync = false }, HttpStatusCode.Created);
         created["lexwareSync"]!.GetValue<bool>().ShouldBeFalse();
         var version = created["version"]!.GetValue<long>();
         var kept = await SendAsync<JsonObject>(_admin, HttpMethod.Put, $"/api/v1/contacts/{oneSided}", new { version, kind = "person", name = "Privat Einseitig", city = "Rosenheim" });
@@ -563,7 +563,7 @@ public sealed class LexwareTests(PostgresFixture postgres) : IAsyncLifetime
         var lexContact = _lexware.AddContact("Huber Bau GmbH", email: "buero@huber-bau.example");
         var customer = Guid.CreateVersion7();
         await SendAsync<JsonObject>(_admin, HttpMethod.Post, "/api/v1/contacts",
-            new { id = customer, kind = "company", name = "Huber Bau GmbH", email = "buero@huber-bau.example", lexwareSync = false }, HttpStatusCode.Created);
+            new { lexwareCreateAnyway = true, id = customer, kind = "company", name = "Huber Bau GmbH", email = "buero@huber-bau.example", lexwareSync = false }, HttpStatusCode.Created);
         var other = await CustomerAsync("Zimmerei Lang");
         var bauakte = await BauakteAsync("EFH Huber", customer);
 

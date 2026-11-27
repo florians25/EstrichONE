@@ -25,6 +25,7 @@ public sealed class LexwareModule : IModule
         services.AddHostedService(provider => provider.GetRequiredService<LexwareChangeSyncJob>());
         services.AddScoped<ICustomerReferenceSource, LexwareCustomerReferences>();
         services.AddScoped<ICustomerSyncDefault, LexwareCustomerSyncDefault>();
+        services.AddScoped<ICustomerCreationCheck, LexwareCustomerCreationCheck>();
     }
 
     public void MapEndpoints(IEndpointRouteBuilder api) => LexwareEndpoints.Map(api);

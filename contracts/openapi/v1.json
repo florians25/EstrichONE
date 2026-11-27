@@ -4298,7 +4298,7 @@
         "tags": [
           "Kontakte"
         ],
-        "summary": "Kontakt anlegen (idempotent über die ID)",
+        "summary": "Kontakt anlegen (idempotent über die ID). Mit Lexware Office prüft der Server vor dem Speichern, ob es den Kunden dort schon gibt: bei Treffern 409 LEXWARE_CUSTOMER_EXISTS mit candidates (anlegen nur mit lexwareCreateAnyway), ohne Antwort 409 LEXWARE_CHECK_UNAVAILABLE (anlegen nur mit lexwareSkipCheck)",
         "operationId": "CreateContact",
         "requestBody": {
           "content": {
@@ -47449,6 +47449,14 @@
               "null",
               "boolean"
             ]
+          },
+          "lexwareCreateAnyway": {
+            "type": "boolean",
+            "default": false
+          },
+          "lexwareSkipCheck": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
