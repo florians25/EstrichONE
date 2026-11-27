@@ -59,7 +59,10 @@ Kundennummer, Anschrift und dem Grund der Übereinstimmung.
 - **Aus Lexware Office übernehmen** legt den Kunden mit den Daten aus Lexware Office an und verknüpft ihn.
 - **Trotzdem neu anlegen** legt den Kunden bewusst ohne Verknüpfung an.
 
-Ohne Verbindung prüft die App nicht. Der Server prüft dann nach der Synchronisation: Gibt es keinen ähnlichen Kontakt,
+Maßgeblich ist die Prüfung beim Tippen auf **Sichern** bzw. **Anlegen**: Die App fragt erst Lexware Office und legt den
+Kunden erst danach an. Solange steht dort **Prüfung in Lexware Office läuft**. Ist die Prüfung nicht möglich, zum Beispiel
+ohne Verbindung, fragt die App nach; mit **Ohne Prüfung anlegen** legen Sie den Kunden bewusst an. Der Server prüft ihn
+dann nach der Synchronisation: Gibt es keinen ähnlichen Kontakt,
 legt er den Kunden in Lexware Office an, sonst steht der Kunde im Büro unter den möglichen Dubletten.
 
 ## Kunden archivieren oder löschen

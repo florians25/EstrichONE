@@ -464,7 +464,7 @@ Record<string, string | null> | null {
 /** Warnung über den Treffern, in Einzahl und Mehrzahl. */
 export function lexwareCheckText(check: LexwareContactCheck | null): { warning: string; note: string } {
 	if (!check) return { warning: "", note: "" };
-	if (!check.checked) return { warning: "", note: check.message ? `${check.message} Der Kunde lässt sich trotzdem anlegen und erscheint später im Kundenabgleich.` : "" };
+	if (!check.checked) return { warning: "", note: check.message ? `${check.message} Beim Anlegen wird erneut geprüft.` : "" };
 	const n = check.candidates.length;
 	return { warning: n === 0 ? "" : n === 1 ? LEXWARE_EXISTS_WARNING : `${LEXWARE_EXISTS_WARNING} Es gibt ${n} passende Kontakte.`, note: "" };
 }
@@ -504,4 +504,29 @@ export function enableSyncQuestion(preview: { changed: number; wouldCreate: numb
 		: preview.withMatches === 1 ? " 1 Kunde hat dort einen ähnlichen Kontakt und erscheint unter „Mögliche Dubletten“."
 			: ` ${preview.withMatches} Kunden haben dort einen ähnlichen Kontakt und erscheinen unter „Mögliche Dubletten“.`;
 	return `Abgleich mit Lexware Office für ${who} einschalten? ${created}${matches}`;
+}
+
+// ---------- Verbindliche Prüfung beim Anlegen (der Server prüft vor dem Speichern) ----------
+
+export const LEXWARE_CHECK_RUNNING = "Prüfung in Lexware Office läuft";
+export const UNCHECKED_QUESTION = "Möchten Sie den Kunden ohne Prüfung in Lexware Office anlegen? Gibt es ihn dort schon, entsteht ein doppelter Eintrag.";
+
+/** Ablehnung der Kundenanlage durch den Server: Treffer in Lexware Office oder Prüfung nicht möglich; sonst `null`. */
+export function creationProblem(error: { code?: string; problem?: Record<string, unknown> } | null | undefined):
+{ kind: "exists"; check: LexwareContactCheck } | { kind: "unavailable"; detail: string } | null {
+	if (error?.code === "LEXWARE_CUSTOMER_EXISTS") {
+		const candidates = Array.isArray(error.problem?.candidates) ? error.problem?.candidates as LexwareContactCandidate[] : [];
+		return { kind: "exists", check: { checked: true, message: null, candidates, canImport: error.problem?.canImport === true } };
+	}
+	if (error?.code === "LEXWARE_CHECK_UNAVAILABLE") {
+		return { kind: "unavailable", detail: String(error.problem?.detail ?? LEXWARE_CHECK_UNAVAILABLE) };
+	}
+	return null;
+}
+
+/** Rückfrage mit den Treffern, wenn ein Kunde außerhalb des Dialogs „Neuer Kunde“ angelegt wird. */
+export function existsQuestion(check: LexwareContactCheck): string {
+	const hits = check.candidates.slice(0, 5).map((c) => `${c.contact.name}: ${[lexwareCandidateLine(c.contact), c.reasons.join(", ")].filter(Boolean).join(", ")}`);
+	return `${LEXWARE_EXISTS_WARNING}\n\n${hits.join("\n")}\n\n`
+		+ "Zum Übernehmen wählen Sie unter Kunden „Aus Lexware übernehmen“. Möchten Sie den Kunden trotzdem neu anlegen, ohne Verknüpfung mit Lexware Office?";
 }

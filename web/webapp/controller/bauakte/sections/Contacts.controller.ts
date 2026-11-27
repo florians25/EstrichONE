@@ -1,3 +1,4 @@
+import { createCustomerChecked } from "../../../util/lexwareCreate";
 import SectionBase from "./SectionBase";
 import { startTeamsChat, teamsChatStates } from "../../../util/teamsChat";
 import JSONModel from "sap/ui/model/json/JSONModel";
@@ -480,7 +481,7 @@ export default class Contacts extends SectionBase {
 					}
 					contactId = uuidv7();
 					const phones = [text("phone") && { kind: "office", number: text("phone"), label: null }, text("mobile") && { kind: "mobile", number: text("mobile"), label: null }].filter(Boolean);
-					await post("contacts", { id: contactId, kind: v.company ? "company" : "person", name, phone: text("phone") ?? text("mobile"), email: text("email"),
+					await createCustomerChecked({ id: contactId, kind: v.company ? "company" : "person", name, phone: text("phone") ?? text("mobile"), email: text("email"),
 						street: text("street"), postalCode: text("postalCode"), city: text("city"), phones });
 				}
 				return put<BauakteParty[]>(`bauakten/${this.bauakteId}/parties/${party?.id ?? uuidv7()}`, {

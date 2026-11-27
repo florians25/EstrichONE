@@ -59,6 +59,9 @@ export EstrichOne__Lexware__AllowAnyBaseUrl=true
 export EstrichOne__Lexware__MinRequestInterval=00:00:00.050
 # Änderungsabgleich verknüpfter Kunden: Der Hintergrunddienst sieht im Test alle fünf Sekunden nach Änderungen (sonst 30).
 export EstrichOne__Lexware__ChangePollInterval=00:00:05
+# Kurze Pause nach einem Ausfall und kurze Wartezeiten bei Wiederholungen (der Test schaltet die nachgebildete API zeitweise ab).
+export EstrichOne__Lexware__ChangeSyncPause=00:00:10
+export EstrichOne__Lexware__RetryDelay=00:00:00.200
 dotnet publish "$ROOT/backend/src/EstrichOne.Api" -c Release -o "$WORK/api" --nologo -v quiet
 dotnet "$WORK/api/EstrichOne.Api.dll" migrate >/dev/null
 dotnet "$WORK/api/EstrichOne.Api.dll" >"$WORK/api.log" 2>&1 &

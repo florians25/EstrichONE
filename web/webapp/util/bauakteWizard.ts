@@ -12,6 +12,7 @@
  *  5. Prüfen und anlegen; danach öffnet der Aufrufer die neue Bauakte.
  * „Anlegen“ steht ab Schritt 2 zur Verfügung: die Schritte 3 und 4 sind Ergänzungen und können entfallen.
  */
+import { createCustomerChecked } from "./lexwareCreate";
 import { schemaWizardControls } from "./project";
 import { SITE_NOTES_LABEL, SITE_NOTES_MAX, SITE_NOTES_PLACEHOLDER } from "./freeText";
 import Link from "sap/m/Link";
@@ -820,7 +821,7 @@ export function openBauakteWizard(options: WizardOptions): Promise<(BauakteDetai
 				let customerId = existing?.id ?? null;
 				if (!existing) {
 					const f = customerFields();
-					const contact = await post<ContactResponse>("contacts", {
+					const contact = await createCustomerChecked<ContactResponse>({
 						id: uuidv7(), kind: customerKind.getSelectedKey(), name: f.name, customerNumber: null,
 						street: f.street, postalCode: f.postalCode, city: f.city, phone: f.phone, email: f.email, notes: null,
 					});

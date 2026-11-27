@@ -1,5 +1,6 @@
 /** Kunde anlegen/bearbeiten (erweiterte Kundendaten, Dublettenprüfung über alle Nummern). */
-import { get, post, put } from "./api";
+import { createCustomerChecked } from "./lexwareCreate";
+import { get, put } from "./api";
 import { KEEP_OPEN, openForm } from "./forms";
 import { uuidv7 } from "./ids";
 import { AUTO_NUMBER } from "./numberField";
@@ -95,7 +96,7 @@ export async function openCustomerForm(contact: ContactResponse | null, readOnly
 				}
 			}
 			if (contact) await put(`contacts/${contact.id}`, { ...body, version: contact.version });
-			else await post("contacts", { ...body, id: uuidv7() });
+			else await createCustomerChecked({ ...body, id: uuidv7() });
 			return true;
 		},
 	});

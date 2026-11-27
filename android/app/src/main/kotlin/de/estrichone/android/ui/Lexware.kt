@@ -144,41 +144,85 @@ private fun VoucherRow(voucher: LexwareVoucher, onClick: () -> Unit) {
     }
 }
 
+/** Stand der Prüfung gegen Lexware Office im Formular „Neuer Kunde“. */
+class LexwareCheckState {
+    var check by mutableStateOf<LexwareContactCheck?>(null)
+    /** „Trotzdem neu anlegen“: Der Nutzer legt den Kunden bewusst ohne Verknüpfung an. */
+    var anyway by mutableStateOf(false)
+    /** Die verbindliche Prüfung beim Klick auf Anlegen läuft. */
+    var running by mutableStateOf(false)
+    /** Rückfrage „Ohne Prüfung anlegen“, wenn die Prüfung nicht möglich war. */
+    var askUnchecked by mutableStateOf(false)
+
+    val hits: List<LexwareContactCandidate> get() = check?.takeIf { it.checked }?.candidates.orEmpty()
+}
+
 /**
- * Prüfung beim Anlegen eines Kunden (nur online, mit eingeschaltetem Modul, unabhängig vom Schalter „Mit Lexware Office
- * abgleichen“): Gibt es den Kunden in Lexware Office schon, erscheint die Warnung mit den Treffern. „Aus Lexware Office
+ * Verbindliche Prüfung beim Klick auf Anlegen: erst in Lexware Office prüfen (über den Server, mit den endgültigen
+ * Angaben), dann anlegen. Bei Treffern wird nicht angelegt, bis der Nutzer übernimmt oder „Trotzdem neu anlegen“ wählt.
+ * Ist die Prüfung nicht möglich (keine Verbindung, Lexware Office nicht erreichbar), fragt die App nach.
+ *
+ * @return true, wenn angelegt werden darf.
+ */
+suspend fun LexwareCheckState.confirm(session: Session, name: String, company: Boolean, street: String, postalCode: String, city: String,
+    phone: String, uncheckedConfirmed: Boolean = false): Boolean {
+    if (!Lexware.checkActive(session.modules.value, session.permissions.value) || anyway) return true
+    val request = Lexware.checkRequest(name, company, street, postalCode, city, phone) ?: return true
+    running = true
+    val result = runCatching { session.api.checkLexwareContact(request) }.getOrNull()
+    running = false
+    if (result == null || !result.checked) {
+        if (uncheckedConfirmed) return true
+        askUnchecked = true
+        return false
+    }
+    check = result
+    return result.candidates.isEmpty()
+}
+
+/**
+ * Anzeige der Prüfung beim Anlegen eines Kunden (mit eingeschaltetem Modul, unabhängig vom Schalter „Mit Lexware Office
+ * abgleichen“): Schon während der Eingabe wird entprellt gesucht; maßgeblich ist die Prüfung beim Klick auf Anlegen
+ * ([confirm]). Gibt es den Kunden in Lexware Office schon, erscheint die Warnung mit den Treffern. „Aus Lexware Office
  * übernehmen“ legt den Kunden auf dem Server mit den Lexware-Daten an und verknüpft ihn; sonst entscheidet der Nutzer mit
- * „Trotzdem neu anlegen“ bewusst. Ohne Verbindung wird nicht geprüft und nichts blockiert.
+ * „Trotzdem neu anlegen“ bewusst.
  *
  * @param onImported Kunde übernommen: ID und Name des neuen Kunden.
- * @param onBlocking Es gibt Treffer, über die noch nicht entschieden wurde.
+ * @param onUnchecked Der Nutzer hat „Ohne Prüfung anlegen“ bestätigt.
  */
 @Composable
 fun LexwareCustomerCheck(
-    session: Session, name: String, company: Boolean, street: String, postalCode: String, city: String, phone: String,
-    onImported: (String, String) -> Unit, onBlocking: (Boolean) -> Unit,
+    session: Session, state: LexwareCheckState, name: String, company: Boolean, street: String, postalCode: String, city: String, phone: String,
+    onImported: (String, String) -> Unit, onUnchecked: () -> Unit = {},
 ) {
     val modules by session.modules.collectAsState()
     val permissions by session.permissions.collectAsState()
     if (!Lexware.checkActive(modules, permissions)) return
     val model = LocalModel.current
     val scope = rememberCoroutineScope()
-    var check by remember { mutableStateOf<LexwareContactCheck?>(null) }
-    var anyway by remember { mutableStateOf(false) }
     val request = Lexware.checkRequest(name, company, street, postalCode, city, phone)
     LaunchedEffect(request) {
-        anyway = false
+        state.anyway = false
         if (request == null) {
-            check = null
+            state.check = null
         } else {
             delay(500) // entprellt: erst nach einer kurzen Pause beim Tippen
-            check = runCatching { session.api.checkLexwareContact(request) }.getOrNull()
+            state.check = runCatching { session.api.checkLexwareContact(request) }.getOrNull()
         }
     }
-    val hits = check?.takeIf { it.checked }?.candidates.orEmpty()
-    LaunchedEffect(hits.size, anyway) { onBlocking(hits.isNotEmpty() && !anyway) }
-    check?.takeIf { !it.checked }?.message?.let { Secondary("$it Der Kunde lässt sich trotzdem anlegen.") }
-    if (hits.isEmpty()) return
+    if (state.running) Secondary("Prüfung in Lexware Office läuft", Modifier.testTag("lexwareRunning"))
+    if (state.askUnchecked) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { state.askUnchecked = false },
+            title = { Text("Prüfung in Lexware Office nicht möglich") },
+            text = { Text("Die Prüfung in Lexware Office ist derzeit nicht möglich. Möchten Sie den Kunden ohne Prüfung anlegen? Gibt es ihn dort schon, entsteht ein doppelter Eintrag.") },
+            confirmButton = { androidx.compose.material3.TextButton(onClick = { state.askUnchecked = false; onUnchecked() }) { Text("Ohne Prüfung anlegen") } },
+            dismissButton = { androidx.compose.material3.TextButton(onClick = { state.askUnchecked = false }) { Text("Abbrechen") } },
+        )
+    }
+    val check = state.check
+    val hits = state.hits
+    if (hits.isEmpty() || check == null) return
 
     Banner(Lexware.EXISTS_WARNING, Icons.Filled.Warning, tones.warning, tones.warningSoft, Modifier.testTag("lexwareWarning"))
     SectionCard {
@@ -188,7 +232,7 @@ fun LexwareCustomerCheck(
             when {
                 contact.linkedContactId != null -> RowItem(contact.name,
                     subtitle = "${Lexware.candidateLine(candidate)}. Bereits verknüpft mit dem Kunden ${contact.linkedContactName.orEmpty()}.".trim())
-                Lexware.canImport(check!!, candidate) -> RowItem(contact.name, subtitle = Lexware.candidateLine(candidate), value = "Aus Lexware Office übernehmen",
+                Lexware.canImport(check, candidate) -> RowItem(contact.name, subtitle = Lexware.candidateLine(candidate), value = "Aus Lexware Office übernehmen",
                     onClick = {
                         scope.launch {
                             val result = runCatching { session.api.importLexwareContact(contact.id) }
@@ -211,6 +255,6 @@ fun LexwareCustomerCheck(
             Text("Trotzdem neu anlegen")
             Secondary("Der Kunde wird ohne Verknüpfung mit Lexware Office angelegt.")
         }
-        androidx.compose.material3.Switch(anyway, { anyway = it }, modifier = Modifier.testTag("lexwareAnyway"))
+        androidx.compose.material3.Switch(state.anyway, { state.anyway = it }, modifier = Modifier.testTag("lexwareAnyway"))
     }
 }

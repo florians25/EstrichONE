@@ -256,8 +256,33 @@ fun NewBauakteSheet(onDismiss: () -> Unit, onCreated: (String) -> Unit) {
     val modules by session.modules.collectAsState()
     var lexwareSync by remember(modules) { mutableStateOf(modules.lexwareSyncDefault) }
     // Prüfung gegen Lexware Office beim Anlegen eines Kunden: offene Treffer und ein von dort übernommener Kunde.
-    var lexwareBlocking by remember { mutableStateOf(false) }
+    val lexwareState = remember { LexwareCheckState() }
     var imported by remember { mutableStateOf<Pair<String, String>?>(null) }
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    fun create() {
+        try {
+            val id = session.service.createBauakte(title, street, postalCode, city, template, customerId,
+                if (newCustomer && customerName.isNotBlank()) NewCustomer(customerName, company, street, postalCode, city, phone,
+                    lexwareSync = if (modules.lexwareOn) lexwareSync else null) else null)
+            model.message("Bauakte angelegt. Sie wird beim nächsten Abgleich übertragen.")
+            onCreated(id)
+        } catch (e: IllegalArgumentException) {
+            error = e.message
+        }
+    }
+    // Neuer Kunde: erst in Lexware Office prüfen, dann anlegen. Bei Treffern oder ohne Antwort nur nach ausdrücklicher Entscheidung.
+    fun submit(uncheckedConfirmed: Boolean = false) {
+        if (!(newCustomer && customerName.isNotBlank())) {
+            create()
+            return
+        }
+        scope.launch {
+            if (lexwareState.confirm(session, customerName, company, street, postalCode, city, phone, uncheckedConfirmed)) create()
+            else if (lexwareState.hits.isNotEmpty()) {
+                error = "Dieser Kunde ist bereits in Lexware Office vorhanden. Bitte übernehmen Sie ihn oder wählen Sie „Trotzdem neu anlegen“."
+            }
+        }
+    }
 
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true), containerColor = tones.canvas) {
         Column(Modifier.verticalScroll(rememberScrollState()).imePadding().padding(horizontal = 20.dp).padding(bottom = 32.dp),
@@ -329,9 +354,9 @@ fun NewBauakteSheet(onDismiss: () -> Unit, onCreated: (String) -> Unit) {
                     Text("Firma", modifier = Modifier.weight(1f))
                     Switch(company, { company = it })
                 }
-                LexwareCustomerCheck(session, customerName, company, street, postalCode, city, phone,
-                    onImported = { id, name -> imported = id to name; customerId = id; newCustomer = false; lexwareBlocking = false },
-                    onBlocking = { lexwareBlocking = it })
+                LexwareCustomerCheck(session, lexwareState, customerName, company, street, postalCode, city, phone,
+                    onImported = { id, name -> imported = id to name; customerId = id; newCustomer = false; error = null },
+                    onUnchecked = { submit(uncheckedConfirmed = true) })
                 if (modules.lexwareOn) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
@@ -347,21 +372,7 @@ fun NewBauakteSheet(onDismiss: () -> Unit, onCreated: (String) -> Unit) {
                     modifier = Modifier.clip(RoundedCornerShape(8.dp)).clickable { newCustomer = false }.padding(6.dp))
             }
             error?.let { Text(it, color = tones.danger) }
-            Button(onClick = {
-                if (newCustomer && lexwareBlocking) {
-                    error = "Dieser Kunde ist bereits in Lexware Office vorhanden. Bitte übernehmen Sie ihn oder wählen Sie „Trotzdem neu anlegen“."
-                    return@Button
-                }
-                try {
-                    val id = session.service.createBauakte(title, street, postalCode, city, template, customerId,
-                        if (newCustomer && customerName.isNotBlank()) NewCustomer(customerName, company, street, postalCode, city, phone,
-                            lexwareSync = if (modules.lexwareOn) lexwareSync else null) else null)
-                    model.message("Bauakte angelegt. Sie wird beim nächsten Abgleich übertragen.")
-                    onCreated(id)
-                } catch (e: IllegalArgumentException) {
-                    error = e.message
-                }
-            }, enabled = title.isNotBlank(), modifier = Modifier.fillMaxWidth().height(48.dp)) { Text("Anlegen") }
+            Button(onClick = { submit() }, enabled = title.isNotBlank() && !lexwareState.running, modifier = Modifier.fillMaxWidth().height(48.dp)) { Text("Anlegen") }
         }
     }
 }

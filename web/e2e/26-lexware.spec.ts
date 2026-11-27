@@ -84,6 +84,7 @@ test('Lexware Office: Kunde mit Dublettenprüfung verknüpfen, Rechnungen und An
   const customer = crypto.randomUUID();
   expect((await apiCall(page, 'POST', '/api/v1/contacts', {
     id: customer, kind: 'company', name: 'Huber Bau GmbH', email: 'buero@huber-bau.example', street: 'Am Anger 7', postalCode: '83022', city: 'Rosenheim',
+    lexwareCreateAnyway: true,
   })).status).toBe(201);
   const bauakte = crypto.randomUUID();
   huberCustomer = customer;
@@ -245,6 +246,48 @@ test('Lexware Office: spätere Änderungen abgleichen, Abweichungen entscheiden,
   expect((await apiCall<Record<string, unknown>>(page, 'GET', `/api/v1/contacts/${kern.linkedContactId}`)).json)
     .toMatchObject({ name: 'Malerbetrieb Kern GmbH', street: 'Färberweg 3', city: 'Kolbermoor', email: 'info@maler-kern.example', lexwareSync: true });
   expect(stub.calls.filter((c) => c.method !== 'GET')).toEqual([]);
+
+  // Verbindliche Prüfung beim Klick auf „Kunde anlegen“: Der Server prüft in Lexware Office und speichert erst danach.
+  const exists = await apiCall<{ code: string; candidates: { contact: { name: string } }[] }>(page, 'POST', '/api/v1/contacts',
+    { id: crypto.randomUUID(), kind: 'company', name: 'Zimmerei Lang' });
+  expect(exists.status).toBe(409);
+  expect(exists.json.code).toBe('LEXWARE_CUSTOMER_EXISTS');
+  expect(exists.json.candidates[0].contact.name).toBe('Zimmerei Lang');
+  const customerNames = async () => (await apiCall<{ name: string }[]>(page, 'GET', '/api/v1/contacts?limit=500')).json.map((c) => c.name);
+  expect(await customerNames()).not.toContain('Zimmerei Lang');
+
+  // Kein Treffer: Während der Prüfung steht „Prüfung in Lexware Office läuft“ und die Schaltfläche ist gesperrt, danach wird angelegt.
+  await page.goto('/kunden');
+  await page.getByRole('button', { name: 'Neuer Kunde' }).click();
+  await page.locator('#newCustomerDialog').getByRole('option', { name: 'Gewerbekunde' }).click();
+  await page.locator('#ncName-inner').fill('Bodenleger Neuhaus GmbH');
+  await page.waitForTimeout(1200);
+  stub.delayMs = 1500;
+  await page.locator('#ncCreate').click();
+  await expect(page.locator('#ncLexwareRunning')).toContainText('Prüfung in Lexware Office läuft');
+  await expect(page.locator('#ncCreate')).toBeDisabled();
+  await expect(page.locator('#newCustomerDialog')).toHaveCount(0, { timeout: 30_000 });
+  stub.delayMs = 0;
+  expect(await customerNames()).toContain('Bodenleger Neuhaus GmbH');
+
+  // Lexware Office nicht erreichbar: nicht stillschweigend anlegen, sondern Rückfrage „Ohne Prüfung anlegen“.
+  stub.down = true;
+  await page.goto('/kunden');
+  await page.getByRole('button', { name: 'Neuer Kunde' }).click();
+  await page.locator('#newCustomerDialog').getByRole('option', { name: 'Gewerbekunde' }).click();
+  await page.locator('#ncName-inner').fill('Estrich Sonnleitner GmbH');
+  await page.locator('#ncCreate').click();
+  const unchecked = page.getByRole('alertdialog');
+  await expect(unchecked).toContainText('Die Prüfung in Lexware Office ist derzeit nicht möglich.', { timeout: 60_000 });
+  await expect(unchecked).toContainText('Der Kunde wurde nicht angelegt.');
+  await unchecked.getByRole('button', { name: 'Abbrechen' }).click();
+  await expect(page.locator('#ncError')).toContainText('nicht angelegt');
+  expect(await customerNames()).not.toContain('Estrich Sonnleitner GmbH');
+  await page.locator('#ncCreate').click();
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Ohne Prüfung anlegen' }).click({ timeout: 60_000 });
+  await expect(page.locator('#newCustomerDialog')).toHaveCount(0, { timeout: 30_000 });
+  expect(await customerNames()).toContain('Estrich Sonnleitner GmbH');
+  stub.down = false;
 
   // Erstabgleich beim Verknüpfen: Der unterschiedliche Name wurde nicht überschrieben, sondern steht als Abweichung am Kunden.
   await page.goto(`/kunden/${customer}?abschnitt=lexware`);

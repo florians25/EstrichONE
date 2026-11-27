@@ -4,6 +4,7 @@
  * Während der Eingabe prüft der Server auf ähnliche Kunden (Name, Telefon, E-Mail, Anschrift); ein Treffer kann direkt
  * übernommen werden. Nach dem Anlegen kann direkt eine Bauakte für den Kunden folgen.
  */
+import { createCustomerChecked } from "./lexwareCreate";
 import Dialog from "sap/m/Dialog";
 import MessageBox from "sap/m/MessageBox";
 import Button from "sap/m/Button";
@@ -42,7 +43,7 @@ import type { ContactEmail, ContactPhone, ContactResponse } from "./models";
 import { candidateUsable, useCandidateText } from "./customerRemoval";
 import Switch from "sap/m/Switch";
 import {
-	lexwareCandidateAction, lexwareCandidateLine, lexwareCheckActive, lexwareCheckRequest, lexwareCheckText, SYNC_HELP, SYNC_LABEL, syncFieldVisible, syncInitial,
+	LEXWARE_CHECK_RUNNING, lexwareCandidateAction, lexwareCandidateLine, lexwareCheckActive, lexwareCheckRequest, lexwareCheckText, SYNC_HELP, SYNC_LABEL, syncFieldVisible, syncInitial,
 	type ImportLexwareContactResponse, type LexwareContactCandidate, type LexwareContactCheck,
 } from "./lexware";
 import { ensureActive } from "./customerRemovalDialog";
@@ -174,7 +175,10 @@ export function openNewCustomerDialog(options: NewCustomerOptions = {}): Promise
 	const lxList = new List("ncLexwareHits", { visible: false, showSeparators: "Inner" });
 	const lxForce = new CheckBox("ncLexwareForce", { text: "Trotzdem neu anlegen (ohne Verknüpfung mit Lexware Office)", visible: false });
 	const lxNote = new Text("ncLexwareNote", { visible: false }).addStyleClass("eoMuted");
-	const dupBox = new VBox({ renderType: "Bare", items: [checking, dupStrip, dupList, forceNew, lxStrip, lxList, lxForce, lxNote] }).addStyleClass("eoDupBox");
+	// Beim Klick auf „Kunde anlegen“ prüft der Server verbindlich in Lexware Office; solange ist das Anlegen gesperrt.
+	const lxRunning = new MessageStrip("ncLexwareRunning", { type: "Information", showIcon: true, visible: false, text: LEXWARE_CHECK_RUNNING });
+	let onRunning: (running: boolean) => void = () => undefined;
+	const dupBox = new VBox({ renderType: "Bare", items: [checking, dupStrip, dupList, forceNew, lxRunning, lxStrip, lxList, lxForce, lxNote] }).addStyleClass("eoDupBox");
 
 	const phoneList = () => ((phones.read() as ContactPhone[]) ?? []);
 	const emailList = () => ((emails.read() as ContactEmail[]) ?? []);
@@ -348,7 +352,7 @@ export function openNewCustomerDialog(options: NewCustomerOptions = {}): Promise
 		strip.setVisible(false);
 		// Letzte Prüfung vor dem Anlegen; offene Treffer müssen bewusst übergangen werden.
 		clearTimeout(pending);
-		await Promise.all([check(), checkLexware()]);
+		await check();
 		if (lexwareHits.length > 0 && !lxForce.getSelected()) {
 			strip.setText("Dieser Kunde ist bereits in Lexware Office vorhanden. Bitte aus Lexware Office übernehmen oder „Trotzdem neu anlegen“ wählen.");
 			strip.setVisible(true);
@@ -364,15 +368,25 @@ export function openNewCustomerDialog(options: NewCustomerOptions = {}): Promise
 		const p = phoneList();
 		const e = emailList();
 		const text = (v: string) => v.trim() || null;
+		// Der Server prüft jetzt mit den endgültigen Angaben in Lexware Office und speichert erst danach.
+		const checking = lexwareCheck && !lxForce.getSelected();
+		lxRunning.setVisible(checking);
+		onRunning(true);
 		dialog.setBusy(true);
 		try {
-			const contact = await post<ContactResponse>("contacts", {
+			const contact = await createCustomerChecked<ContactResponse>({
+				lexwareCreateAnyway: lxForce.getSelected(),
 				id: uuidv7(), kind: kind.getSelectedKey(), name: name.getValue().trim(), customerNumber: null,
 				street: text(street.getValue()), postalCode: text(postalCode.getValue()), city: text(city.getValue()),
 				phone: p[0]?.number ?? null, email: e[0]?.address ?? null, phones: p, emails: e,
 				salutation: company ? "Firma" : text(salutation.getValue()), title: company ? null : text(title.getValue()),
 				vatId: company ? text(vatId.getValue()) : null, preferredChannel: channel.getSelectedKey() || null, notes: text(notes.getValue()),
 				...(withSync ? { lexwareSync: lexwareSync.getState() } : {}),
+			}, (found) => {
+				// Treffer aus der Prüfung des Servers: im Dialog zeigen, nichts wurde angelegt. Der Nutzer übernimmt oder bestätigt bewusst.
+				lexwareKey = "";
+				showLexware(found);
+				return Promise.resolve(false);
 			});
 			if (company && person.name.getValue().trim()) {
 				await put(`contacts/${contact.id}/persons/${uuidv7()}`, {
@@ -381,10 +395,15 @@ export function openNewCustomerDialog(options: NewCustomerOptions = {}): Promise
 			}
 			return { contact, existing: false, createBauakte };
 		} catch (error) {
-			strip.setText(problemMessage(error));
+			strip.setText(lexwareHits.length > 0 && !lxForce.getSelected()
+				? "Dieser Kunde ist bereits in Lexware Office vorhanden. Bitte aus Lexware Office übernehmen oder „Trotzdem neu anlegen“ wählen."
+				: problemMessage(error));
 			strip.setVisible(true);
+			if (lexwareHits.length > 0) lxStrip.getDomRef()?.scrollIntoView({ block: "nearest" });
 			return null;
 		} finally {
+			lxRunning.setVisible(false);
+			onRunning(false);
 			dialog.setBusy(false);
 		}
 	};
@@ -402,6 +421,10 @@ export function openNewCustomerDialog(options: NewCustomerOptions = {}): Promise
 				if (r) finish(r);
 			} });
 		const cancel = new Button({ text: "Abbrechen", press: () => dialog.close() });
+		onRunning = (running) => {
+			create.setEnabled(!running);
+			createWithBauakte.setEnabled(!running);
+		};
 		finish = (r) => {
 			result = r;
 			dialog.close();

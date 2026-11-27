@@ -74,12 +74,15 @@ struct NewBauakteView: View {
     @State private var input = NewBauakte(title: "")
     @State private var customer: Contact?
     @State private var newCustomer: NewCustomer?
+    @State private var lexware = LexwareCheckState()
     @State private var showsDescription = false
     @State private var locating = false
     @State private var locationHint: String?
     @State private var similar: [Bauakte] = []
     @State private var errorMessage: String?
     @State private var saving = false
+    /// Ziel nach dem Anlegen, während die Rückfrage „Ohne Prüfung anlegen“ offen ist.
+    @State private var pendingNext: Next = .open
     /// Was gleich nach der Anlage geschieht (eine Hauptschaltfläche „Anlegen“ statt drei gleichrangiger).
     @State private var afterCreation: Next = .open
     @State private var location = LocationProvider()
@@ -136,6 +139,12 @@ struct NewBauakteView: View {
             }
             .navigationTitle("Neue Bauakte")
             .navigationBarTitleDisplayMode(.inline)
+            .alert(LexwareCustomerCheck.uncheckedTitle, isPresented: $lexware.askUnchecked) {
+                Button("Ohne Prüfung anlegen") { Task { await create(next: pendingNext, uncheckedConfirmed: true) } }
+                Button("Abbrechen", role: .cancel) {}
+            } message: {
+                Text(LexwareCustomerCheck.uncheckedQuestion)
+            }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Abbrechen") { dismiss() }
@@ -197,7 +206,7 @@ struct NewBauakteView: View {
     }
 
     private var customerSection: some View {
-        CustomerChooser(customer: $customer, newCustomer: $newCustomer,
+        CustomerChooser(customer: $customer, newCustomer: $newCustomer, lexware: $lexware,
                         siteAddress: (street: input.street, postalCode: input.postalCode, city: input.city))
     }
 
@@ -495,11 +504,27 @@ struct NewBauakteView: View {
         similar = (try? await service.similar(to: candidate)) ?? []
     }
 
-    private func create(next: Next) async {
+    private func create(next: Next, uncheckedConfirmed: Bool = false) async {
         guard let service = model.active?.service else { return }
         if let problem = problem(upTo: .details) {
             errorMessage = problem
             return
+        }
+        // Neuer Kunde: erst in Lexware Office prüfen, dann anlegen. Bei Treffern oder ohne Antwort nur nach ausdrücklicher Entscheidung.
+        if customer == nil {
+            switch await LexwareCustomerCheck.confirm(model, newCustomer, state: $lexware) {
+            case .hits:
+                errorMessage = LexwareCustomerCheck.existsMessage
+                return
+            case .unavailable:
+                if !uncheckedConfirmed {
+                    pendingNext = next
+                    lexware.askUnchecked = true
+                    return
+                }
+            case .proceed:
+                break
+            }
         }
         saving = true
         defer { saving = false }

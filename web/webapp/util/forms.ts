@@ -2,6 +2,7 @@
  * Formulardialoge aus einer Feldbeschreibung: ein Muster für alle Stammdaten- und Erfassungsdialoge
  * (SimpleForm, Pflichtfelder, deutsche Zahlen und Datumsformate, Fehler im Dialog statt Alert).
  */
+import { createCustomerChecked } from "./lexwareCreate";
 import Dialog from "sap/m/Dialog";
 import Button from "sap/m/Button";
 import Label from "sap/m/Label";
@@ -31,7 +32,7 @@ import SuggestionItem from "sap/m/SuggestionItem";
 import type Control from "sap/ui/core/Control";
 import type InputBase from "sap/m/InputBase";
 import { ValueState } from "sap/ui/core/library";
-import { get, post, problemMessage } from "./api";
+import { get, problemMessage } from "./api";
 import { largeDialogSize } from "./dialogSize";
 import { parseNumber } from "./format";
 import { uuidv7 } from "./ids";
@@ -161,7 +162,7 @@ export function customerInput(id: string, initialId: string | null, initialText:
 			const name = item.getText().replace(/^„/, "").replace(/“ als neuen Kunden anlegen$/, "");
 			input.setBusy(true);
 			try {
-				const contact = await post<ContactResponse>("contacts", { id: uuidv7(), kind: "person", name });
+				const contact = await createCustomerChecked<ContactResponse>({ id: uuidv7(), kind: "person", name });
 				selected = contact.id;
 				input.setValue(contact.name);
 				input.setValueState(ValueState.Success);

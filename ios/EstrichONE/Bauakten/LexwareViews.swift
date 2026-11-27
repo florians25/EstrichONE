@@ -137,7 +137,12 @@ struct LexwareBauakteSections: View {
 /// Stand der Prüfung gegen Lexware Office beim Anlegen eines Kunden.
 struct LexwareCheckState: Equatable {
     var check: LexwareContactCheck?
+    /// „Trotzdem neu anlegen“: Der Nutzer legt den Kunden bewusst ohne Verknüpfung an.
     var anyway = false
+    /// Die verbindliche Prüfung beim Sichern läuft.
+    var running = false
+    /// Rückfrage „Ohne Prüfung anlegen“, wenn die Prüfung nicht möglich war.
+    var askUnchecked = false
 
     var hits: [LexwareContactCandidate] {
         guard let check, check.checked else { return [] }
@@ -154,6 +159,42 @@ enum LexwareCustomerCheck {
     static func key(_ customer: NewCustomer?) -> String {
         guard let customer else { return "" }
         return "\(customer.name)|\(customer.isCompany)|\(customer.street ?? "")|\(customer.postalCode ?? "")|\(customer.city ?? "")"
+    }
+
+    /// Ergebnis der verbindlichen Prüfung beim Sichern.
+    enum Verdict {
+        /// Kein Treffer bzw. keine Prüfung zuständig: anlegen.
+        case proceed
+        /// Treffer in Lexware Office: nicht anlegen, bis der Nutzer übernimmt oder „Trotzdem neu anlegen“ wählt.
+        case hits
+        /// Prüfung nicht möglich (keine Verbindung, Lexware Office nicht erreichbar): Rückfrage.
+        case unavailable
+    }
+
+    static let uncheckedTitle = "Prüfung in Lexware Office nicht möglich"
+    static let uncheckedQuestion = "Die Prüfung in Lexware Office ist derzeit nicht möglich. Möchten Sie den Kunden ohne Prüfung anlegen? Gibt es ihn dort schon, entsteht ein doppelter Eintrag."
+    static let existsMessage = "Dieser Kunde ist bereits in Lexware Office vorhanden. Bitte übernehmen Sie ihn oder wählen Sie „Trotzdem neu anlegen“."
+
+    /// Verbindliche Prüfung beim Sichern: erst in Lexware Office prüfen (über den Server, mit den endgültigen Angaben),
+    /// dann anlegen. Nur mit eingeschaltetem Modul; antwortet der Server ablehnend (Recht fehlt, älterer Server), ist
+    /// keine Prüfung zuständig.
+    @MainActor
+    static func confirm(_ model: AppModel, _ customer: NewCustomer?, state: Binding<LexwareCheckState>) async -> Verdict {
+        guard let customer, !state.wrappedValue.anyway, (model.active?.sync?.modules ?? .allOn).lexwareOn, let client = model.active?.client,
+              let request = Lexware.checkRequest(name: customer.name, company: customer.isCompany, street: customer.street ?? "",
+                                                 postalCode: customer.postalCode ?? "", city: customer.city ?? "", phone: customer.phone ?? "")
+        else { return .proceed }
+        state.wrappedValue.running = true
+        defer { state.wrappedValue.running = false }
+        do throws(APIError) {
+            let result = try await client.checkLexwareContact(request)
+            guard result.checked else { return .unavailable }
+            state.wrappedValue.check = result
+            return result.candidates.isEmpty ? .proceed : .hits
+        } catch {
+            if case .server = error { return .proceed }
+            return .unavailable
+        }
     }
 
     @MainActor
@@ -179,6 +220,15 @@ struct LexwareCheckSection: View {
     @State private var message: String?
 
     var body: some View {
+        if state.running {
+            Section {
+                HStack(spacing: 12) {
+                    ProgressView()
+                    Text("Prüfung in Lexware Office läuft")
+                }
+                .accessibilityIdentifier("lexwareCheckRunning")
+            }
+        }
         if !state.hits.isEmpty {
             Section {
                 ForEach(state.hits) { candidate in
@@ -209,7 +259,7 @@ struct LexwareCheckSection: View {
             }
         } else if let check = state.check, !check.checked, let note = check.message {
             Section {
-                Text("\(note) Der Kunde lässt sich trotzdem anlegen.").font(.footnote).foregroundStyle(Color.secondary)
+                Text("\(note) Beim Sichern wird erneut geprüft.").font(.footnote).foregroundStyle(Color.secondary)
             }
         }
     }

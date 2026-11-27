@@ -69,7 +69,22 @@ Schalter **Mit Lexware Office abgleichen** aus ist.
 
 ![Warnung beim Anlegen eines Kunden](bilder/lexware-neuer-kunde.png "Neuer Kunde: Der Kunde ist bereits in Lexware Office vorhanden")
 
-Ist Lexware Office gerade nicht erreichbar, steht im Dialog ein Hinweis. Das Anlegen bleibt möglich.
+### Prüfung beim Klick auf Anlegen
+
+Maßgeblich ist die Prüfung beim Klick auf **Kunde anlegen**: EstrichONE fragt erst Lexware Office mit den endgültigen
+Angaben und legt den Kunden erst danach an. Solange steht im Dialog **Prüfung in Lexware Office läuft** und die
+Schaltflächen sind gesperrt.
+
+- **Kein Treffer:** Der Kunde wird angelegt.
+- **Treffer:** Der Kunde wird nicht angelegt. Der Dialog zeigt die Treffer; Sie übernehmen den Kunden aus Lexware Office
+  oder wählen **Trotzdem neu anlegen** und klicken erneut.
+- **Prüfung nicht möglich** (Lexware Office nicht erreichbar): Der Kunde wird nicht stillschweigend angelegt. EstrichONE
+  fragt nach; mit **Ohne Prüfung anlegen** legen Sie ihn bewusst an.
+
+Das gilt an jeder Stelle, an der Sie im Web einen Kunden neu anlegen, auch im Assistenten für neue Bauakten und bei den
+Beteiligten einer Bauakte. Außerhalb des Dialogs **Neuer Kunde** erscheinen die Treffer in einer Rückfrage.
+
+![Prüfung in Lexware Office nicht möglich](bilder/lexware-pruefung-nicht-moeglich.png "Rückfrage, wenn die Prüfung in Lexware Office nicht möglich ist")
 
 ### Automatisch in Lexware Office anlegen
 

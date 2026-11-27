@@ -4,7 +4,7 @@ import {
   syncInitial, syncStateText, uniquePairs, voucherNumber, voucherStatus, voucherSummary, voucherTypeText, type LexwareReconciliation,
   changeSyncHelp, changeSyncOptions, changeSyncStand, changeSyncState, deviationSummary, deviationValue, pdfAvailable, PDF_DRAFT_HINT, resolveRequest,
   voucherPdfPath, voucherTitle, type LexwareSyncState, bauakteLexwareBlock, type BauakteLexware,
-  creationStateText, enableSyncQuestion, lexwareCandidateAction, lexwareCandidateLine, lexwareCheckActive, lexwareCheckRequest, lexwareCheckText, LEXWARE_EXISTS_WARNING,
+  creationProblem, creationStateText, enableSyncQuestion, existsQuestion, LEXWARE_CHECK_RUNNING, UNCHECKED_QUESTION, lexwareCandidateAction, lexwareCandidateLine, lexwareCheckActive, lexwareCheckRequest, lexwareCheckText, LEXWARE_EXISTS_WARNING,
 } from '../webapp/util/lexware';
 import { adminAreas, matchesArea } from '../webapp/util/adminCatalog';
 import { routes } from '../webapp/util/routes';
@@ -316,7 +316,7 @@ describe('Lexware Office: Prüfung beim Anlegen eines Kunden', () => {
     const down = lexwareCheckText({ checked: false, message: 'Die Prüfung in Lexware Office ist derzeit nicht möglich.', candidates: [], canImport: false });
     expect(down.warning).toBe('');
     expect(down.note).toContain('derzeit nicht möglich');
-    expect(down.note).toContain('trotzdem anlegen');
+    expect(down.note).toContain('Beim Anlegen wird erneut geprüft.');
   });
 
   it('Treffer: Kundennummer und Anschrift, Übernahme nur mit Recht und ohne bestehende Verknüpfung', () => {
@@ -346,5 +346,31 @@ describe('Lexware Office: automatische Anlage neuer Kunden', () => {
       + 'Dadurch werden 3 Kunden automatisch in Lexware Office neu angelegt, weil es dort keinen ähnlichen Kontakt gibt. '
       + '2 Kunden haben dort einen ähnlichen Kontakt und erscheinen unter „Mögliche Dubletten“.');
     expect(enableSyncQuestion({ changed: 2, wouldCreate: 1, withMatches: 1 })).toContain('wird 1 Kunde automatisch');
+  });
+});
+
+describe('Lexware Office: verbindliche Prüfung beim Klick auf Anlegen', () => {
+  const candidate = { contact: { id: 'l1', name: 'Malerbetrieb Kern GmbH', isCompany: true, customerNumber: '10003', street: 'Färberweg 3', postalCode: '83059',
+    city: 'Kolbermoor', email: null, phone: null, url: 'https://app.lexware.de/x', linkedContactId: null, linkedContactName: null }, score: 80,
+    reasons: ['gleicher Name und PLZ'], strong: false };
+
+  it('Ablehnung des Servers: Treffer mit Kandidaten, Prüfung nicht möglich, sonst nichts', () => {
+    expect(creationProblem({ code: 'LEXWARE_CUSTOMER_EXISTS', problem: { candidates: [candidate], canImport: true } }))
+      .toEqual({ kind: 'exists', check: { checked: true, message: null, candidates: [candidate], canImport: true } });
+    expect(creationProblem({ code: 'LEXWARE_CUSTOMER_EXISTS', problem: {} })).toMatchObject({ kind: 'exists', check: { candidates: [], canImport: false } });
+    expect(creationProblem({ code: 'LEXWARE_CHECK_UNAVAILABLE', problem: { detail: 'Die Prüfung in Lexware Office ist derzeit nicht möglich. Der Kunde wurde nicht angelegt.' } }))
+      .toEqual({ kind: 'unavailable', detail: 'Die Prüfung in Lexware Office ist derzeit nicht möglich. Der Kunde wurde nicht angelegt.' });
+    expect(creationProblem({ code: 'VERSION_CONFLICT' })).toBeNull();
+    expect(creationProblem(null)).toBeNull();
+  });
+
+  it('Texte: Zustand der Prüfung und Rückfragen', () => {
+    expect(LEXWARE_CHECK_RUNNING).toBe('Prüfung in Lexware Office läuft');
+    expect(UNCHECKED_QUESTION).toContain('ohne Prüfung in Lexware Office anlegen');
+    const question = existsQuestion({ checked: true, message: null, candidates: [candidate], canImport: true });
+    expect(question).toContain('Achtung: Dieser Kunde ist bereits in Lexware Office vorhanden.');
+    expect(question).toContain('Malerbetrieb Kern GmbH: Kundennummer 10003, Färberweg 3, 83059 Kolbermoor, gleicher Name und PLZ');
+    expect(question).toContain('trotzdem neu anlegen');
+    for (const text of [question, UNCHECKED_QUESTION, LEXWARE_CHECK_RUNNING]) expect(text).not.toMatch(/[–—·]/);
   });
 });

@@ -193,7 +193,7 @@ struct NewCustomerForm: View {
         .toolbar {
             ToolbarItem(placement: .confirmationAction) {
                 Button("Sichern") { Task { await save() } }
-                    .disabled(saving || customer.name.trimmingCharacters(in: .whitespaces).isEmpty)
+                    .disabled(saving || lexware.running || customer.name.trimmingCharacters(in: .whitespaces).isEmpty)
                     .accessibilityIdentifier("saveCustomerButton")
             }
         }
@@ -208,13 +208,28 @@ struct NewCustomerForm: View {
             if !Task.isCancelled { lexware = LexwareCheckState(check: result) }
         }
         .sensoryFeedback(.error, trigger: errorMessage) { _, new in new != nil }
+        .alert(LexwareCustomerCheck.uncheckedTitle, isPresented: $lexware.askUnchecked) {
+            Button("Ohne Prüfung anlegen") { Task { await save(uncheckedConfirmed: true) } }
+            Button("Abbrechen", role: .cancel) {}
+        } message: {
+            Text(LexwareCustomerCheck.uncheckedQuestion)
+        }
     }
 
-    private func save() async {
+    /// Erst in Lexware Office prüfen, dann anlegen: bei Treffern oder ohne Antwort nur nach ausdrücklicher Entscheidung.
+    private func save(uncheckedConfirmed: Bool = false) async {
         guard let service = model.active?.service else { return }
-        if lexware.blocking {
-            errorMessage = "Dieser Kunde ist bereits in Lexware Office vorhanden. Bitte übernehmen Sie ihn oder wählen Sie „Trotzdem neu anlegen“."
+        switch await LexwareCustomerCheck.confirm(model, customer, state: $lexware) {
+        case .hits:
+            errorMessage = LexwareCustomerCheck.existsMessage
             return
+        case .unavailable:
+            if !uncheckedConfirmed {
+                lexware.askUnchecked = true
+                return
+            }
+        case .proceed:
+            break
         }
         saving = true
         defer { saving = false }
@@ -261,6 +276,8 @@ struct SimilarCustomersSection: View {
 struct CustomerChooser: View {
     @Binding var customer: Contact?
     @Binding var newCustomer: NewCustomer?
+    /// Stand der Prüfung gegen Lexware Office; die Schnellanlage prüft damit verbindlich vor dem Anlegen.
+    @Binding var lexware: LexwareCheckState
     var siteAddress: (street: String?, postalCode: String?, city: String?)?
 
     @Environment(AppModel.self) private var model
@@ -268,7 +285,6 @@ struct CustomerChooser: View {
     @State private var results: [Contact] = []
     @State private var recent: [Contact] = []
     @State private var similar: [Contact] = []
-    @State private var lexware = LexwareCheckState()
 
     var body: some View {
         // Dublettenhinweis oberhalb der Eingabefelder, damit er nicht unter der Tastatur verschwindet.

@@ -249,7 +249,8 @@ abstract class ScreenshotBase(private val device: String, private val appearance
     @Test
     fun kundeLexwareWarnung() = lexwareShot("kunde-lexware-warnung") { _, session ->
         androidx.compose.material3.Text("Neuer Kunde: Huber Wohnbau", style = androidx.compose.material3.MaterialTheme.typography.titleMedium)
-        de.estrichone.android.ui.LexwareCustomerCheck(session, "Huber Wohnbau", true, "", "83022", "Rosenheim", "", onImported = { _, _ -> }, onBlocking = {})
+        de.estrichone.android.ui.LexwareCustomerCheck(session, remember { de.estrichone.android.ui.LexwareCheckState() }, "Huber Wohnbau", true, "",
+            "83022", "Rosenheim", "", onImported = { _, _ -> })
     }
 
     /** Bauakte für Planer: „Einplanen“ öffnet das kompakte Blatt mit Tag, Kolonne (mit Auslastung), Tätigkeit und Uhrzeit. */

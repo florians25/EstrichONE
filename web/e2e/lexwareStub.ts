@@ -47,6 +47,10 @@ export class LexwareStub {
   companyName = 'Estrichbau E2E GmbH';
   /** Kennt die nachgebildete API den Pfad `/file`? Sonst nur den älteren Weg über `/document`. */
   fileRoute = true;
+  /** Lexware Office nicht erreichbar: jede Anfrage antwortet mit 503. */
+  down = false;
+  /** Verzögerung jeder Antwort in Millisekunden (um Zwischenzustände der Oberfläche zu prüfen). */
+  delayMs = 0;
   private server: Server | null = null;
   private customerNumber = 10000;
 
@@ -146,6 +150,8 @@ export class LexwareStub {
       response.end(JSON.stringify(json));
     };
 
+    if (this.delayMs > 0) await new Promise((resolve) => setTimeout(resolve, this.delayMs));
+    if (this.down) return send(503, { status: 503, error: 'Service Unavailable' });
     if (request.headers.authorization !== `Bearer ${STUB_KEY}`) return send(401, { status: 401, error: 'Unauthorized' });
     if (method === 'GET' && path === '/v1/profile') return send(200, { organizationId: 'aa93e8a8-2aa3-470b-b914-caad8a255dd8', companyName: this.companyName });
 

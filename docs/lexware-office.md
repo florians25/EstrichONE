@@ -116,7 +116,8 @@ Links in die Lexware-Oberfläche: `https://app.lexware.de/permalink/{invoices|qu
 | `DELETE lexware/customers/{id}/link` | `invoices.assign` | Verknüpfung lösen |
 | `PUT lexware/customers/{id}/sync` | `invoices.assign` | „Mit Lexware Office abgleichen“ ein- oder ausschalten |
 | `POST lexware/customers/{id}/create/retry` | `invoices.assign` | automatische Anlage erneut versuchen (prüft vorher erneut auf Dubletten) |
-| `POST lexware/contacts/check` | `contacts.edit` | beim Anlegen eines Kunden prüfen, ob es ihn in Lexware Office schon gibt; blockiert nie |
+| `POST lexware/contacts/check` | `contacts.edit` | prüfen, ob es einen Kunden in Lexware Office schon gibt (während der Eingabe im Web, verbindlich vor dem Anlegen in den Apps); antwortet ohne Verbindung mit `checked=false` |
+| `POST contacts` | `contacts.edit` | Kunde anlegen; prüft vorher verbindlich in Lexware Office (`LEXWARE_CUSTOMER_EXISTS`, `LEXWARE_CHECK_UNAVAILABLE`, Felder `lexwareCreateAnyway`, `lexwareSkipCheck`) |
 | `POST lexware/customers/{id}/sync/run` | `invoices.assign` | Änderungsabgleich für diesen Kunden jetzt ausführen |
 | `POST lexware/customers/{id}/sync/resolve` | `invoices.assign`, für „Lexware übernehmen“ zusätzlich `contacts.edit` | Abweichungen entscheiden: `source` für alle Felder oder `fields` je Feld, jeweils `estrichOne` oder `lexware` |
 | `GET lexware/customers/{id}/vouchers/{lexwareId}/document` | `invoices.read` | Beleg des verknüpften Kontakts als PDF (`download=true` als Anhang) |
@@ -171,6 +172,36 @@ Bauleitung“ nur bei neuen Installationen; in bestehenden Installationen vergib
 - Statusabgleich: beim Öffnen des Abschnitts für Belege, deren letzter Abgleich älter als zwei Minuten ist (stornierte
   nicht mehr), höchstens zwanzig je Aufruf; „Aktualisieren“ gleicht alle sofort ab. Ist Lexware nicht erreichbar, bleibt
   der gespeicherte Stand mit Hinweis sichtbar. In Lexware gelöschte Belege erhalten den Hinweis „nicht mehr vorhanden“.
+
+## Verbindliche Prüfung vor der Kundenanlage
+
+- `POST contacts` prüft bei eingeschaltetem Modul mit hinterlegtem Schlüssel selbst in Lexware Office, mit den
+  endgültigen Angaben und bevor gespeichert wird (`ICustomerCreationCheck` in `Contacts/Exports`, umgesetzt von
+  `LexwareCustomerCreationCheck`; unabhängig vom Schalter „Mit Lexware Office abgleichen“).
+- Treffer: 409 `LEXWARE_CUSTOMER_EXISTS` mit `candidates` (wie die Prüfung, mit Gründen) und `canImport`; nichts wird
+  gespeichert. Anlage trotz Treffern nur mit `lexwareCreateAnyway: true`.
+- Prüfung nicht möglich (Lexware nicht erreichbar, Schlüssel abgelehnt, Zeitüberschreitung): 409
+  `LEXWARE_CHECK_UNAVAILABLE`; nichts wird gespeichert. Anlage nur mit `lexwareSkipCheck: true`. Dieses Feld übergeht nur
+  die fehlende Antwort: Ist Lexware erreichbar und gibt es Treffer, bleibt es bei `LEXWARE_CUSTOMER_EXISTS`.
+- Präzision (`LexwareService.PreciseContactsAsync`): die vollständige Kontaktliste über alle Seiten (kurz
+  zwischengespeichert) und dazu bei jeder Prüfung frische, gezielte Abfragen `GET /v1/contacts?customer=true&name=` (voller
+  Name und längstes Wort) und `&email=`, jeweils über alle Seiten der Treffer. Die Drosselung auf zwei Anfragen je
+  Sekunde gilt unverändert. `POST lexware/contacts/check` nutzt dieselbe Prüfung.
+- Web: Jede Stelle, die einen Kunden anlegt, geht über `util/lexwareCreate.ts` (`createCustomerChecked`): Zustand
+  „Prüfung in Lexware Office läuft“, bei Treffern die Kandidaten (im Dialog „Neuer Kunde“ als Liste, sonst als Rückfrage),
+  bei fehlender Antwort die Rückfrage „Ohne Prüfung anlegen“.
+- Apps: Kunden entstehen dort über den Sync (auch ohne Verbindung). Die Apps prüfen deshalb beim Klick auf Anlegen bzw.
+  Sichern über `POST lexware/contacts/check` mit den endgültigen Angaben und legen erst danach an; bei Treffern nur nach
+  „Aus Lexware Office übernehmen“ oder „Trotzdem neu anlegen“, ohne Antwort nur nach „Ohne Prüfung anlegen“.
+- Entscheidung zu älteren App-Versionen und zum Sync: Die Sync-Operation `contact.create` wird nicht abgelehnt. Eine
+  Ablehnung ließe offline erfasste Kunden und die daran hängenden Bauakten auf dem Gerät hängen, und ältere Apps können
+  keine Rückfrage zeigen. Solche Kunden werden angenommen und danach auf dem Server geprüft: ohne Treffer automatisch in
+  Lexware Office angelegt (wenn eingeschaltet), mit Treffern nie automatisch, sondern unter „Mögliche Dubletten“
+  geführt. Ältere Clients, die `POST contacts` direkt aufrufen, erhalten die Ablehnung im Standard-Problemformat; `detail`
+  nennt den Grund verständlich („Achtung: Dieser Kunde ist bereits in Lexware Office vorhanden. Der Kunde wurde nicht
+  angelegt. …“) und wird von ihnen als Fehlermeldung angezeigt.
+- Nicht erfasst: der Kunden-Import aus CSV (eigene Vorschau mit Dublettenprüfung in EstrichONE; die importierten Kunden
+  erscheinen im Kundenabgleich) und die Übernahme aus Lexware Office selbst.
 
 ## Prüfung beim Anlegen und automatische Anlage
 
@@ -339,7 +370,10 @@ Nur Kontakte mit der Rolle Kunde werden betrachtet, archivierte nicht.
     E-Rechnungen (XRechnung, ZUGFeRD) prüfen, dass mit `Accept: application/pdf` ein PDF und kein XML kommt.
 15. Automatische Anlage: Pflichtfelder bei `POST /v1/contacts` für Personen ohne Vornamen und Firmen ohne Anschrift;
     Verhalten bei Zeitüberschreitung (Kontakt trotzdem angelegt?) und ob er danach in `GET /v1/contacts` sofort erscheint.
-16. Lastverhalten: Erstabgleich mit vielen Verknüpfungen (liest nur die Kontaktliste) und viele Änderungen kurz
+16. Verbindliche Prüfung: Filter `name` (Teilwort, Mindestlänge, Groß- und Kleinschreibung) und `email` bei
+    `GET /v1/contacts`, Seitengröße 100 und Blättern in gefilterten Ergebnissen; Dauer der Prüfung beim Klick mit echter
+    Drosselung.
+17. Lastverhalten: Erstabgleich mit vielen Verknüpfungen (liest nur die Kontaktliste) und viele Änderungen kurz
     hintereinander (ein `GET` und ein `PUT` je Kontakt, zwei Anfragen je Sekunde).
 ## Nicht Teil dieser Runde
 
