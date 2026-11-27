@@ -3,8 +3,13 @@
 Mit dem Modul **Lexware Office** arbeiten EstrichONE und Lexware Office (früher lexoffice) zusammen. Die Aufgaben sind
 klar getrennt:
 
-- **Rechnungen und Angebote erstellen, bearbeiten und versenden Sie ausschließlich in Lexware Office.** EstrichONE legt
-  dort keine Belege an und ändert keine.
+- **Rechnungen erstellen, bearbeiten und versenden Sie in Lexware Office.** EstrichONE legt keine Rechnungen an und
+  ändert keine Belege.
+- **Angebote (Beta)** bereiten Sie auf Wunsch in EstrichONE vor und senden sie als Entwurf an Lexware Office. Nummer,
+  Festschreiben und Versand bleiben in Lexware Office (siehe „Angebote (Beta)“).
+- **Artikel und Leistungen** gleicht EstrichONE mit den Artikeln in Lexware Office ab (Modul „Lexware Office: Artikel“).
+- **Status der Bauakte** folgt auf Wunsch dem Angebots- und Rechnungsstatus (Modul „Lexware Office: Status der Bauakte
+  automatisch“).
 - **EstrichONE zeigt die Belege an**: am Kunden alle Rechnungen und Angebote, in der Bauakte die zugeordneten, jeweils
   mit Nummer, Datum, Betrag und Status. Abgeschlossene Belege öffnen Sie direkt als PDF; ein Klick führt zum Beleg in
   Lexware Office.
@@ -282,6 +287,88 @@ lädt die Datei ohne Vorschau herunter.
 
 ![Beleg zuordnen](bilder/lexware-beleg-zuordnen.png "Dialog Beleg zuordnen mit Vorschlag über die Bauaktennummer")
 
+## Artikel und Leistungen
+
+Unter **Material** → **Artikel und Leistungen** pflegen Sie die Verkaufsartikel und Leistungen, die in Angeboten stehen:
+Bezeichnung, Art (Leistung oder Material), Artikelnummer, Einheit, Preis netto und Steuersatz. Ein Eintrag lässt sich
+mit einem Artikel des Materialstamms verknüpfen; der Materialstamm selbst führt weiter Einkaufspreise und Lieferanten.
+
+Mit dem Modul **Lexware Office: Artikel** (Systemeinstellungen, Module; setzt Lexware Office voraus, nach der
+Installation aus) gleicht EstrichONE diese Einträge mit den Artikeln in Lexware Office ab. Die Richtung wählen Sie unter
+**Verwaltung** → **Integrationen** → **Lexware Office** bei **Artikel abgleichen**:
+
+| Richtung | Wirkung |
+|---|---|
+| Aus Lexware Office nach EstrichONE (Vorgabe) | Neue Artikel aus Lexware Office werden übernommen, Änderungen dort nachgezogen. In Lexware Office ändert EstrichONE nichts. |
+| Beide Richtungen | Zusätzlich legt EstrichONE neue Einträge in Lexware Office an und überträgt Änderungen dorthin. |
+| Aus | Kein Abgleich. Artikel und Leistungen bleiben in EstrichONE nutzbar. |
+
+Der Abgleich läuft regelmäßig im Hintergrund; mit **Jetzt abgleichen** sofort. Gelöscht wird nie, weder in EstrichONE
+noch in Lexware Office. Ein Artikel, den es in Lexware Office nicht mehr gibt, bleibt in EstrichONE und ist gekennzeichnet.
+
+- **Mögliche Dubletten:** Hat ein Artikel aus Lexware Office dieselbe Artikelnummer oder dieselbe Bezeichnung wie ein
+  Eintrag in EstrichONE, übernimmt EstrichONE ihn nicht automatisch. Er steht unter der Liste zur Entscheidung:
+  **Verknüpfen** oder **Trotzdem übernehmen**.
+- **Abweichungen:** Haben beide Seiten ein Feld unterschiedlich geändert, oder geht eine Änderung wegen der Richtung
+  nicht nach Lexware Office, zeigt die Spalte „Abgleich mit Lexware Office“ **Abweichungen**. Über die Schaltfläche
+  entscheiden Sie je Feld.
+
+![Artikel und Leistungen](bilder/lexware-artikel.png "Material, Artikel und Leistungen mit Abgleichstand")
+
+## Angebote (Beta)
+
+Mit dem Modul **Angebote (Beta)** (setzt Lexware Office voraus, nach der Installation aus) bereiten Sie Angebote in
+EstrichONE vor. Dafür braucht die Rolle das Recht **Angebote vorbereiten** (bei neuen Installationen hat es die Rolle
+„Büro und Bauleitung“, Administratoren immer). Die Funktion ist als **Beta** gekennzeichnet.
+
+1. Öffnen Sie in der Bauakte **Rechnungen und Angebote** und wählen Sie **Angebot erstellen (Beta)**. Ein Angebot ohne
+   Bauakte erstellen Sie am Kunden im Abschnitt **Lexware Office**.
+2. Ist der Kunde noch nicht mit Lexware Office verknüpft, nennt EstrichONE den Weg dorthin: Verknüpfen Sie ihn am Kunden
+   (siehe „Kunden verknüpfen“).
+3. Füllen Sie den Kopf aus: Titel, Einleitung, **Gültig bis**, Zahlungsbedingung (aus Lexware Office oder eigener Text),
+   **Steuerart** (netto oder Bauleistung nach § 13b UStG) und Bemerkung. Die Nummer wird automatisch vergeben, und zwar in
+   Lexware Office.
+4. Erfassen Sie die Positionen: **Aus Artikeln und Leistungen**, **Freie Position** oder **Textposition**. Je Position
+   Menge, Einheit, Einzelpreis netto, Steuersatz und optional Rabatt. Die Summen netto, Steuer und brutto rechnet die
+   Maske sofort mit.
+5. **Vorschläge aus der Bauakte** übernimmt die Gesamtfläche aus „Räume und Flächen“ bzw. dem Kennwert „Fläche gesamt“
+   als Estrichposition in m². Übernommen wird nur, was Sie bestätigen. Randdämmstreifen schlägt EstrichONE nicht vor,
+   weil Raumumfänge in der Bauakte nicht erfasst werden.
+6. **Speichern** sichert den Entwurf in EstrichONE; Sie können ihn beliebig oft bearbeiten.
+7. **Als Entwurf an Lexware Office senden** legt das Angebot dort als Entwurf an. Danach gilt der Beleg in Lexware Office:
+   Er steht in der Bauakte unter **Rechnungen und Angebote**, ist dort mit **In Lexware öffnen** erreichbar, und der
+   Entwurf in EstrichONE ist schreibgeschützt. Nummer vergeben, festschreiben und versenden Sie in Lexware Office.
+
+Mehrfaches Senden legt kein zweites Angebot an. Bricht das Senden ohne Antwort ab, sucht EstrichONE beim nächsten Versuch
+zuerst in Lexware Office nach dem Angebot. Rechnungen erstellt EstrichONE nicht. In den Apps erscheinen gesendete
+Angebote in der Belegliste; eine Maske gibt es dort nicht.
+
+![Angebot vorbereiten](bilder/lexware-angebot.png "Angebot (Beta) mit Positionen und Summen")
+
+## Status der Bauakte aus Lexware Office
+
+Mit dem Modul **Lexware Office: Status der Bauakte automatisch** (setzt Lexware Office voraus, nach der Installation aus)
+folgt die Bauakte dem Stand der zugeordneten Belege. Die Regeln schalten Sie unter **Verwaltung** → **Integrationen** →
+**Lexware Office** bei **Status der Bauakte** einzeln ein und aus:
+
+- **Angenommenes Angebot:** Ist ein zugeordnetes Angebot in Lexware Office angenommen und steht die Bauakte auf
+  „Anfrage“, setzt EstrichONE sie auf „Geplant“.
+- **Alle Rechnungen bezahlt:** Sind alle zugeordneten Rechnungen bezahlt (mindestens eine, keine offen oder überfällig,
+  keine offene Gutschrift) und ist die Bauakte weder abgeschlossen noch storniert, erhält sie das Kennzeichen
+  **Zur Abschlussprüfung** mit dem Hinweis „Rechnungen vollständig bezahlt, bitte prüfen und abschließen“.
+
+Die Regeln laufen beim Statusabgleich der Belege (beim Öffnen der Bauakte, mit **Aktualisieren** und regelmäßig im
+Hintergrund). Sie gehen nur vorwärts: Kein Status wird zurückgesetzt, und eine Bauakte, die jemand schon weitergeschaltet
+hat, bleibt unverändert. Die zuständige Person erhält eine Benachrichtigung; der Verlauf vermerkt „automatisch durch
+Lexware Office“.
+
+**Abschließen bleibt eine bewusste Handlung.** Im Kopf der Bauakte stehen dafür **Abschließen** (der gewohnte Ablauf) und
+**Prüfung zurückstellen**. Zurückgestellt wird das Kennzeichen erst wieder gesetzt, wenn sich der Zahlstand ändert, etwa
+durch eine weitere bezahlte Rechnung. In der Bauaktenliste zeigt der Reiter **Zur Abschlussprüfung** alle betroffenen
+Bauakten. Die Apps zeigen das Kennzeichen in der Bauakte an.
+
+![Zur Abschlussprüfung](bilder/lexware-abschlusspruefung.png "Kennzeichen und Aktionen im Kopf der Bauakte")
+
 ## Fragen
 
 | Frage | Antwort |
@@ -289,10 +376,14 @@ lädt die Datei ohne Vorschau herunter.
 | Der Verbindungstest meldet einen abgelehnten Schlüssel. | Erzeugen Sie in Lexware Office einen neuen Schlüssel und hinterlegen Sie ihn. |
 | Der Verbindungstest meldet fehlenden Zugriff. | Die Public API ist im gebuchten Tarif nicht enthalten. |
 | Die Abschnitte fehlen in Kunde und Bauakte. | Das Modul ist ausgeschaltet oder Ihrer Rolle fehlen die Rechte der Gruppe Rechnungen. |
-| Kann ich in EstrichONE eine Rechnung oder ein Angebot schreiben? | Nein. Belege entstehen ausschließlich in Lexware Office; EstrichONE zeigt sie an. |
+| Kann ich in EstrichONE eine Rechnung oder ein Angebot schreiben? | Rechnungen nicht; sie entstehen in Lexware Office. Angebote können Sie mit dem Modul „Angebote (Beta)“ in EstrichONE vorbereiten und als Entwurf an Lexware Office senden. |
 | Ein Beleg zeigt „In Lexware Office nicht mehr vorhanden“. | Er wurde dort gelöscht. Lösen Sie die Zuordnung in der Bauakte. |
 | Ein Kunde soll nie nach Lexware Office. | Schalten Sie beim Kunden **Mit Lexware Office abgleichen** aus. |
-| Was geht an Lexware Office? | Nur die Daten der Kunden mit eingeschaltetem Abgleich. Belege liest EstrichONE nur. |
+| Was geht an Lexware Office? | Die Daten der Kunden mit eingeschaltetem Abgleich, bei Richtung „Beide Richtungen“ Artikel und Leistungen und mit „Angebote (Beta)“ die gesendeten Angebotsentwürfe. Rechnungen liest EstrichONE nur. |
+| Ein Artikel aus Lexware Office wurde nicht übernommen. | Es gibt in EstrichONE einen Eintrag mit gleicher Artikelnummer oder Bezeichnung. Entscheiden Sie unter Artikel und Leistungen: verknüpfen oder trotzdem übernehmen. |
+| Das Angebot lässt sich nicht senden. | Der Kunde ist nicht mit Lexware Office verknüpft oder Angaben fehlen; die Maske nennt sie. |
+| Das gesendete Angebot soll geändert werden. | Ändern Sie es in Lexware Office. Der Entwurf in EstrichONE ist nach dem Senden schreibgeschützt. |
+| Die Bauakte wurde nicht abgeschlossen, obwohl alles bezahlt ist. | Das ist so gewollt: EstrichONE stellt sie nur zur Abschlussprüfung. Abschließen Sie selbst im Kopf der Bauakte. |
 | Ein neuer Kunde wurde nicht in Lexware Office angelegt. | Es gibt dort einen ähnlichen Kontakt, der Schalter am Kunden ist aus oder die automatische Anlage ist ausgeschaltet. Der Abschnitt Lexware Office am Kunden nennt den Stand. |
 | Ein Kunde zeigt „Abweichungen offen“. | Kunde und Kontakt haben unterschiedliche Angaben. Entscheiden Sie am Kunden oder im Kundenabgleich, welcher Wert gilt. |
 | Eine Änderung aus Lexware Office ist noch nicht da. | Der Abgleich läuft etwa alle 15 Minuten. **Jetzt abgleichen** am Kunden holt sie sofort. |
