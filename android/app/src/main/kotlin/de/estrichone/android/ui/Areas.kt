@@ -684,7 +684,7 @@ private fun ProjectArea(id: String) {
     var postalCode by remember { mutableStateOf(bauakte.postalCode ?: "") }
     var city by remember { mutableStateOf(bauakte.city ?: "") }
     var description by remember { mutableStateOf(bauakte.description ?: "") }
-    var siteNotes by remember { mutableStateOf(bauakte.siteNotes ?: "") }
+    var siteNotes by remember { mutableStateOf(bauakte.siteNotesAndAccess ?: "") }
     fun key(field: FormField) = field.path.removePrefix("project.")
     fun current(field: FormField) = (bauakte.project[key(field)] as? JsonPrimitive)
 
@@ -707,7 +707,11 @@ private fun ProjectArea(id: String) {
             if (postalCode.trim() != (bauakte.postalCode ?: "")) changes["postalCode"] = postalCode
             if (city.trim() != (bauakte.city ?: "")) changes["city"] = city
             if (description.trim() != (bauakte.description ?: "")) changes["description"] = description
-            if (siteNotes.trim() != (bauakte.siteNotes ?: "")) changes["siteNotes"] = siteNotes
+            if (siteNotes.trim() != (bauakte.siteNotesAndAccess ?: "")) {
+                changes["siteNotes"] = siteNotes
+                // Älterer Server: Der noch getrennt gespeicherte Zugang steht jetzt in den Hinweisen, nichts doppelt.
+                if (bauakte.legacySiteAccess != null) project["siteAccess"] = kotlinx.serialization.json.JsonNull
+            }
             if (kotlinx.serialization.json.JsonObject(project) != bauakte.project) changes["project"] = kotlinx.serialization.json.JsonObject(project)
             if (changes.isNotEmpty()) {
                 session.service.updateBauakte(id, changes)
@@ -724,7 +728,8 @@ private fun ProjectArea(id: String) {
                 OutlinedTextField(city, { city = it }, label = { Text("Ort") }, singleLine = true, modifier = Modifier.weight(0.65f))
             }
             // Freitexte mehrzeilig (wachsen mit dem Text); Zeilenumbrüche bleiben erhalten.
-            DictationField(siteNotes, { siteNotes = it }, "Hinweise und Behinderungen", minLines = 3)
+            DictationField(siteNotes, { siteNotes = it.take(de.estrichone.core.FreeText.SITE_NOTES_MAX) }, de.estrichone.core.FreeText.SITE_NOTES_LABEL, minLines = 3)
+            Text(de.estrichone.core.FreeText.SITE_NOTES_HELP, style = MaterialTheme.typography.bodySmall, color = tones.textSecondary)
             DictationField(description, { description = it }, "Beschreibung", minLines = 4)
             schema?.groups?.forEach { group ->
                 Text(group.label, style = SectionTitle, modifier = Modifier.padding(top = 12.dp))

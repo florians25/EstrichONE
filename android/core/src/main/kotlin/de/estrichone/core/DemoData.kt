@@ -92,14 +92,14 @@ object DemoData {
         bauakte(EFH, "2026-041", "EFH Schneider, Neubau", "inProgress", "Ahornweg 3", "84028", "Landshut", SCHNEIDER,
             mapOf("objectType" to "efh", "floors" to "EG, OG", "totalArea" to 142.5, "priority" to "normal", "screedType" to "ct", "construction" to "heated",
                 "nominalThicknessMm" to 65, "strengthClass" to "C25-F4", "underfloorHeating" to true, "heatingType" to "water", "insulation" to "EPS 035 DEO",
-                "insulationThicknessMm" to 40, "siteAccess" to "Pumpe am Straßenrand, Schlauch über die Terrasse", "waterOnSite" to true, "powerOnSite" to true),
+                "insulationThicknessMm" to 40, "waterOnSite" to true, "powerOnSite" to true),
             -2, 3, mapOf("latitude" to 48.5372, "longitude" to 12.1521, "description" to "Heizestrich CT-C25-F4, 65 mm, EG und OG",
-                "siteNotes" to "Zufahrt über die Hofeinfahrt, Schlüssel bei Familie Huber (Tel. 0871 4433221).\nHund im Garten, Tor bitte immer schließen.",
+                "siteNotes" to "Zufahrt über die Hofeinfahrt, Schlüssel bei Familie Huber (Tel. 0871 4433221).\nHund im Garten, Tor bitte immer schließen.\n\nPumpe am Straßenrand, Schlauch über die Terrasse.",
                 "siteContactName" to "Herr Schneider", "siteContactPhone" to "0171 2345678", "updatedAt" to time(-1800)))
         bauakte(HALLE, "2026-042", "Halle Gewerbering", "planned", "Gewerbering 3", "84030", "Ergolding", HUBER_BAU,
             mapOf("objectType" to "industrial", "totalArea" to 600, "screedType" to "ct", "construction" to "bonded", "nominalThicknessMm" to 50,
-                "strengthClass" to "C30-F5", "underfloorHeating" to false, "priority" to "high", "siteAccess" to "Zufahrt nur bis 7,5 t"),
-            3, 5, mapOf("description" to "Industrieestrich im Verbund, 600 m²"))
+                "strengthClass" to "C30-F5", "underfloorHeating" to false, "priority" to "high"),
+            3, 5, mapOf("description" to "Industrieestrich im Verbund, 600 m²", "siteNotes" to "Zufahrt nur bis 7,5 t"))
         bauakte(PRAXIS, "2026-038", "Praxis Dr. Maier, Sanierung", "drying", "Altstadt 12", "84028", "Landshut", MAIER,
             mapOf("objectType" to "renovation", "totalArea" to 85, "screedType" to "caf", "construction" to "floating", "nominalThicknessMm" to 45,
                 "strengthClass" to "CA-C25-F4", "underfloorHeating" to true, "heatingType" to "water"), -12, -10,
@@ -219,7 +219,6 @@ object DemoData {
                 field("underfloorHeating", "Fußbodenheizung", "boolean", badge = true), field("heatingType", "Art der Heizung", "select", list = "heatingType"),
                 field("insulation", "Dämmung", "text", help = "z. B. EPS 035 DEO"), field("insulationThicknessMm", "Dämmdicke", "integer", unit = "mm"))),
             mapOf("key" to "baustelle", "label" to "Baustelle", "fields" to listOf(
-                field("siteAccess", "Zugang / Besonderheiten", "textarea", help = "Pumpenstandort, Zufahrt, Etage"),
                 field("waterOnSite", "Wasser vor Ort", "boolean"), field("powerOnSite", "Strom vor Ort", "boolean"))),
         )
         val inspection = listOf(

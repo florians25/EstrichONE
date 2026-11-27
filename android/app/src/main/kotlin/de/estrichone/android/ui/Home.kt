@@ -416,7 +416,8 @@ fun TodayJobCard(job: PlannedJob, session: Session, phase: TodayGlance.Phase = T
         if (job.resources.isNotEmpty()) JobLine(Icons.Filled.LocalShipping, job.resources.joinToString(", ") { it.name })
         val contact = bauakte?.siteContactName
         if (contact != null || phone != null) JobLine(Icons.Outlined.AccountCircle, listOfNotNull(contact?.let { "Vor Ort: $it" } ?: "Ansprechpartner vor Ort", phone).joinToString(", "))
-        job.notes?.let { JobLine(Icons.Filled.Info, it, detailLabel = "Zugang und Hinweise") }
+        bauakte?.siteNotesAndAccess?.let { JobLine(Icons.Filled.Warning, it, detailLabel = "Hinweise und Zugang", maxLines = 3) }
+        job.notes?.let { JobLine(Icons.Filled.Info, it, detailLabel = "Hinweis der Disposition") }
         job.warnings.forEach { JobLine(Icons.Filled.Warning, it, color = tones.warning) }
         if (!glance.isEmpty) GlanceChips(glance, Modifier.padding(top = 8.dp, end = 8.dp))
         if (isToday) VisitActions(job, visit, setVisit, Modifier.padding(top = 12.dp, end = 8.dp))
@@ -467,7 +468,7 @@ private fun GlanceChips(glance: SiteGlance, modifier: Modifier = Modifier) {
 @Composable
 private fun JobLine(
     icon: androidx.compose.ui.graphics.vector.ImageVector, text: String, bold: Boolean = false, color: Color? = null,
-    detail: String? = null, dot: Color? = null, detailLabel: String? = null,
+    detail: String? = null, dot: Color? = null, detailLabel: String? = null, maxLines: Int = Int.MAX_VALUE,
 ) {
     Row(Modifier.fillMaxWidth().padding(top = 8.dp, end = 8.dp), verticalAlignment = Alignment.Top) {
         Icon(icon, detailLabel, tint = color ?: tones.textSecondary, modifier = Modifier.size(20.dp))
@@ -479,7 +480,7 @@ private fun JobLine(
                     Spacer(Modifier.width(6.dp))
                 }
                 Text(text, style = MaterialTheme.typography.bodyMedium, fontWeight = if (bold) FontWeight.SemiBold else FontWeight.Normal,
-                    color = color ?: MaterialTheme.colorScheme.onSurface)
+                    color = color ?: MaterialTheme.colorScheme.onSurface, maxLines = maxLines, overflow = TextOverflow.Ellipsis)
             }
             if (detail != null) Text(detail, style = MaterialTheme.typography.bodySmall, color = tones.textSecondary)
         }
