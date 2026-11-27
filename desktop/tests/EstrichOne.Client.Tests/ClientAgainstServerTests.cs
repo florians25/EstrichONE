@@ -102,7 +102,7 @@ public sealed class ClientAgainstServerTests(PostgresFixture postgres) : IAsyncL
 
         updated.Status.ShouldBe(BauakteStatus.InProgress);
         updated.SiteNotes.ShouldBe("Hund im Garten");
-        (await client.GetHintsAsync(created.Id, ct)).ShouldContain(h => h.Kind == "site_notes" && h.Severity == BauakteHintSeverity.Warning);
+        (await client.GetHintsAsync(created.Id, ct)).ShouldNotContain(h => h.Kind == "site_notes");
         (await client.GetMembersAsync(created.Id, ct)).Single().Role.ShouldBe(BauakteMemberRole.Responsible);
         updated.Number.ShouldNotBeNull();
         conflict.Status.ShouldBe(HttpStatusCode.PreconditionFailed);
