@@ -240,8 +240,7 @@ internal static class ContactEndpoints
                 if (!result.Available && !request.LexwareSkipCheck)
                 {
                     return TypedResults.Problem(statusCode: StatusCodes.Status409Conflict, title: "Prüfung in Lexware Office nicht möglich",
-                        detail: $"{result.Message ?? "Die Prüfung in Lexware Office ist derzeit nicht möglich."} Der Kunde wurde nicht angelegt. "
-                            + "Versuchen Sie es später erneut oder legen Sie ihn bewusst ohne Prüfung an.",
+                        detail: "Die Prüfung in Lexware Office ist derzeit nicht möglich, Lexware Office antwortet nicht. Der Kunde wurde nicht angelegt.",
                         extensions: new Dictionary<string, object?> { ["code"] = LexwareCheckUnavailableCode });
                 }
 

@@ -7,7 +7,7 @@
 import MessageBox from "sap/m/MessageBox";
 import BusyIndicator from "sap/ui/core/BusyIndicator";
 import { ApiError, post } from "./api";
-import { showToast } from "./toast";
+import { closeToast, showToast } from "./toast";
 import { session } from "./session";
 import {
 	creationProblem, existsQuestion, LEXWARE_CHECK_RUNNING, lexwareCheckActive, UNCHECKED_QUESTION, type LexwareContactCheck,
@@ -45,9 +45,10 @@ export async function createCustomerChecked<T>(body: Record<string, unknown>, on
 	const flags: CreateFlags = {};
 	for (;;) {
 		const running = checkRunning() && !flags.lexwareCreateAnyway;
+		let toast: HTMLElement | null = null;
 		if (running) {
 			BusyIndicator.show(0);
-			showToast(LEXWARE_CHECK_RUNNING);
+			toast = showToast(LEXWARE_CHECK_RUNNING, { type: "info", duration: 60000 });
 		}
 		try {
 			return await post<T>("contacts", { ...body, ...flags });
@@ -55,6 +56,7 @@ export async function createCustomerChecked<T>(body: Record<string, unknown>, on
 			const problem = creationProblem(error instanceof ApiError ? { code: error.code, problem: error.problem as Record<string, unknown> | undefined } : null);
 			if (!problem) throw error;
 			if (running) BusyIndicator.hide();
+			if (toast) closeToast(toast);
 			if (problem.kind === "exists") {
 				const proceed = onExists ? await onExists(problem.check) : await ask(existsQuestion(problem.check), "Trotzdem neu anlegen", "Lexware Office");
 				if (!proceed) throw new ApiError(409, "LEXWARE_CUSTOMER_EXISTS", "Der Kunde wurde nicht angelegt, weil es ihn in Lexware Office bereits gibt.");
@@ -65,6 +67,7 @@ export async function createCustomerChecked<T>(body: Record<string, unknown>, on
 			}
 		} finally {
 			if (running) BusyIndicator.hide();
+			if (toast) closeToast(toast);
 		}
 	}
 }
