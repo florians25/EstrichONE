@@ -123,10 +123,21 @@
 				<link><Link text="{i18n>akte.join}" press=".onAssignMe" visible="{= ${akte>/canAssignMe} === true }"/></link>
 			</MessageStrip>
 			<VBox id="dossierBox" renderType="Bare"/>
+			<!-- Merkmal „Zur Abschlussprüfung“ (z. B. alle Rechnungen in Lexware Office bezahlt). Abschließen bleibt eine Handlung im Büro. -->
+			<MessageStrip id="reviewStrip" type="Warning" showIcon="true" customIcon="sap-icon://inspection" class="sapUiTinyMarginBottom"
+				visible="{= !!${akte>/bauakte/reviewRequestedAt} }"
+				text="{= 'Zur Abschlussprüfung: ' + (${akte>/bauakte/reviewReason} || 'bitte prüfen und abschließen') + '. Automatisch durch Lexware Office gesetzt.' }"/>
+			<HBox id="reviewActions" renderType="Bare" class="sapUiTinyMarginBottom"
+				visible="{= !!${akte>/bauakte/reviewRequestedAt} &amp;&amp; ${session>/permissions/bauakten.edit} === true &amp;&amp; ${akte>/writable} !== false }">
+				<Button id="reviewCompleteButton" text="Abschließen" type="Emphasized" icon="sap-icon://complete" press=".onComplete" class="sapUiTinyMarginEnd"/>
+				<Button id="reviewDismiss" text="Prüfung zurückstellen" type="Transparent" icon="sap-icon://undo" press=".onDismissReview"
+					tooltip="Kennzeichen entfernen. Es wird erneut gesetzt, wenn sich der Zahlstatus der Rechnungen ändert."/>
+			</HBox>
 			<HBox wrap="Wrap" alignItems="Center" class="eoHintBadges eoBadgeRow">
 				<HBox items="{akte>/projectBadges}" wrap="Wrap" class="eoHintBadges">
 					<ObjectStatus text="{akte>text}" state="{akte>state}" icon="{akte>icon}" inverted="true"/>
 				</HBox>
+				<ObjectStatus id="reviewBadge" text="Zur Abschlussprüfung" state="Warning" inverted="true" icon="sap-icon://inspection" visible="{= !!${akte>/bauakte/reviewRequestedAt} }"/>
 				<ObjectStatus text="{akte>/approvalsText}" state="Warning" inverted="true" icon="sap-icon://pending" visible="{= !!${akte>/approvalsText} }"/>
 				<HBox items="{akte>/hints}" wrap="Wrap" class="eoHintBadges">
 					<customData><core:CustomData key="role" value="list" writeToDom="true"/></customData>

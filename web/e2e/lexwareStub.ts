@@ -5,7 +5,9 @@ import { randomUUID } from 'node:crypto';
  * Nachgebildete Public API von Lexware Office für die Ende-zu-Ende-Tests (kein echter Aufruf, kein echter Schlüssel):
  * Profil, Kontakte (Liste mit Filtern, Abruf, Anlage, Ändern mit `version`, sonst 409), Belege (Rechnungen, Angebote,
  * Gutschriften, Auftragsbestätigungen: nur Abruf), Belegliste und das Beleg-PDF (`/file` sowie `/document` mit `/v1/files`;
- * für Entwürfe 406). Schreibende Aufrufe für Belege gibt es nicht (404), denn EstrichONE legt keine Belege an. Der Zustand
+ * für Entwürfe 406), Artikel (Liste, Abruf, Anlage, Ändern mit `version`), Zahlungsbedingungen und das Anlegen eines
+ * Angebotsentwurfs (`POST /v1/quotations`, mit Abfrage wie `finalize` abgelehnt). Andere schreibende Aufrufe für Belege
+ * gibt es nicht (404). Der Zustand
  * liegt im Speicher und lässt sich im Test ändern (z. B. eine Rechnung in Lexware „abschließen“, einen Kontakt bearbeiten).
  */
 export const STUB_KEY = 'e2e-schluessel-nicht-echt';
@@ -43,6 +45,14 @@ export function simplePdf(lines: string[]): Buffer {
 export class LexwareStub {
   readonly contacts = new Map<string, Json>();
   readonly vouchers = new Map<string, Json>();
+  readonly articles = new Map<string, Json>();
+  /** Gesendete Angebotsentwürfe (Inhalt von `POST /v1/quotations`). */
+  readonly quotations: Json[] = [];
+  paymentConditions: Json[] = [
+    { id: 'pc-14', organizationDefault: true, paymentTermLabelTemplate: 'Zahlbar innerhalb von 14 Tagen ohne Abzug.', paymentTermDuration: 14 },
+    { id: 'pc-30', organizationDefault: false, paymentTermLabelTemplate: 'Zahlbar innerhalb von 30 Tagen, bei Zahlung innerhalb von 8 Tagen 2 % Skonto.', paymentTermDuration: 30,
+      paymentDiscountConditions: { discountPercentage: 2, discountRange: 8 } },
+  ];
   readonly calls: { method: string; path: string }[] = [];
   companyName = 'Estrichbau E2E GmbH';
   /** Kennt die nachgebildete API den Pfad `/file`? Sonst nur den älteren Weg über `/document`. */
@@ -101,6 +111,17 @@ export class LexwareStub {
       title: v.title ?? (v.type === 'quotation' ? 'Angebot' : 'Rechnung'), introduction: v.introduction ?? null,
       address: { contactId: v.contactId ?? null, name: v.contactName ?? (contact ? LexwareStub.name(contact) : null) },
       totalPrice: { currency: 'EUR', totalNetAmount: v.net, totalGrossAmount: v.gross },
+    });
+    return id;
+  }
+
+  addArticle(a: { title: string; type?: 'PRODUCT' | 'SERVICE'; number?: string; net: number; tax?: number; unit?: string; description?: string }): string {
+    const id = randomUUID();
+    const tax = a.tax ?? 19;
+    this.articles.set(id, {
+      id, organizationId: 'aa93e8a8-2aa3-470b-b914-caad8a255dd8', archived: false, title: a.title, description: a.description ?? null, type: a.type ?? 'SERVICE',
+      articleNumber: a.number ?? null, unitName: a.unit ?? 'm²', price: { netPrice: a.net, grossPrice: Math.round(a.net * (100 + tax)) / 100, leadingPrice: 'NET', taxRate: tax },
+      version: 1,
     });
     return id;
   }
@@ -190,6 +211,52 @@ export class LexwareStub {
       };
       this.contacts.set(id, next);
       return send(200, { id, resourceUri: `${this.url}${path}`, createdDate: next.createdDate, updatedDate: next.updatedDate, version: next.version });
+    }
+
+    if (method === 'GET' && path === '/v1/articles') {
+      const all = [...this.articles.values()];
+      const page = Number(url.searchParams.get('page') ?? 0);
+      const size = Number(url.searchParams.get('size') ?? 25);
+      const totalPages = Math.max(1, Math.ceil(all.length / size));
+      return send(200, { content: all.slice(page * size, (page + 1) * size), first: page === 0, last: page + 1 >= totalPages, totalPages, totalElements: all.length });
+    }
+    if (method === 'POST' && path === '/v1/articles') {
+      const id = randomUUID();
+      this.articles.set(id, { ...body, id, version: 1, archived: false });
+      return send(200, { id, resourceUri: `${this.url}/v1/articles/${id}`, version: 1 });
+    }
+    if (method === 'GET' && path.startsWith('/v1/articles/')) {
+      const article = this.articles.get(path.slice('/v1/articles/'.length));
+      return article ? send(200, article) : send(404, { status: 404, error: 'Not Found' });
+    }
+    if (method === 'PUT' && path.startsWith('/v1/articles/')) {
+      const id = path.slice('/v1/articles/'.length);
+      const stored = this.articles.get(id);
+      if (!stored) return send(404, { status: 404, error: 'Not Found' });
+      if (body.version !== stored.version) return send(409, { status: 409, message: 'Resource was modified' });
+      this.articles.set(id, { ...body, id, archived: stored.archived, version: Number(stored.version) + 1 });
+      return send(200, { id, version: Number(stored.version) + 1 });
+    }
+    if (method === 'GET' && path === '/v1/payment-conditions') return send(200, this.paymentConditions);
+    if (method === 'POST' && path === '/v1/quotations') {
+      if (url.search) return send(400, { status: 400, message: 'Unexpected query' });
+      const id = randomUUID();
+      let net = 0;
+      let gross = 0;
+      for (const line of ((body.lineItems as Json[]) ?? []).filter((l) => l.type !== 'text')) {
+        const price = line.unitPrice as Json;
+        const amount = Math.round(Number(line.quantity) * Number(price.netAmount) * (1 - Number(line.discountPercentage ?? 0) / 100) * 100) / 100;
+        net += amount;
+        gross += Math.round(amount * (100 + Number(price.taxRatePercentage))) / 100;
+      }
+      this.quotations.push(body);
+      const contact = this.contacts.get(String((body.address as Json).contactId));
+      this.vouchers.set(id, {
+        ...body, id, voucherType: 'quotation', voucherStatus: 'draft', voucherNumber: null,
+        address: { contactId: (body.address as Json).contactId, name: contact ? LexwareStub.name(contact) : null },
+        totalPrice: { currency: 'EUR', totalNetAmount: Math.round(net * 100) / 100, totalGrossAmount: Math.round(gross * 100) / 100 },
+      });
+      return send(200, { id, resourceUri: `${this.url}/v1/quotations/${id}`, version: 1 });
     }
 
     const segments: Record<string, string> = { invoices: 'invoice', quotations: 'quotation', 'credit-notes': 'creditnote', 'order-confirmations': 'orderconfirmation' };

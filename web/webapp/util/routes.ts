@@ -27,6 +27,8 @@ export const routes: RouteDef[] = [
 	{ name: "inquiries", pattern: "/anfragen", view: "office.Inquiries", permission: "contacts.read", nav: "inquiries", title: "nav.inquiries" },
 	{ name: "orders", pattern: "/bestellungen", view: "materials.Orders", permission: "materials.read", nav: "orders", title: "nav.orders" },
 	{ name: "materials", pattern: "/material", view: "materials.Materials", permission: "materials.read", nav: "materials", title: "nav.materials" },
+	{ name: "articles", pattern: "/artikel", view: "materials.Articles", permission: "materials.read", nav: "articles", title: "nav.articles" },
+	{ name: "quotation", pattern: "/angebote/:id", view: "office.Quotation", permission: "quotations.prepare", nav: "customers", title: "nav.quotation" },
 	{ name: "suppliers", pattern: "/lieferanten", view: "materials.Suppliers", permission: "materials.read", nav: "suppliers", title: "nav.suppliers" },
 	{ name: "customers", pattern: "/kunden", view: "Customers", permission: "contacts.read", nav: "customers", title: "nav.customers" },
 	{ name: "customer", pattern: "/kunden/:id", view: "Customer", permission: "contacts.read", nav: "customers", title: "nav.customers" },
@@ -129,6 +131,7 @@ export const navigation: NavEntry[] = [
 			{ key: "orders", path: "/bestellungen", icon: "sap-icon://cart", permission: "materials.read" },
 			{ key: "materials", path: "/material", icon: "sap-icon://product", permission: "materials.read" },
 			{ key: "suppliers", path: "/lieferanten", icon: "sap-icon://supplier", permission: "materials.read" },
+			{ key: "articles", path: "/artikel", icon: "sap-icon://tag", permission: "materials.read" },
 		],
 	},
 	{

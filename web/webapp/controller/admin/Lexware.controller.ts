@@ -13,6 +13,7 @@ import {
 	type DeviationSource, type LexwareContactSummary, type LexwareCustomerSummary, type LexwareDeviationItem, type LexwareInternalDuplicate, type LexwareLinkedPair,
 	type LexwareReconciliation, type LexwareSettings, type LexwareSuggestion, type LexwareTestResponse,
 } from "../../util/lexware";
+import { articleSyncHelp, articleSyncOptions, statusRuleTexts } from "../../util/quotations";
 import { importLexwareContact, openCustomerLinkDialog, openDeviationDialog, openExternal, resolveAllDeviations } from "../../util/lexwareDialogs";
 
 const numberText = (number: string | null) => (number ? `Kundennummer ${number}` : "ohne Kundennummer");
@@ -25,7 +26,9 @@ export default class Lexware extends BaseController {
 			s: null, loaded: false, busy: false, apiKey: "", baseUrl: "", lastTestText: "", tab: "connection",
 			rec: null, recBusy: false, recStand: "", figures: [], list: "suggestions", suggestions: [], internal: [], onlyEstrichOne: [], onlyLexware: [], linked: [], excluded: [], excludedSelected: 0,
 			deviations: [], changeSyncOptions, changeSyncHelp: "", changeSyncStand: { text: "", state: "None" },
+			articleSyncOptions, articleSyncHelp: "", articleSyncStand: { text: "", state: "None" }, ruleTexts: statusRuleTexts,
 		});
+		this.model().bindProperty("/s/articleSync").attachChange(() => this.model().setProperty("/articleSyncHelp", articleSyncHelp(this.model().getProperty("/s/articleSync") as string)));
 		// Die Erläuterung folgt der Auswahl, noch vor dem Speichern.
 		this.model().bindProperty("/s/changeSync").attachChange(() => this.model().setProperty("/changeSyncHelp", changeSyncHelp(this.model().getProperty("/s/changeSync") as string)));
 	}
@@ -67,6 +70,10 @@ export default class Lexware extends BaseController {
 		m.setProperty("/lastTestText", lastTestText(s, dateTime));
 		m.setProperty("/changeSyncHelp", changeSyncHelp(s.changeSync));
 		m.setProperty("/changeSyncStand", changeSyncStand(s, dateTime));
+		m.setProperty("/articleSyncHelp", articleSyncHelp(s.articleSync));
+		m.setProperty("/articleSyncStand", s.lastArticleSyncError
+			? { text: `Letzter Artikelabgleich fehlgeschlagen: ${s.lastArticleSyncError}`, state: "Error" }
+			: s.lastArticleSyncAt ? { text: `Letzter Artikelabgleich: ${dateTime(s.lastArticleSyncAt)}`, state: "None" } : { text: "", state: "None" });
 		this.statusLine([
 			!s.moduleEnabled && { text: "Das Modul ist ausgeschaltet. Kunde und Bauakte zeigen keine Lexware-Abschnitte.", level: "info" },
 			s.moduleEnabled && !s.hasApiKey && { text: "Es ist noch kein API-Schlüssel hinterlegt.", level: "warning" },
@@ -87,6 +94,7 @@ export default class Lexware extends BaseController {
 		const saved = await this.run(() => put<LexwareSettings>("settings/integrations/lexware", {
 			apiKey: String(m.getProperty("/apiKey") ?? "").trim() || null, baseUrl: String(m.getProperty("/baseUrl") ?? "").trim() || null,
 			version: s.version, newCustomersSync: s.newCustomersSync === true, changeSync: s.changeSync, autoCreate: s.autoCreate === true,
+			articleSync: s.articleSync, statusOnQuotationAccepted: s.statusOnQuotationAccepted !== false, statusOnInvoicesPaid: s.statusOnInvoicesPaid !== false,
 		}));
 		if (saved) {
 			this.apply(saved);

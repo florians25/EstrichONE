@@ -4,7 +4,7 @@
 		<f:title>
 			<f:DynamicPageTitle>
 				<f:heading><Title text="{i18n>nav.lexwareSettings}" level="H1"/></f:heading>
-				<f:expandedContent><Text text="Rechnungen und Angebote entstehen ausschließlich in Lexware Office, die Bauunterlagen liegen in EstrichONE. Kunden werden verknüpft; ihre Rechnungen und Angebote zeigt EstrichONE am Kunden und in der Bauakte an."/></f:expandedContent>
+				<f:expandedContent><Text text="Rechnungen entstehen in Lexware Office, die Bauunterlagen liegen in EstrichONE. Kunden werden verknüpft; ihre Rechnungen und Angebote zeigt EstrichONE am Kunden und in der Bauakte an. Mit „Angebote (Beta)“ bereiten Sie Angebote in EstrichONE vor und senden sie als Entwurf an Lexware Office."/></f:expandedContent>
 				<f:actions>
 					<Button id="lexwareTestButton" text="Verbindung testen" icon="sap-icon://connected" press=".onTest" enabled="{= ${view>/s/hasApiKey} === true || !!${view>/apiKey} }"/>
 					<Button id="lexwareSave" text="{i18n>common.save}" icon="sap-icon://save" type="Emphasized" press=".onSave" enabled="{view>/loaded}"/>
@@ -22,7 +22,7 @@
 								<MessageStrip id="lexwareTestResult" visible="{= !!${view>/lastTestText} }" type="{= ${view>/s/lastTestOk} ? 'Success' : 'Error' }" showIcon="true"
 									text="{view>/lastTestText}" class="sapUiSmallMarginBottom"/>
 								<MessageStrip type="Information" showIcon="true" class="sapUiSmallMarginBottom" id="lexwareKeyHint"
-									text="Den API-Schlüssel erzeugen Sie in Lexware Office unter Einstellungen › Erweiterungen › Public API. Die Public API ist im Tarif XL enthalten. An Lexware Office gehen nur die Daten der Kunden, die Sie dort anlegen oder verknüpfen. Rechnungen und Angebote liest EstrichONE nur; es legt in Lexware Office keine Belege an und ändert keine.">
+									text="Den API-Schlüssel erzeugen Sie in Lexware Office unter Einstellungen › Erweiterungen › Public API. Die Public API ist im Tarif XL enthalten. An Lexware Office gehen nur die Daten der Kunden, die Sie dort anlegen oder verknüpfen. Rechnungen liest EstrichONE nur. Angebote legt EstrichONE nur mit „Angebote (Beta)“ und nur als Entwurf an; Nummer, Festschreiben und Versand bleiben in Lexware Office.">
 									<link><Link text="Schlüssel in Lexware Office erzeugen" href="{view>/s/keyHelpUrl}" target="_blank"/></link>
 								</MessageStrip>
 							</VBox>
@@ -68,6 +68,28 @@
 									<Text id="lxChangeSyncHelp" text="{view>/changeSyncHelp}"/>
 									<Text text="Abgeglichen werden Name, Anrede, Rechnungsanschrift, E-Mail-Adresse, Telefon und USt-ID bei verknüpften Kunden mit eingeschaltetem Abgleich. Kundennummern werden nie überschrieben. Beim ersten Abgleich überschreibt EstrichONE nichts: Vorhandene Unterschiede erscheinen im Kundenabgleich unter „Abweichungen“."/>
 									<ObjectStatus id="lxChangeSyncStand" text="{view>/changeSyncStand/text}" state="{view>/changeSyncStand/state}" visible="{= !!${view>/changeSyncStand/text} }"/>
+								</VBox>
+								<core:Title text="Artikel" visible="{= ${session>/modules/lexwareArticles} === true }"/>
+								<Label text="Artikel abgleichen" labelFor="lxArticleSync" visible="{= ${session>/modules/lexwareArticles} === true }"/>
+								<VBox visible="{= ${session>/modules/lexwareArticles} === true }">
+									<Select id="lxArticleSync" selectedKey="{view>/s/articleSync}" items="{view>/articleSyncOptions}" width="24rem">
+										<core:Item key="{view>key}" text="{view>text}"/>
+									</Select>
+									<Text id="lxArticleSyncHelp" text="{view>/articleSyncHelp}"/>
+									<Text text="Abgeglichen werden Bezeichnung, Beschreibung, Art, Artikelnummer, GTIN, Einheit, Preis netto und Steuersatz. Mögliche Dubletten (gleiche Artikelnummer oder Bezeichnung) werden nicht automatisch übernommen, sondern unter Material › Artikel und Leistungen zur Entscheidung angezeigt."/>
+									<ObjectStatus id="lxArticleSyncStand" text="{view>/articleSyncStand/text}" state="{view>/articleSyncStand/state}" visible="{= !!${view>/articleSyncStand/text} }"/>
+								</VBox>
+								<core:Title text="Status der Bauakte" visible="{= ${session>/modules/lexwareStatus} === true }"/>
+								<Label text="Angenommenes Angebot" labelFor="lxRuleQuotation" visible="{= ${session>/modules/lexwareStatus} === true }"/>
+								<VBox visible="{= ${session>/modules/lexwareStatus} === true }">
+									<Switch id="lxRuleQuotation" state="{view>/s/statusOnQuotationAccepted}" customTextOn=" " customTextOff=" "/>
+									<Text text="{view>/ruleTexts/quotation}"/>
+								</VBox>
+								<Label text="Alle Rechnungen bezahlt" labelFor="lxRuleInvoices" visible="{= ${session>/modules/lexwareStatus} === true }"/>
+								<VBox visible="{= ${session>/modules/lexwareStatus} === true }">
+									<Switch id="lxRuleInvoices" state="{view>/s/statusOnInvoicesPaid}" customTextOn=" " customTextOff=" "/>
+									<Text text="{view>/ruleTexts/invoices}"/>
+									<Text text="Beide Regeln laufen beim Statusabgleich der Belege, die einer Bauakte zugeordnet sind (beim Öffnen der Bauakte und regelmäßig im Hintergrund). Die zuständige Person erhält eine Benachrichtigung; der Verlauf der Bauakte vermerkt „automatisch durch Lexware Office“."/>
 								</VBox>
 								<core:Title text="Erweitert"/>
 								<Label text="Basis-URL der API" labelFor="lxUrl"/>

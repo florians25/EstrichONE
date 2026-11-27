@@ -45,6 +45,8 @@ export interface BauakteListItem {
   isAssigned?: boolean | null;
   /** Darf der Benutzer die Bauakte ändern (zugeteilt oder „Alle Bauakten bearbeiten“)? Sonst „Nur ansehen“. */
   canEdit?: boolean | null;
+  /** Merkmal „Zur Abschlussprüfung“ (z. B. alle Rechnungen in Lexware Office bezahlt); kein eigener Status. */
+  reviewRequestedAt?: string | null;
 }
 
 export interface BauakteMapPoint {
@@ -82,6 +84,8 @@ export interface BauaktePage {
 }
 
 export interface BauakteDetail extends BauakteListItem {
+  /** Grund des Merkmals „Zur Abschlussprüfung“. */
+  reviewReason?: string | null;
   latitude: number | null;
   longitude: number | null;
   description: string | null;

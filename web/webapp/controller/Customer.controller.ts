@@ -1,3 +1,4 @@
+import { startQuotation } from "../util/quotationStart";
 import BaseController from "./BaseController";
 import type Event from "sap/ui/base/Event";
 import type Control from "sap/ui/core/Control";
@@ -47,6 +48,11 @@ const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one :
  * @namespace estrichone.controller
  */
 export default class Customer extends BaseController {
+	async onCreateQuotation(): Promise<void> {
+		const id = await startQuotation({ contactId: this.id }, () => (this.byId("secLexware") as Control | undefined)?.getDomRef()?.scrollIntoView());
+		if (id) this.nav(`/angebote/${id}`);
+	}
+
 	private id = "";
 	private files: FileResponse[] = [];
 

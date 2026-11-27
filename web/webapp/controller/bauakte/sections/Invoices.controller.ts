@@ -8,6 +8,9 @@ import {
 	euro, pdfAvailable, PDF_DRAFT_HINT, voucherNumber, voucherPdfPath, voucherStatus, voucherSummary, voucherTitle, voucherTypeText, type BauakteLexware,
 	type LexwareVoucher,
 } from "../../../util/lexware";
+import { session } from "../../../util/session";
+import { startQuotation } from "../../../util/quotationStart";
+import { quotationStateText, type QuotationSummary } from "../../../util/quotations";
 import { downloadVoucherPdf, openAssignVoucherDialog, openExternal, openVoucherPdf, type VoucherPdf } from "../../../util/lexwareDialogs";
 
 /**
@@ -17,7 +20,7 @@ import { downloadVoucherPdf, openAssignVoucherDialog, openExternal, openVoucherP
  */
 export default class Invoices extends SectionBase {
 	protected init(): void {
-		this.v().setModel(new JSONModel({ loaded: false, configured: false, canAssign: false, vouchers: [], summary: "", syncError: "" }), "inv");
+		this.v().setModel(new JSONModel({ loaded: false, configured: false, canAssign: false, vouchers: [], summary: "", syncError: "", quotations: [], canQuote: false }), "inv");
 	}
 
 	private inv(): JSONModel {
@@ -26,6 +29,30 @@ export default class Invoices extends SectionBase {
 
 	protected async load(): Promise<void> {
 		this.apply(await get<BauakteLexware>(`bauakten/${this.bauakteId}/lexware`));
+		await this.loadQuotations();
+	}
+
+	/** Angebote (Beta): Entwürfe dieser Bauakte, die noch nicht gesendet sind (gesendete stehen in der Belegliste). */
+	private async loadQuotations(): Promise<void> {
+		const m = this.inv();
+		const canQuote = session.moduleOn("quotations") && this.has("quotations.prepare");
+		m.setProperty("/canQuote", canQuote);
+		if (!canQuote) { m.setProperty("/quotations", []); return; }
+		const list = await get<QuotationSummary[]>("lexware/quotations", { bauakteId: this.bauakteId });
+		m.setProperty("/quotations", list.filter((q) => q.state !== "sent").map((q) => {
+			const state = quotationStateText(q.state);
+			return { ...q, stateText: state.text, stateState: state.state, netText: euro(q.net), grossText: euro(q.gross), validText: date(q.validUntil) };
+		}));
+	}
+
+	async onCreateQuotation(): Promise<void> {
+		const id = await startQuotation({ bauakteId: this.bauakteId }, (contactId) => this.nav(`/kunden/${contactId}`));
+		if (id) this.nav(`/angebote/${id}`);
+	}
+
+	onOpenQuotation(e: Event): void {
+		const q = (e.getSource() as Control).getBindingContext("inv")?.getObject() as QuotationSummary;
+		this.nav(`/angebote/${q.id}`);
 	}
 
 	private apply(data: BauakteLexware): void {

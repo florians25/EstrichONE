@@ -178,7 +178,7 @@ describe('Lexware Office: Einstellungen, Modul und Rechte', () => {
 
   it('Protokolltexte vorhanden und ohne Gedankenstriche oder Trennpunkte', () => {
     const texts = Object.entries(auditTexts).filter(([key]) => key.startsWith('lexware.'));
-    expect(texts.length).toBe(11);
+    expect(texts.length).toBe(18);
     expect(auditTexts['lexware.contact_synced']).toBe('Kundendaten mit Lexware Office abgeglichen');
     for (const [, text] of texts) expect(text).not.toMatch(/[–—·]/);
   });

@@ -1,0 +1,96 @@
+<mvc:View controllerName="estrichone.controller.materials.Articles" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:f="sap.f" xmlns:core="sap.ui.core"
+	core:require="{fmt: 'estrichone/model/formatter'}" height="100%">
+	<f:DynamicPage id="page" toggleHeaderOnTitleClick="false">
+		<f:title>
+			<f:DynamicPageTitle>
+				<f:heading><Title text="{i18n>nav.articles}" level="H1"/></f:heading>
+				<f:expandedContent><Text text="Verkaufsartikel und Leistungen mit Preis netto und Steuersatz, wie sie in Angeboten stehen. Mit „Lexware Office: Artikel“ abgeglichen mit den Artikeln in Lexware Office."/></f:expandedContent>
+				<f:actions>
+					<Button id="articleSyncNow" text="Jetzt abgleichen" icon="sap-icon://synchronize" press=".onSync" visible="{= ${view>/syncEnabled} === true &amp;&amp; ${session>/permissions/materials.manage} === true }"/>
+					<Button id="articleNew" text="Eintrag anlegen" icon="sap-icon://add" type="Emphasized" press=".onNew" visible="{= ${session>/permissions/materials.manage} === true }"/>
+				</f:actions>
+			</f:DynamicPageTitle>
+		</f:title>
+		<f:content>
+			<VBox renderType="Bare">
+				<MessageStrip id="articleSyncStand" text="{view>/standText}" type="{view>/standType}" showIcon="true" visible="{= !!${view>/standText} }" class="sapUiSmallMarginBottom"/>
+				<Table id="articleTable" contextualWidth="Auto" fixedLayout="false" items="{view>/shown}" busy="{view>/busy}" sticky="HeaderToolbar,ColumnHeaders" growing="true" growingThreshold="100"
+					popinLayout="GridSmall" noDataText="Noch keine Einträge. Legen Sie Leistungen und Artikel an oder gleichen Sie mit Lexware Office ab.">
+					<headerToolbar>
+						<OverflowToolbar>
+							<Title text="Artikel und Leistungen" level="H2"/>
+							<ToolbarSpacer/>
+							<SearchField width="19rem" placeholder="Bezeichnung, Artikelnummer" liveChange=".refresh" value="{view>/search}"/>
+							<Select id="articleFilter" selectedKey="{view>/filter}" change=".refresh" items="{view>/filters}">
+								<core:Item key="{view>key}" text="{view>text}"/>
+							</Select>
+							<Label text="Inaktive anzeigen" labelFor="articleInactive"/>
+							<Switch customTextOn=" " customTextOff=" " id="articleInactive" state="{view>/inactive}" change=".onInactive"/>
+						</OverflowToolbar>
+					</headerToolbar>
+					<columns>
+						<Column width="34%"><Text text="Bezeichnung"/></Column>
+						<Column width="7rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Art"/></Column>
+						<Column width="9rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Artikelnummer"/></Column>
+						<Column width="6rem"><Text text="Einheit"/></Column>
+						<Column width="9rem" hAlign="End"><Text text="Preis netto"/></Column>
+						<Column width="6rem" hAlign="End" minScreenWidth="Desktop" demandPopin="true"><Text text="Steuersatz"/></Column>
+						<Column minScreenWidth="Desktop" demandPopin="true" visible="{view>/hasMaterial}"><Text text="Material"/></Column>
+						<Column width="14rem"><Text text="Abgleich mit Lexware Office"/></Column>
+						<Column width="10rem" hAlign="End"/>
+					</columns>
+					<items>
+						<ColumnListItem>
+							<VBox renderType="Bare">
+								<Link text="{view>title}" wrapping="true" press=".onEdit" enabled="{= ${session>/permissions/materials.manage} === true }"/>
+								<Text text="{view>description}" visible="{= !!${view>description} }" class="eoMuted" maxLines="2"/>
+							</VBox>
+							<Text text="{view>kindText}"/>
+							<Text text="{view>articleNumber}"/>
+							<Text text="{view>unit}"/>
+							<Text text="{path: 'view>netPrice', formatter: 'fmt.money'}" class="eoTabular"/>
+							<Text text="{view>taxText}" class="eoTabular"/>
+							<Text text="{view>materialName}"/>
+							<VBox renderType="Bare">
+								<ObjectStatus text="{view>syncText}" state="{view>syncState}" icon="{view>syncIcon}"/>
+								<Text text="{view>sync/error}" visible="{= !!${view>sync/error} }" class="eoMuted"/>
+							</VBox>
+							<HBox justifyContent="End" renderType="Bare" wrap="Wrap">
+								<Button text="Abweichungen" icon="sap-icon://compare" type="Transparent" press=".onDeviations" visible="{= ${view>sync/state} === 'deviations' }"/>
+								<Button icon="sap-icon://action" type="Transparent" tooltip="In Lexware öffnen" press=".onOpen" visible="{= !!${view>lexwareUrl} }"/>
+								<Button text="In Lexware anlegen" type="Transparent" press=".onCreate" visible="{= ${view>sync/state} === 'local' &amp;&amp; ${view>/canPush} === true }"/>
+							</HBox>
+						</ColumnListItem>
+					</items>
+				</Table>
+
+				<Table id="articleOnlyLexware" items="{view>/onlyLexware}" visible="{= ${view>/onlyLexware}.length > 0 }" class="sapUiMediumMarginTop" popinLayout="GridSmall" contextualWidth="Auto">
+					<headerToolbar>
+						<Toolbar><Title text="In Lexware Office, noch nicht übernommen: möglicher Treffer in EstrichONE, bitte entscheiden" level="H3" wrapping="true"/></Toolbar>
+					</headerToolbar>
+					<columns>
+						<Column><Text text="Artikel in Lexware Office"/></Column>
+						<Column><Text text="Möglicher Treffer in EstrichONE"/></Column>
+						<Column width="22rem" hAlign="End"/>
+					</columns>
+					<items>
+						<ColumnListItem>
+							<VBox renderType="Bare">
+								<Text text="{view>article/title}" class="eoStrong"/>
+								<Text text="{view>remoteText}" class="eoMuted"/>
+							</VBox>
+							<VBox renderType="Bare">
+								<Text text="{view>candidateTitle}"/>
+								<Text text="{view>reasonText}" class="eoMuted"/>
+							</VBox>
+							<HBox justifyContent="End" renderType="Bare" wrap="Wrap">
+								<Button text="Verknüpfen" icon="sap-icon://chain-link" type="Transparent" press=".onLinkCandidate" visible="{= !!${view>candidateId} }"/>
+								<Button text="Trotzdem übernehmen" type="Transparent" press=".onImportAnyway"/>
+							</HBox>
+						</ColumnListItem>
+					</items>
+				</Table>
+			</VBox>
+		</f:content>
+	</f:DynamicPage>
+</mvc:View>

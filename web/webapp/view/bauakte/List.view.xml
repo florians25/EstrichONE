@@ -47,6 +47,8 @@
 							<IconTabFilter key="planned" text="Geplant"/>
 							<IconTabFilter key="inProgress" text="In Ausführung"/>
 							<IconTabFilter key="drying" text="Belegreif / Trocknung"/>
+							<IconTabFilter key="review" text="Zur Abschlussprüfung" icon="sap-icon://inspection" iconColor="Critical"
+								visible="{= ${session>/modules/lexwareStatus} === true }"/>
 							<IconTabSeparator/>
 							<IconTabFilter key="old" text="Altakten" icon="sap-icon://attachment-zip-file" iconColor="Neutral"/>
 						</items>
@@ -88,8 +90,11 @@
 								<Text text="{parts: ['view>street', 'view>postalCode', 'view>city'], formatter: 'fmt.address'}"/>
 							</HBox>
 							<Text text="{path: 'view>responsibleUserId', formatter: 'fmt.person'}"/>
-							<ObjectStatus text="{path: 'view>status', formatter: 'fmt.bauakteStatusText'}" state="{path: 'view>status', formatter: 'fmt.bauakteStatusState'}"
-								icon="{path: 'view>status', formatter: 'fmt.bauakteStatusIcon'}" inverted="true"/>
+							<VBox renderType="Bare">
+								<ObjectStatus text="{path: 'view>status', formatter: 'fmt.bauakteStatusText'}" state="{path: 'view>status', formatter: 'fmt.bauakteStatusState'}"
+									icon="{path: 'view>status', formatter: 'fmt.bauakteStatusIcon'}" inverted="true"/>
+								<ObjectStatus text="Zur Abschlussprüfung" state="Warning" icon="sap-icon://inspection" visible="{= !!${view>reviewRequestedAt} }"/>
+							</VBox>
 							<Text text="{path: 'view>updatedAt', formatter: 'fmt.dateTime'}" class="eoTabular"/>
 						</ColumnListItem>
 					</items>

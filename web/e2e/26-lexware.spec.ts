@@ -165,7 +165,8 @@ test('Lexware Office: Kunde mit Dublettenprüfung verknüpfen, Rechnungen und An
   await page.goto(`/bauakten/${bauakte}`);
   await openSection(page, 'Rechnungen und Angebote');
   await expect(page.getByText('Dieser Bauakte ist noch keine Rechnung und kein Angebot zugeordnet.')).toBeVisible();
-  await expect(page.getByText('werden ausschließlich in Lexware Office erstellt', { exact: false })).toBeVisible();
+  await expect(page.getByText('Rechnungen werden in Lexware Office erstellt', { exact: false })).toBeVisible();
+  // Ohne das Modul „Angebote (Beta)“ gibt es keine Schaltfläche, die einen Beleg erstellt.
   await expect(page.getByRole('button', { name: /Rechnung erstellen|Angebot erstellen|Entwurf/ })).toHaveCount(0);
 
   // Beleg zuordnen: Belege des Kunden, der Beleg mit der Bauaktennummer steht als Vorschlag oben.

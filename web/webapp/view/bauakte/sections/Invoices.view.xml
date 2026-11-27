@@ -12,6 +12,8 @@
 					<ToolbarSpacer/>
 					<Button id="invoiceRefresh" text="Aktualisieren" icon="sap-icon://refresh" press=".onRefresh" enabled="{= ${inv>/configured} === true }"
 						tooltip="Status aller Belege jetzt mit Lexware Office abgleichen"/>
+					<Button id="quotationCreate" text="Angebot erstellen (Beta)" icon="sap-icon://create-form" press=".onCreateQuotation" visible="{= ${inv>/canQuote} === true }"
+						tooltip="Angebot in EstrichONE vorbereiten und als Entwurf an Lexware Office senden"/>
 					<Button id="invoiceAssign" text="Beleg zuordnen" icon="sap-icon://chain-link" type="Emphasized" press=".onAssign" visible="{= ${inv>/canAssign} === true }"
 						tooltip="Vorhandene Rechnung oder vorhandenes Angebot aus Lexware Office dieser Bauakte zuordnen">
 						<layoutData><OverflowToolbarLayoutData priority="NeverOverflow"/></layoutData>
@@ -54,6 +56,32 @@
 			</items>
 		</Table>
 		<Text id="invoiceSummary" text="{inv>/summary}" class="sapUiTinyMarginTop" visible="{= !!${inv>/summary} }"/>
-		<Text text="Rechnungen und Angebote werden ausschließlich in Lexware Office erstellt und bearbeitet. EstrichONE zeigt Nummer, Betrag und Status, zeigt den Beleg als PDF an und führt Sie zum Beleg. Für Entwürfe stellt Lexware Office kein PDF bereit." class="eoHelpText sapUiTinyMarginTop"/>
+		<Table id="quotationDrafts" items="{inv>/quotations}" visible="{= ${inv>/quotations}.length > 0 }" class="sapUiSmallMarginTop" popinLayout="GridSmall" contextualWidth="Auto">
+			<headerToolbar>
+				<OverflowToolbar>
+					<Title text="Angebote in Vorbereitung" level="H3"/>
+					<ObjectStatus text="Beta" state="Information" inverted="true"/>
+				</OverflowToolbar>
+			</headerToolbar>
+			<columns>
+				<Column><Text text="Titel"/></Column>
+				<Column width="12rem"><Text text="Stand"/></Column>
+				<Column width="8rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Gültig bis"/></Column>
+				<Column width="8rem" hAlign="End" minScreenWidth="Tablet" demandPopin="true"><Text text="Netto"/></Column>
+				<Column width="8rem" hAlign="End"><Text text="Brutto"/></Column>
+				<Column width="8rem" hAlign="End"/>
+			</columns>
+			<items>
+				<ColumnListItem>
+					<Link text="{inv>title}" press=".onOpenQuotation"/>
+					<ObjectStatus text="{inv>stateText}" state="{inv>stateState}"/>
+					<Text text="{inv>validText}" class="eoTabular"/>
+					<Text text="{inv>netText}" class="eoTabular"/>
+					<Text text="{inv>grossText}" class="eoTabular eoStrong"/>
+					<Button text="Bearbeiten" type="Transparent" press=".onOpenQuotation"/>
+				</ColumnListItem>
+			</items>
+		</Table>
+		<Text text="Rechnungen werden in Lexware Office erstellt und bearbeitet. EstrichONE zeigt Nummer, Betrag und Status, zeigt den Beleg als PDF an und führt Sie zum Beleg. Für Entwürfe stellt Lexware Office kein PDF bereit." class="eoHelpText sapUiTinyMarginTop"/>
 	</VBox>
 </mvc:View>

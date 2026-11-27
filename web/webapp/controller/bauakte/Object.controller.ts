@@ -470,6 +470,15 @@ export default class ObjectController extends BaseController {
 		if (choice === "completeAndArchive") await archiveAfterCompletion(b.id, b.title);
 	}
 
+	/** „Prüfung zurückstellen“: Kennzeichen „Zur Abschlussprüfung“ entfernen (wird bei geändertem Zahlstatus erneut gesetzt). */
+	async onDismissReview(): Promise<void> {
+		const done = await this.run(() => post<BauakteDetail>(`bauakten/${this.id}/review/dismiss`), "Prüfung zurückgestellt");
+		if (done) {
+			akte.invalidate(this.id);
+			this.apply(done);
+		}
+	}
+
 	onReactivate(): void {
 		void this.save({ status: "planned", cancellationReason: null }, this.t("akte.reactivated"));
 	}

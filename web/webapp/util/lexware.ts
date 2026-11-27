@@ -35,6 +35,15 @@ export interface LexwareSettings {
 	customersWithDeviations: number;
 	/** Neue Kunden ohne Treffer automatisch in Lexware Office anlegen. */
 	autoCreate: boolean;
+	/** Richtung des Artikelabgleichs (Modul „Lexware Office: Artikel“). */
+	articleSync: "fromLexware" | "both" | "off";
+	lastArticleSyncAt: string | null;
+	lastArticleSyncError: string | null;
+	catalogItems: number;
+	articlesWithDeviations: number;
+	/** Regeln des Moduls „Status der Bauakte automatisch“. */
+	statusOnQuotationAccepted: boolean;
+	statusOnInvoicesPaid: boolean;
 }
 
 /** Stand der automatischen Anlage eines Kunden in Lexware Office. */

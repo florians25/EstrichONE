@@ -72,7 +72,8 @@ export default class List extends BaseController {
 		m.setProperty("/busy", true);
 		try {
 			const page = await get<BauaktePage>("bauakten", {
-				limit: 50, status: m.getProperty("/status") || "active", search: m.getProperty("/search") || undefined,
+				limit: 50, status: m.getProperty("/status") === "review" ? "active" : m.getProperty("/status") || "active", search: m.getProperty("/search") || undefined,
+				review: m.getProperty("/status") === "review" ? true : undefined,
 				cursor: more ? m.getProperty("/cursor") : undefined, responsibleUserId: m.getProperty("/responsible") || undefined,
 				customerId: m.getProperty("/customer") || undefined, assigned: m.getProperty("/scope") === "mine" ? true : undefined,
 			});
