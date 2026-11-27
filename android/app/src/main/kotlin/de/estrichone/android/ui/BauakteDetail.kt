@@ -342,6 +342,10 @@ private fun Header(b: Bauakte, session: Session, viewOnly: Boolean = false) {
         }
         b.addressLine?.let { Secondary(it, Modifier.padding(top = 8.dp)) }
         if (b.status == BauakteStatus.Cancelled && b.cancellationReason != null) Secondary("Storniert: ${b.cancellationReason}", Modifier.padding(top = 4.dp))
+        if (b.reviewRequestedAt != null) {
+            Pill("Zur Abschlussprüfung", tones.warning, tones.warningSoft, modifier = Modifier.padding(top = 8.dp))
+            Secondary(b.reviewReason ?: "Bitte prüfen und abschließen.", Modifier.padding(top = 4.dp))
+        }
     }
     TransferLine(b.id, Modifier.padding(top = Space.m))
 }

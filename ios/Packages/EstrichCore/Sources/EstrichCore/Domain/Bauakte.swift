@@ -74,6 +74,10 @@ public struct Bauakte: Identifiable, Equatable, Sendable {
     public let initialInspectionWaivedReason: String?
     public let initialInspectionWaivedByName: String?
     public let initialInspectionWaivedAt: Date?
+    /// Kennzeichen „Zur Abschlussprüfung“ (z. B. alle Rechnungen in Lexware Office bezahlt). Kein eigener Status; ältere
+    /// Server liefern die Felder nicht. Abgeschlossen wird im Büro.
+    public let reviewRequestedAt: Date?
+    public let reviewReason: String?
     public let syncState: SyncState
 
     public init(_ entity: LocalEntity) {
@@ -103,6 +107,8 @@ public struct Bauakte: Identifiable, Equatable, Sendable {
         initialInspectionWaivedReason = data["initialInspectionWaivedReason"]?.string
         initialInspectionWaivedByName = data["initialInspectionWaivedByName"]?.string
         initialInspectionWaivedAt = data["initialInspectionWaivedAt"]?.string.flatMap(APIDate.parse)
+        reviewRequestedAt = data["reviewRequestedAt"]?.string.flatMap(APIDate.parse)
+        reviewReason = data["reviewReason"]?.string
         syncState = entity.syncState
     }
 

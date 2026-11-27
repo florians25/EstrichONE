@@ -80,6 +80,13 @@ data class Bauakte(val entity: LocalEntity) {
     val initialInspectionWaivedByName: String? = d.str("initialInspectionWaivedByName")
     val initialInspectionWaivedAt: Instant? = ApiDate.parse(d.str("initialInspectionWaivedAt"))
 
+    /**
+     * Kennzeichen „Zur Abschlussprüfung“ (z. B. alle Rechnungen in Lexware Office bezahlt). Kein eigener Status; ältere
+     * Server liefern die Felder nicht. Abgeschlossen wird im Büro.
+     */
+    val reviewRequestedAt: Instant? = ApiDate.parse(d.str("reviewRequestedAt"))
+    val reviewReason: String? = d.str("reviewReason")
+
     /** „Keine Erstbegehung erforderlich (Max Huber, 10.11.2026, Bestandsgebäude)“; leere Angaben entfallen, `null` ohne Vermerk. */
     val initialInspectionWaiverText: String?
         get() {

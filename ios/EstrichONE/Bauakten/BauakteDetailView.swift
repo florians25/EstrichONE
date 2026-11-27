@@ -618,6 +618,12 @@ struct BauakteDetailView: View {
                     if bauakte.status == .cancelled {
                         Callout(tone: .danger, title: "Storniert", message: bauakte.cancellationReason ?? "ohne Angabe eines Grundes", symbol: "xmark.circle.fill")
                     }
+                    if bauakte.reviewRequestedAt != nil {
+                        // Kennzeichen vom Server (z. B. Rechnungen in Lexware Office bezahlt); abgeschlossen wird im Büro.
+                        Callout(tone: .warning, title: "Zur Abschlussprüfung", message: bauakte.reviewReason ?? "Bitte prüfen und abschließen.",
+                                symbol: "checkmark.seal")
+                            .accessibilityIdentifier("reviewBadge")
+                    }
                     if let statusError {
                         Callout(tone: .danger, message: statusError)
                     }
