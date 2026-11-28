@@ -50,6 +50,8 @@ public static class Permissions
     public const string CreditNotesRead = "creditnotes.read";
     public const string CreditNotesEdit = "creditnotes.edit";
     public const string CreditNotesFinalize = "creditnotes.finalize";
+    public const string PurchasesRead = "purchases.read";
+    public const string PurchasesEdit = "purchases.edit";
     public const string UsersManage = "users.manage";
     public const string RolesManage = "roles.manage";
     public const string DevicesRead = "devices.read";
@@ -115,6 +117,8 @@ public static class Permissions
         new(CreditNotesRead, "Verkauf", "Gutschriften im Verkauf ansehen"),
         new(CreditNotesEdit, "Verkauf", "Gutschriften erfassen und als Entwurf an Lexware Office senden"),
         new(CreditNotesFinalize, "Verkauf", "Gutschriften beim Senden festschreiben"),
+        new(PurchasesRead, "Eingangsbelege", "Eingangsbelege aus Lexware Office und die Kosten der Bauakte ansehen (Modul „Eingangsbelege“)"),
+        new(PurchasesEdit, "Eingangsbelege", "Eingangsbelege hochladen, an Lexware Office weitergeben und Bauakten zuordnen; Lieferanten verknüpfen"),
         new(UsersManage, "Verwaltung", "Benutzer verwalten"),
         new(RolesManage, "Verwaltung", "Rollen und Rechte verwalten"),
         new(DevicesRead, "IT Center", "Geräte sehen"),

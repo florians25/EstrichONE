@@ -27085,6 +27085,631 @@
         ]
       }
     },
+    "/api/v1/purchases/vouchers": {
+      "get": {
+        "tags": [
+          "Eingangsbelege"
+        ],
+        "summary": "Eingangsbelege aus Lexware Office (Belegliste) mit Bauakte und Lieferant, dazu die hochgeladenen Belege",
+        "operationId": "ListPurchaseVouchers",
+        "parameters": [
+          {
+            "name": "refresh",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PurchaseListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/purchases/vouchers/{lexwareId}/bauakte": {
+      "put": {
+        "tags": [
+          "Eingangsbelege"
+        ],
+        "summary": "Eingangsbeleg einer Bauakte zuordnen oder die Zuordnung lösen (ohne bauakteId)",
+        "operationId": "AssignPurchaseVoucher",
+        "parameters": [
+          {
+            "name": "lexwareId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignPurchaseVoucherRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/purchases/suppliers/{lexwareContactId}": {
+      "put": {
+        "tags": [
+          "Eingangsbelege"
+        ],
+        "summary": "Lieferant aus Lexware Office mit einem Lieferanten des Materialstamms verknüpfen (ohne supplierId lösen)",
+        "operationId": "LinkPurchaseSupplier",
+        "parameters": [
+          {
+            "name": "lexwareContactId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LinkPurchaseSupplierRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/purchases/documents": {
+      "post": {
+        "tags": [
+          "Eingangsbelege"
+        ],
+        "summary": "Eingangsbeleg hochladen: Inhalt der Datei als Rohdaten im Body (PDF, JPEG, PNG, XRechnung als XML; höchstens 5 MB). Gleiche Datei ein zweites Mal liefert den vorhandenen Beleg",
+        "operationId": "UploadPurchaseDocument",
+        "parameters": [
+          {
+            "name": "fileName",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "bauakteId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "source",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PurchaseDocumentResponse"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PurchaseDocumentResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Payload Too Large",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported Media Type",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/purchases/documents/{id}": {
+      "get": {
+        "tags": [
+          "Eingangsbelege"
+        ],
+        "summary": "Hochgeladener Eingangsbeleg mit den Daten der E-Rechnung und der Prüfung der Pflichtangaben",
+        "operationId": "GetPurchaseDocument",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PurchaseDocumentResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "Eingangsbelege"
+        ],
+        "summary": "Bauakte und Notiz des hochgeladenen Eingangsbelegs ändern",
+        "operationId": "UpdatePurchaseDocument",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePurchaseDocumentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PurchaseDocumentResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Eingangsbelege"
+        ],
+        "summary": "Hochgeladenen Eingangsbeleg verwerfen (nur vor der Übergabe an Lexware Office)",
+        "operationId": "DiscardPurchaseDocument",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/purchases/documents/{id}/file": {
+      "get": {
+        "tags": [
+          "Eingangsbelege"
+        ],
+        "summary": "Datei des hochgeladenen Eingangsbelegs",
+        "operationId": "GetPurchaseDocumentFile",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/purchases/documents/{id}/send": {
+      "post": {
+        "tags": [
+          "Eingangsbelege"
+        ],
+        "summary": "An Lexware Office übergeben (POST /v1/files, type voucher). Ein übergebener Beleg wird nicht ein zweites Mal gesendet",
+        "operationId": "SendPurchaseDocumentToLexware",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PurchaseDocumentResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "424": {
+            "description": "Failed Dependency",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/purchases/bauakten/{id}/costs": {
+      "get": {
+        "tags": [
+          "Eingangsbelege"
+        ],
+        "summary": "Erlöse, Kosten und Differenz der Bauakte mit den zugeordneten und hochgeladenen Eingangsbelegen",
+        "operationId": "GetBauakteCosts",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BauakteCostsResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/backup/status": {
       "get": {
         "tags": [
@@ -31421,6 +32046,21 @@
           }
         }
       },
+      "AssignPurchaseVoucherRequest": {
+        "required": [
+          "bauakteId"
+        ],
+        "type": "object",
+        "properties": {
+          "bauakteId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
       "AttachDeviceRequest": {
         "required": [
           "deviceId",
@@ -32243,6 +32883,55 @@
               "integer"
             ],
             "format": "int64"
+          }
+        }
+      },
+      "BauakteCostsResponse": {
+        "required": [
+          "bauakteId",
+          "revenue",
+          "costs",
+          "difference",
+          "text",
+          "vouchers",
+          "documents",
+          "canEdit"
+        ],
+        "type": "object",
+        "properties": {
+          "bauakteId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "revenue": {
+            "type": "number",
+            "format": "double"
+          },
+          "costs": {
+            "type": "number",
+            "format": "double"
+          },
+          "difference": {
+            "type": "number",
+            "format": "double"
+          },
+          "text": {
+            "type": "string"
+          },
+          "vouchers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PurchaseListItem"
+            }
+          },
+          "documents": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PurchaseDocumentItem"
+            }
+          },
+          "canEdit": {
+            "type": "boolean"
           }
         }
       },
@@ -39286,6 +39975,193 @@
           }
         }
       },
+      "EInvoiceData": {
+        "required": [
+          "format",
+          "creditNote",
+          "number",
+          "issueDate",
+          "dueDate",
+          "sellerName",
+          "sellerVatId",
+          "sellerStreet",
+          "sellerPostalCode",
+          "sellerCity",
+          "buyerName",
+          "buyerReference",
+          "currency",
+          "netTotal",
+          "taxTotal",
+          "grossTotal",
+          "duePayable",
+          "lines",
+          "problems"
+        ],
+        "type": "object",
+        "properties": {
+          "format": {
+            "type": "string"
+          },
+          "creditNote": {
+            "type": "boolean"
+          },
+          "number": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "issueDate": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "dueDate": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "sellerName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "sellerVatId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "sellerStreet": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "sellerPostalCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "sellerCity": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "buyerName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "buyerReference": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "currency": {
+            "type": "string"
+          },
+          "netTotal": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "taxTotal": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "grossTotal": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "duePayable": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "lines": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EInvoiceLine"
+            }
+          },
+          "problems": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "EInvoiceLine": {
+        "required": [
+          "name",
+          "quantity",
+          "unit",
+          "netPrice",
+          "lineNet",
+          "taxRate"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "unit": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "netPrice": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "lineNet": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "taxRate": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          }
+        }
+      },
       "EmployeeDetail": {
         "required": [
           "id",
@@ -44293,6 +45169,21 @@
           }
         }
       },
+      "LinkPurchaseSupplierRequest": {
+        "required": [
+          "supplierId"
+        ],
+        "type": "object",
+        "properties": {
+          "supplierId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
       "LinkTicketRequest": {
         "required": [
           "otherTicketId"
@@ -44969,6 +45860,9 @@
             "type": "boolean"
           },
           "salesPayments": {
+            "type": "boolean"
+          },
+          "purchases": {
             "type": "boolean"
           },
           "lexwareStatus": {
@@ -47609,6 +48503,329 @@
               "type": "string",
               "format": "uuid"
             }
+          }
+        }
+      },
+      "PurchaseDocumentItem": {
+        "required": [
+          "id",
+          "fileName",
+          "contentType",
+          "sizeBytes",
+          "format",
+          "formatName",
+          "supplierName",
+          "invoiceNumber",
+          "invoiceDate",
+          "grossAmount",
+          "bauakteId",
+          "bauakteNumber",
+          "bauakteTitle",
+          "state",
+          "sendError",
+          "uploadedAt",
+          "uploadedBy",
+          "sentAt",
+          "problemCount",
+          "source"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "fileName": {
+            "type": "string"
+          },
+          "contentType": {
+            "type": "string"
+          },
+          "sizeBytes": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "format": {
+            "type": "string"
+          },
+          "formatName": {
+            "type": "string"
+          },
+          "supplierName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "invoiceNumber": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "invoiceDate": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "grossAmount": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "bauakteId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "bauakteNumber": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "bauakteTitle": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "state": {
+            "type": "string"
+          },
+          "sendError": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "uploadedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "uploadedBy": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "sentAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "problemCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "source": {
+            "type": "string"
+          }
+        }
+      },
+      "PurchaseDocumentResponse": {
+        "required": [
+          "document",
+          "note",
+          "data",
+          "canEdit"
+        ],
+        "type": "object",
+        "properties": {
+          "document": {
+            "$ref": "#/components/schemas/PurchaseDocumentItem"
+          },
+          "note": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "data": {
+            "$ref": "#/components/schemas/EInvoiceData"
+          },
+          "canEdit": {
+            "type": "boolean"
+          },
+          "duplicate": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      },
+      "PurchaseListItem": {
+        "required": [
+          "lexwareId",
+          "type",
+          "typeName",
+          "number",
+          "voucherDate",
+          "dueDate",
+          "gross",
+          "openAmount",
+          "status",
+          "contactName",
+          "lexwareContactId",
+          "supplierId",
+          "supplierName",
+          "supplierLinkedByHand",
+          "bauakteId",
+          "bauakteNumber",
+          "bauakteTitle",
+          "lexwareUrl"
+        ],
+        "type": "object",
+        "properties": {
+          "lexwareId": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "typeName": {
+            "type": "string"
+          },
+          "number": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "voucherDate": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "dueDate": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "gross": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "openAmount": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "status": {
+            "type": "string"
+          },
+          "contactName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "lexwareContactId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "supplierId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "supplierName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "supplierLinkedByHand": {
+            "type": "boolean"
+          },
+          "bauakteId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "bauakteNumber": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "bauakteTitle": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "lexwareUrl": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "PurchaseListResponse": {
+        "required": [
+          "items",
+          "documents",
+          "suppliers",
+          "canEdit",
+          "loadedAt",
+          "lexwareError"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PurchaseListItem"
+            }
+          },
+          "documents": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PurchaseDocumentItem"
+            }
+          },
+          "suppliers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SupplierSummary"
+            }
+          },
+          "canEdit": {
+            "type": "boolean"
+          },
+          "loadedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lexwareError": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -53973,6 +55190,29 @@
           }
         }
       },
+      "SupplierSummary": {
+        "required": [
+          "id",
+          "name",
+          "number"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "number": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "SwapCrewsRequest": {
         "required": [
           "crewA",
@@ -57098,6 +58338,29 @@
           }
         }
       },
+      "UpdatePurchaseDocumentRequest": {
+        "required": [
+          "bauakteId",
+          "note"
+        ],
+        "type": "object",
+        "properties": {
+          "bauakteId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "note": {
+            "maxLength": 1000,
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "UpdateStatusResponse": {
         "required": [
           "installed",
@@ -58252,6 +59515,9 @@
     },
     {
       "name": "Verkauf"
+    },
+    {
+      "name": "Eingangsbelege"
     },
     {
       "name": "Backup-Spiegel"

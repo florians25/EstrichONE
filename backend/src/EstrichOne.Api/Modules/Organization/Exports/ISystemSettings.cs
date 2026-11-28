@@ -363,6 +363,9 @@ public sealed record ModuleSettings
 
     public bool SalesPayments { get; init; }
 
+    /// <summary>Eingangsbelege aus Lexware Office (setzt Lexware Office voraus). Zunächst aus.</summary>
+    public bool Purchases { get; init; }
+
     /// <summary>Lexware Office: Status der Bauakte automatisch aus Angebots- und Rechnungsstatus (setzt Lexware Office voraus). Zunächst aus.</summary>
     public bool LexwareStatus { get; init; }
 
@@ -396,6 +399,7 @@ public sealed record ModuleSettings
         AppModules.SalesCreditNotes => SalesCreditNotes,
         AppModules.SalesFinalize => SalesFinalize,
         AppModules.SalesPayments => SalesPayments,
+        AppModules.Purchases => Purchases,
         AppModules.LexwareStatus => LexwareStatus,
         _ => true,
     };
@@ -430,6 +434,7 @@ public sealed record ModuleSettings
         AppModules.SalesCreditNotes => this with { SalesCreditNotes = on },
         AppModules.SalesFinalize => this with { SalesFinalize = on },
         AppModules.SalesPayments => this with { SalesPayments = on },
+        AppModules.Purchases => this with { Purchases = on },
         AppModules.LexwareStatus => this with { LexwareStatus = on },
         _ => this,
     };

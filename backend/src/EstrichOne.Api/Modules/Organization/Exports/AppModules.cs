@@ -49,6 +49,7 @@ public static class AppModules
     public const string SalesCreditNotes = "salesCreditNotes";
     public const string SalesFinalize = "salesFinalize";
     public const string SalesPayments = "salesPayments";
+    public const string Purchases = "purchases";
     public const string LexwareStatus = "lexwareStatus";
 
     /// <summary>Fehlercode der Endpunkte abgeschalteter Module.</summary>
@@ -96,6 +97,9 @@ public static class AppModules
             [Sales]),
         new(SalesPayments, "office", "Verkauf: Zahlungen und Mahnstufe", "Offenen Betrag, Zahlstatus und Mahnstufe der Rechnungen aus Lexware Office anzeigen.",
             [SalesInvoices]),
+        new(Purchases, "office", "Eingangsbelege",
+            "Eingangsrechnungen und Gutschriften von Lieferanten aus Lexware Office anzeigen, Bauakten zuordnen (Kosten der Bauakte) und neue Belege hochladen (PDF, Foto, XRechnung, ZUGFeRD), die an Lexware Office weitergegeben werden.",
+            [Lexware]),
 
         new(Materials, "material", "Material und Lieferanten", "Materialstamm, Lieferanten und Materialhinweise in Bauakten.", []),
         new(Orders, "material", "Bestellungen", "Materialbestellungen mit Bestell-PDF und Lieferstatus.", [Materials]),

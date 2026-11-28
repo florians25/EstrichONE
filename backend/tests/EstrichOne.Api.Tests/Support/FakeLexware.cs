@@ -120,6 +120,9 @@ public sealed class FakeLexware : HttpMessageHandler
     /// <summary>Gesendete Angebote (Inhalt von <c>POST /v1/quotations</c>).</summary>
     public ConcurrentBag<JsonObject> Quotations { get; } = [];
 
+    /// <summary>Übergebene Dateien (<c>POST /v1/files</c>): ID → Inhalt des Formulars als Text.</summary>
+    public ConcurrentDictionary<string, string> Files { get; } = new();
+
     /// <summary>Offener Betrag je Beleg für <c>GET /v1/payments/{id}</c> und die Belegliste.</summary>
     public ConcurrentDictionary<string, decimal> OpenAmounts { get; } = new();
 
@@ -266,6 +269,20 @@ public sealed class FakeLexware : HttpMessageHandler
                     ["content"] = content, ["first"] = page == 0, ["last"] = page + 1 >= totalPages, ["totalPages"] = totalPages,
                     ["totalElements"] = all.Count, ["numberOfElements"] = content.Count, ["size"] = size, ["number"] = page,
                 });
+            }
+
+            case ("POST", "/v1/files"):
+            {
+                // Belegeingang: multipart/form-data mit „file“ und „type=voucher“.
+                if (request.Content is not MultipartFormDataContent || body is null || !body.Contains("name=type", StringComparison.Ordinal)
+                    || !body.Contains("voucher", StringComparison.Ordinal))
+                {
+                    return Json(HttpStatusCode.BadRequest, new JsonObject { ["status"] = 400, ["message"] = "type must be voucher" });
+                }
+
+                var fileId = Guid.NewGuid().ToString();
+                Files[fileId] = body;
+                return Json(HttpStatusCode.Accepted, new JsonObject { ["id"] = fileId });
             }
 
             case ("POST", "/v1/contacts"):

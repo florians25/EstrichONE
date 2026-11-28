@@ -220,6 +220,14 @@ public static class LexwareVoucherTypes
 
     public static IReadOnlyList<string> All { get; } = [Invoice, Quotation, CreditNote, OrderConfirmation, DeliveryNote];
 
+    /// <summary>Eingangsrechnung eines Lieferanten (nur lesend).</summary>
+    public const string PurchaseInvoice = "purchaseinvoice";
+
+    /// <summary>Gutschrift eines Lieferanten (nur lesend).</summary>
+    public const string PurchaseCreditNote = "purchasecreditnote";
+
+    public static IReadOnlyList<string> Purchase { get; } = [PurchaseInvoice, PurchaseCreditNote];
+
     /// <summary>Belege mit Zahlungsbedeutung (offen, überfällig, bezahlt): Rechnung und Gutschrift.</summary>
     public static bool Payable(string? type) => type is Invoice or CreditNote;
 
@@ -231,6 +239,7 @@ public static class LexwareVoucherTypes
         CreditNote => "credit-notes",
         OrderConfirmation => "order-confirmations",
         DeliveryNote => "delivery-notes",
+        PurchaseInvoice or PurchaseCreditNote => "vouchers",
         _ => null,
     };
 }
@@ -240,8 +249,8 @@ public static class LexwareVoucherTypes
 /// Sekunde, Wiederholung bei 429 mit wachsender Wartezeit, Zeitlimit je Versuch und verständliche Fehlermeldungen.
 /// Geschrieben wird nur an genau benannten Stellen (<see cref="WriteAllowed"/>): Kontakte anlegen und ändern
 /// (<c>POST /v1/contacts</c>, <c>PUT /v1/contacts/{id}</c>), Artikel anlegen und ändern (<c>POST /v1/articles</c>,
-/// <c>PUT /v1/articles/{id}</c>) und Verkaufsbelege anlegen (Angebot, Auftragsbestätigung, Rechnung, Gutschrift; als Entwurf,
-/// festgeschrieben nur mit ausdrücklicher Freigabe). Belege werden nie geändert, gelöscht oder archiviert.
+/// <c>PUT /v1/articles/{id}</c>), Verkaufsbelege anlegen (Angebot, Auftragsbestätigung, Rechnung, Gutschrift; als Entwurf,
+/// festgeschrieben nur mit ausdrücklicher Freigabe) und Eingangsbelege als Datei übergeben (<c>POST /v1/files</c>). Belege werden nie geändert, gelöscht oder archiviert.
 /// <see cref="WriteAllowed"/> weist jeden anderen schreibenden Aufruf schon vor dem Senden ab.
 /// Alle Feldnamen der API stehen nur in dieser Datei (docs/lexware-office.md), damit Anpassungen an einer Stelle bleiben.
 /// </summary>
@@ -694,6 +703,31 @@ public sealed class LexwareClient(IHttpClientFactory http, IOptions<LexwareOptio
         return result;
     }
 
+    /// <summary>Eingangsbelege der Belegliste (Eingangsrechnungen und Gutschriften von Lieferanten), neueste zuerst.</summary>
+    public Task<IReadOnlyList<LexwareListVoucher>> ListPurchaseVouchersAsync(LexwareConnection connection, int size, int maxPages,
+        CancellationToken cancellationToken) =>
+        ListSalesVouchersAsync(connection, LexwareVoucherTypes.Purchase, size, maxPages, cancellationToken);
+
+    /// <summary>
+    /// Übergibt eine Datei (PDF, Bild, XRechnung) als Eingangsbeleg (<c>POST /v1/files</c>, Formularfeld <c>type=voucher</c>).
+    /// Lexware Office legt daraus einen Beleg „zu prüfen“ an. Wird bei Fehlern nicht wiederholt (außer bei 429), damit kein
+    /// Beleg doppelt entsteht.
+    /// </summary>
+    public async Task<string> UploadVoucherFileAsync(LexwareConnection connection, byte[] content, string fileName, string contentType,
+        CancellationToken cancellationToken)
+    {
+        var (bytes, _) = await SendRawAsync(connection, HttpMethod.Post, "/v1/files", null, "application/json", cancellationToken, content: () =>
+        {
+            var form = new MultipartFormDataContent();
+            var file = new ByteArrayContent(content);
+            file.Headers.ContentType = new MediaTypeHeaderValue(contentType);
+            form.Add(file, "file", fileName);
+            form.Add(new StringContent("voucher"), "type");
+            return form;
+        });
+        return Str(Parse(Encoding.UTF8.GetString(bytes))?["id"]) ?? throw new LexwareException("UNEXPECTED_RESPONSE", $"{Service} hat keine ID der Datei geliefert.");
+    }
+
     /// <summary>Datum als Zeitpunkt um Mitternacht in deutscher Zeit, wie Lexware Office es erwartet (<c>2026-11-27T00:00:00.000+01:00</c>).</summary>
     internal static string LexwareDate(DateOnly date)
     {
@@ -1009,8 +1043,9 @@ public sealed class LexwareClient(IHttpClientFactory http, IOptions<LexwareOptio
     /// <summary>
     /// Schreibende Aufrufe sind nur an genau diesen Stellen erlaubt: Kontakt anlegen (<c>POST /v1/contacts</c>) und einen
     /// einzelnen ändern (<c>PUT /v1/contacts/{id}</c>), Artikel anlegen (<c>POST /v1/articles</c>) und einen einzelnen
-    /// ändern (<c>PUT /v1/articles/{id}</c>) sowie Verkaufsbelege anlegen (<c>POST /v1/quotations</c>,
-    /// <c>/v1/order-confirmations</c>, <c>/v1/invoices</c>, <c>/v1/credit-notes</c>). Als Abfrage ist bei Verkaufsbelegen nur
+    /// ändern (<c>PUT /v1/articles/{id}</c>), Verkaufsbelege anlegen (<c>POST /v1/quotations</c>,
+    /// <c>/v1/order-confirmations</c>, <c>/v1/invoices</c>, <c>/v1/credit-notes</c>) sowie eine Datei als Eingangsbeleg
+    /// übergeben (<c>POST /v1/files</c> mit <c>type=voucher</c>, ohne Abfrage). Als Abfrage ist bei Verkaufsbelegen nur
     /// <c>precedingSalesVoucherId</c> (Belegkette) erlaubt und <c>finalize=true</c> nur, wenn <paramref name="finalize"/>
     /// ausdrücklich gesetzt ist (Modul, Recht und Bestätigung geprüft). Alle anderen schreibenden Aufrufe tragen keine
     /// Abfrage. Belege werden nie geändert, gelöscht oder archiviert, Kontakte und Artikel nie gelöscht.
@@ -1033,7 +1068,7 @@ public sealed class LexwareClient(IHttpClientFactory http, IOptions<LexwareOptio
             return false;
         }
 
-        return (method == HttpMethod.Post && path is "/v1/contacts" or "/v1/articles")
+        return (method == HttpMethod.Post && path is "/v1/contacts" or "/v1/articles" or "/v1/files")
             || (method == HttpMethod.Put && (Single(path, ContactPath) || Single(path, ArticlePath)));
     }
 
@@ -1078,14 +1113,14 @@ public sealed class LexwareClient(IHttpClientFactory http, IOptions<LexwareOptio
         Parse(Encoding.UTF8.GetString((await SendRawAsync(connection, method, pathAndQuery, body, "application/json", cancellationToken)).Content));
 
     private async Task<(byte[] Content, string? ContentType)> SendRawAsync(LexwareConnection connection, HttpMethod method, string pathAndQuery,
-        JsonObject? body, string accept, CancellationToken cancellationToken, bool finalize = false)
+        JsonObject? body, string accept, CancellationToken cancellationToken, bool finalize = false, Func<HttpContent>? content = null)
     {
         var uri = new Uri(connection.BaseUri, pathAndQuery);
         var path = uri.AbsolutePath; // ohne Abfrage: dort können Namen und Adressen stehen
         if (!WriteAllowed(method, path, uri.Query, finalize))
         {
             throw new InvalidOperationException(
-                $"EstrichONE schreibt in Lexware Office nur Kontakte und Artikel (anlegen, ändern) und Verkaufsbelege (anlegen); {method.Method} {path} ist so nicht vorgesehen.");
+                $"EstrichONE schreibt in Lexware Office nur Kontakte und Artikel (anlegen, ändern), Verkaufsbelege (anlegen) und Eingangsbelege (Datei übergeben); {method.Method} {path} ist so nicht vorgesehen.");
         }
 
         var payload = body?.ToJsonString();
@@ -1096,7 +1131,11 @@ public sealed class LexwareClient(IHttpClientFactory http, IOptions<LexwareOptio
             using var request = new HttpRequestMessage(method, uri);
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", connection.ApiKey);
             request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue(accept));
-            if (payload is not null)
+            if (content is not null)
+            {
+                request.Content = content();
+            }
+            else if (payload is not null)
             {
                 request.Content = new StringContent(payload, Encoding.UTF8, "application/json");
             }

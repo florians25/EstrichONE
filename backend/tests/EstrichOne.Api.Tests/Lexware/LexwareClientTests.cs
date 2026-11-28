@@ -211,8 +211,17 @@ public sealed class LexwareClientTests : IDisposable
         var methods = typeof(LexwareClient).GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance
             | System.Reflection.BindingFlags.DeclaredOnly).Select(m => m.Name).Where(n => n != "Dispose").Order().ToList();
         methods.ShouldBe(["CreateArticleAsync", "CreateContactAsync", "CreateSalesVoucherAsync", "GetArticleAsync", "GetContactAsync", "GetPaymentAsync",
-            "GetVoucherAsync", "GetVoucherDocumentAsync", "ListArticlesAsync", "ListCustomersAsync", "ListPaymentConditionsAsync", "ListSalesVouchersAsync",
-            "ListVouchersAsync", "ProfileAsync", "UpdateArticleAsync", "UpdateContactAsync"]);
+            "GetVoucherAsync", "GetVoucherDocumentAsync", "ListArticlesAsync", "ListCustomersAsync", "ListPaymentConditionsAsync", "ListPurchaseVouchersAsync",
+            "ListSalesVouchersAsync", "ListVouchersAsync", "ProfileAsync", "UpdateArticleAsync", "UpdateContactAsync", "UploadVoucherFileAsync"]);
+
+        // Eingangsbeleg übergeben: nur POST /v1/files ohne Abfrage (type=voucher steht im Formular).
+        LexwareClient.WriteAllowed(HttpMethod.Post, "/v1/files").ShouldBeTrue();
+        foreach (var method in new[] { HttpMethod.Put, HttpMethod.Patch, HttpMethod.Delete })
+        {
+            LexwareClient.WriteAllowed(method, "/v1/files").ShouldBeFalse($"{method} /v1/files");
+        }
+
+        LexwareClient.WriteAllowed(HttpMethod.Post, "/v1/files", "?type=voucher").ShouldBeFalse();
 
         LexwareClient.WriteAllowed(HttpMethod.Post, "/v1/contacts").ShouldBeTrue();
         LexwareClient.WriteAllowed(HttpMethod.Put, "/v1/contacts/abc").ShouldBeTrue();
@@ -220,7 +229,7 @@ public sealed class LexwareClientTests : IDisposable
                  {
                      "/v1/invoices/abc", "/v1/invoices/abc/document", "/v1/invoices/abc/file", "/v1/quotations/abc",
                      "/v1/quotations/abc/document", "/v1/articles/abc/archive",
-                     "/v1/credit-notes/abc", "/v1/order-confirmations/abc", "/v1/voucherlist", "/v1/files", "/v1/dunnings", "/v1/delivery-notes",
+                     "/v1/credit-notes/abc", "/v1/order-confirmations/abc", "/v1/voucherlist", "/v1/dunnings", "/v1/vouchers", "/v1/delivery-notes",
                      "/v1/files/abc", "/v1/contacts/abc/archive", "/v1/contacts/", "/v1/event-subscriptions",
                  })
         {

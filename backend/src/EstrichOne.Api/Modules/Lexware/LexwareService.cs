@@ -566,7 +566,7 @@ public sealed class LexwareService(
 
     /// <summary>Status für die Anzeige: offene Rechnungen nach Ablauf der Fälligkeit gelten als überfällig.</summary>
     public string DisplayStatus(string type, string status, DateOnly? dueDate) =>
-        type == LexwareVoucherTypes.Invoice && status == "open" && dueDate is { } due && due < Today() ? "overdue" : status;
+        type is LexwareVoucherTypes.Invoice or LexwareVoucherTypes.PurchaseInvoice && status == "open" && dueDate is { } due && due < Today() ? "overdue" : status;
 
     public void Apply(LexwareVoucherLink link, LexwareVoucher voucher)
     {

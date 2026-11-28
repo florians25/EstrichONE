@@ -119,6 +119,12 @@ internal static class BauakteHistoryEndpoints
                 $"Automatisch durch {Detail("source")}: Status von „{Status(Detail("from"))}“ auf „{Status(Detail("to"))}“ gesetzt (Auslöser: {Trigger(Detail("trigger"))}).",
             "bauakte.review_requested" =>
                 $"Automatisch durch {(Detail("source") is { Length: > 0 } source ? source : "EstrichONE")}: zur Abschlussprüfung gestellt ({Detail("reason")}).",
+            "bauakte.purchase_assigned" =>
+                $"{actor} hat den Eingangsbeleg {(Detail("number").Length > 0 ? Detail("number") : "ohne Nummer")}{(Detail("supplier").Length > 0 ? $" von {Detail("supplier")}" : string.Empty)} zugeordnet.",
+            "bauakte.purchase_unassigned" =>
+                $"{actor} hat die Zuordnung des Eingangsbelegs {(Detail("number").Length > 0 ? Detail("number") : "ohne Nummer")} gelöst.",
+            "bauakte.purchase_uploaded" => $"{actor} hat den Eingangsbeleg „{Detail("file")}“ hochgeladen.",
+            "lexware.purchase_sent" => $"{actor} hat den Eingangsbeleg „{Detail("file")}“ an Lexware Office übergeben.",
             "bauakte.lexware_auto_assigned" =>
                 $"Lexware Office: {VoucherKind(Detail("kind"))} {(Detail("number").Length > 0 ? Detail("number") : "ohne Nummer")} {Detail("reason")}.",
             "bauakte.review_dismissed" => $"{actor} hat die Abschlussprüfung zurückgestellt.",

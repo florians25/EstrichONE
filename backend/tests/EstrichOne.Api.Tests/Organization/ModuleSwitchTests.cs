@@ -32,7 +32,7 @@ public sealed class ModuleSwitchTests(PostgresFixture postgres) : IAsyncLifetime
         var modules = (await site.GetFromJsonAsync<ModulesResponse>("/api/v1/settings/modules", TestJson.Options, Ct))!;
         // Lexware Office braucht einen API-Schlüssel und ist deshalb mit seinen Zusatzmodulen zunächst aus.
         string[] lexware = [AppModules.Lexware, AppModules.LexwareArticles, AppModules.Quotations, AppModules.LexwareStatus, AppModules.Sales,
-            AppModules.SalesOrderConfirmations, AppModules.SalesInvoices, AppModules.SalesCreditNotes, AppModules.SalesFinalize, AppModules.SalesPayments];
+            AppModules.SalesOrderConfirmations, AppModules.SalesInvoices, AppModules.SalesCreditNotes, AppModules.SalesFinalize, AppModules.SalesPayments, AppModules.Purchases];
         modules.Modules.Where(m => !m.Core && !lexware.Contains(m.Key)).ShouldAllBe(m => m.Enabled);
         modules.Modules.Where(m => lexware.Contains(m.Key)).ShouldAllBe(m => !m.Enabled);
         modules.Modules.Single(m => m.Key == AppModules.Quotations).Requires.ShouldBe([AppModules.Sales]);
