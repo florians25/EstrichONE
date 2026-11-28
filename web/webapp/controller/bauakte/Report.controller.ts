@@ -9,10 +9,27 @@ import { escape as e } from "../../util/orders";
 import { loadCompany } from "../../util/orderDialogs";
 import type { RouteMatch } from "../../util/router";
 import { session } from "../../util/session";
+import { waitForImages } from "../../util/printImages";
 
 type Kind = "bericht" | "abnahme" | "blatt";
 
 const titles: Record<Kind, string> = { bericht: "Baustellenbericht", abnahme: "Abnahmeprotokoll", blatt: "Bauaktenblatt" };
+
+type LogoInfo = { hasLogo: boolean; updatedAt: string | null };
+
+/**
+ * Bild eines Fotos für den Druck: Vorschaustufe (aufgerichtet, ohne Metadaten), sonst das Original. HEIC zeigen die
+ * meisten Browser nicht an, Videos lassen sich nicht drucken: dafür ein Hinweisfeld statt eines kaputten Bildes.
+ */
+function photoContent(f: FileResponse): string {
+	if (f.kind === "video") return `<div class="placeholder">Video „${e(f.originalName)}“. Die Wiedergabe ist nur in der Bauakte möglich.</div>`;
+	const heic = /hei[cf]/i.test(f.contentType) || /\.hei[cf]$/i.test(f.originalName);
+	if (f.variants === "ready") return `<img src="/api/v1/files/${f.id}/content?variant=display" alt="${e(f.caption ?? f.originalName)}" loading="eager"/>`;
+	if (heic || f.variants === "failed") {
+		return `<div class="placeholder">Foto im Format HEIC oder nicht lesbar. Bitte in der Bauakte öffnen oder als JPEG hochladen.</div>`;
+	}
+	return `<img src="/api/v1/files/${f.id}/content?variant=original" alt="${e(f.caption ?? f.originalName)}" loading="eager"/>`;
+}
 
 /**
  * Druckansichten der Bauakte (Browser-Druck, „Als PDF speichern“): Baustellenbericht für einen Zeitraum mit
@@ -35,7 +52,7 @@ export default class Report extends BaseController {
 		m.setProperty("/busy", true);
 		try {
 			m.setProperty("/html", await this.build(kind, match.query));
-			document.title = `${titles[kind]} (EstrichONE)`;
+			document.title = titles[kind];
 		} catch (error) {
 			this.showError(error);
 		} finally {
@@ -47,8 +64,8 @@ export default class Report extends BaseController {
 		const id = this.bauakteId;
 		await session.people();
 		const b = await get<BauakteDetail>(`bauakten/${id}`);
-		const [company, rooms, files, diary, inspections, work, members, customer] = await Promise.all([
-			loadCompany(), akte.rooms(id), akte.files(id), akte.diary(id), akte.inspections(id),
+		const [company, logo, rooms, files, diary, inspections, work, members, customer] = await Promise.all([
+			loadCompany(), get<LogoInfo>("company/logo/info").catch(() => null), akte.rooms(id), akte.files(id), akte.diary(id), akte.inspections(id),
 			session.has("work.read") ? akte.work(id) : Promise.resolve([]),
 			get<BauakteMember[]>(`bauakten/${id}/members`).catch(() => [] as BauakteMember[]),
 			b.customerId && session.has("contacts.read") ? get<ContactResponse>(`contacts/${b.customerId}`).catch(() => null) : Promise.resolve(null),
@@ -57,9 +74,19 @@ export default class Report extends BaseController {
 		const to = query.get("bis") || "9999-12-31";
 		const withPhotos = query.get("fotos") !== "0";
 		const withWork = query.get("aufgaben") !== "0";
-		const photo = (f: FileResponse) => `<figure><img src="/api/v1/files/${f.id}/content?variant=${f.variants === "ready" ? "display" : "original"}" alt="${e(f.caption ?? f.originalName)}"/>`
-			+ `<figcaption>${e(dateTime(f.capturedAt ?? f.createdAt))}${f.caption ? `, ${e(f.caption)}` : ""}</figcaption></figure>`;
-		const head = `<div class="head"><div><h1>${e(titles[kind])}</h1><div><strong>${e(b.number ?? "")} ${e(b.title)}</strong></div>
+		const photo = (f: FileResponse) => {
+			const room = rooms.rooms.find((r) => r.id === f.roomId);
+			const caption = [
+				`<strong>${f.kind === "video" ? "Video" : "Foto"}, ${e(dateTime(f.capturedAt ?? f.createdAt))}</strong>`,
+				room ? `Raum: ${e(room.name)}${room.floor ? ` (${e(room.floor)})` : ""}` : "",
+				f.uploadedByUserId ? `Aufnahme: ${e(session.name(f.uploadedByUserId))}` : "",
+				f.caption ? e(f.caption) : "",
+			].filter(Boolean).join("<br/>");
+			return `<figure>${photoContent(f)}<figcaption>${caption}</figcaption></figure>`;
+		};
+		// Firmenlogo aus den Einstellungen; ohne Logo steht der Firmenname rechts als Text (kein anderes Logo).
+		const logoHtml = logo?.hasLogo ? `<img class="logo" src="/api/v1/company/logo?v=${encodeURIComponent(logo.updatedAt ?? "")}" alt="${e(company?.name ?? "Firmenlogo")}"/>` : "";
+		const head = `<div class="head"><div>${logoHtml}<h1>${e(titles[kind])}</h1><div><strong>${e(b.number ?? "")} ${e(b.title)}</strong></div>
 <div class="muted">${e([b.street, [b.postalCode, b.city].filter(Boolean).join(" ")].filter(Boolean).join(", "))}</div></div>
 <div style="text-align:right"><strong>${e(company?.name)}</strong><div class="muted">${e([company?.street, [company?.postalCode, company?.city].filter(Boolean).join(" ")].filter(Boolean).join(", "))}</div>
 <div class="muted">${e([company?.phone && `Tel. ${company.phone}`, company?.email].filter(Boolean).join(", "))}</div>
@@ -82,7 +109,7 @@ ${cm.map((i) => `<tr><td>${e(dateTime(i.performedAt))}</td><td>${e(i.location)}<
 		const openWork = work.filter((w) => w.status !== "done");
 		const workTable = (items: typeof work, title: string) => `<h2>${e(title)}</h2>${items.length ? `<table><thead><tr><th>Art</th><th>Beschreibung</th><th>Fällig</th><th>Zuständig</th><th>Status</th></tr></thead><tbody>
 ${items.map((w) => `<tr><td>${w.kind === "defect" ? "Mangel" : "Aufgabe"}</td><td>${e(w.title)}</td><td>${e(date(w.dueDate))}</td><td>${e(session.name(w.assigneeUserId))}</td><td>${w.status === "done" ? "erledigt" : w.status === "inProgress" ? "in Arbeit" : "offen"}</td></tr>`).join("")}</tbody></table>` : "<p>Keine.</p>"}`;
-		const photos = files.filter((f) => f.kind === "photo" && f.state === "stored");
+		const photos = files.filter((f) => (f.kind === "photo" || f.kind === "video") && f.state === "stored");
 
 		if (kind === "blatt") {
 			return `<div class="eoSheet">${head}${facts}${b.description ? `<h2>Beschreibung</h2><p class="pre">${e(b.description)}</p>` : ""}${roomTable}${checks}${withWork ? workTable(openWork, "Offene Aufgaben und Mängel") : ""}</div>`;
@@ -112,10 +139,19 @@ ${withWork ? workTable(openWork.filter((w) => w.kind === "defect"), "Bekannte of
 		return `<div class="eoSheet">${head}<p><strong>${e(period)}</strong></p>${facts}${roomTable}${diaryHtml}${checks}
 ${withWork ? workTable(work, "Aufgaben und Mängel") : ""}
 ${withPhotos ? `<h2>Fotos im Zeitraum (${periodPhotos.length})</h2><div class="photos">${periodPhotos.slice(0, 60).map(photo).join("")}</div>${periodPhotos.length > 60 ? `<p class="muted">… und ${periodPhotos.length - 60} weitere.</p>` : ""}` : ""}
-<p class="muted" style="margin-top:1.5rem">Erstellt mit EstrichONE am ${e(new Date().toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" }))}.</p></div>`;
+<p class="muted" style="margin-top:1.5rem">Erstellt am ${e(new Date().toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" }))}.</p></div>`;
 	}
 
-	onPrint(): void {
+	/** Erst drucken, wenn Firmenlogo und alle Fotos geladen und dekodiert sind (sonst fehlen sie im PDF). */
+	async onPrint(): Promise<void> {
+		const m = this.model();
+		m.setProperty("/busy", true);
+		try {
+			const missing = await waitForImages(Array.from(document.querySelectorAll<HTMLImageElement>(".eoSheet img")));
+			if (missing > 0) this.toast(`${missing} Bild(er) konnten nicht geladen werden und fehlen im Ausdruck.`);
+		} finally {
+			m.setProperty("/busy", false);
+		}
 		window.print();
 	}
 

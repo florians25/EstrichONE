@@ -181,9 +181,10 @@ Telefon, E-Mail und Website.
 
 ![Firmendaten](bilder/systemeinstellungen.png "Systemeinstellungen, Reiter Firma mit Firmenlogo")
 
-Unter **Firmenlogo** laden Sie Ihr Logo hoch (**Logo hochladen …**; PNG, JPEG oder WebP, am besten quer mit
-transparentem Hintergrund). Es erscheint im Web in der Kopfzeile und auf allen PDFs; das EstrichONE-Logo bleibt
-zusätzlich klein in der Fußzeile. **Entfernen** nimmt es wieder heraus. Änderungen übernehmen Sie mit **Speichern** oben
+Unter **Firmenlogo** laden Sie Ihr Logo hoch (**Logo hochladen …**; PNG, JPEG, WebP oder SVG, am besten quer mit
+transparentem Hintergrund). Es erscheint auf allen PDFs und Ausdrucken im Kopf und auf dem Deckblatt, unverzerrt und
+höchstens 1,4 cm hoch. Ohne Firmenlogo steht dort Ihr Firmenname als Text. Ein neues Logo gilt sofort für den
+nächsten Ausdruck. **Entfernen** nimmt es wieder heraus. Änderungen übernehmen Sie mit **Speichern** oben
 rechts.
 
 ## Systemeinstellungen {#systemeinstellungen}
@@ -203,7 +204,7 @@ Speicher, Module und Pushnachrichten haben zusätzlich eine eigene Karte auf der
 | **Anmeldung** | Sitzungen im Browser (Abmelden nach Leerlauf, Dauer von „Angemeldet bleiben“), Zwei-Faktor-Pflicht für Administratoren, wie lange Apps auf Smartphones und Tablets ohne Nutzung angemeldet bleiben |
 | **Benachrichtigungen** | Welche E-Mails verschickt werden, nach wie vielen Minuten ein Ausfall von Archivserver bzw. Backup-Ziel gemeldet wird, Web Push, Inhalt in Pushnachrichten, Apple Push (APNs) für die iOS-App |
 | **Darstellung und Karte** | Farbschema und Dichte als Vorgabe für neue Benutzer, Kachelserver und Quellenangabe der Karte |
-| **PDF-Layout** | Firmenlogo im Kopf, EstrichONE-Logo in der Fußzeile, Akzentfarbe, zusätzliche Fußzeile (Bankverbindung, Registergericht, USt-IdNr.), Fotos je Zeile |
+| **PDF-Layout** | Firmenlogo im Kopf, Hinweis „Erstellt mit EstrichONE“ in der Fußzeile (Text, ausgeschaltet), Akzentfarbe, zusätzliche Fußzeile (Bankverbindung, Registergericht, USt-IdNr.), Fotos je Zeile |
 | **Speicher** | Speicherschonende Ablage von Fotos und PDFs, Belegung, Nachverdichten |
 | **Module** | Alle Fachmodule (Planung, Material, Personal, Urlaub, Anrufe, Protokolle, Abnahmen, Aufgaben, Mängel, Helpdesk, Chat …) ein- und ausschalten |
 | **Weitere Bereiche** | Sprungziele zu Sicherung, Backup-Zielen, Archiv, E-Mail und Protokoll |

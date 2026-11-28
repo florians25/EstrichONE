@@ -44,8 +44,12 @@ Bauakte (`GET /api/v1/bauakten/{id}/report.pdf`, mit Fotodokumentation) und Kolo
   Version ist in `Directory.Packages.props` deshalb fest auf 6.2.4 gesetzt und darf nur nach Lizenzprüfung angehoben
   werden. Das transitiv eingebundene `System.Security.Cryptography.Pkcs` ist auf die gepflegte .NET-10-Fassung gehoben.
 - Schrift: **Liberation Sans** (SIL Open Font License 1.1, Lizenztext in `Infrastructure/Pdf/Assets/LiberationSans-OFL.txt`)
-  wird eingebettet, damit der Server keine Systemschriften braucht. Logo: `branding/png/logo-horizontal.png`.
-- Fotos kommen aus der Vorschau-Variante (WebP) und werden für das PDF mit libvips als JPEG verkleinert.
+  wird eingebettet, damit der Server keine Systemschriften braucht.
+- Logo: ausschließlich das Firmenlogo aus den Firmendaten (`company_logo`, bei jedem Ausdruck frisch gelesen). Ohne
+  Firmenlogo steht der Firmenname als Text im Kopf; ein Produktlogo ist bewusst nicht eingebettet.
+- Fotos (`Infrastructure/Pdf/PdfImages.cs`): Vorschau-Variante, sonst das Original (auch vom Storage), nach EXIF
+  aufgerichtet, nach sRGB gewandelt und als JPEG in eine Box mit erhaltenem Seitenverhältnis gesetzt. HEIC ohne
+  Decoder, ausgelagerte Akten und Videos erscheinen als Hinweisfeld statt als Fehler.
 
 ## Regeln
 

@@ -22,6 +22,8 @@ public sealed class DocumentationModule : IModule
         services.AddScoped<Exports.IStoredFiles, StoredFiles>();
         services.AddScoped<ApprovalService>();
         services.AddScoped<Exports.IArchivableDocuments, ArchivableDocuments>();
+        services.AddScoped(provider => new ReportPhotos(provider.GetRequiredService<LocalFileStorage>(), provider.GetRequiredService<OffloadService>(),
+            provider.GetRequiredService<ILogger<ReportPhotos>>()));
         services.AddScoped<BauakteReportBuilder>();
         services.AddScoped<IBauakteHintSource, DocumentationHints>();
         services.AddHostedService<VariantWorker>();

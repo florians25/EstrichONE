@@ -54,7 +54,7 @@
 							<Label text="Logo"/>
 							<VBox>
 								<Image src="{view>/logoUrl}" visible="{view>/logo/hasLogo}" height="4rem" alt="Firmenlogo" decorative="false" class="eoLogoPreview"/>
-								<Text text="Noch kein Logo. Es erscheint im Web (Kopfzeile) und auf allen PDFs; das EstrichONE-Logo bleibt zusätzlich in der Fußzeile." visible="{= !${view>/logo/hasLogo} }" class="eoMuted"/>
+								<Text text="Noch kein Logo. Das Firmenlogo erscheint auf allen PDFs und Ausdrucken, ohne Logo steht dort der Firmenname als Text. Möglich sind PNG (auch transparent), JPEG, WebP und SVG." visible="{= !${view>/logo/hasLogo} }" class="eoMuted"/>
 								<HBox class="sapUiTinyMarginTop eoEntryRow">
 									<Button id="logoUpload" text="Logo hochladen …" icon="sap-icon://upload" press=".onLogoUpload"/>
 									<Button text="Entfernen" icon="sap-icon://delete" press=".onLogoDelete" visible="{view>/logo/hasLogo}"/>
@@ -232,7 +232,8 @@
 						<form:SimpleForm editable="true" layout="ResponsiveGridLayout" labelSpanL="4" labelSpanM="4" maxContainerCols="1" width="56rem">
 							<core:Title text="Ausdrucke (Bauakte, Abnahme, Planung, Benutzerbrief)"/>
 							<Label text="Firmenlogo im Kopf"/><Switch state="{view>/s/pdf/showCompanyLogo}" customTextOn=" " customTextOff=" "/>
-							<Label text="EstrichONE-Logo in der Fußzeile"/><Switch state="{view>/s/pdf/showEstrichOneLogo}" customTextOn=" " customTextOff=" "/>
+							<Label text=""/><Text text="Ohne hinterlegtes oder eingeschaltetes Firmenlogo steht der Firmenname als Text im Kopf." class="eoMuted"/>
+							<Label text="Hinweis „Erstellt mit EstrichONE“ in der Fußzeile"/><Switch state="{view>/s/pdf/showEstrichOneLogo}" customTextOn=" " customTextOff=" "/>
 							<Label text="Akzentfarbe" labelFor="setAccent"/>
 							<HBox alignItems="Center">
 								<Input id="setAccent" value="{view>/s/pdf/accentColor}" maxLength="7" width="8rem" placeholder="#1F4E79" valueLiveUpdate="true"/>

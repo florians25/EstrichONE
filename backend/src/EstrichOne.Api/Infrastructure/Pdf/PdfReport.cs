@@ -9,11 +9,11 @@ namespace EstrichOne.Api.Infrastructure.Pdf;
 /// <summary>Firmendaten für Kopf- und Fußzeile (aus dem Organisationsmodul übergeben).</summary>
 public sealed record PdfCompany(string Name, string? Street, string? PostalCode, string? City, string? Phone, string? Email, string? Website)
 {
-    /// <summary>Logo des Betriebs (PNG). Ohne Logo steht das EstrichONE-Logo im Kopf.</summary>
-    public byte[]? Logo { get; init; }
+    /// <summary>Firmenlogo aus den Einstellungen (vorbereitet, PNG). Ohne Logo steht der Firmenname als Text im Kopf, nie ein anderes Logo.</summary>
+    public PdfImage? Logo { get; init; }
 
-    /// <summary>EstrichONE-Logo zusätzlich klein in der Fußzeile.</summary>
-    public bool ShowEstrichOneLogo { get; init; } = true;
+    /// <summary>Hinweis „Erstellt mit EstrichONE“ als kleiner Text in der Fußzeile (kein Logo).</summary>
+    public bool ShowEstrichOneLogo { get; init; }
 
     /// <summary>Akzentfarbe (#RRGGBB) für Überschriften.</summary>
     public string? AccentColor { get; init; }
@@ -29,7 +29,7 @@ public sealed record PdfCompany(string Name, string? Street, string? PostalCode,
 
 /// <summary>
 /// Gemeinsames Layout aller PDF-Ausdrucke (MigraDoc, MIT): Schrift Liberation Sans (eingebettet, SIL OFL 1.1),
-/// Kopfzeile mit Logo und Firma, Fußzeile mit Firmendaten und „Seite x von y“, deutsche Formate.
+/// Kopfzeile mit Firmenlogo (oder Firmenname als Text) und Firma, Fußzeile mit Firmendaten und „Seite x von y“, deutsche Formate.
 /// </summary>
 public static class PdfReport
 {
@@ -54,8 +54,6 @@ public static class PdfReport
             }
         }
     }
-
-    public static byte[] Logo { get; } = EmbeddedFontResolver.Read("logo-horizontal.png");
 
     /// <summary>Neues Dokument mit Stilen und einem Abschnitt (A4 hoch oder quer) inkl. Kopf-/Fußzeile.</summary>
     public static Color Accent(PdfCompany company) =>
@@ -117,13 +115,27 @@ public static class PdfReport
         headerTable.AddColumn(Unit.FromCentimeter(usable * 0.45));
         headerTable.AddColumn(Unit.FromCentimeter(usable * 0.55));
         var row = headerTable.AddRow();
-        var logo = row.Cells[0].AddImage(ImageSource(company.Logo ?? Logo));
-        logo.Height = Unit.FromCentimeter(company.Logo is null ? 0.85 : 1.1);
-        logo.LockAspectRatio = true;
+        row.VerticalAlignment = VerticalAlignment.Bottom;
+        if (company.Logo is { } companyLogo)
+        {
+            // Firmenlogo höchstens 1,4 cm hoch und so breit wie die linke Spalte, Seitenverhältnis bleibt.
+            PdfImages.Add(row.Cells[0].AddParagraph(), companyLogo, usable * 0.45 - 0.2, 1.4);
+        }
+        else
+        {
+            // Kein Logo hinterlegt: Firmenname als Text statt eines fremden oder alten Logos.
+            var name = row.Cells[0].AddParagraph();
+            name.AddFormattedText(company.Name, new Font { Size = 13, Bold = true, Color = brand });
+        }
+
         var right = row.Cells[1].AddParagraph();
         right.Format.Alignment = ParagraphAlignment.Right;
-        right.AddFormattedText(company.Name, TextFormat.Bold).Font.Color = brand;
-        right.AddLineBreak();
+        if (company.Logo is not null)
+        {
+            right.AddFormattedText(company.Name, TextFormat.Bold).Font.Color = brand;
+            right.AddLineBreak();
+        }
+
         right.AddFormattedText(title, new Font { Size = 8.5, Color = Muted });
         row.Borders.Bottom.Width = 0.75;
         row.Borders.Bottom.Color = Line;
@@ -145,15 +157,14 @@ public static class PdfReport
             frow.Cells[0].AddParagraph(company.FooterText).Style = "Muted";
         }
 
-        if (company.Logo is not null && company.ShowEstrichOneLogo)
+        if (company.ShowEstrichOneLogo)
         {
-            // Eigenes Logo im Kopf, EstrichONE dezent in der Fußzeile.
-            var made = frow.Cells[0].AddParagraph();
+            // Nur auf Wunsch (Einstellungen, PDF-Layout) und nur als Text: kein Produktlogo neben dem Firmenlogo.
+            var made = frow.Cells[0].AddParagraph("Erstellt mit EstrichONE");
             made.Style = "Muted";
-            var mark = made.AddImage(ImageSource(Logo));
-            mark.Height = Unit.FromCentimeter(0.35);
-            mark.LockAspectRatio = true;
+            made.Format.Font.Size = 7;
         }
+
         var pages = frow.Cells[1].AddParagraph();
         pages.Style = "Muted";
         pages.Format.Alignment = ParagraphAlignment.Right;

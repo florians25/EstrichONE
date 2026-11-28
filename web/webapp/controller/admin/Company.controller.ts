@@ -519,11 +519,13 @@ export default class Company extends BaseController {
 	onLogoUpload(): void {
 		const input = document.createElement("input");
 		input.type = "file";
-		input.accept = "image/png,image/jpeg,image/webp";
+		input.accept = "image/png,image/jpeg,image/webp,image/svg+xml,.svg";
 		input.addEventListener("change", async () => {
-			const file = input.files?.[0];
-			if (!file) return;
+			const picked = input.files?.[0];
+			if (!picked) return;
 			try {
+				// SVG verarbeitet der Server aus Sicherheitsgründen nicht: im Browser als transparentes PNG rastern.
+				const file = isSvg(picked) ? await svgToPng(picked) : picked;
 				const logo = await api<LogoInfo>("company/logo", { method: "PUT", raw: file, headers: { "Content-Type": file.type || "application/octet-stream" } });
 				this.model().setProperty("/logo", logo);
 				this.model().setProperty("/logoUrl", `/api/v1/company/logo?v=${encodeURIComponent(logo.updatedAt ?? String(Date.now()))}`);
@@ -537,7 +539,7 @@ export default class Company extends BaseController {
 	}
 
 	async onLogoDelete(): Promise<void> {
-		if (!(await this.confirm("Firmenlogo entfernen? Ausdrucke zeigen dann wieder das EstrichONE-Logo.", { title: "Logo entfernen", action: "Entfernen", danger: true }))) return;
+		if (!(await this.confirm("Firmenlogo entfernen? Ausdrucke zeigen dann den Firmennamen als Text.", { title: "Logo entfernen", action: "Entfernen", danger: true }))) return;
 		try {
 			await del("company/logo");
 			this.model().setProperty("/logo", { hasLogo: false, width: 0, height: 0, updatedAt: null });
@@ -556,5 +558,32 @@ export default class Company extends BaseController {
 	private editable(settings: SystemSettings | null): SystemSettings | null {
 		return settings ? { ...settings, bauakte: { ...settings.bauakte, defaultTemplateId: settings.bauakte.defaultTemplateId ?? "" },
 			approvals: { ...settings.approvals, defaultRoleId: settings.approvals.defaultRoleId ?? "" } } : null;
+	}
+}
+
+const isSvg = (file: File): boolean => file.type === "image/svg+xml" || /\.svg$/i.test(file.name);
+
+/** SVG-Logo als PNG mit transparentem Hintergrund, lange Kante 1200 px, Seitenverhältnis wie im SVG. */
+async function svgToPng(file: Blob): Promise<File> {
+	const url = URL.createObjectURL(file.type === "image/svg+xml" ? file : new Blob([await file.text()], { type: "image/svg+xml" }));
+	try {
+		const image = new Image();
+		image.decoding = "async";
+		image.src = url;
+		await image.decode().catch(() => {
+			throw new Error("Das SVG-Logo konnte nicht gelesen werden. Bitte als PNG speichern und erneut hochladen.");
+		});
+		const w = image.naturalWidth || 1200;
+		const h = image.naturalHeight || 400;
+		const scale = 1200 / Math.max(w, h);
+		const canvas = document.createElement("canvas");
+		canvas.width = Math.max(1, Math.round(w * scale));
+		canvas.height = Math.max(1, Math.round(h * scale));
+		canvas.getContext("2d")?.drawImage(image, 0, 0, canvas.width, canvas.height);
+		const png = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png"));
+		if (!png) throw new Error("Das SVG-Logo konnte nicht umgewandelt werden. Bitte als PNG hochladen.");
+		return new File([png], "logo.png", { type: "image/png" });
+	} finally {
+		URL.revokeObjectURL(url);
 	}
 }
