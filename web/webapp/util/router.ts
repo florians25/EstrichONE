@@ -14,6 +14,8 @@ export interface RouteDef {
 	/** Ohne Programmrahmen (z. B. Druckansicht). */
 	bare?: boolean;
 	permission?: string;
+	/** Seite mit einem dieser Rechte (z. B. Verkauf: ansehen einer beliebigen Belegart). */
+	anyPermission?: string[];
 	/** Eintrag der Seitennavigation, der hervorgehoben wird. */
 	nav?: string;
 	/** Titel für Browser-Reiter und Kopfzeile (i18n-Schlüssel). */

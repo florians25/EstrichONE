@@ -146,11 +146,11 @@
 				visible="{= ${session>/modules/lexware} === true &amp;&amp; ${session>/permissions/invoices.read} === true }">
 				<uxap:subSections><uxap:ObjectPageSubSection>
 					<VBox renderType="Bare" busy="{view>/lexware/busy}" busyIndicatorDelay="0">
-						<Text text="Rechnungen für diesen Kunden entstehen in Lexware Office. Ist der Kunde mit seinem Kontakt dort verknüpft, zeigt EstrichONE seine Belege hier an und gleicht spätere Änderungen an Name, Anschrift, E-Mail-Adresse und Telefon ab. Mit „Angebote (Beta)“ bereiten Sie Angebote hier vor und senden sie als Entwurf an Lexware Office." class="sapUiSmallMarginBottom"/>
+						<Text text="Ist der Kunde mit seinem Kontakt in Lexware Office verknüpft, zeigt EstrichONE seine Belege hier an und gleicht spätere Änderungen an Name, Anschrift, E-Mail-Adresse und Telefon ab. Mit dem Modul „Verkauf“ erfassen Sie Angebote, Rechnungen und weitere Belege in EstrichONE und senden sie an Lexware Office." class="sapUiSmallMarginBottom"/>
 						<HBox renderType="Bare" class="sapUiSmallMarginBottom"
 							visible="{= ${session>/modules/quotations} === true &amp;&amp; ${session>/permissions/quotations.prepare} === true }">
-							<Button id="customerQuotation" text="Angebot erstellen (Beta)" icon="sap-icon://create-form" press=".onCreateQuotation"
-								tooltip="Angebot zum Kunden in EstrichONE vorbereiten und als Entwurf an Lexware Office senden (ohne Bauakte)"/>
+							<Button id="customerQuotation" text="Angebot erstellen" icon="sap-icon://create-form" press=".onCreateQuotation"
+								tooltip="Angebot zum Kunden in EstrichONE erfassen und an Lexware Office senden (ohne Bauakte)"/>
 						</HBox>
 						<HBox alignItems="Center" wrap="Wrap" renderType="Bare" class="sapUiSmallMarginBottom">
 							<ObjectStatus id="lexwareLinkState" text="{= ${view>/lexware/link} ? 'Verknüpft' : 'Nicht verknüpft' }" state="{= ${view>/lexware/link} ? 'Success' : 'None' }"

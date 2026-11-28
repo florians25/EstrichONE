@@ -23,20 +23,20 @@ test.afterAll(async () => {
 test('Angebot mit § 13b: Ablehnung verständlich, Behebung mit einem Klick', async ({ page }) => {
   await signIn(page, 'admin', adminPassword);
   expect((await apiCall(page, 'PUT', '/api/v1/settings/integrations/lexware', { apiKey: STUB_KEY, baseUrl: stub.url })).status).toBe(200);
-  expect((await apiCall(page, 'PUT', '/api/v1/settings/modules', { modules: { lexware: true, quotations: true } })).status).toBe(200);
+  expect((await apiCall(page, 'PUT', '/api/v1/settings/modules', { modules: { lexware: true, sales: true, quotations: true } })).status).toBe(200);
   const customer = crypto.randomUUID();
   expect((await apiCall(page, 'POST', '/api/v1/contacts', { id: customer, kind: 'company', name: 'Bergblick Bau GmbH', lexwareCreateAnyway: true })).status).toBe(201);
   expect((await apiCall(page, 'POST', `/api/v1/lexware/customers/${customer}/link`, { lexwareContactId: contact })).status).toBe(200);
   const id = crypto.randomUUID();
-  const created = await apiCall<{ version: number; validUntil: string }>(page, 'POST', '/api/v1/lexware/quotations', { id, contactId: customer });
+  const created = await apiCall<{ version: number; validUntil: string }>(page, 'POST', '/api/v1/sales/vouchers', { id, type: 'quotation', contactId: customer });
   expect(created.status).toBe(201);
-  expect((await apiCall(page, 'PUT', `/api/v1/lexware/quotations/${id}`, {
+  expect((await apiCall(page, 'PUT', `/api/v1/sales/vouchers/${id}`, {
     version: created.json.version, title: 'Angebot Tiefgarage', validUntil: created.json.validUntil, taxType: 'constructionService13b',
     lines: [{ kind: 'item', name: 'Zementestrich liefern und einbauen', quantity: 420, unit: 'm²', netPrice: 21.5, taxRate: 19 }],
   })).status).toBe(200);
 
-  await page.goto(`/angebote/${id}`);
-  await page.locator('[id$="quotationSend"]').click();
+  await page.goto(`/verkauf/${id}`);
+  await page.locator('[id$="salesSend"]').click();
   await page.getByRole('alertdialog').getByRole('button', { name: 'Senden' }).click();
 
   // Meldung auf Deutsch mit Behebung; der englische Originaltext steht nur unter „Technische Einzelheiten“.
@@ -49,18 +49,18 @@ test('Angebot mit § 13b: Ablehnung verständlich, Behebung mit einem Klick', as
   await dialog.getByRole('button', { name: 'Abbrechen' }).click();
 
   // Auf der Seite bleibt die Meldung mit derselben Behebung; die Steuerart ist für Angebote gesperrt, mit Hinweis.
-  await expect(page.locator('[id$="quotationFailed"]')).toContainText('§ 13b UStG für Ihr Unternehmen nicht zu');
-  await expect(page.locator('[id$="quotationFailed"]')).not.toContainText('not allowed');
-  await expect(page.locator('[id$="qTaxHint"]')).toContainText('abgelehnt');
+  await expect(page.locator('[id$="salesFailed"]')).toContainText('§ 13b UStG für Ihr Unternehmen nicht zu');
+  await expect(page.locator('[id$="salesFailed"]')).not.toContainText('not allowed');
+  await expect(page.locator('[id$="sTaxHint"]')).toContainText('abgelehnt');
   await page.screenshot({ path: 'test-results/lexware-fehler-13b-seite.png' });
-  await page.locator('[id$="quotationFix"]').click();
+  await page.locator('[id$="salesFix"]').click();
   await expect(toast(page)).toContainText('Als Entwurf an Lexware Office gesendet');
-  await expect(page.locator('[id$="quotationSent"]')).toBeVisible();
+  await expect(page.locator('[id$="salesSent"]')).toBeVisible();
   expect(stub.quotations).toHaveLength(1);
   expect((stub.quotations[0] as { taxConditions: { taxType: string } }).taxConditions.taxType).toBe('net');
 
   // Gemerkt: Die Auswahl bietet § 13b für Angebote nicht mehr an.
-  const options = await apiCall<{ taxTypes: { key: string; allowed: boolean }[] }>(page, 'GET', '/api/v1/lexware/quotations/options');
+  const options = await apiCall<{ taxTypes: { key: string; allowed: boolean }[] }>(page, 'GET', '/api/v1/sales/options?type=quotation');
   expect(options.json.taxTypes.find((t) => t.key === 'constructionService13b')?.allowed).toBe(false);
 });
 
@@ -73,7 +73,7 @@ test('Einstellungen: erlaubte Steuerarten erneut prüfen', async ({ page }) => {
   await expect(toast(page)).toContainText('Erlaubte Steuerarten geprüft');
   await expect(page.locator('[id$="lxTaxTypes"]')).not.toContainText('Abgelehnt am');
   await page.screenshot({ path: 'test-results/lexware-steuerarten-einstellungen.png' });
-  const options = await apiCall<{ taxTypes: { key: string; allowed: boolean }[] }>(page, 'GET', '/api/v1/lexware/quotations/options');
+  const options = await apiCall<{ taxTypes: { key: string; allowed: boolean }[] }>(page, 'GET', '/api/v1/sales/options?type=quotation');
   expect(options.json.taxTypes.every((t) => t.allowed)).toBe(true);
 
 });
@@ -97,8 +97,11 @@ test('Bauakte: Auftragsbestätigung und Lieferschein heißen „Erstellt“, nic
   await expect(table.getByRole('row').filter({ hasText: 'LS-2026-0003' })).toContainText('Erstellt');
   await expect(table.getByRole('row').filter({ hasText: 'RE-2026-0101' })).toContainText('Offen');
   // Offene Beträge nur aus der Rechnung, nicht aus der Auftragsbestätigung.
-  await expect(page.getByText(/offen 4\.760,00/)).toBeVisible();
+  await expect(page.locator('[id$="invoiceSummary"]')).toContainText(/offen 4\.760,00/);
   await page.screenshot({ path: 'test-results/lexware-status-belegarten.png' });
 
-  expect((await apiCall(page, 'PUT', '/api/v1/settings/modules', { modules: { lexware: false, quotations: false } })).status).toBe(200);
+  expect((await apiCall(page, 'PUT', '/api/v1/settings/modules', { modules: {
+    lexware: false, lexwareArticles: false, lexwareStatus: false, sales: false, quotations: false, salesOrderConfirmations: false, salesInvoices: false,
+    salesCreditNotes: false, salesFinalize: false, salesPayments: false,
+  } })).status).toBe(200);
 });

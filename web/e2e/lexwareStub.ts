@@ -48,6 +48,11 @@ export class LexwareStub {
   readonly articles = new Map<string, Json>();
   /** Gesendete Angebotsentwürfe (Inhalt von `POST /v1/quotations`). */
   readonly quotations: Json[] = [];
+  /** Alle angelegten Verkaufsbelege mit Belegart, Inhalt und Abfrage (z. B. finalize, precedingSalesVoucherId). */
+  readonly created: { type: string; body: Json; query: string }[] = [];
+  /** Offener Betrag je Beleg (Belegliste und GET /v1/payments/{id}). */
+  readonly openAmounts = new Map<string, number>();
+  private voucherNumber = 0;
   paymentConditions: Json[] = [
     { id: 'pc-14', organizationDefault: true, paymentTermLabelTemplate: 'Zahlbar innerhalb von 14 Tagen ohne Abzug.', paymentTermDuration: 14 },
     { id: 'pc-30', organizationDefault: false, paymentTermLabelTemplate: 'Zahlbar innerhalb von 30 Tagen, bei Zahlung innerhalb von 8 Tagen 2 % Skonto.', paymentTermDuration: 30,
@@ -245,11 +250,20 @@ export class LexwareStub {
       return send(200, { id, version: Number(stored.version) + 1 });
     }
     if (method === 'GET' && path === '/v1/payment-conditions') return send(200, this.paymentConditions);
-    if (method === 'POST' && path === '/v1/quotations') {
-      if (url.search) return send(400, { status: 400, message: 'Unexpected query' });
+    const salesPaths: Record<string, string> = { '/v1/quotations': 'quotation', '/v1/order-confirmations': 'orderconfirmation', '/v1/invoices': 'invoice', '/v1/credit-notes': 'creditnote' };
+    if (method === 'POST' && salesPaths[path]) {
+      // Erlaubt sind nur finalize=true und precedingSalesVoucherId (wie die echte API, so weit bekannt).
+      const keys = [...url.searchParams.keys()];
+      if (keys.some((k) => k !== 'finalize' && k !== 'precedingSalesVoucherId') || (url.searchParams.has('finalize') && url.searchParams.get('finalize') !== 'true')) {
+        return send(400, { status: 400, message: 'Unexpected query' });
+      }
+      const type = salesPaths[path];
       const taxType = String((body.taxConditions as Json | undefined)?.taxType ?? '');
       if (this.rejectedTaxTypes.has(taxType)) {
         return send(400, { requestId: randomUUID(), status: 400, error: 'Bad Request', path, message: `Tax type '${taxType}' not allowed for this organization` });
+      }
+      if (type === 'invoice' && !body.shippingConditions) {
+        return send(406, { status: 406, message: 'Validation failed', details: [{ field: 'shippingConditions', violation: 'NOTNULL', message: 'must not be null' }] });
       }
       const id = randomUUID();
       let net = 0;
@@ -260,14 +274,24 @@ export class LexwareStub {
         net += amount;
         gross += Math.round(amount * (100 + Number(price.taxRatePercentage))) / 100;
       }
-      this.quotations.push(body);
+      if (type === 'quotation') this.quotations.push(body);
+      this.created.push({ type, body, query: url.search });
+      const finalized = url.searchParams.get('finalize') === 'true';
       const contact = this.contacts.get(String((body.address as Json).contactId));
       this.vouchers.set(id, {
-        ...body, id, voucherType: 'quotation', voucherStatus: 'draft', voucherNumber: null,
+        ...body, id, voucherType: type, voucherStatus: finalized ? 'open' : 'draft',
+        voucherNumber: finalized ? `${({ quotation: 'AG', orderconfirmation: 'AB', invoice: 'RE', creditnote: 'GS' } as Record<string, string>)[type]}-2026-${String(++this.voucherNumber).padStart(4, '0')}` : null,
+        precedingSalesVoucherId: url.searchParams.get('precedingSalesVoucherId'),
         address: { contactId: (body.address as Json).contactId, name: contact ? LexwareStub.name(contact) : null },
         totalPrice: { currency: 'EUR', totalNetAmount: Math.round(net * 100) / 100, totalGrossAmount: Math.round(gross * 100) / 100 },
       });
-      return send(200, { id, resourceUri: `${this.url}/v1/quotations/${id}`, version: 1 });
+      return send(200, { id, resourceUri: `${this.url}${path}/${id}`, version: 1 });
+    }
+    if (method === 'GET' && path.startsWith('/v1/payments/')) {
+      const voucher = this.vouchers.get(path.slice('/v1/payments/'.length));
+      if (!voucher) return send(404, { status: 404, error: 'Not Found' });
+      const open = this.openAmounts.get(String(voucher.id)) ?? Number((voucher.totalPrice as Json).totalGrossAmount);
+      return send(200, { openAmount: open, currency: 'EUR', paymentStatus: open === 0 ? 'balanced' : 'openRevenue', voucherType: voucher.voucherType, voucherStatus: voucher.voucherStatus });
     }
 
     const segments: Record<string, string> = { invoices: 'invoice', quotations: 'quotation', 'credit-notes': 'creditnote', 'order-confirmations': 'orderconfirmation', 'delivery-notes': 'deliverynote' };
@@ -307,6 +331,7 @@ export class LexwareStub {
           id: v.id, voucherType: v.voucherType, voucherStatus: v.voucherStatus, voucherNumber: v.voucherNumber, voucherDate: v.voucherDate,
           dueDate: v.dueDate ?? v.expirationDate ?? null, contactId: (v.address as Json).contactId, contactName: (v.address as Json).name,
           totalAmount: (v.totalPrice as Json).totalGrossAmount, currency: 'EUR',
+          openAmount: this.openAmounts.get(String(v.id)) ?? (v.totalPrice as Json).totalGrossAmount,
         }));
       return send(200, { content, last: true, totalPages: 1, totalElements: content.length });
     }

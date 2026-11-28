@@ -91,6 +91,21 @@
 									<Text text="{view>/ruleTexts/invoices}"/>
 									<Text text="Beide Regeln laufen beim Statusabgleich der Belege, die einer Bauakte zugeordnet sind (beim Öffnen der Bauakte und regelmäßig im Hintergrund). Die zuständige Person erhält eine Benachrichtigung; der Verlauf der Bauakte vermerkt „automatisch durch Lexware Office“."/>
 								</VBox>
+								<core:Title text="Belege zuordnen"/>
+								<Label text="Belege automatisch zuordnen" labelFor="lxAutoAssign"/>
+								<VBox>
+									<Switch id="lxAutoAssign" state="{view>/s/autoAssign}" customTextOn=" " customTextOff=" "/>
+									<Text text="EstrichONE ordnet Belege aus Lexware Office selbst einer Bauakte zu, wenn das eindeutig ist: in EstrichONE erstellte Belege, Belege mit der Bauaktennummer im Text (bei verknüpftem Kunden dieser Bauakte) und Belege, die an einem bereits zugeordneten Beleg hängen. Bei mehreren möglichen Bauakten bleibt es beim Vorschlag. Aufgehobene Zuordnungen werden nicht wiederholt."/>
+								</VBox>
+								<Label text="Einzige offene Bauakte des Kunden" labelFor="lxAutoAssignSingle"/>
+								<VBox>
+									<Switch id="lxAutoAssignSingle" state="{view>/s/autoAssignSingleOpen}" enabled="{= ${view>/s/autoAssign} === true }" customTextOn=" " customTextOff=" "/>
+									<Text text="Zusätzlich zuordnen, wenn der Kunde genau eine offene Bauakte hat und das Belegdatum in ihren Zeitraum fällt. Diese Regel ist weniger sicher und deshalb zunächst aus."/>
+								</VBox>
+								<Label text="Zuletzt automatisch zugeordnet" visible="{= ${view>/autoAssigned}.length > 0 }"/>
+								<List id="lxAutoAssigned" items="{view>/autoAssigned}" visible="{= ${view>/autoAssigned}.length > 0 }" showSeparators="Inner">
+									<StandardListItem title="{view>title}" description="{view>description}" info="{view>when}"/>
+								</List>
 								<core:Title text="Steuerarten" visible="{= ${view>/s/hasApiKey} === true }"/>
 								<Label text="Erlaubte Steuerarten" labelFor="lxTaxRecheck" visible="{= ${view>/s/hasApiKey} === true }"/>
 								<VBox visible="{= ${view>/s/hasApiKey} === true }">

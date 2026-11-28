@@ -27,7 +27,7 @@ test.afterAll(async () => {
 test('Artikel und Leistungen: Abgleich aus Lexware Office', async ({ page }) => {
   await signIn(page, 'admin', adminPassword);
   expect((await apiCall(page, 'PUT', '/api/v1/settings/integrations/lexware', { apiKey: STUB_KEY, baseUrl: stub.url })).status).toBe(200);
-  expect((await apiCall(page, 'PUT', '/api/v1/settings/modules', { modules: { lexware: true, lexwareArticles: true, quotations: true, lexwareStatus: true } })).status)
+  expect((await apiCall(page, 'PUT', '/api/v1/settings/modules', { modules: { lexware: true, lexwareArticles: true, sales: true, quotations: true, lexwareStatus: true } })).status)
     .toBe(200);
 
   // Einstellungen: Richtung des Artikelabgleichs (Vorgabe aus Lexware Office) und Regeln des Bauaktenstatus.
@@ -50,7 +50,7 @@ test('Artikel und Leistungen: Abgleich aus Lexware Office', async ({ page }) => 
   expect(stub.calls.filter((c) => c.method !== 'GET')).toHaveLength(0);
 });
 
-test('Angebot (Beta): aus der Bauakte vorbereiten und als Entwurf senden', async ({ page }) => {
+test('Angebot im Verkauf: aus der Bauakte erfassen und als Entwurf senden', async ({ page }) => {
   await signIn(page, 'admin', adminPassword);
   customer = crypto.randomUUID();
   expect((await apiCall(page, 'POST', '/api/v1/contacts', { id: customer, kind: 'company', name: 'Sonnenhang GmbH', lexwareCreateAnyway: true })).status)
@@ -63,7 +63,7 @@ test('Angebot (Beta): aus der Bauakte vorbereiten und als Entwurf senden', async
 
   // Ohne Verknüpfung: Hinweis mit Weg zum Kunden.
   await page.goto(`/bauakten/${bauakte}?abschnitt=rechnungen`);
-  await page.locator('[id$="quotationCreate"]').click();
+  await page.locator('[id$="salesQuotation"]').click();
   const hint = page.getByRole('alertdialog');
   await expect(hint).toContainText('noch nicht mit Lexware Office verknüpft');
   await expect(hint.getByRole('button', { name: 'Zum Kunden' })).toBeVisible();
@@ -71,41 +71,41 @@ test('Angebot (Beta): aus der Bauakte vorbereiten und als Entwurf senden', async
 
   expect((await apiCall(page, 'POST', `/api/v1/lexware/customers/${customer}/link`, { lexwareContactId: contact })).status).toBe(200);
   await page.reload();
-  await page.locator('[id$="quotationCreate"]').click();
-  await expect(page).toHaveURL(/\/angebote\//);
-  quotation = page.url().split('/angebote/')[1];
-  await expect(page.locator('[id$="quotationBeta"]')).toContainText('Beta');
-  await expect(page.getByText('wird automatisch vergeben')).toBeVisible();
+  await page.locator('[id$="salesQuotation"]').click();
+  await expect(page).toHaveURL(/\/verkauf\//);
+  quotation = page.url().split('/verkauf/')[1];
+  await expect(page.locator('[id$="salesTitle"]')).toContainText('Angebot');
+  await expect(page.getByText('wird automatisch vergeben').first()).toBeVisible();
 
   // Vorschlag aus der Bauakte: Fläche aus den Kennwerten, Preis aus dem einzigen Katalogeintrag je m².
-  await page.locator('[id$="qSuggest"]').click();
+  await page.locator('[id$="sSuggest"]').click();
   const suggest = page.getByRole('dialog', { name: 'Vorschläge aus der Bauakte' });
   await expect(suggest).toContainText('286,4 m²');
   await expect(suggest).toContainText('Randdämmstreifen werden nicht vorgeschlagen');
   await suggest.getByRole('button', { name: 'Übernehmen' }).click();
 
   // Aus Artikeln und Leistungen, dazu eine Textposition.
-  await page.locator('[id$="qCatalog"]').click();
-  const pick = page.getByRole('dialog', { name: 'Aus Artikeln und Leistungen' });
+  await page.locator('[id$="sCatalog"]').click();
+  const pick = page.getByRole('dialog', { name: 'Artikel suchen' });
   await pick.getByRole('listitem').filter({ hasText: 'Randdämmstreifen 8 mm' }).getByRole('checkbox').click();
   await pick.getByRole('button', { name: /^(OK|Auswählen|Übernehmen)$/ }).click();
-  await page.locator('[id$="qText"]').click();
-  const lines = page.locator('[id$="quotationLines"]');
-  await lines.getByRole('row').last().locator('input').first().fill('Bauseits Strom und Wasser');
+  await page.locator('[id$="sAddText"]').click();
+  const lines = page.locator('[id$="salesLines"]');
+  await lines.getByRole('row').last().locator('input[type="text"]').first().fill('Bauseits Strom und Wasser');
 
-  await expect(page.locator('span[id$="qNet"]')).toContainText('7.017,75');
-  await page.locator('[id$="qPayment"]').first().click();
+  await expect(page.locator('span[id$="sNet"]')).toContainText('7.017,75');
+  await page.locator('[id$="sPayment"]').first().click();
   await page.getByRole('option', { name: /14 Tagen ohne Abzug/ }).click();
-  await page.locator('[id$="quotationSave"]').click();
-  await expect(toast(page)).toContainText('Entwurf gespeichert');
-  await expect(page.locator('span[id$="qGross"]')).toContainText('€');
+  await page.locator('[id$="salesSave"]').click();
+  await expect(toast(page)).toContainText('Beleg gespeichert');
+  await expect(page.locator('span[id$="sGross"]')).toContainText('€');
   await page.screenshot({ path: 'test-results/angebot-maske.png' });
 
-  await page.locator('[id$="quotationSend"]').click();
+  await page.locator('[id$="salesSend"]').click();
   await page.getByRole('alertdialog').getByRole('button', { name: 'Senden' }).click();
   await expect(toast(page)).toContainText('Als Entwurf an Lexware Office gesendet');
-  await expect(page.locator('[id$="quotationSent"]')).toBeVisible();
-  await expect(page.locator('input[id$="qTitle-inner"]')).not.toBeEditable();
+  await expect(page.locator('[id$="salesSent"]')).toBeVisible();
+  await expect(page.locator('input[id$="sTitle-inner"]')).not.toBeEditable();
 
   // Genau ein Entwurf, ohne finalize; Steuerart netto; Zahlungsbedingung aus Lexware Office.
   expect(stub.quotations).toHaveLength(1);
@@ -117,7 +117,7 @@ test('Angebot (Beta): aus der Bauakte vorbereiten und als Entwurf senden', async
   expect(sent.lineItems.map((l) => l.type)).toEqual(['service', 'material', 'text']);
 
   // Erneut senden legt nichts doppelt an.
-  expect((await apiCall(page, 'POST', `/api/v1/lexware/quotations/${quotation}/send`)).status).toBe(200);
+  expect((await apiCall(page, 'POST', `/api/v1/sales/vouchers/${quotation}/send`)).status).toBe(200);
   expect(stub.quotations).toHaveLength(1);
 });
 
@@ -158,6 +158,9 @@ test('Gesendetes Angebot in der Bauakte, Status aus Lexware Office', async ({ pa
 
   // Module wieder aus, damit die übrigen Tests unverändert laufen.
   expect((await apiCall(page, 'PUT', '/api/v1/settings/modules', {
-    modules: { lexware: false, lexwareArticles: false, quotations: false, lexwareStatus: false },
+    modules: {
+      lexware: false, lexwareArticles: false, lexwareStatus: false, sales: false, quotations: false, salesOrderConfirmations: false, salesInvoices: false,
+      salesCreditNotes: false, salesFinalize: false, salesPayments: false,
+    },
   })).status).toBe(200);
 });

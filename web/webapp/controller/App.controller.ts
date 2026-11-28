@@ -494,7 +494,7 @@ export default class AppController extends BaseController {
 			if (disabledModule) {
 				match = { ...match, route: { ...route, view: "ModuleDisabled", bare: false, title: "nav.moduleDisabled" }, params: { ...match.params, module: disabledModule } };
 				route = match.route;
-			} else if (route.permission && !session.has(route.permission)) {
+			} else if ((route.permission && !session.has(route.permission)) || (route.anyPermission && !route.anyPermission.some((p) => session.has(p)))) {
 				this.nav("/start", true);
 				return;
 			}

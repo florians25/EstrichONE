@@ -4,6 +4,30 @@
 			text="Lexware Office ist noch nicht eingerichtet. Der API-Schlüssel wird unter Verwaltung › Integrationen › Lexware Office hinterlegt."/>
 		<MessageStrip id="invoicesSyncError" type="Warning" showIcon="true" class="sapUiSmallMarginBottom" visible="{= !!${inv>/syncError} }"
 			text="{= 'Der Status konnte nicht mit Lexware Office abgeglichen werden. Angezeigt wird der zuletzt gespeicherte Stand. ' + ${inv>/syncError} }"/>
+		<!-- Rechnungsplan (Modul Verkauf): Auftragssumme, Abschläge, bezahlt, offen, noch nicht berechnet als Text und schlichter Balken. -->
+		<Panel id="billingPlan" headerText="Rechnungsplan" visible="{= ${inv>/plan} !== null }" class="sapUiSmallMarginBottom eoBillingPlan">
+			<headerToolbar>
+				<OverflowToolbar>
+					<Title text="Rechnungsplan" level="H3"/>
+					<ToolbarSpacer/>
+					<Button id="salesQuotation" text="Angebot erstellen" icon="sap-icon://create-form" press=".onCreateQuotation" visible="{inv>/canQuote}"
+						tooltip="Angebot zur Bauakte im Belegeditor erfassen"/>
+					<Button id="salesDownPayment" text="Abschlag erstellen" icon="sap-icon://money-bills" press=".onDownPayment" visible="{inv>/canInvoice}"
+						tooltip="Abschlagsrechnung nach Leistungsstand oder Prozent der Auftragssumme"/>
+					<Button id="salesFinalInvoice" text="Schlussrechnung erstellen" icon="sap-icon://sales-document" press=".onFinalInvoice" visible="{inv>/canInvoice}"
+						tooltip="Alle Positionen des Auftrags, bisherige Abschläge als Abzug"/>
+				</OverflowToolbar>
+			</headerToolbar>
+			<VBox renderType="Bare">
+				<Text id="billingPlanText" text="{inv>/plan/text}"/>
+				<ProgressIndicator id="billingPlanBar" percentValue="{inv>/planBar/billed}" displayValue="{inv>/planBar/label}" showValue="true" state="None"
+					visible="{= !!${inv>/plan/orderNet} }" class="sapUiTinyMarginTop" width="100%"/>
+				<Text text="{inv>/planDetail}" class="eoMuted" visible="{= !!${inv>/planDetail} }"/>
+				<VBox items="{inv>/plan/hints}" renderType="Bare">
+					<Text text="{inv>}" class="eoHelpText"/>
+				</VBox>
+			</VBox>
+		</Panel>
 		<Table id="invoiceTable" items="{inv>/vouchers}" popinLayout="GridSmall" contextualWidth="Auto"
 			noDataText="Dieser Bauakte ist noch keine Rechnung und kein Angebot zugeordnet.">
 			<headerToolbar>
@@ -12,8 +36,8 @@
 					<ToolbarSpacer/>
 					<Button id="invoiceRefresh" text="Aktualisieren" icon="sap-icon://refresh" press=".onRefresh" enabled="{= ${inv>/configured} === true }"
 						tooltip="Status aller Belege jetzt mit Lexware Office abgleichen"/>
-					<Button id="quotationCreate" text="Angebot erstellen (Beta)" icon="sap-icon://create-form" press=".onCreateQuotation" visible="{= ${inv>/canQuote} === true }"
-						tooltip="Angebot in EstrichONE vorbereiten und als Entwurf an Lexware Office senden"/>
+					<Button id="quotationCreate" text="Angebot erstellen" icon="sap-icon://create-form" press=".onCreateQuotation"
+						visible="{= ${inv>/canQuote} === true &amp;&amp; ${inv>/plan} === null }" tooltip="Angebot in EstrichONE erfassen und an Lexware Office senden"/>
 					<Button id="invoiceAssign" text="Beleg zuordnen" icon="sap-icon://chain-link" type="Emphasized" press=".onAssign" visible="{= ${inv>/canAssign} === true }"
 						tooltip="Vorhandene Rechnung oder vorhandenes Angebot aus Lexware Office dieser Bauakte zuordnen">
 						<layoutData><OverflowToolbarLayoutData priority="NeverOverflow"/></layoutData>
@@ -21,14 +45,14 @@
 				</OverflowToolbar>
 			</headerToolbar>
 			<columns>
-				<Column width="9rem"><Text text="Art"/></Column>
-				<Column width="12rem"><Text text="Nummer"/></Column>
+				<Column width="11.5rem"><Text text="Art"/></Column>
+				<Column width="11rem"><Text text="Nummer"/></Column>
 				<Column width="7rem"><Text text="Datum"/></Column>
 				<Column width="9rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Fällig bzw. gültig bis"/></Column>
 				<Column hAlign="End" width="8rem" minScreenWidth="Desktop" demandPopin="true"><Text text="Netto"/></Column>
 				<Column hAlign="End" width="8rem"><Text text="Brutto"/></Column>
 				<Column width="9rem"><Text text="Status"/></Column>
-				<Column hAlign="End" width="22rem"/>
+				<Column hAlign="End" width="19rem" minScreenWidth="Tablet" demandPopin="true"/>
 			</columns>
 			<items>
 				<ColumnListItem>
@@ -44,6 +68,7 @@
 					<VBox>
 						<ObjectStatus text="{inv>statusText}" state="{inv>statusState}" icon="{inv>statusIcon}" inverted="true"/>
 						<ObjectStatus text="{inv>syncError}" state="Warning" visible="{= !!${inv>syncError} }"/>
+						<Text text="{inv>autoAssigned}" class="eoMuted" visible="{= !!${inv>autoAssigned} }"/>
 					</VBox>
 					<HBox justifyContent="End" renderType="Bare" wrap="Wrap">
 						<Button text="PDF anzeigen" icon="sap-icon://pdf-attachment" type="Transparent" press=".onPdf" enabled="{inv>pdf}" tooltip="{inv>pdfHint}"/>
@@ -56,32 +81,31 @@
 			</items>
 		</Table>
 		<Text id="invoiceSummary" text="{inv>/summary}" class="sapUiTinyMarginTop" visible="{= !!${inv>/summary} }"/>
-		<Table id="quotationDrafts" items="{inv>/quotations}" visible="{= ${inv>/quotations}.length > 0 }" class="sapUiSmallMarginTop" popinLayout="GridSmall" contextualWidth="Auto">
+		<Table id="quotationDrafts" items="{inv>/drafts}" visible="{= ${inv>/drafts}.length > 0 }" class="sapUiSmallMarginTop" popinLayout="GridSmall" contextualWidth="Auto">
 			<headerToolbar>
 				<OverflowToolbar>
-					<Title text="Angebote in Vorbereitung" level="H3"/>
-					<ObjectStatus text="Beta" state="Information" inverted="true"/>
+					<Title text="Belege in Vorbereitung (noch nicht in Lexware Office)" level="H3"/>
 				</OverflowToolbar>
 			</headerToolbar>
 			<columns>
+				<Column width="10rem"><Text text="Art"/></Column>
 				<Column><Text text="Titel"/></Column>
 				<Column width="12rem"><Text text="Stand"/></Column>
-				<Column width="8rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Gültig bis"/></Column>
 				<Column width="8rem" hAlign="End" minScreenWidth="Tablet" demandPopin="true"><Text text="Netto"/></Column>
 				<Column width="8rem" hAlign="End"><Text text="Brutto"/></Column>
 				<Column width="8rem" hAlign="End"/>
 			</columns>
 			<items>
 				<ColumnListItem>
-					<Link text="{inv>title}" press=".onOpenQuotation"/>
+					<Text text="{inv>typeName}" class="eoStrong"/>
+					<Link text="{inv>title}" press=".onOpenDraft"/>
 					<ObjectStatus text="{inv>stateText}" state="{inv>stateState}"/>
-					<Text text="{inv>validText}" class="eoTabular"/>
 					<Text text="{inv>netText}" class="eoTabular"/>
 					<Text text="{inv>grossText}" class="eoTabular eoStrong"/>
-					<Button text="Bearbeiten" type="Transparent" press=".onOpenQuotation"/>
+					<Button text="Bearbeiten" type="Transparent" press=".onOpenDraft"/>
 				</ColumnListItem>
 			</items>
 		</Table>
-		<Text text="Rechnungen werden in Lexware Office erstellt und bearbeitet. EstrichONE zeigt Nummer, Betrag und Status, zeigt den Beleg als PDF an und führt Sie zum Beleg. Für Entwürfe stellt Lexware Office kein PDF bereit." class="eoHelpText sapUiTinyMarginTop"/>
+		<Text text="{= ${inv>/plan} !== null ? 'Belege erfassen Sie in EstrichONE und senden sie an Lexware Office. Nummer, Buchhaltung und Belegarchiv bleiben in Lexware Office. Für Entwürfe stellt Lexware Office kein PDF bereit.' : 'Rechnungen werden in Lexware Office erstellt und bearbeitet. EstrichONE zeigt Nummer, Betrag und Status, zeigt den Beleg als PDF an und führt Sie zum Beleg. Für Entwürfe stellt Lexware Office kein PDF bereit.' }" class="eoHelpText sapUiTinyMarginTop"/>
 	</VBox>
 </mvc:View>

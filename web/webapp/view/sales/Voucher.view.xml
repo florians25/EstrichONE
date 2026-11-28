@@ -1,0 +1,270 @@
+<mvc:View controllerName="estrichone.controller.sales.Voucher" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:uxap="sap.uxap" xmlns:form="sap.ui.layout.form"
+	xmlns:layout="sap.ui.layout" xmlns:core="sap.ui.core" height="100%">
+	<uxap:ObjectPageLayout id="salesPage" upperCaseAnchorBar="false" showFooter="true" busy="{view>/busy}" busyIndicatorDelay="200" headerContentPinnable="false"
+		toggleHeaderOnTitleClick="false">
+		<uxap:headerTitle>
+			<uxap:ObjectPageDynamicHeaderTitle>
+				<uxap:breadcrumbs>
+					<Breadcrumbs currentLocationText="{view>/v/typeName}">
+						<Link text="Verkauf" press=".onBack"/>
+						<Link text="{view>/bauakteText}" press=".onBauakte" visible="{= !!${view>/v/bauakteId} }"/>
+					</Breadcrumbs>
+				</uxap:breadcrumbs>
+				<uxap:heading>
+					<Title id="salesTitle" text="{= ${view>/v/lexwareNumber} ? ${view>/v/typeName} + ' ' + ${view>/v/lexwareNumber} : (${view>/v/typeName} || 'Beleg') }" level="H1" wrapping="true"/>
+				</uxap:heading>
+				<uxap:expandedContent><Text text="{= ${view>/v/title} + (${view>/v/lexwareNumber} ? '' : ', Nummer wird automatisch vergeben') }"/></uxap:expandedContent>
+				<uxap:snappedContent><Text text="{= ${view>/v/customerName} + ', ' + ${view>/totalsView/grossText} }"/></uxap:snappedContent>
+				<uxap:actions>
+					<Button id="salesOpenLexware" text="In Lexware öffnen" icon="sap-icon://action" press=".onOpenLexware" visible="{= !!${view>/v/lexwareUrl} }"
+						tooltip="Beleg in Lexware Office öffnen (dort bearbeiten, versenden und buchen)"/>
+				</uxap:actions>
+			</uxap:ObjectPageDynamicHeaderTitle>
+		</uxap:headerTitle>
+		<uxap:headerContent>
+			<!-- Kopfbereich: Belegart, Status, Kunde, Bauakte und Beträge als Attribute (keine Kacheln). -->
+			<layout:HorizontalLayout allowWrapping="true" class="eoSalesHeader">
+				<layout:VerticalLayout class="sapUiMediumMarginEnd">
+					<ObjectStatus title="Belegart" text="{view>/v/typeName}"/>
+					<ObjectStatus id="salesStatus" title="Status" text="{view>/statusView/text}" state="{view>/statusView/state}" inverted="true"/>
+				</layout:VerticalLayout>
+				<layout:VerticalLayout class="sapUiMediumMarginEnd">
+					<ObjectAttribute title="Kunde" text="{view>/v/customerName}" active="true" press=".onCustomer"/>
+					<ObjectAttribute title="Bauakte" text="{= ${view>/bauakteText} || 'keine (Beleg zum Kunden)' }" active="{= !!${view>/v/bauakteId} }" press=".onBauakte"/>
+				</layout:VerticalLayout>
+				<layout:VerticalLayout class="sapUiMediumMarginEnd">
+					<ObjectAttribute title="Netto" text="{view>/totalsView/netText}"/>
+					<ObjectAttribute title="Brutto" text="{view>/totalsView/grossText}"/>
+					<ObjectAttribute title="Offen" text="{view>/openText}" visible="{= !!${view>/openText} }"/>
+				</layout:VerticalLayout>
+			</layout:HorizontalLayout>
+		</uxap:headerContent>
+		<uxap:sections>
+			<uxap:ObjectPageSection id="secHead" title="Kopfdaten" titleUppercase="false">
+				<uxap:subSections>
+					<uxap:ObjectPageSubSection>
+						<VBox renderType="Bare">
+							<MessageStrip id="salesSent" type="Success" showIcon="true" visible="{= ${view>/v/state} === 'sent' }" class="sapUiSmallMarginBottom"
+								text="{view>/sentText}">
+								<link><Link text="In Lexware öffnen" press=".onOpenLexware"/></link>
+							</MessageStrip>
+							<VBox id="salesFailedBox" renderType="Bare" visible="{= ${view>/v/state} === 'failed' }" class="sapUiSmallMarginBottom">
+								<MessageStrip id="salesFailed" type="Error" showIcon="true"
+									text="{= 'Das Senden an Lexware Office ist fehlgeschlagen. ' + (${view>/v/sendError} || '') + ' Sie können den Beleg bearbeiten und erneut senden; ein bereits angelegter Beleg wird dabei erkannt und nicht doppelt angelegt.' }"/>
+								<Button id="salesFix" text="{view>/fixText}" type="Emphasized" icon="sap-icon://paper-plane" press=".onFix" visible="{= !!${view>/fixText} }"
+									class="sapUiTinyMarginTop"/>
+								<Panel id="salesTechnical" headerText="Technische Einzelheiten" expandable="true" expanded="false" visible="{= !!${view>/v/sendErrorTechnical} }">
+									<Text text="{view>/v/sendErrorTechnical}"/>
+								</Panel>
+							</VBox>
+							<MessageStrip id="salesNotLinked" type="Warning" showIcon="true" visible="{= ${view>/v/customerLinked} === false }" class="sapUiSmallMarginBottom"
+								text="Der Kunde ist noch nicht mit Lexware Office verknüpft. Verknüpfen Sie ihn am Kunden im Abschnitt „Lexware Office“, danach lässt sich der Beleg senden.">
+								<link><Link text="Zum Kunden" press=".onCustomer"/></link>
+							</MessageStrip>
+							<form:SimpleForm id="salesHeadForm" editable="{view>/edit}" layout="ColumnLayout" columnsM="2" columnsL="2" columnsXL="2" labelSpanL="4" labelSpanM="4">
+								<core:Title text="Kunde"/>
+								<Label text="Kunde"/>
+								<Link id="salesCustomer" text="{view>/v/customerName}" press=".onCustomer"/>
+								<Label text="Anschrift"/>
+								<Text text="{= ${view>/v/customerAddress} || 'keine Anschrift hinterlegt' }"/>
+								<Label text="Kundennummer"/>
+								<Text text="{= ${view>/v/customerNumber} || '–' }"/>
+								<Label text="Bauakte"/>
+								<Text text="{= ${view>/bauakteText} || 'keine (Beleg zum Kunden)' }"/>
+								<core:Title text="Beleg"/>
+								<Label text="Nummer"/>
+								<Text id="salesNumber" text="{view>/numberText}"/>
+								<Label text="Belegdatum" labelFor="sDate"/>
+								<DatePicker id="sDate" value="{view>/v/voucherDate}" valueFormat="yyyy-MM-dd" displayFormat="dd.MM.yyyy" editable="{view>/edit}" change=".onDirty"
+									placeholder="Tag des Sendens"/>
+								<Label text="Gültig bis" required="true" labelFor="sValid" visible="{= ${view>/v/type} === 'quotation' }"/>
+								<DatePicker id="sValid" value="{view>/v/validUntil}" valueFormat="yyyy-MM-dd" displayFormat="dd.MM.yyyy" editable="{view>/edit}" change=".onDirty"
+									visible="{= ${view>/v/type} === 'quotation' }"/>
+								<Label text="Leistungsdatum bzw. Beginn" required="{= ${view>/v/type} === 'invoice' }" labelFor="sService" visible="{= ${view>/v/type} !== 'quotation' }"/>
+								<DatePicker id="sService" value="{view>/v/serviceDate}" valueFormat="yyyy-MM-dd" displayFormat="dd.MM.yyyy" editable="{view>/edit}" change=".onDirty"
+									visible="{= ${view>/v/type} !== 'quotation' }"/>
+								<Label text="Ende des Leistungszeitraums" labelFor="sServiceEnd" visible="{= ${view>/v/type} !== 'quotation' }"/>
+								<DatePicker id="sServiceEnd" value="{view>/v/serviceEndDate}" valueFormat="yyyy-MM-dd" displayFormat="dd.MM.yyyy" editable="{view>/edit}"
+									change=".onDirty" visible="{= ${view>/v/type} !== 'quotation' }" placeholder="nur bei einem Zeitraum"/>
+								<Label text="Titel" required="true" labelFor="sTitle"/>
+								<Input id="sTitle" value="{view>/v/title}" maxLength="200" editable="{view>/edit}" liveChange=".onDirty"/>
+								<core:Title text="Zahlung und Steuer"/>
+								<Label text="Zahlungsbedingung" labelFor="sPayment" visible="{= ${view>/v/type} !== 'creditnote' }"/>
+								<Select id="sPayment" selectedKey="{view>/v/paymentConditionId}" items="{view>/payments}" enabled="{view>/edit}" change=".onPayment" width="100%"
+									forceSelection="false" visible="{= ${view>/v/type} !== 'creditnote' }">
+									<core:Item key="{view>key}" text="{view>text}"/>
+								</Select>
+								<Label text="Text der Zahlungsbedingung" labelFor="sPaymentLabel" visible="{= ${view>/v/type} !== 'creditnote' }"/>
+								<Input id="sPaymentLabel" value="{view>/v/paymentLabel}" maxLength="300" editable="{view>/edit}" liveChange=".onDirty"
+									placeholder="z. B. Zahlbar innerhalb von 14 Tagen ohne Abzug." visible="{= ${view>/v/type} !== 'creditnote' }"/>
+								<Label text="Steuerart" labelFor="sTax"/>
+								<Select id="sTax" selectedKey="{view>/v/taxType}" items="{view>/taxTypes}" enabled="{view>/edit}" change=".onTotals" width="100%">
+									<core:Item key="{view>key}" text="{view>text}" enabled="{view>allowed}"/>
+								</Select>
+								<Label text="" visible="{= !!${view>/taxHint} &amp;&amp; ${view>/edit} === true }"/>
+								<Text id="sTaxHint" text="{view>/taxHint}" visible="{= !!${view>/taxHint} &amp;&amp; ${view>/edit} === true }" class="eoHelpText"/>
+							</form:SimpleForm>
+						</VBox>
+					</uxap:ObjectPageSubSection>
+				</uxap:subSections>
+			</uxap:ObjectPageSection>
+
+			<uxap:ObjectPageSection id="secLines" title="Positionen" titleUppercase="false">
+				<uxap:subSections>
+					<uxap:ObjectPageSubSection>
+						<VBox renderType="Bare">
+							<Table id="salesLines" items="{view>/lines}" mode="{= ${view>/edit} ? 'MultiSelect' : 'None' }" popinLayout="GridSmall" contextualWidth="Auto"
+								noDataText="Noch keine Positionen. Geben Sie unten eine Bezeichnung ein oder suchen Sie einen Artikel.">
+								<headerToolbar>
+									<OverflowToolbar>
+										<Title text="{= 'Positionen (' + ${view>/lines}.length + ')' }" level="H2"/>
+										<ToolbarSpacer/>
+										<Button id="sSuggest" text="Vorschläge aus der Bauakte" icon="sap-icon://lightbulb" press=".onSuggest"
+											visible="{= ${view>/edit} === true &amp;&amp; !!${view>/v/bauakteId} }" tooltip="Fläche aus Räume und Flächen bzw. Kennwerten, Regiestunden aus Einsätzen"/>
+										<Button id="sCatalog" text="Artikel suchen" icon="sap-icon://search" press=".onCatalog" visible="{view>/edit}"/>
+										<Button id="sAddItem" text="Position hinzufügen" icon="sap-icon://add" press=".onAddItem" visible="{view>/edit}"/>
+										<Button id="sAddText" text="Textposition" icon="sap-icon://text" press=".onAddText" visible="{view>/edit}"/>
+										<Button id="sAddSubtotal" text="Zwischensumme" icon="sap-icon://sum" press=".onAddSubtotal" visible="{view>/edit}"/>
+										<Button id="sUp" icon="sap-icon://navigation-up-arrow" tooltip="Ausgewählte Positionen nach oben" press=".onUp" visible="{view>/edit}"/>
+										<Button id="sDown" icon="sap-icon://navigation-down-arrow" tooltip="Ausgewählte Positionen nach unten" press=".onDown" visible="{view>/edit}"/>
+										<Button id="sRemove" icon="sap-icon://delete" tooltip="Ausgewählte Positionen löschen" press=".onRemove" visible="{view>/edit}"/>
+									</OverflowToolbar>
+								</headerToolbar>
+								<columns>
+									<Column width="3rem"><Text text="Pos."/></Column>
+									<Column><Text text="Bezeichnung und Beschreibung"/></Column>
+									<Column width="6rem" hAlign="End" minScreenWidth="Tablet" demandPopin="true"><Text text="Menge"/></Column>
+									<Column width="5.5rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Einheit"/></Column>
+									<Column width="7.5rem" hAlign="End" minScreenWidth="Tablet" demandPopin="true"><Text text="Einzelpreis netto"/></Column>
+									<Column width="6rem" minScreenWidth="Desktop" demandPopin="true"><Text text="USt"/></Column>
+									<Column width="5rem" hAlign="End" minScreenWidth="Desktop" demandPopin="true"><Text text="Rabatt %"/></Column>
+									<Column width="8rem" hAlign="End"><Text text="Betrag netto"/></Column>
+								</columns>
+								<items>
+									<ColumnListItem highlight="{= ${view>kind} === 'deduction' ? 'Information' : 'None' }">
+										<Text text="{view>pos}" class="eoTabular"/>
+										<VBox renderType="Bare">
+											<Input value="{view>name}" maxLength="255" editable="{view>/edit}" liveChange=".onDirty" visible="{= ${view>kind} !== 'subtotal' }"
+												placeholder="{= ${view>kind} === 'text' ? 'Überschrift der Textposition' : 'Bezeichnung' }"/>
+											<Text text="{= ${view>name} || 'Zwischensumme' }" class="eoStrong" visible="{= ${view>kind} === 'subtotal' }"/>
+											<TextArea value="{view>description}" rows="1" growing="true" maxLength="2000" editable="{view>/edit}" liveChange=".onDirty" width="100%"
+												placeholder="Beschreibung (optional)" visible="{= ${view>kind} !== 'subtotal' }"/>
+											<Text text="{view>hint}" class="eoMuted" visible="{= !!${view>hint} }"/>
+										</VBox>
+										<Input value="{view>quantityText}" textAlign="End" visible="{= ${view>kind} === 'item' }" editable="{view>/edit}" liveChange=".onTotals"/>
+										<Input value="{view>unit}" maxLength="50" visible="{= ${view>kind} === 'item' }" editable="{view>/edit}" liveChange=".onDirty"/>
+										<Input value="{view>priceText}" textAlign="End" visible="{= ${view>kind} === 'item' || ${view>kind} === 'deduction' }" editable="{view>/edit}"
+											liveChange=".onTotals"/>
+										<Select selectedKey="{view>taxKey}" visible="{= ${view>kind} === 'item' || ${view>kind} === 'deduction' }"
+											enabled="{= ${view>/edit} === true &amp;&amp; !${view>/noTax} }" change=".onTotals" width="100%">
+											<core:Item key="19" text="19 %"/>
+											<core:Item key="7" text="7 %"/>
+											<core:Item key="0" text="0 %"/>
+										</Select>
+										<Input value="{view>discountText}" textAlign="End" visible="{= ${view>kind} === 'item' }" editable="{view>/edit}" liveChange=".onTotals" placeholder="0"/>
+										<Text text="{view>netText}" class="eoTabular eoStrong"/>
+									</ColumnListItem>
+								</items>
+							</Table>
+							<!-- Eingabezeile: Artikel suchen oder neue Position eingeben (Enter übernimmt, ohne Maus). -->
+							<Input id="sQuick" visible="{view>/edit}" placeholder="Artikel suchen oder neue Position eingeben" showSuggestion="true" suggestionItems="{view>/suggest}"
+								suggestionItemSelected=".onQuickPick" submit=".onQuickSubmit" liveChange=".onQuickType" class="sapUiTinyMarginTop" width="100%"
+								ariaLabelledBy="sQuickLabel">
+								<suggestionItems><core:ListItem key="{view>id}" text="{view>title}" additionalText="{view>info}"/></suggestionItems>
+							</Input>
+							<core:InvisibleText id="sQuickLabel" text="Artikel suchen oder neue Position eingeben"/>
+							<Text text="Tipp: Enter übernimmt die Eingabe als neue Position. Mit Pfeiltasten wählen Sie einen Artikel aus der Vorschlagsliste. Strg und S speichert."
+								class="eoHelpText" visible="{view>/edit}"/>
+							<MessageStrip id="salesProblems" type="Warning" showIcon="true" visible="{= ${view>/problemsText}.length > 0 &amp;&amp; ${view>/edit} === true }"
+								text="{view>/problemsText}" class="sapUiSmallMarginTop"/>
+						</VBox>
+					</uxap:ObjectPageSubSection>
+				</uxap:subSections>
+			</uxap:ObjectPageSection>
+
+			<uxap:ObjectPageSection id="secTexts" title="Texte" titleUppercase="false">
+				<uxap:subSections>
+					<uxap:ObjectPageSubSection>
+						<form:SimpleForm editable="{view>/edit}" layout="ColumnLayout" columnsM="1" columnsL="1" columnsXL="1">
+							<Label text="Einleitungstext" labelFor="sIntro"/>
+							<TextArea id="sIntro" value="{view>/v/introduction}" rows="3" growing="true" maxLength="4000" editable="{view>/edit}" liveChange=".onDirty" width="100%"/>
+							<Label text="Schlusstext" labelFor="sRemark"/>
+							<TextArea id="sRemark" value="{view>/v/remark}" rows="2" growing="true" maxLength="4000" editable="{view>/edit}" liveChange=".onDirty" width="100%"
+								placeholder="z. B. Wir freuen uns auf Ihren Auftrag."/>
+						</form:SimpleForm>
+					</uxap:ObjectPageSubSection>
+				</uxap:subSections>
+			</uxap:ObjectPageSection>
+
+			<uxap:ObjectPageSection id="secTotals" title="Summen" titleUppercase="false">
+				<uxap:subSections>
+					<uxap:ObjectPageSubSection>
+						<VBox renderType="Bare">
+							<HBox justifyContent="End" renderType="Bare">
+								<VBox id="salesTotals" width="28rem" renderType="Bare" class="eoQuotationTotals">
+									<HBox justifyContent="SpaceBetween" renderType="Bare"><Label text="Summe netto"/><Text id="sNet" text="{view>/totalsView/netText}" class="eoTabular"/></HBox>
+									<VBox items="{view>/totalsView/taxLines}" renderType="Bare">
+										<HBox justifyContent="SpaceBetween" renderType="Bare" class="sapUiTinyMarginTop">
+											<Label text="{view>label}" wrapping="true"/><Text text="{view>taxText}" class="eoTabular"/>
+										</HBox>
+									</VBox>
+									<HBox justifyContent="SpaceBetween" renderType="Bare" class="sapUiTinyMarginTop">
+										<Label text="Summe brutto" design="Bold"/><Text id="sGross" text="{view>/totalsView/grossText}" class="eoTabular eoStrong"/>
+									</HBox>
+								</VBox>
+							</HBox>
+							<Text text="{view>/totalsView/note}" class="eoHelpText" visible="{= !!${view>/totalsView/note} }"/>
+							<Text text="Die Summen sind eine Vorschau. Maßgeblich rechnet Lexware Office; Rundungen können dort um einzelne Cent abweichen." class="eoHelpText"/>
+						</VBox>
+					</uxap:ObjectPageSubSection>
+				</uxap:subSections>
+			</uxap:ObjectPageSection>
+
+			<uxap:ObjectPageSection id="secChain" title="Belegkette und Zahlungen" titleUppercase="false">
+				<uxap:subSections>
+					<uxap:ObjectPageSubSection>
+						<VBox renderType="Bare">
+							<List id="salesChain" items="{view>/chain}" noDataText="Dieser Beleg steht noch in keiner Belegkette. Aus einem gesendeten Angebot entsteht über „Weitere“ eine Auftragsbestätigung oder Rechnung."
+								showSeparators="Inner">
+								<StandardListItem title="{= ${view>typeName} + ' ' + (${view>number} || 'wird automatisch vergeben') }" description="{view>info}"
+									info="{view>statusText}" infoState="{view>statusState}" type="{= ${view>current} || !${view>id} ? 'Inactive' : 'Navigation' }"
+									highlight="{= ${view>current} ? 'Information' : 'None' }" press=".onChainOpen"/>
+							</List>
+							<form:SimpleForm editable="false" layout="ColumnLayout" columnsM="2" columnsL="2" class="sapUiSmallMarginTop"
+								visible="{= ${view>/v/type} === 'invoice' &amp;&amp; ${view>/v/state} === 'sent' &amp;&amp; ${view>/paymentsModule} === true }">
+								<core:Title text="Zahlungen"/>
+								<Label text="Offener Betrag"/><Text id="salesOpen" text="{= ${view>/openText} || 'noch nicht abgeglichen' }"/>
+								<Label text="Zahlstatus"/><Text text="{view>/paymentText}"/>
+								<Label text=""/><Button id="salesPaymentRefresh" text="Zahlstand aus Lexware Office lesen" icon="sap-icon://refresh" press=".onRefreshPayment"/>
+							</form:SimpleForm>
+						</VBox>
+					</uxap:ObjectPageSubSection>
+				</uxap:subSections>
+			</uxap:ObjectPageSection>
+		</uxap:sections>
+		<uxap:footer>
+			<OverflowToolbar id="salesFooter">
+				<ToolbarSpacer/>
+				<Button id="salesSave" text="Speichern" press=".onSave" enabled="{view>/dirty}" visible="{view>/edit}" tooltip="Speichern (Strg und S)"/>
+				<Button id="salesPreview" text="Vorschau" icon="sap-icon://pdf-attachment" press=".onPreview" enabled="{= !!${view>/v/lexwareId} &amp;&amp; ${view>/v/status} !== 'draft' }"
+					tooltip="{= ${view>/v/lexwareId} ? (${view>/v/status} === 'draft' ? 'Für Entwürfe stellt Lexware Office kein PDF bereit.' : 'PDF aus Lexware Office anzeigen') : 'Das PDF entsteht in Lexware Office, sobald der Beleg dort festgeschrieben ist.' }"/>
+				<Button id="salesSend" text="An Lexware Office senden" type="Emphasized" icon="sap-icon://paper-plane" press=".onSend" visible="{view>/edit}"
+					enabled="{= ${view>/v/customerLinked} === true &amp;&amp; !${view>/sending} }" tooltip="Als Entwurf in Lexware Office anlegen"/>
+				<Button id="salesFinalize" text="Festschreiben" icon="sap-icon://locked" press=".onFinalize" visible="{= ${view>/edit} === true &amp;&amp; ${view>/v/canFinalize} === true }"
+					enabled="{= ${view>/v/customerLinked} === true &amp;&amp; !${view>/sending} }" tooltip="In Lexware Office anlegen und festschreiben (Nummer wird vergeben)"/>
+				<MenuButton id="salesMore" text="Weitere" buttonMode="Regular">
+					<menu>
+						<Menu itemSelected=".onMore">
+							<MenuItem key="duplicate" text="Duplizieren" icon="sap-icon://copy" visible="{view>/v/canEdit}"/>
+							<MenuItem key="orderconfirmation" text="In Auftragsbestätigung umwandeln" icon="sap-icon://sales-order"
+								visible="{= ${view>/followers}.indexOf('orderconfirmation') >= 0 }"/>
+							<MenuItem key="invoice" text="In Rechnung umwandeln" icon="sap-icon://sales-document" visible="{= ${view>/followers}.indexOf('invoice') >= 0 }"/>
+							<MenuItem key="creditnote" text="Gutschrift zur Rechnung" icon="sap-icon://money-bills" visible="{= ${view>/followers}.indexOf('creditnote') >= 0 }"/>
+							<MenuItem key="discard" text="Verwerfen" icon="sap-icon://delete" visible="{view>/edit}"/>
+						</Menu>
+					</menu>
+				</MenuButton>
+			</OverflowToolbar>
+		</uxap:footer>
+	</uxap:ObjectPageLayout>
+</mvc:View>

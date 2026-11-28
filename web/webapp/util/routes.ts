@@ -2,6 +2,9 @@
 import type { RouteDef } from "./router";
 import { adminAreas } from "./adminCatalog";
 
+/** Rechte, mit denen der Verkauf sichtbar ist (ansehen bzw. erfassen einer Belegart). */
+export const salesRead = ["quotations.read", "quotations.prepare", "orderconfirmations.read", "salesinvoices.read", "creditnotes.read"];
+
 export const routes: RouteDef[] = [
 	{ name: "login", pattern: "/anmelden", view: "auth.Login", public: true, title: "login.title" },
 	{ name: "setup", pattern: "/einrichtung", view: "auth.Setup", public: true, title: "setup.title" },
@@ -28,7 +31,10 @@ export const routes: RouteDef[] = [
 	{ name: "orders", pattern: "/bestellungen", view: "materials.Orders", permission: "materials.read", nav: "orders", title: "nav.orders" },
 	{ name: "materials", pattern: "/material", view: "materials.Materials", permission: "materials.read", nav: "materials", title: "nav.materials" },
 	{ name: "articles", pattern: "/artikel", view: "materials.Articles", permission: "materials.read", nav: "articles", title: "nav.articles" },
-	{ name: "quotation", pattern: "/angebote/:id", view: "office.Quotation", permission: "quotations.prepare", nav: "customers", title: "nav.quotation" },
+	{ name: "sales", pattern: "/verkauf", view: "sales.Sales", anyPermission: salesRead, nav: "sales", title: "nav.sales" },
+	{ name: "salesVoucher", pattern: "/verkauf/:id", view: "sales.Voucher", anyPermission: salesRead, nav: "sales", title: "nav.salesVoucher" },
+	// Frühere Adresse der Angebote (Beta): öffnet denselben Beleg im Belegeditor.
+	{ name: "quotation", pattern: "/angebote/:id", view: "sales.Voucher", anyPermission: salesRead, nav: "sales", title: "nav.salesVoucher" },
 	{ name: "suppliers", pattern: "/lieferanten", view: "materials.Suppliers", permission: "materials.read", nav: "suppliers", title: "nav.suppliers" },
 	{ name: "customers", pattern: "/kunden", view: "Customers", permission: "contacts.read", nav: "customers", title: "nav.customers" },
 	{ name: "customer", pattern: "/kunden/:id", view: "Customer", permission: "contacts.read", nav: "customers", title: "nav.customers" },
@@ -137,6 +143,7 @@ export const navigation: NavEntry[] = [
 	{
 		key: "groupOffice", children: [
 			{ key: "customers", path: "/kunden", icon: "sap-icon://customer", permission: "contacts.read" },
+			{ key: "sales", path: "/verkauf", icon: "sap-icon://sales-document", anyPermission: salesRead },
 			{ key: "calls", path: "/anrufe", icon: "sap-icon://call", permission: "contacts.read" },
 			{ key: "fuelReceipts", path: "/tankbelege", icon: "sap-icon://receipt", permission: "fuel.record" },
 			{ key: "messages", path: "/verwaltung/nachrichten", icon: "sap-icon://paper-plane", permission: "notifications.send" },

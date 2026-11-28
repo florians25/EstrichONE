@@ -29,6 +29,8 @@ export function taxTypesText(t: LexwareTaxTypes | null, format: (iso: string) =>
 	return parts.join(" ");
 }
 
+export interface LexwareAutoAssigned { linkId: string; bauakteId: string; bauakteNumber: string | null; bauakteTitle: string | null; type: string; number: string | null; reason: string; linkedAt: string }
+
 export interface LexwareSettings {
 	moduleEnabled: boolean;
 	hasApiKey: boolean;
@@ -43,6 +45,7 @@ export interface LexwareSettings {
 	keyHelpUrl: string;
 	version: number;
 	taxTypes?: LexwareTaxTypes | null;
+	autoAssign?: boolean; autoAssignSingleOpen?: boolean;
 	newCustomersSync: boolean;
 	/** Richtung des Änderungsabgleichs verknüpfter Kunden. */
 	changeSync: ChangeSync;
@@ -151,6 +154,8 @@ export interface LexwareVoucher {
 	id: string; lexwareId: string; type: VoucherType | string; number: string | null; title: string | null; voucherDate: string | null; dueDate: string | null;
 	netAmount: number | null; grossAmount: number | null; currency: string; status: VoucherStatus | string; contactName: string | null; url: string;
 	syncedAt: string | null; syncError: string | null;
+	/** Grund der automatischen Zuordnung, z. B. „automatisch zugeordnet: Bauaktennummer im Beleg“. */
+	autoAssigned?: string | null;
 }
 export interface LexwareBauakteCustomer { id: string; name: string; lexwareContactId: string | null; syncEnabled: boolean }
 export interface BauakteLexware {

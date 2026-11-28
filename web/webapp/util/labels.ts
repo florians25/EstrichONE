@@ -198,7 +198,9 @@ export const auditTexts: Record<string, string> = {
 	"lexware.contact_synced": "Kundendaten mit Lexware Office abgeglichen",
 	"lexware.articles_synced": "Artikel mit Lexware Office abgeglichen", "lexware.article_synced": "Artikel nach Lexware Office übertragen",
 	"lexware.article_created": "Artikel in Lexware Office angelegt", "lexware.article_imported": "Artikel aus Lexware Office übernommen",
-	"lexware.article_linked": "Artikel mit Lexware Office verknüpft", "lexware.quotation_sent": "Angebot als Entwurf an Lexware Office gesendet",
+	"lexware.article_linked": "Artikel mit Lexware Office verknüpft", "lexware.quotation_sent": "Angebot als Entwurf an Lexware Office gesendet", "lexware.sales_sent": "Verkaufsbeleg an Lexware Office gesendet",
+	"lexware.sales_finalized": "Verkaufsbeleg in Lexware Office festgeschrieben", "lexware.sales_discarded": "Verkaufsbeleg in EstrichONE verworfen",
+	"lexware.tax_types_checked": "Lexware Office: erlaubte Steuerarten geprüft", "bauakte.lexware_auto_assigned": "Beleg aus Lexware Office automatisch zugeordnet",
 	"lexware.quotation_discarded": "Angebotsentwurf verworfen", "bauakte.review_requested": "Zur Abschlussprüfung gestellt",
 	"bauakte.review_dismissed": "Abschlussprüfung zurückgestellt",
 };

@@ -11,7 +11,7 @@ import type { RouteMatch } from "../../util/router";
 import {
 	changeSyncHelp, changeSyncOptions, changeSyncStand, changeSyncState, creationStateText, deviationValue, enableSyncQuestion, lastTestText, matchLabel, placeText, reconciliationFigures, taxTypesText, uniquePairs,
 	type DeviationSource, type LexwareContactSummary, type LexwareCustomerSummary, type LexwareDeviationItem, type LexwareInternalDuplicate, type LexwareLinkedPair,
-	type LexwareReconciliation, type LexwareSettings, type LexwareSuggestion, type LexwareTaxTypes, type LexwareTestResponse,
+	type LexwareReconciliation, type LexwareSettings, type LexwareSuggestion, type LexwareAutoAssigned, type LexwareTaxTypes, type LexwareTestResponse, voucherTypeText,
 } from "../../util/lexware";
 import { articleSyncHelp, articleSyncOptions, statusRuleTexts } from "../../util/quotations";
 import { importLexwareContact, openCustomerLinkDialog, openDeviationDialog, openExternal, resolveAllDeviations } from "../../util/lexwareDialogs";
@@ -23,7 +23,7 @@ const sideText = (c: LexwareCustomerSummary | LexwareContactSummary | null) => (
 export default class Lexware extends BaseController {
 	onInit(): void {
 		this.local({
-			s: null, loaded: false, busy: false, apiKey: "", baseUrl: "", lastTestText: "", tab: "connection",
+			s: null, autoAssigned: [], loaded: false, busy: false, apiKey: "", baseUrl: "", lastTestText: "", tab: "connection",
 			rec: null, recBusy: false, recStand: "", figures: [], list: "suggestions", suggestions: [], internal: [], onlyEstrichOne: [], onlyLexware: [], linked: [], excluded: [], excludedSelected: 0,
 			deviations: [], changeSyncOptions, changeSyncHelp: "", changeSyncStand: { text: "", state: "None" },
 			articleSyncOptions, articleSyncHelp: "", articleSyncStand: { text: "", state: "None" }, ruleTexts: statusRuleTexts,
@@ -72,6 +72,10 @@ export default class Lexware extends BaseController {
 		m.setProperty("/changeSyncStand", changeSyncStand(s, dateTime));
 		m.setProperty("/articleSyncHelp", articleSyncHelp(s.articleSync));
 		m.setProperty("/taxTypesText", taxTypesText(s.taxTypes ?? null, dateTime));
+		void get<LexwareAutoAssigned[]>("settings/integrations/lexware/auto-assigned").then((list) => m.setProperty("/autoAssigned", list.map((a) => ({
+			title: `${voucherTypeText(a.type)} ${a.number ?? "ohne Nummer"} zu Bauakte ${[a.bauakteNumber, a.bauakteTitle].filter(Boolean).join(" ")}`,
+			description: a.reason, when: dateTime(a.linkedAt),
+		})))).catch(() => m.setProperty("/autoAssigned", []));
 		m.setProperty("/articleSyncStand", s.lastArticleSyncError
 			? { text: `Letzter Artikelabgleich fehlgeschlagen: ${s.lastArticleSyncError}`, state: "Error" }
 			: s.lastArticleSyncAt ? { text: `Letzter Artikelabgleich: ${dateTime(s.lastArticleSyncAt)}`, state: "None" } : { text: "", state: "None" });
@@ -96,6 +100,7 @@ export default class Lexware extends BaseController {
 			apiKey: String(m.getProperty("/apiKey") ?? "").trim() || null, baseUrl: String(m.getProperty("/baseUrl") ?? "").trim() || null,
 			version: s.version, newCustomersSync: s.newCustomersSync === true, changeSync: s.changeSync, autoCreate: s.autoCreate === true,
 			articleSync: s.articleSync, statusOnQuotationAccepted: s.statusOnQuotationAccepted !== false, statusOnInvoicesPaid: s.statusOnInvoicesPaid !== false,
+			autoAssign: s.autoAssign !== false, autoAssignSingleOpen: s.autoAssignSingleOpen === true,
 		}));
 		if (saved) {
 			this.apply(saved);

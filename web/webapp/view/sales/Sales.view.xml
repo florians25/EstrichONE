@@ -1,0 +1,99 @@
+<mvc:View controllerName="estrichone.controller.sales.Sales" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:f="sap.f" xmlns:core="sap.ui.core" height="100%">
+	<f:DynamicPage id="page" toggleHeaderOnTitleClick="false" busy="{view>/busy}">
+		<f:title>
+			<f:DynamicPageTitle>
+				<f:heading><Title text="{i18n>nav.sales}" level="H1"/></f:heading>
+				<f:expandedContent>
+					<Text text="Angebote, Auftragsbestätigungen, Rechnungen und Gutschriften. Erfasst wird in EstrichONE, Nummer, Buchhaltung und Belegarchiv bleiben in Lexware Office."/>
+				</f:expandedContent>
+				<f:actions>
+					<MenuButton id="salesNew" text="Neuer Beleg" icon="sap-icon://add" type="Emphasized" visible="{= ${view>/creatable}.length > 0 }"
+						buttonMode="Regular">
+						<menu>
+							<Menu items="{view>/creatable}" itemSelected=".onNew">
+								<MenuItem text="{view>name}" key="{view>type}"/>
+							</Menu>
+						</menu>
+					</MenuButton>
+					<Button id="salesRefresh" text="{i18n>common.refresh}" icon="sap-icon://refresh" press=".onRefresh" tooltip="Belegliste neu aus Lexware Office laden"/>
+				</f:actions>
+			</f:DynamicPageTitle>
+		</f:title>
+		<f:header>
+			<f:DynamicPageHeader pinnable="false">
+				<!-- Filterleiste wie im SAP List Report: Suche, Kunde, Bauakte; Belegart und Status als Reiter über der Tabelle. -->
+				<FlexBox wrap="Wrap" alignItems="End" class="eoSalesFilters">
+					<VBox class="sapUiSmallMarginEnd sapUiTinyMarginBottom">
+						<Label text="Suche" labelFor="salesSearch"/>
+						<SearchField id="salesSearch" value="{view>/filter/query}" liveChange=".onFilter" width="18rem" placeholder="Nummer, Titel, Kunde, Bauakte"/>
+					</VBox>
+					<VBox class="sapUiSmallMarginEnd sapUiTinyMarginBottom">
+						<Label text="Kunde" labelFor="salesCustomer"/>
+						<ComboBox id="salesCustomer" selectedKey="{view>/filter/customer}" items="{view>/customers}" change=".onFilter" width="16rem" showClearIcon="true"
+							placeholder="Alle Kunden">
+							<core:Item key="{view>key}" text="{view>text}"/>
+						</ComboBox>
+					</VBox>
+					<VBox class="sapUiSmallMarginEnd sapUiTinyMarginBottom">
+						<Label text="Bauakte" labelFor="salesBauakte"/>
+						<ComboBox id="salesBauakte" selectedKey="{view>/filter/bauakte}" items="{view>/bauakten}" change=".onFilter" width="16rem" showClearIcon="true"
+							placeholder="Alle Bauakten">
+							<core:Item key="{view>key}" text="{view>text}"/>
+						</ComboBox>
+					</VBox>
+				</FlexBox>
+			</f:DynamicPageHeader>
+		</f:header>
+		<f:content>
+			<VBox renderType="Bare">
+				<MessageStrip id="salesLexwareError" type="Warning" showIcon="true" visible="{= !!${view>/lexwareError} }" class="sapUiSmallMarginBottom"
+					text="{= 'Lexware Office ist im Moment nicht erreichbar. Angezeigt werden die Belege aus EstrichONE und die den Bauakten zugeordneten Belege. ' + ${view>/lexwareError} }"/>
+				<IconTabHeader id="salesTypes" selectedKey="{view>/filter/type}" select=".onFilter" mode="Inline" items="{view>/typeTabs}">
+					<items><IconTabFilter key="{view>key}" text="{view>text}"/></items>
+				</IconTabHeader>
+				<Table id="salesTable" items="{view>/items}" growing="true" growingThreshold="50" growingScrollToLoad="true" popinLayout="GridSmall" contextualWidth="Auto"
+					sticky="ColumnHeaders,HeaderToolbar" noDataText="Keine Belege in dieser Auswahl. Mit „Neuer Beleg“ erfassen Sie einen Beleg, auch direkt aus der Bauakte.">
+					<headerToolbar>
+						<OverflowToolbar>
+							<SegmentedButton id="salesStatus" selectedKey="{view>/filter/status}" selectionChange=".onFilter" items="{view>/statusTabs}">
+								<items><SegmentedButtonItem key="{view>key}" text="{view>text}"/></items>
+							</SegmentedButton>
+							<ToolbarSpacer/>
+						</OverflowToolbar>
+					</headerToolbar>
+					<columns>
+						<Column width="11rem"><Text text="Nummer"/></Column>
+						<Column><Text text="Kunde"/></Column>
+						<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Bauakte"/></Column>
+						<Column width="6.5rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Datum"/></Column>
+						<Column width="6.5rem" minScreenWidth="Desktop" demandPopin="true"><Text text="Fällig"/></Column>
+						<Column width="7.5rem" hAlign="End" minScreenWidth="Desktop" demandPopin="true"><Text text="Netto"/></Column>
+						<Column width="7.5rem" hAlign="End"><Text text="Brutto"/></Column>
+						<Column width="7.5rem" hAlign="End" minScreenWidth="Tablet" demandPopin="true"><Text text="Offen"/></Column>
+						<Column width="10rem"><Text text="Status"/></Column>
+					</columns>
+					<items>
+						<ColumnListItem type="Navigation" press=".onOpen">
+							<VBox renderType="Bare">
+								<Text text="{view>numberText}" class="eoTabular eoStrong"/>
+								<Text text="{view>typeName}" class="eoMuted"/>
+							</VBox>
+							<VBox renderType="Bare">
+								<Text text="{view>customerName}"/>
+								<Text text="{view>title}" class="eoMuted" maxLines="1" visible="{= !!${view>title} }"/>
+							</VBox>
+							<Text text="{view>bauakteText}"/>
+							<Text text="{view>dateText}" class="eoTabular"/>
+							<Text text="{view>dueText}" class="eoTabular"/>
+							<Text text="{view>netText}" class="eoTabular"/>
+							<Text text="{view>grossText}" class="eoTabular eoStrong"/>
+							<Text text="{view>openText}" class="eoTabular"/>
+							<ObjectStatus text="{view>statusText}" state="{view>statusState}" inverted="true"/>
+						</ColumnListItem>
+					</items>
+				</Table>
+				<Text id="salesSummary" text="{view>/summary}" class="sapUiSmallMarginTop"/>
+			</VBox>
+		</f:content>
+	</f:DynamicPage>
+</mvc:View>
