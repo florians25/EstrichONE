@@ -487,7 +487,8 @@ public sealed record AppearanceSettings
 public sealed record PdfSettings
 {
     public bool ShowCompanyLogo { get; init; } = true;
-    public bool ShowEstrichOneLogo { get; init; } = true;
+    /// <summary>Kleiner Texthinweis „Erstellt mit EstrichONE“ in der Fußzeile (kein Logo), nur auf Wunsch.</summary>
+    public bool ShowEstrichOneLogo { get; init; }
     public string AccentColor { get; init; } = "#1F4E79";
     public string? FooterText { get; init; }
     public int PhotosPerRow { get; init; } = 2;

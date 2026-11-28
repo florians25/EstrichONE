@@ -152,7 +152,33 @@ const pending = new Map<string, string>();
 const fileKey = (file: File, options: UploadOptions) =>
 	[options.bauakteId, file.name, file.size, file.lastModified, options.previousVersionId ?? ""].join("|");
 
-export async function uploadFile(file: File, options: UploadOptions): Promise<FileResponse> {
+/**
+ * HEIC/HEIF (iPhone) als JPEG hochladen, wenn der Browser es dekodieren kann (Safari): der Server hat keinen HEVC-Decoder,
+ * ohne Umwandlung gäbe es weder Vorschau noch Foto im PDF. Ausrichtung wird beim Dekodieren angewendet. Kann der Browser
+ * HEIC nicht lesen (z. B. Chrome, Firefox), bleibt die Datei unverändert.
+ */
+export async function heicAsJpeg(file: File): Promise<File> {
+	const heic = /^image\/hei[cf]/i.test(file.type) || /\.hei[cf]$/i.test(file.name);
+	if (!heic || typeof createImageBitmap !== "function" || typeof document === "undefined") return file;
+	try {
+		const bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
+		const canvas = document.createElement("canvas");
+		canvas.width = bitmap.width;
+		canvas.height = bitmap.height;
+		const context = canvas.getContext("2d");
+		if (!context) return file;
+		context.drawImage(bitmap, 0, 0);
+		bitmap.close();
+		const jpeg = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.9));
+		if (!jpeg) return file;
+		return new File([jpeg], file.name.replace(/\.hei[cf]$/i, "") + ".jpg", { type: "image/jpeg", lastModified: file.lastModified });
+	} catch {
+		return file;
+	}
+}
+
+export async function uploadFile(original: File, options: UploadOptions): Promise<FileResponse> {
+	const file = options.previousVersionId ? original : await heicAsJpeg(original);
 	const bytes = await file.arrayBuffer();
 	const key = fileKey(file, options);
 	const known = pending.get(key);

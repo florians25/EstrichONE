@@ -53,9 +53,11 @@ internal sealed class PdfBranding(EstrichOneDbContext db, ICompanyProfiles compa
         var logo = pdf.ShowCompanyLogo
             ? await db.Set<CompanyLogo>().AsNoTracking().Select(l => l.Png).SingleOrDefaultAsync(cancellationToken)
             : null;
-        return new PdfCompany(profile?.Name ?? "EstrichONE", profile?.Street, profile?.PostalCode, profile?.City, profile?.Phone, profile?.Email, profile?.Website)
+        // Bei jedem Ausdruck frisch aus der Datenbank (kein Zwischenspeicher): ein neues Logo wirkt sofort.
+        var name = profile?.Name is { Length: > 0 } n ? n : await companies.GetDisplayNameAsync(cancellationToken);
+        return new PdfCompany(name, profile?.Street, profile?.PostalCode, profile?.City, profile?.Phone, profile?.Email, profile?.Website)
         {
-            Logo = logo is { Length: > 0 } ? logo : null,
+            Logo = logo is { Length: > 0 } ? PdfImages.PrepareLogo(logo) : null,
             ShowEstrichOneLogo = pdf.ShowEstrichOneLogo,
             AccentColor = pdf.AccentColor,
             FooterText = pdf.FooterText,
@@ -91,7 +93,8 @@ internal static class CompanyLogoEndpoints
                 detail: "Es ist noch kein Firmenlogo hinterlegt.", extensions: new Dictionary<string, object?> { ["code"] = "NO_LOGO" });
         }
 
-        http.Response.Headers.CacheControl = "private, max-age=300";
+        // Immer nachfragen (304 über Last-Modified): nach einem Logowechsel erscheint sofort das neue Logo.
+        http.Response.Headers.CacheControl = "no-cache";
         return TypedResults.File(logo.Png, "image/png", lastModified: logo.UpdatedAt);
     }
 

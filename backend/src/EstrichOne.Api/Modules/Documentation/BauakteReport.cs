@@ -11,13 +11,12 @@ using MigraDoc.DocumentObjectModel;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using NetVips;
 using static EstrichOne.Api.Infrastructure.Pdf.PdfReport;
 
 namespace EstrichOne.Api.Modules.Documentation;
 
 /// <summary>
-/// Bauakte als PDF (Server, MigraDoc): Deckblatt mit Logo, Stammdaten und Kunde, Räume und Flächen, Bautagebuch,
+/// Bauakte als PDF (Server, MigraDoc): Deckblatt mit Firmenlogo (sonst Firmenname), Stammdaten und Kunde, Räume und Flächen, Bautagebuch,
 /// Prüfungen (Erstbegehung, CM-Messung/Belegreife), Aufgaben und Mängel sowie Fotodokumentation mit Beschriftung.
 /// </summary>
 internal static class BauakteReportEndpoints
@@ -58,8 +57,8 @@ internal static class BauakteReportEndpoints
 }
 
 internal sealed class BauakteReportBuilder(
-    EstrichOneDbContext db, IBauakteReportSource bauakten, IWorkReportSource work, IPdfBranding branding, LocalFileStorage storage,
-    ICurrentUser currentUser, IAuditLog audit, TimeProvider clock, ILogger<BauakteReportBuilder> logger, IFormSchemas forms, IValueLists valueLists)
+    EstrichOneDbContext db, IBauakteReportSource bauakten, IWorkReportSource work, IPdfBranding branding, ReportPhotos photoSource,
+    ICurrentUser currentUser, IAuditLog audit, TimeProvider clock, IFormSchemas forms, IValueLists valueLists, ISystemSettings settings)
 {
     public static readonly IReadOnlySet<string> AllParts =
         new HashSet<string>(["uebersicht", "raeume", "tagebuch", "pruefungen", "maengel", "fotos"], StringComparer.OrdinalIgnoreCase);
@@ -107,16 +106,20 @@ internal sealed class BauakteReportBuilder(
                 .OrderBy(i => i.PerformedAt).ToListAsync(cancellationToken)
             : [];
         var onlyPhotos = inspectionId is null ? null : inspections.SelectMany(i => i.PhotoFileIds).ToList();
-        var workItems = parts.Contains("maengel") ? await work.ListAsync(bauakteId, cancellationToken) : [];
+        var workItems = parts.Contains("maengel") || parts.Contains("fotos") ? await work.ListAsync(bauakteId, cancellationToken) : [];
+        // Fotos und Videos der Akte (Videos als Hinweisfeld, kein Fehler); nur vollständig hochgeladene Dateien.
         var photos = parts.Contains("fotos")
             ? await db.Set<FileRecord>().AsNoTracking()
-                .Where(f => f.BauakteId == bauakteId && f.Kind == FileKind.Photo && f.State == FileState.Stored && (onlyPhotos == null || onlyPhotos.Contains(f.Id)))
-                .OrderBy(f => f.CapturedAt ?? f.CreatedAt).Take(maxPhotos).ToListAsync(cancellationToken)
+                .Where(f => f.BauakteId == bauakteId && (f.Kind == FileKind.Photo || f.Kind == FileKind.Video) && f.State == FileState.Stored
+                    && (onlyPhotos == null || onlyPhotos.Contains(f.Id)))
+                .OrderBy(f => f.CapturedAt ?? f.CreatedAt).ThenBy(f => f.Id).Take(maxPhotos).ToListAsync(cancellationToken)
             : [];
-        var userIds = diary.Select(d => d.AuthorUserId).Concat(inspections.Select(i => i.PerformedByUserId)).Distinct().ToList();
+        var userIds = diary.Select(d => d.AuthorUserId).Concat(inspections.Select(i => i.PerformedByUserId)).Concat(photos.Select(p => p.UploadedByUserId))
+            .Distinct().ToList();
         var names = await db.Set<User>().AsNoTracking().Where(u => userIds.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => u.DisplayName, cancellationToken);
 
-        Cover(section, info, pdfCompany, width, diary.Count, inspections.Count, workItems.Count, photos.Count);
+        Cover(section, info, pdfCompany, width, diary.Count, inspections.Count, parts.Contains("maengel") ? workItems.Count : 0,
+            photos.Count(p => p.Kind == FileKind.Photo), photos.Count(p => p.Kind == FileKind.Video));
 
         if (parts.Contains("uebersicht"))
         {
@@ -317,47 +320,23 @@ internal sealed class BauakteReportBuilder(
         {
             section.AddPageBreak();
             section.AddParagraph("Fotodokumentation", StyleNames.Heading1);
-            var grid = section.AddTable();
-            grid.Borders.Width = 0;
-            grid.AddColumn(Unit.FromCentimeter(width / 2));
-            grid.AddColumn(Unit.FromCentimeter(width / 2));
-            MigraDoc.DocumentObjectModel.Tables.Row? row = null;
-            var index = 0;
-            foreach (var photo in photos)
+            var entries = new List<ReportPhoto>(photos.Count);
+            for (var index = 0; index < photos.Count; index++)
             {
-                var image = await PhotoAsync(photo, cancellationToken);
-                if (index % 2 == 0)
-                {
-                    row = grid.AddRow();
-                    row.KeepWith = 0;
-                    row.TopPadding = Unit.FromPoint(4);
-                    row.BottomPadding = Unit.FromPoint(8);
-                }
-
-                var cell = row!.Cells[index % 2];
-                if (image is not null)
-                {
-                    var picture = cell.AddParagraph().AddImage(ImageSource(image));
-                    picture.Width = Unit.FromCentimeter(width / 2 - 0.4);
-                    picture.LockAspectRatio = true;
-                }
-                else
-                {
-                    cell.AddParagraph("(Vorschau nicht verfügbar)").Style = "Muted";
-                }
-
-                var caption = cell.AddParagraph();
-                caption.Format.SpaceBefore = Unit.FromPoint(2);
-                caption.AddFormattedText($"Foto {index + 1}", TextFormat.Bold);
-                caption.AddText($", {PdfReport.DateTime(photo.CapturedAt ?? photo.CreatedAt)}");
-                if (!string.IsNullOrWhiteSpace(photo.Caption))
-                {
-                    caption.AddLineBreak();
-                    caption.AddText(photo.Caption);
-                }
-
-                index++;
+                var photo = photos[index];
+                var room = info.Rooms.FirstOrDefault(r => r.Id != default && r.Id == photo.RoomId);
+                var item = photo.WorkItemId is { } workItemId ? workItems.FirstOrDefault(w => w.Id == workItemId) : null;
+                entries.Add(new ReportPhoto(await photoSource.LoadAsync(photo, cancellationToken),
+                    $"{(photo.Kind == FileKind.Video ? "Video" : "Foto")} {index + 1}, {PdfReport.DateTime(photo.CapturedAt ?? photo.CreatedAt)}",
+                    [
+                        room is null ? null : $"Raum: {room.Name}{(string.IsNullOrWhiteSpace(room.Floor) ? string.Empty : $" ({room.Floor})")}",
+                        item is null ? null : $"{(item.IsDefect ? "Mangel" : "Aufgabe")}: {item.Title}",
+                        names.TryGetValue(photo.UploadedByUserId, out var by) ? $"Aufnahme: {by}" : null,
+                        photo.Caption,
+                    ]));
             }
+
+            ReportPhotos.AddGrid(section, width, (await settings.GetAsync(cancellationToken)).Pdf.PhotosPerRow, entries);
         }
 
         if (inspectionId is null)
@@ -389,13 +368,23 @@ internal sealed class BauakteReportBuilder(
         }
     }
 
-    private void Cover(Section section, BauakteReportInfo info, PdfCompany company, double width, int diary, int inspections, int work, int photos)
+    private void Cover(Section section, BauakteReportInfo info, PdfCompany company, double width, int diary, int inspections, int work, int photos, int videos)
     {
         var spacer = section.AddParagraph();
         spacer.Format.SpaceBefore = Unit.FromCentimeter(2.2);
-        var logo = section.AddParagraph().AddImage(ImageSource(Logo));
-        logo.Width = Unit.FromCentimeter(8);
-        logo.LockAspectRatio = true;
+        if (company.Logo is { } logo)
+        {
+            // Firmenlogo aus den Einstellungen, höchstens 8 × 3 cm, Seitenverhältnis bleibt.
+            PdfImages.Add(section.AddParagraph(), logo, 8, 3);
+        }
+        else
+        {
+            var name = section.AddParagraph(company.Name);
+            name.Format.Font.Size = 20;
+            name.Format.Font.Bold = true;
+            name.Format.Font.Color = Accent(company);
+        }
+
         var kind = section.AddParagraph("BAUAKTE");
         kind.Format.SpaceBefore = Unit.FromCentimeter(2.0);
         kind.Format.Font.Size = 10;
@@ -414,7 +403,8 @@ internal sealed class BauakteReportBuilder(
             ("Kunde", info.Customer is { } c ? string.Join(", ", new[] { c.Name, Address(c.Street, c.PostalCode, c.City) }.Where(v => !string.IsNullOrWhiteSpace(v))) : null),
             ("Ausführung", Period(info.PlannedStart, info.PlannedEnd)),
             ("Fläche", info.Rooms.Count > 0 ? $"{Number(info.Rooms.Sum(r => r.AreaSquareMeters ?? 0))} m² in {info.Rooms.Count} Räumen" : null),
-            ("Inhalt", $"{diary} Tagesberichte, {inspections} Prüfungen, {work} Aufgaben/Mängel, {photos} Fotos"),
+            ("Inhalt", $"{diary} Tagesberichte, {inspections} Prüfungen, {work} Aufgaben/Mängel, {photos} {(photos == 1 ? "Foto" : "Fotos")}"
+                + (videos > 0 ? $", {videos} {(videos == 1 ? "Video" : "Videos")}" : string.Empty)),
             ("Angelegt von", $"{info.CreatedByName} am {PdfReport.DateTime(info.CreatedAt)}"),
             ("Erstellt", PdfReport.DateTime(clock.GetUtcNow())));
         var from = section.AddParagraph();
@@ -424,30 +414,6 @@ internal sealed class BauakteReportBuilder(
         {
             from.AddLineBreak();
             from.AddText(line);
-        }
-    }
-
-    /// <summary>Foto als JPEG für das PDF (Vorschau-Variante bzw. Original, verkleinert); null, wenn nicht lesbar (z. B. HEIC ohne Variante).</summary>
-    private async Task<byte[]?> PhotoAsync(FileRecord photo, CancellationToken cancellationToken)
-    {
-        try
-        {
-            var variant = storage.VariantPath(photo.Id, "display");
-            var path = File.Exists(variant) ? variant : photo.StorageKey is { } key ? storage.PathOf(key) : null;
-            if (path is null || !File.Exists(path))
-            {
-                return null;
-            }
-
-            var bytes = await File.ReadAllBytesAsync(path, cancellationToken);
-            using var image = Image.ThumbnailBuffer(bytes, 1200, height: 1200, size: Enums.Size.Down);
-            using var flat = image.HasAlpha() ? image.Flatten(background: [255, 255, 255]) : image.Copy();
-            return flat.JpegsaveBuffer(q: 80, keep: Enums.ForeignKeep.None);
-        }
-        catch (Exception exception) when (exception is VipsException or IOException)
-        {
-            logger.LogWarning(exception, "Foto {FileId} konnte nicht in das PDF übernommen werden.", photo.Id);
-            return null;
         }
     }
 

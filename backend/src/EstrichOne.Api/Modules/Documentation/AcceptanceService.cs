@@ -11,7 +11,6 @@ using MigraDoc.DocumentObjectModel;
 using MigraDoc.DocumentObjectModel.Tables;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
-using NetVips;
 
 namespace EstrichOne.Api.Modules.Documentation;
 
@@ -26,12 +25,11 @@ public sealed class AcceptanceService(
     ISystemSettings settings,
     IMailService mail,
     FileService files,
-    LocalFileStorage storage,
+    ReportPhotos photoSource,
     IOptions<EstrichOneOptions> options,
     TimeProvider clock,
     Notifications.Exports.INotifier notifier,
-    Teams.Exports.ITeamsIntegration teams,
-    ILogger<AcceptanceService> logger)
+    Teams.Exports.ITeamsIntegration teams)
 {
     private const string EntityType = "bauakte";
 
@@ -300,61 +298,23 @@ public sealed class AcceptanceService(
             return;
         }
 
-        var photos = await db.Set<FileRecord>().AsNoTracking().Where(f => ids.Contains(f.Id) && f.State == FileState.Stored).Take(8).ToListAsync(cancellationToken);
-        var images = new List<byte[]>();
-        foreach (var photo in photos)
-        {
-            if (await JpegAsync(photo, cancellationToken) is { } jpeg)
-            {
-                images.Add(jpeg);
-            }
-        }
-
-        if (images.Count == 0)
+        // Reihenfolge wie bei der Abnahme ausgewählt; Videos als Hinweisfeld, Fotos aufgerichtet und unverzerrt.
+        var files = await db.Set<FileRecord>().AsNoTracking().Where(f => ids.Contains(f.Id) && f.State == FileState.Stored).ToListAsync(cancellationToken);
+        var photos = ids.Select(id => files.FirstOrDefault(f => f.Id == id)).OfType<FileRecord>().Take(8).ToList();
+        if (photos.Count == 0)
         {
             return;
         }
 
         section.AddParagraph("Fotos", StyleNames.Heading2);
-        var table = section.AddTable();
-        table.Borders.Visible = false;
-        var column = (width - 0.4) / 2;
-        table.AddColumn(Unit.FromCentimeter(column));
-        table.AddColumn(Unit.FromCentimeter(0.4));
-        table.AddColumn(Unit.FromCentimeter(column));
-        for (var i = 0; i < images.Count; i += 2)
+        var entries = new List<ReportPhoto>(photos.Count);
+        for (var i = 0; i < photos.Count; i++)
         {
-            var row = table.AddRow();
-            row.BottomPadding = Unit.FromPoint(6);
-            for (var j = 0; j < 2 && i + j < images.Count; j++)
-            {
-                var image = row.Cells[j * 2].AddParagraph().AddImage(PdfReport.ImageSource(images[i + j]));
-                image.Width = Unit.FromCentimeter(column);
-                image.LockAspectRatio = true;
-            }
+            var photo = photos[i];
+            entries.Add(new ReportPhoto(await photoSource.LoadAsync(photo, cancellationToken),
+                $"{(photo.Kind == FileKind.Video ? "Video" : "Foto")} {i + 1}, {PdfReport.DateTime(photo.CapturedAt ?? photo.CreatedAt)}", [photo.Caption]));
         }
-    }
 
-    private async Task<byte[]?> JpegAsync(FileRecord photo, CancellationToken cancellationToken)
-    {
-        try
-        {
-            var variant = storage.VariantPath(photo.Id, "display");
-            var path = File.Exists(variant) ? variant : photo.StorageKey is { } key ? storage.PathOf(key) : null;
-            if (path is null || !File.Exists(path))
-            {
-                return null;
-            }
-
-            var bytes = await File.ReadAllBytesAsync(path, cancellationToken);
-            using var image = Image.ThumbnailBuffer(bytes, 1000, height: 1000, size: Enums.Size.Down);
-            using var flat = image.HasAlpha() ? image.Flatten(background: [255, 255, 255]) : image.Copy();
-            return flat.JpegsaveBuffer(q: 78, keep: Enums.ForeignKeep.None);
-        }
-        catch (Exception exception) when (exception is VipsException or IOException)
-        {
-            logger.LogWarning(exception, "Foto {FileId} konnte nicht in das Abnahmeprotokoll übernommen werden.", photo.Id);
-            return null;
-        }
+        ReportPhotos.AddGrid(section, width, 2, entries);
     }
 }
