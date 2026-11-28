@@ -16,6 +16,6 @@ internal sealed class BauakteRooms(EstrichOneDbContext db) : IBauakteRooms
         var typeIds = rooms.Select(r => r.ScreedTypeId).OfType<Guid>().Distinct().ToList();
         var types = await db.Set<ScreedType>().AsNoTracking().Where(t => typeIds.Contains(t.Id)).ToDictionaryAsync(t => t.Id, t => t.Name, cancellationToken);
         return rooms.Select(r => new BauakteRoomArea(r.Id, r.Name, r.Floor, r.AreaSquareMeters,
-            r.ScreedTypeId is { } id ? types.GetValueOrDefault(id) : null, r.ThicknessMillimeters)).ToList();
+            r.ScreedTypeId is { } id ? types.GetValueOrDefault(id) : null, r.ThicknessMillimeters, r.Status is RoomStatus.Laid or RoomStatus.Ready)).ToList();
     }
 }

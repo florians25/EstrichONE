@@ -18,4 +18,19 @@ public static class PermissionEndpointExtensions
             .RequireApprovedDevice()
             .AddRequirements(new PermissionRequirement(permission)));
     }
+
+    /// <summary>Endpunkt mit einem der angegebenen Rechte (z. B. Verkauf: ansehen einer beliebigen Belegart; die Belegart prüft der Endpunkt selbst).</summary>
+    public static TBuilder RequireAnyPermission<TBuilder>(this TBuilder builder, params string[] anyOf)
+        where TBuilder : IEndpointConventionBuilder
+    {
+        if (anyOf.Length == 0 || anyOf.Any(p => !Permissions.Exists(p)))
+        {
+            throw new ArgumentException("Unbekanntes Recht.", nameof(anyOf));
+        }
+
+        return builder.RequireAuthorization(policy => policy
+            .RequireAuthenticatedUser()
+            .RequireApprovedDevice()
+            .AddRequirements(new PermissionRequirement(anyOf)));
+    }
 }

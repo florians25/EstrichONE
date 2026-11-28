@@ -208,7 +208,7 @@ public sealed class LexwareArticleQuotationTests(PostgresFixture postgres) : IAs
         await ConfigureAsync();
         // Administratoren dürfen bei ausgeschaltetem Modul lesen; schreiben nicht.
         (await ProblemAsync(_admin, HttpMethod.Post, "/api/v1/lexware/articles/sync", HttpStatusCode.Conflict)).ShouldStartWith("MODULE_DISABLED");
-        await ModulesAsync("quotations");
+        await ModulesAsync("sales", "quotations");
         (await SendAsync<CatalogListResponse>(_admin, HttpMethod.Get, "/api/v1/lexware/articles")).SyncEnabled.ShouldBeFalse();
         (await ProblemAsync(_admin, HttpMethod.Post, "/api/v1/lexware/articles/sync", HttpStatusCode.Conflict)).ShouldStartWith("MODULE_DISABLED");
         using var worker = await _factory.CreateClientAsAsync("baustelle", StandardRoles.SiteWorkerId);
@@ -221,45 +221,45 @@ public sealed class LexwareArticleQuotationTests(PostgresFixture postgres) : IAs
     [Fact]
     public void QuotationTotals_PerTaxRate_And13bWithoutTax()
     {
-        QuotationDraftLine Line(decimal qty, decimal price, decimal tax, decimal? discount = null) =>
-            new() { Kind = QuotationDraftLine.KindItem, Name = "x", Quantity = qty, Unit = "m²", NetPrice = price, TaxRate = tax, DiscountPercent = discount };
-        List<QuotationDraftLine> lines = [Line(120.5m, 24m, 19m), Line(10m, 3.333m, 7m, 10m), new() { Kind = QuotationDraftLine.KindText, Name = "Hinweis" }];
-        var totals = QuotationRules.Totals(lines, QuotationDraft.TaxNet);
+        SalesVoucherLine Line(decimal qty, decimal price, decimal tax, decimal? discount = null) =>
+            new() { Kind = SalesVoucherLine.KindItem, Name = "x", Quantity = qty, Unit = "m²", NetPrice = price, TaxRate = tax, DiscountPercent = discount };
+        List<SalesVoucherLine> lines = [Line(120.5m, 24m, 19m), Line(10m, 3.333m, 7m, 10m), new() { Kind = SalesVoucherLine.KindText, Name = "Hinweis" }];
+        var totals = SalesRules.Totals(lines, SalesVoucher.TaxNet);
         totals.Net.ShouldBe(2892m + 30m);
         totals.Tax.ShouldBe(549.48m + 2.1m);
         totals.Gross.ShouldBe(totals.Net + totals.Tax);
-        QuotationRules.Totals(lines, QuotationDraft.TaxConstruction13b).Tax.ShouldBe(0m);
+        SalesRules.Totals(lines, SalesVoucher.TaxConstruction13b).Tax.ShouldBe(0m);
     }
 
     [Fact]
     public async Task Quotation_NeedsLinkedCustomer_SuggestsArea_SendsDraftOnce_ThenReadOnly()
     {
-        await ConfigureAsync(null, "quotations");
+        await ConfigureAsync(null, "sales", "quotations");
         var unlinked = Guid.CreateVersion7();
         await SendAsync<JsonObject>(_admin, HttpMethod.Post, "/api/v1/contacts", new { lexwareCreateAnyway = true, id = unlinked, kind = "company", name = "Neu GmbH" },
             HttpStatusCode.Created);
         var first = await BauakteAsync(unlinked);
-        (await ProblemAsync(_admin, HttpMethod.Post, "/api/v1/lexware/quotations", HttpStatusCode.Conflict, new { id = Guid.CreateVersion7(), bauakteId = first }))
+        (await ProblemAsync(_admin, HttpMethod.Post, "/api/v1/sales/vouchers", HttpStatusCode.Conflict, new { id = Guid.CreateVersion7(), type = "quotation", bauakteId = first }))
             .ShouldContain("LEXWARE_CUSTOMER_NOT_LINKED");
 
         var (customer, lexwareContact) = await LinkedCustomerAsync();
         var bauakte = await BauakteAsync(customer, project: new { totalArea = 142.5m, nominalThicknessMm = 50 });
-        var suggestions = await SendAsync<QuotationSuggestionsResponse>(_admin, HttpMethod.Get, $"/api/v1/lexware/quotations/suggestions?bauakteId={bauakte}");
+        var suggestions = await SendAsync<SalesSuggestionsResponse>(_admin, HttpMethod.Get, $"/api/v1/sales/suggestions?bauakteId={bauakte}");
         suggestions.Lines.ShouldHaveSingleItem().Quantity.ShouldBe(142.5m);
         suggestions.Lines[0].Unit.ShouldBe("m²");
         suggestions.Hints.ShouldContain(h => h.Contains("Randdämmstreifen", StringComparison.Ordinal));
 
-        var options = await SendAsync<QuotationOptionsResponse>(_admin, HttpMethod.Get, "/api/v1/lexware/quotations/options");
+        var options = await SendAsync<SalesOptionsResponse>(_admin, HttpMethod.Get, "/api/v1/sales/options?type=quotation");
         options.PaymentConditions.Count.ShouldBe(2);
         options.PaymentConditionsError.ShouldBeNull();
 
         var id = Guid.CreateVersion7();
-        var draft = await SendAsync<QuotationResponse>(_admin, HttpMethod.Post, "/api/v1/lexware/quotations", new { id, bauakteId = bauakte }, HttpStatusCode.Created);
+        var draft = await SendAsync<SalesVoucherResponse>(_admin, HttpMethod.Post, "/api/v1/sales/vouchers", new { id, type = "quotation", bauakteId = bauakte }, HttpStatusCode.Created);
         draft.CustomerLinked.ShouldBeTrue();
         draft.Introduction!.ShouldContain("EFH Huber");
         draft.State.ShouldBe("draft");
         var condition = options.PaymentConditions[1];
-        draft = await SendAsync<QuotationResponse>(_admin, HttpMethod.Put, $"/api/v1/lexware/quotations/{id}", new
+        draft = await SendAsync<SalesVoucherResponse>(_admin, HttpMethod.Put, $"/api/v1/sales/vouchers/{id}", new
         {
             version = draft.Version, title = "Angebot Estricharbeiten", introduction = draft.Introduction, validUntil = draft.ValidUntil, taxType = "net",
             paymentConditionId = condition.Id, paymentLabel = condition.Label, paymentDuration = condition.Duration, paymentDiscountPercent = condition.DiscountPercent,
@@ -274,7 +274,7 @@ public sealed class LexwareArticleQuotationTests(PostgresFixture postgres) : IAs
         draft.Totals.Net.ShouldBe(3420m + 86.4m);
         draft.Problems.ShouldBeEmpty();
 
-        var sent = await SendAsync<QuotationResponse>(_admin, HttpMethod.Post, $"/api/v1/lexware/quotations/{id}/send");
+        var sent = await SendAsync<SalesVoucherResponse>(_admin, HttpMethod.Post, $"/api/v1/sales/vouchers/{id}/send");
         sent.State.ShouldBe("sent");
         sent.Editable.ShouldBeFalse();
         sent.LexwareUrl!.ShouldContain("/permalink/quotations/edit/");
@@ -289,11 +289,11 @@ public sealed class LexwareArticleQuotationTests(PostgresFixture postgres) : IAs
         body["paymentConditions"]!["paymentTermDuration"]!.GetValue<int>().ShouldBe(30);
 
         // Zweimal senden legt kein zweites Angebot an; Bearbeiten ist gesperrt.
-        await SendAsync<QuotationResponse>(_admin, HttpMethod.Post, $"/api/v1/lexware/quotations/{id}/send");
+        await SendAsync<SalesVoucherResponse>(_admin, HttpMethod.Post, $"/api/v1/sales/vouchers/{id}/send");
         _lexware.CallsTo("POST", "/v1/quotations").Count().ShouldBe(1);
-        (await ProblemAsync(_admin, HttpMethod.Put, $"/api/v1/lexware/quotations/{id}", HttpStatusCode.Conflict, new { version = sent.Version, title = "x" }))
-            .ShouldStartWith("LEXWARE_QUOTATION_SENT");
-        (await ProblemAsync(_admin, HttpMethod.Delete, $"/api/v1/lexware/quotations/{id}", HttpStatusCode.Conflict)).ShouldStartWith("LEXWARE_QUOTATION_SENT");
+        (await ProblemAsync(_admin, HttpMethod.Put, $"/api/v1/sales/vouchers/{id}", HttpStatusCode.Conflict, new { version = sent.Version, title = "x" }))
+            .ShouldStartWith("LEXWARE_SALES_SENT");
+        (await ProblemAsync(_admin, HttpMethod.Delete, $"/api/v1/sales/vouchers/{id}", HttpStatusCode.Conflict)).ShouldStartWith("LEXWARE_SALES_SENT");
 
         // Der Beleg ist der Bauakte zugeordnet und erscheint in der Belegliste.
         var vouchers = await SendAsync<BauakteLexwareResponse>(_admin, HttpMethod.Get, $"/api/v1/bauakten/{bauakte}/lexware");
@@ -307,24 +307,24 @@ public sealed class LexwareArticleQuotationTests(PostgresFixture postgres) : IAs
     [Fact]
     public async Task Quotation_LostAnswer_SecondSendAdoptsExisting_InsteadOfSendingAgain()
     {
-        await ConfigureAsync(null, "quotations");
+        await ConfigureAsync(null, "sales", "quotations");
         var (customer, _) = await LinkedCustomerAsync();
         var id = Guid.CreateVersion7();
-        var draft = await SendAsync<QuotationResponse>(_admin, HttpMethod.Post, "/api/v1/lexware/quotations", new { id, contactId = customer }, HttpStatusCode.Created);
+        var draft = await SendAsync<SalesVoucherResponse>(_admin, HttpMethod.Post, "/api/v1/sales/vouchers", new { id, type = "quotation", contactId = customer }, HttpStatusCode.Created);
         draft.BauakteId.ShouldBeNull();
-        await SendAsync<QuotationResponse>(_admin, HttpMethod.Put, $"/api/v1/lexware/quotations/{id}", new
+        await SendAsync<SalesVoucherResponse>(_admin, HttpMethod.Put, $"/api/v1/sales/vouchers/{id}", new
         {
             version = draft.Version, title = "Angebot Garage", validUntil = draft.ValidUntil, taxType = "constructionService13b",
             lines = new object[] { new { kind = "item", name = "Estrich", quantity = 30m, unit = "m²", netPrice = 25m, taxRate = 19m } },
         });
 
         _lexware.QuotationLostAnswer = 504;
-        (await ProblemAsync(_admin, HttpMethod.Post, $"/api/v1/lexware/quotations/{id}/send", HttpStatusCode.ServiceUnavailable)).ShouldStartWith("LEXWARE_UNAVAILABLE");
-        var failed = await SendAsync<QuotationResponse>(_admin, HttpMethod.Get, $"/api/v1/lexware/quotations/{id}");
+        (await ProblemAsync(_admin, HttpMethod.Post, $"/api/v1/sales/vouchers/{id}/send", HttpStatusCode.ServiceUnavailable)).ShouldStartWith("LEXWARE_UNAVAILABLE");
+        var failed = await SendAsync<SalesVoucherResponse>(_admin, HttpMethod.Get, $"/api/v1/sales/vouchers/{id}");
         failed.State.ShouldBe("failed");
-        (await ProblemAsync(_admin, HttpMethod.Delete, $"/api/v1/lexware/quotations/{id}", HttpStatusCode.Conflict)).ShouldStartWith("LEXWARE_QUOTATION_SENT");
+        (await ProblemAsync(_admin, HttpMethod.Delete, $"/api/v1/sales/vouchers/{id}", HttpStatusCode.Conflict)).ShouldStartWith("LEXWARE_SALES_SENT");
 
-        var sent = await SendAsync<QuotationResponse>(_admin, HttpMethod.Post, $"/api/v1/lexware/quotations/{id}/send");
+        var sent = await SendAsync<SalesVoucherResponse>(_admin, HttpMethod.Post, $"/api/v1/sales/vouchers/{id}/send");
         sent.State.ShouldBe("sent");
         _lexware.CallsTo("POST", "/v1/quotations").Count().ShouldBe(1);
         _lexware.Vouchers.Values.Count(v => v["voucherType"]!.GetValue<string>() == "quotation").ShouldBe(1);
@@ -336,20 +336,20 @@ public sealed class LexwareArticleQuotationTests(PostgresFixture postgres) : IAs
     [Fact]
     public async Task Quotation_TaxType13bRejected_TranslatedWithFix_RememberedUntilRecheck()
     {
-        await ConfigureAsync(null, "quotations");
+        await ConfigureAsync(null, "sales", "quotations");
         _lexware.RejectedTaxTypes.Add("constructionService13b");
         var (customer, _) = await LinkedCustomerAsync();
         var id = Guid.CreateVersion7();
-        var draft = await SendAsync<QuotationResponse>(_admin, HttpMethod.Post, "/api/v1/lexware/quotations", new { id, contactId = customer }, HttpStatusCode.Created);
+        var draft = await SendAsync<SalesVoucherResponse>(_admin, HttpMethod.Post, "/api/v1/sales/vouchers", new { id, type = "quotation", contactId = customer }, HttpStatusCode.Created);
         object Body(long version, string taxType) => new
         {
             version, title = "Angebot Halle", validUntil = draft.ValidUntil, taxType,
             lines = new object[] { new { kind = "item", name = "Estrich", quantity = 100m, unit = "m²", netPrice = 22m, taxRate = 19m } },
         };
-        draft = await SendAsync<QuotationResponse>(_admin, HttpMethod.Put, $"/api/v1/lexware/quotations/{id}", Body(draft.Version, "constructionService13b"));
+        draft = await SendAsync<SalesVoucherResponse>(_admin, HttpMethod.Put, $"/api/v1/sales/vouchers/{id}", Body(draft.Version, "constructionService13b"));
 
         // Senden: Lexware Office lehnt ab, wie beim Kunden mit echtem Konto. Meldung auf Deutsch, Behebung „Netto“, Original nur technisch.
-        using (var request = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/lexware/quotations/{id}/send"))
+        using (var request = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/sales/vouchers/{id}/send"))
         using (var response = await _admin.SendAsync(request, Ct))
         {
             var problem = JsonNode.Parse(await response.Content.ReadAsStringAsync(Ct))!;
@@ -362,7 +362,7 @@ public sealed class LexwareArticleQuotationTests(PostgresFixture postgres) : IAs
             problem["issues"]![0]!["field"]!.GetValue<string>().ShouldBe("taxType");
         }
 
-        var failed = await SendAsync<QuotationResponse>(_admin, HttpMethod.Get, $"/api/v1/lexware/quotations/{id}");
+        var failed = await SendAsync<SalesVoucherResponse>(_admin, HttpMethod.Get, $"/api/v1/sales/vouchers/{id}");
         failed.State.ShouldBe("failed");
         failed.SendError!.ShouldContain("§ 13b UStG");
         failed.SendError!.ShouldNotContain("not allowed");
@@ -371,7 +371,7 @@ public sealed class LexwareArticleQuotationTests(PostgresFixture postgres) : IAs
         failed.Problems.ShouldContain(p => p.Contains("§ 13b UStG", StringComparison.Ordinal)); // gemerkt: so nicht erneut sendebereit
 
         // Die Option ist für Angebote gesperrt, mit Hinweis; andere Belegarten bleiben unberührt.
-        var options = await SendAsync<QuotationOptionsResponse>(_admin, HttpMethod.Get, "/api/v1/lexware/quotations/options");
+        var options = await SendAsync<SalesOptionsResponse>(_admin, HttpMethod.Get, "/api/v1/sales/options?type=quotation");
         var option = options.TaxTypes!.Single(t => t.Key == "constructionService13b");
         option.Allowed.ShouldBeFalse();
         option.Hint!.ShouldContain("erneut prüfen");
@@ -380,10 +380,10 @@ public sealed class LexwareArticleQuotationTests(PostgresFixture postgres) : IAs
         settings.TaxTypes!.Rejections.ShouldHaveSingleItem().VoucherType.ShouldBe("quotation");
 
         // „Steuerart Netto übernehmen und erneut senden“: speichern mit net, senden. Nur ein Angebot entsteht.
-        draft = await SendAsync<QuotationResponse>(_admin, HttpMethod.Put, $"/api/v1/lexware/quotations/{id}", Body(failed.Version, "net"));
+        draft = await SendAsync<SalesVoucherResponse>(_admin, HttpMethod.Put, $"/api/v1/sales/vouchers/{id}", Body(failed.Version, "net"));
         draft.State.ShouldBe("draft");
         draft.SendErrorFix.ShouldBeNull();
-        var sent = await SendAsync<QuotationResponse>(_admin, HttpMethod.Post, $"/api/v1/lexware/quotations/{id}/send");
+        var sent = await SendAsync<SalesVoucherResponse>(_admin, HttpMethod.Post, $"/api/v1/sales/vouchers/{id}/send");
         sent.State.ShouldBe("sent");
         _lexware.Vouchers.Values.Count(v => v["voucherType"]!.GetValue<string>() == "quotation").ShouldBe(1);
         JsonNode.Parse(_lexware.CallsTo("POST", "/v1/quotations").Last().Body!)!["taxConditions"]!["taxType"]!.GetValue<string>().ShouldBe("net");
@@ -393,7 +393,7 @@ public sealed class LexwareArticleQuotationTests(PostgresFixture postgres) : IAs
         var check = await SendAsync<LexwareTaxTypesResponse>(_admin, HttpMethod.Post, "/api/v1/settings/integrations/lexware/tax-types/check");
         check.Rejections.ShouldBeEmpty();
         check.CheckedAt.ShouldNotBeNull();
-        (await SendAsync<QuotationOptionsResponse>(_admin, HttpMethod.Get, "/api/v1/lexware/quotations/options")).TaxTypes!.ShouldAllBe(t => t.Allowed);
+        (await SendAsync<SalesOptionsResponse>(_admin, HttpMethod.Get, "/api/v1/sales/options?type=quotation")).TaxTypes!.ShouldAllBe(t => t.Allowed);
     }
 
     [Fact]
@@ -401,28 +401,28 @@ public sealed class LexwareArticleQuotationTests(PostgresFixture postgres) : IAs
     {
         _lexware.SmallBusiness = true;
         _lexware.ProfileTaxType = "vatfree";
-        await ConfigureAsync(null, "quotations");
+        await ConfigureAsync(null, "sales", "quotations");
         var (customer, _) = await LinkedCustomerAsync();
-        var options = await SendAsync<QuotationOptionsResponse>(_admin, HttpMethod.Get, "/api/v1/lexware/quotations/options");
+        var options = await SendAsync<SalesOptionsResponse>(_admin, HttpMethod.Get, "/api/v1/sales/options?type=quotation");
         options.SmallBusiness.ShouldBeTrue();
         options.TaxTypes!.Where(t => t.Allowed).Select(t => t.Key).ShouldBe(["vatfree"]);
         var id = Guid.CreateVersion7();
-        var draft = await SendAsync<QuotationResponse>(_admin, HttpMethod.Post, "/api/v1/lexware/quotations", new { id, contactId = customer }, HttpStatusCode.Created);
+        var draft = await SendAsync<SalesVoucherResponse>(_admin, HttpMethod.Post, "/api/v1/sales/vouchers", new { id, type = "quotation", contactId = customer }, HttpStatusCode.Created);
         draft.TaxType.ShouldBe("vatfree");
-        draft = await SendAsync<QuotationResponse>(_admin, HttpMethod.Put, $"/api/v1/lexware/quotations/{id}", new
+        draft = await SendAsync<SalesVoucherResponse>(_admin, HttpMethod.Put, $"/api/v1/sales/vouchers/{id}", new
         {
             version = draft.Version, title = "Angebot", validUntil = draft.ValidUntil, taxType = "net",
             lines = new object[] { new { kind = "item", name = "Estrich", quantity = 10m, unit = "m²", netPrice = 20m, taxRate = 19m } },
         });
         draft.Problems.ShouldContain(p => p.Contains("Kleinunternehmer", StringComparison.Ordinal));
-        (await ProblemAsync(_admin, HttpMethod.Post, $"/api/v1/lexware/quotations/{id}/send", HttpStatusCode.UnprocessableEntity)).ShouldContain("Kleinunternehmer");
-        draft = await SendAsync<QuotationResponse>(_admin, HttpMethod.Put, $"/api/v1/lexware/quotations/{id}", new
+        (await ProblemAsync(_admin, HttpMethod.Post, $"/api/v1/sales/vouchers/{id}/send", HttpStatusCode.UnprocessableEntity)).ShouldContain("Kleinunternehmer");
+        draft = await SendAsync<SalesVoucherResponse>(_admin, HttpMethod.Put, $"/api/v1/sales/vouchers/{id}", new
         {
             version = draft.Version, title = "Angebot", validUntil = draft.ValidUntil, taxType = "vatfree",
             lines = new object[] { new { kind = "item", name = "Estrich", quantity = 10m, unit = "m²", netPrice = 20m, taxRate = 19m } },
         });
         draft.Totals.Tax.ShouldBe(0m);
-        await SendAsync<QuotationResponse>(_admin, HttpMethod.Post, $"/api/v1/lexware/quotations/{id}/send");
+        await SendAsync<SalesVoucherResponse>(_admin, HttpMethod.Post, $"/api/v1/sales/vouchers/{id}/send");
         var body = JsonNode.Parse(_lexware.CallsTo("POST", "/v1/quotations").Single().Body!)!;
         body["taxConditions"]!["taxType"]!.GetValue<string>().ShouldBe("vatfree");
         body["lineItems"]![0]!["unitPrice"]!["taxRatePercentage"]!.GetValue<decimal>().ShouldBe(0m);
@@ -432,14 +432,14 @@ public sealed class LexwareArticleQuotationTests(PostgresFixture postgres) : IAs
     public async Task Quotations_NeedModuleAndRight()
     {
         await ConfigureAsync();
-        (await ProblemAsync(_admin, HttpMethod.Post, "/api/v1/lexware/quotations", HttpStatusCode.Conflict, new { id = Guid.CreateVersion7() }))
+        (await ProblemAsync(_admin, HttpMethod.Post, "/api/v1/sales/vouchers", HttpStatusCode.Conflict, new { id = Guid.CreateVersion7(), type = "quotation" }))
             .ShouldStartWith("MODULE_DISABLED");
-        await ModulesAsync("quotations");
+        await ModulesAsync("sales", "quotations");
         using var worker = await _factory.CreateClientAsAsync("baustelle", StandardRoles.SiteWorkerId);
-        using var denied = await worker.GetAsync(new Uri("/api/v1/lexware/quotations/options", UriKind.Relative), Ct);
+        using var denied = await worker.GetAsync(new Uri("/api/v1/sales/options?type=quotation", UriKind.Relative), Ct);
         denied.StatusCode.ShouldBe(HttpStatusCode.Forbidden);
         using var office = await _factory.CreateClientAsAsync("buero", StandardRoles.OfficeId);
-        using var allowed = await office.GetAsync(new Uri("/api/v1/lexware/quotations/options", UriKind.Relative), Ct);
+        using var allowed = await office.GetAsync(new Uri("/api/v1/sales/options?type=quotation", UriKind.Relative), Ct);
         allowed.StatusCode.ShouldBe(HttpStatusCode.OK);
     }
 

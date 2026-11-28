@@ -61,7 +61,24 @@ internal sealed class LexwareDirectory : IDisposable
         _customerVouchers.Clear();
         _voucherTexts.Clear();
         _documents.Clear();
+        _sales.Clear();
         ClearArticles();
+    }
+
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, (DateTimeOffset LoadedAt, IReadOnlyList<LexwareListVoucher> Vouchers)> _sales = new();
+
+    /// <summary>Belegliste der Übersicht „Verkauf“, kurz zwischengespeichert (Schlüssel: Stempel und Belegarten).</summary>
+    public async Task<IReadOnlyList<LexwareListVoucher>> SalesAsync(string key, DateTimeOffset now, TimeSpan maxAge, bool refresh,
+        Func<Task<IReadOnlyList<LexwareListVoucher>>> load)
+    {
+        if (!refresh && _sales.TryGetValue(key, out var cached) && now - cached.LoadedAt < maxAge)
+        {
+            return cached.Vouchers;
+        }
+
+        var vouchers = await load();
+        _sales[key] = (now, vouchers);
+        return vouchers;
     }
 
     private (string Stamp, DateTimeOffset LoadedAt, IReadOnlyList<LexwareArticle> Articles)? _articles;
@@ -337,6 +354,14 @@ public sealed class LexwareService(
         var connection = Connection(row);
         return Directory.PaymentConditionsAsync(Stamp(row), clock.GetUtcNow(), Options.PaymentConditionCacheDuration,
             () => client.ListPaymentConditionsAsync(connection, cancellationToken));
+    }
+
+    /// <summary>Verkaufsbelege der Belegliste (bis zu vier Seiten zu 250), kurz zwischengespeichert.</summary>
+    public Task<IReadOnlyList<LexwareListVoucher>> SalesListAsync(LexwareSettingsRow row, IReadOnlyList<string> types, bool refresh, CancellationToken cancellationToken)
+    {
+        var connection = Connection(row);
+        return Directory.SalesAsync(Stamp(row) + "|" + string.Join(',', types), clock.GetUtcNow(), Options.StatusCacheDuration, refresh,
+            () => client.ListSalesVouchersAsync(connection, types, 250, 4, cancellationToken));
     }
 
     // ---------- Kontakte ----------

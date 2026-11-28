@@ -19,6 +19,7 @@ public sealed class PlanningModule : IModule
         services.AddScoped<DispatchService>();
         services.AddScoped<CockpitService>();
         services.AddScoped<Exports.IVehicleDirectory, VehicleDirectory>();
+        services.AddScoped<Exports.IBauakteAssignments, BauakteAssignments>();
         services.AddScoped<IFileReadGrant, EmployeeDocumentGrant>();
         services.AddScoped<IFileReadGrant, ResourceFileGrant>();
         services.AddScoped<IDataInitializer, CalendarSeed>();

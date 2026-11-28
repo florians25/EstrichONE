@@ -350,6 +350,19 @@ public sealed record ModuleSettings
     /// <summary>Angebote (Beta): Angebote vorbereiten und als Entwurf an Lexware Office senden (setzt Lexware Office voraus). Zunächst aus.</summary>
     public bool Quotations { get; init; }
 
+    /// <summary>Verkauf (setzt Lexware Office voraus) und seine Untermodule. Zunächst aus.</summary>
+    public bool Sales { get; init; }
+
+    public bool SalesOrderConfirmations { get; init; }
+
+    public bool SalesInvoices { get; init; }
+
+    public bool SalesCreditNotes { get; init; }
+
+    public bool SalesFinalize { get; init; }
+
+    public bool SalesPayments { get; init; }
+
     /// <summary>Lexware Office: Status der Bauakte automatisch aus Angebots- und Rechnungsstatus (setzt Lexware Office voraus). Zunächst aus.</summary>
     public bool LexwareStatus { get; init; }
 
@@ -377,6 +390,12 @@ public sealed record ModuleSettings
         AppModules.Lexware => Lexware,
         AppModules.LexwareArticles => LexwareArticles,
         AppModules.Quotations => Quotations,
+        AppModules.Sales => Sales,
+        AppModules.SalesOrderConfirmations => SalesOrderConfirmations,
+        AppModules.SalesInvoices => SalesInvoices,
+        AppModules.SalesCreditNotes => SalesCreditNotes,
+        AppModules.SalesFinalize => SalesFinalize,
+        AppModules.SalesPayments => SalesPayments,
         AppModules.LexwareStatus => LexwareStatus,
         _ => true,
     };
@@ -405,6 +424,12 @@ public sealed record ModuleSettings
         AppModules.Lexware => this with { Lexware = on },
         AppModules.LexwareArticles => this with { LexwareArticles = on },
         AppModules.Quotations => this with { Quotations = on },
+        AppModules.Sales => this with { Sales = on },
+        AppModules.SalesOrderConfirmations => this with { SalesOrderConfirmations = on },
+        AppModules.SalesInvoices => this with { SalesInvoices = on },
+        AppModules.SalesCreditNotes => this with { SalesCreditNotes = on },
+        AppModules.SalesFinalize => this with { SalesFinalize = on },
+        AppModules.SalesPayments => this with { SalesPayments = on },
         AppModules.LexwareStatus => this with { LexwareStatus = on },
         _ => this,
     };

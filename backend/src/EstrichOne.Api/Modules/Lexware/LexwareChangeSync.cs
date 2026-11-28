@@ -347,6 +347,8 @@ internal sealed class LexwareChangeSyncJob(IServiceScopeFactory scopes, TimeProv
         if (now - _lastStatus >= options.Value.ChangeSyncInterval)
         {
             using var status = scopes.CreateScope();
+            // Sichere Belege zuerst automatisch zuordnen, danach greifen die Statusregeln auch für sie.
+            await status.ServiceProvider.GetRequiredService<LexwareAutoAssignService>().RunAsync(null, cancellationToken);
             await status.ServiceProvider.GetRequiredService<LexwareBauakteStatusService>().RunAsync(cancellationToken);
             _lastStatus = now;
         }

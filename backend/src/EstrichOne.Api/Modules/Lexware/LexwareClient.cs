@@ -170,17 +170,31 @@ public sealed record LexwareArticleDraft(
 public sealed record LexwarePaymentCondition(
     string? Id, string Label, int? Duration, decimal? DiscountPercent, int? DiscountRange, bool IsDefault);
 
-/// <summary>Position eines Angebots für <c>POST /v1/quotations</c>.</summary>
-/// <param name="Type"><c>custom</c> (freie Position), <c>material</c> bzw. <c>service</c> (Artikel aus Lexware Office mit <paramref name="ArticleId"/>) oder <c>text</c>.</param>
-public sealed record LexwareQuotationLine(
+/// <summary>Position eines Verkaufsbelegs für <c>POST /v1/{quotations|order-confirmations|invoices|credit-notes}</c>.</summary>
+/// <param name="Type"><c>custom</c> (freie Position, auch Abzug mit negativem Preis), <c>material</c> bzw. <c>service</c> (Artikel aus Lexware Office mit <paramref name="ArticleId"/>) oder <c>text</c>.</param>
+public sealed record LexwareSalesLine(
     string Type, string? ArticleId, string Name, string? Description, decimal? Quantity, string? UnitName, decimal? NetPrice, decimal? TaxRate,
     decimal? DiscountPercent);
 
-/// <summary>Angebot, das EstrichONE als Entwurf in Lexware Office anlegt.</summary>
+/// <summary>Verkaufsbeleg, den EstrichONE in Lexware Office anlegt (Entwurf, festgeschrieben nur ausdrücklich).</summary>
+/// <param name="Type">Belegart (<see cref="LexwareVoucherTypes"/>): quotation, orderconfirmation, invoice, creditnote.</param>
 /// <param name="TaxType"><c>net</c>, <c>vatfree</c> oder <c>constructionService13b</c> (Bauleistung nach § 13b UStG).</param>
-public sealed record LexwareQuotationDraft(
+/// <param name="ExpirationDate">Angebot: gültig bis.</param>
+/// <param name="ServiceDate">Leistungsdatum bzw. Beginn des Leistungszeitraums (<c>shippingConditions</c>; Rechnung, Auftragsbestätigung, Gutschrift).</param>
+public sealed record LexwareSalesVoucher(
     string ContactId, DateOnly VoucherDate, DateOnly? ExpirationDate, string? Title, string? Introduction, string? Remark, string TaxType,
-    LexwarePaymentCondition? Payment, IReadOnlyList<LexwareQuotationLine> Lines);
+    LexwarePaymentCondition? Payment, IReadOnlyList<LexwareSalesLine> Lines, string Type = LexwareVoucherTypes.Quotation, DateOnly? ServiceDate = null,
+    DateOnly? ServiceEndDate = null);
+
+/// <summary>Zahlstand einer Rechnung (<c>GET /v1/payments/{id}</c>).</summary>
+/// <param name="PaymentStatus">Laut Lexware z. B. <c>openRevenue</c>, <c>balanced</c>.</param>
+public sealed record LexwarePayment(decimal? OpenAmount, string? PaymentStatus, DateOnly? PaidDate);
+
+/// <summary>Eintrag der Belegliste für die Übersicht „Verkauf“.</summary>
+/// <param name="Status">Wie in der Belegliste, einschließlich <c>overdue</c>.</param>
+public sealed record LexwareListVoucher(
+    string Id, string Type, string Status, string? Number, DateOnly? VoucherDate, DateOnly? DueDate, decimal? GrossAmount, decimal? OpenAmount,
+    string? ContactId, string? ContactName);
 
 /// <summary>Antwort auf eine Anlage in Lexware Office.</summary>
 public sealed record LexwareCreated(string Id, int? Version);
@@ -191,7 +205,7 @@ public sealed record LexwareCreated(string Id, int? Version);
 /// <param name="Text">Titel, Einleitung und Schlusstext (nur beim Einzelabruf), für den Zuordnungsvorschlag über die Bauaktennummer.</param>
 public sealed record LexwareVoucher(
     string Id, string Type, string Status, string? Number, string? Title, DateOnly? VoucherDate, DateOnly? DueDate, decimal? NetAmount,
-    decimal? GrossAmount, string Currency, string? ContactId, string? ContactName, string? Text = null);
+    decimal? GrossAmount, string Currency, string? ContactId, string? ContactName, string? Text = null, IReadOnlyList<string>? Preceding = null);
 
 /// <summary>Belegarten, die EstrichONE anzeigt, mit ihrem Pfad in der API und in den Links der Lexware-Oberfläche.</summary>
 public static class LexwareVoucherTypes
@@ -226,8 +240,8 @@ public static class LexwareVoucherTypes
 /// Sekunde, Wiederholung bei 429 mit wachsender Wartezeit, Zeitlimit je Versuch und verständliche Fehlermeldungen.
 /// Geschrieben wird nur an genau benannten Stellen (<see cref="WriteAllowed"/>): Kontakte anlegen und ändern
 /// (<c>POST /v1/contacts</c>, <c>PUT /v1/contacts/{id}</c>), Artikel anlegen und ändern (<c>POST /v1/articles</c>,
-/// <c>PUT /v1/articles/{id}</c>) und ein Angebot als Entwurf anlegen (<c>POST /v1/quotations</c> ohne <c>finalize</c>).
-/// Rechnungen, Gutschriften und Auftragsbestätigungen werden nur gelesen; gelöscht, archiviert oder festgeschrieben wird nie.
+/// <c>PUT /v1/articles/{id}</c>) und Verkaufsbelege anlegen (Angebot, Auftragsbestätigung, Rechnung, Gutschrift; als Entwurf,
+/// festgeschrieben nur mit ausdrücklicher Freigabe). Belege werden nie geändert, gelöscht oder archiviert.
 /// <see cref="WriteAllowed"/> weist jeden anderen schreibenden Aufruf schon vor dem Senden ab.
 /// Alle Feldnamen der API stehen nur in dieser Datei (docs/lexware-office.md), damit Anpassungen an einer Stelle bleiben.
 /// </summary>
@@ -439,11 +453,16 @@ public sealed class LexwareClient(IHttpClientFactory http, IOptions<LexwareOptio
         var json = await SendAsync(connection, HttpMethod.Get, $"/v1/{segment}/{Uri.EscapeDataString(id)}", null, cancellationToken);
         var total = json?["totalPrice"];
         var address = json?["address"];
-        var text = string.Join('\n', new[] { Str(json?["title"]), Str(json?["introduction"]), Str(json?["remark"]) }.Where(p => p is not null));
+        var lineTexts = (json?["lineItems"] as JsonArray ?? []).OfType<JsonObject>().SelectMany(l => new[] { Str(l["name"]), Str(l["description"]) });
+        var text = string.Join('\n', new[] { Str(json?["title"]), Str(json?["introduction"]), Str(json?["remark"]) }.Concat(lineTexts).Where(p => p is not null));
+        // Belegkette: Vorgänger laut Lexware Office (Feldnamen nach bisherigem Wissen, siehe Prüfliste).
+        var preceding = new[] { Str(json?["precedingSalesVoucherId"]) }
+            .Concat((json?["relatedVouchers"] as JsonArray ?? []).OfType<JsonObject>().Select(r => Str(r["id"])))
+            .Where(p => p is not null && p != id).Select(p => p!).Distinct().ToList();
         return new LexwareVoucher(Str(json?["id"]) ?? id, type, Str(json?["voucherStatus"])?.ToLowerInvariant() ?? "draft", Str(json?["voucherNumber"]),
             Str(json?["title"]), Date(json?["voucherDate"]), Date(json?["dueDate"]) ?? Date(json?["expirationDate"]) ?? DueDate(json),
             Decimal(total?["totalNetAmount"]), Decimal(total?["totalGrossAmount"]), Str(total?["currency"]) ?? "EUR", Str(address?["contactId"]),
-            Str(address?["name"]), text);
+            Str(address?["name"]), text, preceding);
     }
 
     /// <summary>
@@ -609,11 +628,70 @@ public sealed class LexwareClient(IHttpClientFactory http, IOptions<LexwareOptio
     /// Legt ein Angebot als Entwurf an (<c>POST /v1/quotations</c> ohne <c>finalize</c>): Nummer, Festschreiben und Versand
     /// bleiben in Lexware Office. Wird bei Fehlern nicht wiederholt, damit kein Angebot doppelt entsteht.
     /// </summary>
-    public async Task<LexwareCreated> CreateQuotationDraftAsync(LexwareConnection connection, LexwareQuotationDraft draft, CancellationToken cancellationToken)
+    public async Task<LexwareCreated> CreateSalesVoucherAsync(LexwareConnection connection, LexwareSalesVoucher draft, string? precedingLexwareId, bool finalize,
+        CancellationToken cancellationToken)
     {
-        var json = await SendAsync(connection, HttpMethod.Post, "/v1/quotations", QuotationBody(draft), cancellationToken);
-        return new LexwareCreated(Str(json?["id"]) ?? throw new LexwareException("UNEXPECTED_RESPONSE", $"{Service} hat keine ID des Angebots geliefert."),
+        var segment = SalesSegment(draft.Type);
+        var query = new List<string>();
+        if (finalize)
+        {
+            query.Add("finalize=true");
+        }
+
+        if (!string.IsNullOrWhiteSpace(precedingLexwareId))
+        {
+            query.Add("precedingSalesVoucherId=" + Uri.EscapeDataString(precedingLexwareId.Trim()));
+        }
+
+        var path = $"/v1/{segment}" + (query.Count > 0 ? "?" + string.Join('&', query) : string.Empty);
+        var json = Parse(Encoding.UTF8.GetString((await SendRawAsync(connection, HttpMethod.Post, path, SalesBody(draft), "application/json", cancellationToken,
+            finalize)).Content));
+        return new LexwareCreated(Str(json?["id"]) ?? throw new LexwareException("UNEXPECTED_RESPONSE", $"{Service} hat keine ID des Belegs geliefert."),
             Int(json?["version"]));
+    }
+
+    private static string SalesSegment(string type) => type is LexwareVoucherTypes.Quotation or LexwareVoucherTypes.OrderConfirmation or LexwareVoucherTypes.Invoice
+        or LexwareVoucherTypes.CreditNote
+        ? LexwareVoucherTypes.Segment(type)!
+        : throw new LexwareException("UNKNOWN_VOUCHER_TYPE", "Diese Belegart kann EstrichONE nicht anlegen.");
+
+    /// <summary>Zahlstand einer Rechnung (<c>GET /v1/payments/{id}</c>, nur lesend).</summary>
+    public async Task<LexwarePayment> GetPaymentAsync(LexwareConnection connection, string voucherId, CancellationToken cancellationToken)
+    {
+        var json = await SendAsync(connection, HttpMethod.Get, $"/v1/payments/{Uri.EscapeDataString(voucherId)}", null, cancellationToken);
+        return new LexwarePayment(Decimal(json?["openAmount"]), Str(json?["paymentStatus"]), Date(json?["paidDate"]));
+    }
+
+    /// <summary>
+    /// Verkaufsbelege der Belegliste, neueste zuerst (<c>GET /v1/voucherlist</c>), mit offenem Betrag (<c>openAmount</c>) und
+    /// dem Status der Liste (auch <c>overdue</c>). Seitenweise bis <paramref name="maxPages"/>.
+    /// </summary>
+    public async Task<IReadOnlyList<LexwareListVoucher>> ListSalesVouchersAsync(LexwareConnection connection, IReadOnlyList<string> types, int size, int maxPages,
+        CancellationToken cancellationToken)
+    {
+        var result = new List<LexwareListVoucher>();
+        for (var page = 0; page < Math.Max(1, maxPages); page++)
+        {
+            var query = new StringBuilder("/v1/voucherlist?voucherType=").Append(string.Join(',', types))
+                .Append("&voucherStatus=any&sort=voucherDate,DESC&size=").Append(size.ToString(CultureInfo.InvariantCulture))
+                .Append("&page=").Append(page.ToString(CultureInfo.InvariantCulture));
+            var json = await SendAsync(connection, HttpMethod.Get, query.ToString(), null, cancellationToken);
+            foreach (var v in (json?["content"] as JsonArray ?? []).OfType<JsonObject>())
+            {
+                if (Str(v["id"]) is { } id && Str(v["voucherType"])?.ToLowerInvariant() is { } type && types.Contains(type))
+                {
+                    result.Add(new LexwareListVoucher(id, type, Str(v["voucherStatus"])?.ToLowerInvariant() ?? "open", Str(v["voucherNumber"]), Date(v["voucherDate"]),
+                        Date(v["dueDate"]), Decimal(v["totalAmount"]), Decimal(v["openAmount"]), Str(v["contactId"]), Str(v["contactName"])));
+                }
+            }
+
+            if (json?["last"] is not JsonValue last || !last.TryGetValue<bool>(out var isLast) || isLast)
+            {
+                break;
+            }
+        }
+
+        return result;
     }
 
     /// <summary>Datum als Zeitpunkt um Mitternacht in deutscher Zeit, wie Lexware Office es erwartet (<c>2026-11-27T00:00:00.000+01:00</c>).</summary>
@@ -632,8 +710,12 @@ public sealed class LexwareClient(IHttpClientFactory http, IOptions<LexwareOptio
         return new DateTimeOffset(date.ToDateTime(TimeOnly.MinValue), offset).ToString("yyyy-MM-dd'T'HH:mm:ss.fffzzz", CultureInfo.InvariantCulture);
     }
 
-    /// <summary>Inhalt für <c>POST /v1/quotations</c>. Bei § 13b UStG und steuerfrei tragen die Positionen den Steuersatz 0.</summary>
-    internal static JsonObject QuotationBody(LexwareQuotationDraft draft)
+    /// <summary>
+    /// Inhalt für <c>POST /v1/{belegart}</c>. Bei § 13b UStG und steuerfrei tragen die Positionen den Steuersatz 0. Angebote
+    /// tragen <c>expirationDate</c>, Rechnungen, Auftragsbestätigungen und Gutschriften <c>shippingConditions</c> (Leistungsdatum
+    /// bzw. Leistungszeitraum). Gutschriften haben keine Zahlungsbedingung.
+    /// </summary>
+    internal static JsonObject SalesBody(LexwareSalesVoucher draft)
     {
         var reverse = LexwareTaxTypes.WithoutTax(draft.TaxType);
         var lines = new JsonArray();
@@ -671,15 +753,22 @@ public sealed class LexwareClient(IHttpClientFactory http, IOptions<LexwareOptio
             ["totalPrice"] = new JsonObject { ["currency"] = "EUR" },
             ["taxConditions"] = new JsonObject { ["taxType"] = draft.TaxType },
         };
-        if (draft.ExpirationDate is { } expires)
+        if (draft.Type == LexwareVoucherTypes.Quotation && draft.ExpirationDate is { } expires)
         {
             body["expirationDate"] = LexwareDate(expires);
+        }
+
+        if (draft.Type != LexwareVoucherTypes.Quotation && draft.ServiceDate is { } start)
+        {
+            body["shippingConditions"] = draft.ServiceEndDate is { } end && end > start
+                ? new JsonObject { ["shippingType"] = "serviceperiod", ["shippingDate"] = LexwareDate(start), ["shippingEndDate"] = LexwareDate(end) }
+                : new JsonObject { ["shippingType"] = "service", ["shippingDate"] = LexwareDate(start) };
         }
 
         Set(body, "title", Blank(draft.Title));
         Set(body, "introduction", Blank(draft.Introduction));
         Set(body, "remark", Blank(draft.Remark));
-        if (draft.Payment is { } payment)
+        if (draft.Payment is { } payment && draft.Type != LexwareVoucherTypes.CreditNote)
         {
             var conditions = new JsonObject { ["paymentTermLabel"] = payment.Label };
             if (payment.Duration is { } days)
@@ -920,24 +1009,59 @@ public sealed class LexwareClient(IHttpClientFactory http, IOptions<LexwareOptio
     /// <summary>
     /// Schreibende Aufrufe sind nur an genau diesen Stellen erlaubt: Kontakt anlegen (<c>POST /v1/contacts</c>) und einen
     /// einzelnen ändern (<c>PUT /v1/contacts/{id}</c>), Artikel anlegen (<c>POST /v1/articles</c>) und einen einzelnen
-    /// ändern (<c>PUT /v1/articles/{id}</c>) sowie ein Angebot als Entwurf anlegen (<c>POST /v1/quotations</c>). Schreibende
-    /// Aufrufe tragen nie eine Abfrage: So kann ein Angebot nicht mit <c>finalize=true</c> festgeschrieben werden. Alles
-    /// andere, insbesondere Rechnungen, ist lesend. Gelöscht oder archiviert wird in Lexware Office nie.
+    /// ändern (<c>PUT /v1/articles/{id}</c>) sowie Verkaufsbelege anlegen (<c>POST /v1/quotations</c>,
+    /// <c>/v1/order-confirmations</c>, <c>/v1/invoices</c>, <c>/v1/credit-notes</c>). Als Abfrage ist bei Verkaufsbelegen nur
+    /// <c>precedingSalesVoucherId</c> (Belegkette) erlaubt und <c>finalize=true</c> nur, wenn <paramref name="finalize"/>
+    /// ausdrücklich gesetzt ist (Modul, Recht und Bestätigung geprüft). Alle anderen schreibenden Aufrufe tragen keine
+    /// Abfrage. Belege werden nie geändert, gelöscht oder archiviert, Kontakte und Artikel nie gelöscht.
     /// </summary>
-    internal static bool WriteAllowed(HttpMethod method, string path, string? query = null)
+    internal static bool WriteAllowed(HttpMethod method, string path, string? query = null, bool finalize = false)
     {
         if (method == HttpMethod.Get)
         {
             return true;
         }
 
-        if (!string.IsNullOrEmpty(query) && query != "?")
+        var hasQuery = !string.IsNullOrEmpty(query) && query != "?";
+        if (method == HttpMethod.Post && path is "/v1/quotations" or "/v1/order-confirmations" or "/v1/invoices" or "/v1/credit-notes")
+        {
+            return !hasQuery || SalesQueryAllowed(query!, finalize);
+        }
+
+        if (hasQuery)
         {
             return false;
         }
 
-        return (method == HttpMethod.Post && path is "/v1/contacts" or "/v1/articles" or "/v1/quotations")
+        return (method == HttpMethod.Post && path is "/v1/contacts" or "/v1/articles")
             || (method == HttpMethod.Put && (Single(path, ContactPath) || Single(path, ArticlePath)));
+    }
+
+    /// <summary>Abfrage beim Anlegen eines Verkaufsbelegs: höchstens <c>precedingSalesVoucherId</c> und, nur mit Freigabe, <c>finalize=true</c>.</summary>
+    private static bool SalesQueryAllowed(string query, bool finalize)
+    {
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var part in query.TrimStart('?').Split('&'))
+        {
+            var pair = part.Split('=', 2);
+            if (pair.Length != 2 || !seen.Add(pair[0]))
+            {
+                return false;
+            }
+
+            var ok = pair[0] switch
+            {
+                "finalize" => finalize && pair[1] == "true",
+                "precedingSalesVoucherId" => pair[1].Length is > 0 and <= 100 && pair[1].All(c => char.IsAsciiLetterOrDigit(c) || c == '-'),
+                _ => false,
+            };
+            if (!ok)
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private static bool Single(string path, string prefix) =>
@@ -954,14 +1078,14 @@ public sealed class LexwareClient(IHttpClientFactory http, IOptions<LexwareOptio
         Parse(Encoding.UTF8.GetString((await SendRawAsync(connection, method, pathAndQuery, body, "application/json", cancellationToken)).Content));
 
     private async Task<(byte[] Content, string? ContentType)> SendRawAsync(LexwareConnection connection, HttpMethod method, string pathAndQuery,
-        JsonObject? body, string accept, CancellationToken cancellationToken)
+        JsonObject? body, string accept, CancellationToken cancellationToken, bool finalize = false)
     {
         var uri = new Uri(connection.BaseUri, pathAndQuery);
         var path = uri.AbsolutePath; // ohne Abfrage: dort können Namen und Adressen stehen
-        if (!WriteAllowed(method, path, uri.Query))
+        if (!WriteAllowed(method, path, uri.Query, finalize))
         {
             throw new InvalidOperationException(
-                $"EstrichONE schreibt in Lexware Office nur Kontakte und Artikel (anlegen, ändern) und Angebotsentwürfe (anlegen); {method.Method} {path} ist nicht vorgesehen.");
+                $"EstrichONE schreibt in Lexware Office nur Kontakte und Artikel (anlegen, ändern) und Verkaufsbelege (anlegen); {method.Method} {path} ist so nicht vorgesehen.");
         }
 
         var payload = body?.ToJsonString();

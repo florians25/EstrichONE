@@ -204,23 +204,23 @@ public sealed class LexwareClientTests : IDisposable
     }
 
     [Fact]
-    public void Vouchers_AreReadOnly_ClientWritesNothingButContacts()
+    public void Vouchers_AreNeverChanged_ClientWritesOnlyNamedCalls()
     {
-        // Rechnungen und Angebote entstehen ausschließlich in Lexware Office: Der Client hat keine Methode, die einen Beleg
-        // anlegt oder ändert, und der Transport weist jeden schreibenden Aufruf außer „Kontakt anlegen“ und „Kontakt ändern“ ab.
+        // Belege werden nur angelegt (Verkauf), nie geändert, gelöscht oder archiviert. Der Transport weist jeden anderen
+        // schreibenden Aufruf ab (Einzelheiten zu Verkaufsbelegen in SalesTests).
         var methods = typeof(LexwareClient).GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance
             | System.Reflection.BindingFlags.DeclaredOnly).Select(m => m.Name).Where(n => n != "Dispose").Order().ToList();
-        methods.ShouldBe(["CreateArticleAsync", "CreateContactAsync", "CreateQuotationDraftAsync", "GetArticleAsync", "GetContactAsync", "GetVoucherAsync",
-            "GetVoucherDocumentAsync", "ListArticlesAsync", "ListCustomersAsync", "ListPaymentConditionsAsync", "ListVouchersAsync", "ProfileAsync",
-            "UpdateArticleAsync", "UpdateContactAsync"]);
+        methods.ShouldBe(["CreateArticleAsync", "CreateContactAsync", "CreateSalesVoucherAsync", "GetArticleAsync", "GetContactAsync", "GetPaymentAsync",
+            "GetVoucherAsync", "GetVoucherDocumentAsync", "ListArticlesAsync", "ListCustomersAsync", "ListPaymentConditionsAsync", "ListSalesVouchersAsync",
+            "ListVouchersAsync", "ProfileAsync", "UpdateArticleAsync", "UpdateContactAsync"]);
 
         LexwareClient.WriteAllowed(HttpMethod.Post, "/v1/contacts").ShouldBeTrue();
         LexwareClient.WriteAllowed(HttpMethod.Put, "/v1/contacts/abc").ShouldBeTrue();
         foreach (var path in new[]
                  {
-                     "/v1/invoices", "/v1/invoices/abc", "/v1/invoices/abc/document", "/v1/invoices/abc/file", "/v1/quotations/abc",
+                     "/v1/invoices/abc", "/v1/invoices/abc/document", "/v1/invoices/abc/file", "/v1/quotations/abc",
                      "/v1/quotations/abc/document", "/v1/articles/abc/archive",
-                     "/v1/credit-notes", "/v1/credit-notes/abc", "/v1/order-confirmations", "/v1/order-confirmations/abc", "/v1/voucherlist", "/v1/files",
+                     "/v1/credit-notes/abc", "/v1/order-confirmations/abc", "/v1/voucherlist", "/v1/files", "/v1/dunnings", "/v1/delivery-notes",
                      "/v1/files/abc", "/v1/contacts/abc/archive", "/v1/contacts/", "/v1/event-subscriptions",
                  })
         {
@@ -240,7 +240,7 @@ public sealed class LexwareClientTests : IDisposable
         LexwareClient.WriteAllowed(HttpMethod.Post, "/v1/articles", "?x=1").ShouldBeFalse();
         LexwareClient.WriteAllowed(HttpMethod.Put, "/v1/quotations").ShouldBeFalse();
         LexwareClient.WriteAllowed(HttpMethod.Put, "/v1/articles").ShouldBeFalse();
-        LexwareClient.WriteAllowed(HttpMethod.Post, "/v1/invoices").ShouldBeFalse();
+        LexwareClient.WriteAllowed(HttpMethod.Put, "/v1/invoices/abc").ShouldBeFalse();
         foreach (var method in new[] { HttpMethod.Post, HttpMethod.Patch, HttpMethod.Delete })
         {
             LexwareClient.WriteAllowed(method, "/v1/articles/abc").ShouldBeFalse($"{method} /v1/articles/abc");

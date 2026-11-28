@@ -42,9 +42,12 @@ internal sealed class UserPermissions(EstrichOneDbContext db, ICurrentUser curre
     }
 }
 
-public sealed class PermissionRequirement(string permission) : IAuthorizationRequirement
+public sealed class PermissionRequirement(params string[] anyOf) : IAuthorizationRequirement
 {
-    public string Permission { get; } = permission;
+    public string Permission { get; } = anyOf[0];
+
+    /// <summary>Es genügt eines dieser Rechte.</summary>
+    public IReadOnlyList<string> AnyOf { get; } = anyOf;
 }
 
 internal sealed class PermissionHandler(IUserPermissions permissions) : AuthorizationHandler<PermissionRequirement>
@@ -52,7 +55,7 @@ internal sealed class PermissionHandler(IUserPermissions permissions) : Authoriz
     protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context, PermissionRequirement requirement)
     {
         if (context.User.Identity?.IsAuthenticated == true
-            && await permissions.HasAsync(requirement.Permission, CancellationToken.None))
+            && (await permissions.GetAsync(CancellationToken.None)) is var granted && requirement.AnyOf.Any(granted.Contains))
         {
             context.Succeed(requirement);
         }

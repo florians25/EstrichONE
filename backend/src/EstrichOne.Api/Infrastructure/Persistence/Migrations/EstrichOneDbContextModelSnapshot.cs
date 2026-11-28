@@ -4654,6 +4654,31 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                     b.ToTable("catalog_items", (string)null);
                 });
 
+            modelBuilder.Entity("EstrichOne.Api.Modules.Lexware.LexwareAutoAssignBlock", b =>
+                {
+                    b.Property<string>("LexwareId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("lexware_id");
+
+                    b.Property<Guid>("BauakteId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("bauakte_id");
+
+                    b.Property<DateTimeOffset>("BlockedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("blocked_at");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("LexwareId")
+                        .HasName("pk_lexware_auto_assign_blocks");
+
+                    b.ToTable("lexware_auto_assign_blocks", (string)null);
+                });
+
             modelBuilder.Entity("EstrichOne.Api.Modules.Lexware.LexwareContactCreation", b =>
                 {
                     b.Property<Guid>("ContactId")
@@ -4801,6 +4826,16 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasDefaultValue("FromLexware")
                         .HasColumnName("article_sync");
 
+                    b.Property<bool>("AutoAssign")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true)
+                        .HasColumnName("auto_assign");
+
+                    b.Property<bool>("AutoAssignSingleOpen")
+                        .HasColumnType("boolean")
+                        .HasColumnName("auto_assign_single_open");
+
                     b.Property<bool>("AutoCreate")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
@@ -4925,6 +4960,11 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<string>("AutoReason")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("auto_reason");
+
                     b.Property<Guid>("BauakteId")
                         .HasColumnType("uuid")
                         .HasColumnName("bauakte_id");
@@ -4973,6 +5013,14 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(100)")
                         .HasColumnName("number");
 
+                    b.Property<string>("Origin")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasDefaultValue("manual")
+                        .HasColumnName("origin");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -5016,7 +5064,7 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                     b.ToTable("lexware_voucher_links", (string)null);
                 });
 
-            modelBuilder.Entity("EstrichOne.Api.Modules.Lexware.QuotationDraft", b =>
+            modelBuilder.Entity("EstrichOne.Api.Modules.Lexware.SalesVoucher", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid")
@@ -5038,6 +5086,19 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("created_by_user_id");
 
+                    b.Property<decimal?>("DownPaymentPercent")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)")
+                        .HasColumnName("down_payment_percent");
+
+                    b.Property<int?>("DunningLevel")
+                        .HasColumnType("integer")
+                        .HasColumnName("dunning_level");
+
+                    b.Property<bool>("Finalized")
+                        .HasColumnType("boolean")
+                        .HasColumnName("finalized");
+
                     b.Property<string>("Introduction")
                         .HasMaxLength(4000)
                         .HasColumnType("character varying(4000)")
@@ -5047,6 +5108,25 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)")
                         .HasColumnName("lexware_id");
+
+                    b.Property<string>("LexwareNumber")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("lexware_number");
+
+                    b.Property<string>("LexwareStatus")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("lexware_status");
+
+                    b.Property<DateTimeOffset?>("LexwareSyncedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("lexware_synced_at");
+
+                    b.Property<decimal?>("OpenAmount")
+                        .HasPrecision(14, 2)
+                        .HasColumnType("numeric(14,2)")
+                        .HasColumnName("open_amount");
 
                     b.Property<string>("PaymentConditionId")
                         .HasMaxLength(100)
@@ -5070,6 +5150,28 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasMaxLength(300)
                         .HasColumnType("character varying(300)")
                         .HasColumnName("payment_label");
+
+                    b.Property<string>("PaymentStatus")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("payment_status");
+
+                    b.Property<Guid?>("PrecedingId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("preceding_id");
+
+                    b.Property<string>("PrecedingLexwareId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("preceding_lexware_id");
+
+                    b.Property<string>("Purpose")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("standard")
+                        .HasColumnName("purpose");
 
                     b.Property<string>("Remark")
                         .HasMaxLength(4000)
@@ -5107,6 +5209,14 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("sent_by_user_id");
 
+                    b.Property<DateOnly?>("ServiceDate")
+                        .HasColumnType("date")
+                        .HasColumnName("service_date");
+
+                    b.Property<DateOnly?>("ServiceEndDate")
+                        .HasColumnType("date")
+                        .HasColumnName("service_end_date");
+
                     b.Property<string>("State")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -5138,24 +5248,39 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasColumnType("bigint")
                         .HasColumnName("version");
 
+                    b.Property<DateOnly?>("VoucherDate")
+                        .HasColumnType("date")
+                        .HasColumnName("voucher_date");
+
+                    b.Property<string>("VoucherType")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasDefaultValue("quotation")
+                        .HasColumnName("voucher_type");
+
                     b.HasKey("Id")
-                        .HasName("pk_quotation_drafts");
+                        .HasName("pk_sales_vouchers");
 
                     b.HasIndex("BauakteId")
-                        .HasDatabaseName("ix_quotation_drafts_bauakte_id");
+                        .HasDatabaseName("ix_sales_vouchers_bauakte_id");
 
                     b.HasIndex("ContactId")
-                        .HasDatabaseName("ix_quotation_drafts_contact_id");
+                        .HasDatabaseName("ix_sales_vouchers_contact_id");
 
                     b.HasIndex("LexwareId")
                         .IsUnique()
-                        .HasDatabaseName("ix_quotation_drafts_lexware_id")
+                        .HasDatabaseName("ix_sales_vouchers_lexware_id")
                         .HasFilter("lexware_id IS NOT NULL");
 
-                    b.ToTable("quotation_drafts", (string)null);
+                    b.HasIndex("PrecedingId")
+                        .HasDatabaseName("ix_sales_vouchers_preceding_id");
+
+                    b.ToTable("sales_vouchers", (string)null);
                 });
 
-            modelBuilder.Entity("EstrichOne.Api.Modules.Lexware.QuotationDraftLine", b =>
+            modelBuilder.Entity("EstrichOne.Api.Modules.Lexware.SalesVoucherLine", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid")
@@ -5164,6 +5289,10 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                     b.Property<Guid?>("CatalogItemId")
                         .HasColumnType("uuid")
                         .HasColumnName("catalog_item_id");
+
+                    b.Property<Guid?>("DeductionVoucherId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("deduction_voucher_id");
 
                     b.Property<string>("Description")
                         .HasMaxLength(2000)
@@ -5216,12 +5345,12 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasColumnName("unit");
 
                     b.HasKey("Id")
-                        .HasName("pk_quotation_draft_lines");
+                        .HasName("pk_sales_voucher_lines");
 
                     b.HasIndex("DraftId", "Position")
-                        .HasDatabaseName("ix_quotation_draft_lines_draft_id_position");
+                        .HasDatabaseName("ix_sales_voucher_lines_draft_id_position");
 
-                    b.ToTable("quotation_draft_lines", (string)null);
+                    b.ToTable("sales_voucher_lines", (string)null);
                 });
 
             modelBuilder.Entity("EstrichOne.Api.Modules.Mail.MailAccount", b =>
@@ -9284,14 +9413,14 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasConstraintName("fk_user_two_factor_user_user_id");
                 });
 
-            modelBuilder.Entity("EstrichOne.Api.Modules.Lexware.QuotationDraftLine", b =>
+            modelBuilder.Entity("EstrichOne.Api.Modules.Lexware.SalesVoucherLine", b =>
                 {
-                    b.HasOne("EstrichOne.Api.Modules.Lexware.QuotationDraft", null)
+                    b.HasOne("EstrichOne.Api.Modules.Lexware.SalesVoucher", null)
                         .WithMany("Lines")
                         .HasForeignKey("DraftId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
-                        .HasConstraintName("fk_quotation_draft_lines_quotation_drafts_draft_id");
+                        .HasConstraintName("fk_sales_voucher_lines_sales_vouchers_draft_id");
                 });
 
             modelBuilder.Entity("EstrichOne.Api.Modules.Materials.Material", b =>
@@ -9545,7 +9674,7 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                     b.Navigation("Persons");
                 });
 
-            modelBuilder.Entity("EstrichOne.Api.Modules.Lexware.QuotationDraft", b =>
+            modelBuilder.Entity("EstrichOne.Api.Modules.Lexware.SalesVoucher", b =>
                 {
                     b.Navigation("Lines");
                 });

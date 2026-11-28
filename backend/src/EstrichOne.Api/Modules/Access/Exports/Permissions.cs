@@ -39,6 +39,17 @@ public static class Permissions
     public const string InvoicesRead = "invoices.read";
     public const string InvoicesAssign = "invoices.assign";
     public const string QuotationsPrepare = "quotations.prepare";
+    public const string QuotationsRead = "quotations.read";
+    public const string QuotationsFinalize = "quotations.finalize";
+    public const string OrderConfirmationsRead = "orderconfirmations.read";
+    public const string OrderConfirmationsEdit = "orderconfirmations.edit";
+    public const string OrderConfirmationsFinalize = "orderconfirmations.finalize";
+    public const string SalesInvoicesRead = "salesinvoices.read";
+    public const string SalesInvoicesEdit = "salesinvoices.edit";
+    public const string SalesInvoicesFinalize = "salesinvoices.finalize";
+    public const string CreditNotesRead = "creditnotes.read";
+    public const string CreditNotesEdit = "creditnotes.edit";
+    public const string CreditNotesFinalize = "creditnotes.finalize";
     public const string UsersManage = "users.manage";
     public const string RolesManage = "roles.manage";
     public const string DevicesRead = "devices.read";
@@ -92,7 +103,18 @@ public static class Permissions
         new(FuelExport, "Tankbelege", "Tankbelege als CSV für die Buchhaltung exportieren"),
         new(InvoicesRead, "Rechnungen", "Rechnungen und Angebote aus Lexware Office an Kunden und Bauakten sehen (wenn das Modul aktiv ist)"),
         new(InvoicesAssign, "Rechnungen", "Rechnungen und Angebote aus Lexware Office Bauakten zuordnen und Kunden mit Lexware Office verknüpfen"),
-        new(QuotationsPrepare, "Rechnungen", "Angebote vorbereiten: Angebote in EstrichONE erfassen und als Entwurf an Lexware Office senden (wenn das Modul „Angebote (Beta)“ aktiv ist)"),
+        new(QuotationsRead, "Verkauf", "Angebote im Verkauf ansehen (Module „Verkauf“ und „Verkauf: Angebote“)"),
+        new(QuotationsPrepare, "Verkauf", "Angebote erfassen und als Entwurf an Lexware Office senden"),
+        new(QuotationsFinalize, "Verkauf", "Angebote beim Senden in Lexware Office festschreiben (zusätzlich Modul „Verkauf: Festschreiben aus EstrichONE“)"),
+        new(OrderConfirmationsRead, "Verkauf", "Auftragsbestätigungen im Verkauf ansehen"),
+        new(OrderConfirmationsEdit, "Verkauf", "Auftragsbestätigungen erfassen und als Entwurf an Lexware Office senden"),
+        new(OrderConfirmationsFinalize, "Verkauf", "Auftragsbestätigungen beim Senden festschreiben"),
+        new(SalesInvoicesRead, "Verkauf", "Rechnungen im Verkauf und den Rechnungsplan der Bauakte ansehen"),
+        new(SalesInvoicesEdit, "Verkauf", "Rechnungen, Abschlags- und Schlussrechnungen erfassen und als Entwurf an Lexware Office senden"),
+        new(SalesInvoicesFinalize, "Verkauf", "Rechnungen beim Senden festschreiben"),
+        new(CreditNotesRead, "Verkauf", "Gutschriften im Verkauf ansehen"),
+        new(CreditNotesEdit, "Verkauf", "Gutschriften erfassen und als Entwurf an Lexware Office senden"),
+        new(CreditNotesFinalize, "Verkauf", "Gutschriften beim Senden festschreiben"),
         new(UsersManage, "Verwaltung", "Benutzer verwalten"),
         new(RolesManage, "Verwaltung", "Rollen und Rechte verwalten"),
         new(DevicesRead, "IT Center", "Geräte sehen"),

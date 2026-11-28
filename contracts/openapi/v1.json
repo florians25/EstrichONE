@@ -23723,6 +23723,38 @@
         ]
       }
     },
+    "/api/v1/settings/integrations/lexware/auto-assigned": {
+      "get": {
+        "tags": [
+          "Lexware Office"
+        ],
+        "summary": "Zuletzt automatisch zugeordnete Belege mit Bauakte und Grund",
+        "operationId": "ListLexwareAutoAssignedVouchers",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LexwareAutoAssignedResponse"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/settings/integrations/lexware/tax-types/check": {
       "post": {
         "tags": [
@@ -26163,14 +26195,21 @@
         ]
       }
     },
-    "/api/v1/lexware/quotations": {
+    "/api/v1/sales/vouchers": {
       "get": {
         "tags": [
-          "Angebote (Beta)"
+          "Verkauf"
         ],
-        "summary": "Angebotsentwürfe einer Bauakte oder eines Kunden",
-        "operationId": "ListQuotationDrafts",
+        "summary": "Übersicht Verkauf: Belege aus Lexware Office (Belegliste) und noch nicht gesendete Belege aus EstrichONE, mit Bauakte, offenem Betrag und Status",
+        "operationId": "ListSalesVouchers",
         "parameters": [
+          {
+            "name": "type",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
           {
             "name": "bauakteId",
             "in": "query",
@@ -26186,6 +26225,14 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          {
+            "name": "refresh",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
           }
         ],
         "responses": {
@@ -26194,10 +26241,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/QuotationSummary"
-                  }
+                  "$ref": "#/components/schemas/SalesListResponse"
                 }
               }
             }
@@ -26214,15 +26258,15 @@
       },
       "post": {
         "tags": [
-          "Angebote (Beta)"
+          "Verkauf"
         ],
-        "summary": "Angebotsentwurf anlegen (zur Bauakte oder zum Kunden); der Kunde muss mit Lexware Office verknüpft sein",
-        "operationId": "CreateQuotationDraft",
+        "summary": "Beleg anlegen (zur Bauakte oder zum Kunden); der Kunde muss mit Lexware Office verknüpft sein",
+        "operationId": "CreateSalesVoucher",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CreateQuotationRequest"
+                "$ref": "#/components/schemas/CreateSalesVoucherRequest"
               }
             }
           },
@@ -26234,7 +26278,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/QuotationResponse"
+                  "$ref": "#/components/schemas/SalesVoucherResponse"
                 }
               }
             }
@@ -26244,7 +26288,17 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/QuotationResponse"
+                  "$ref": "#/components/schemas/SalesVoucherResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
                 }
               }
             }
@@ -26290,20 +26344,29 @@
         ]
       }
     },
-    "/api/v1/lexware/quotations/options": {
+    "/api/v1/sales/options": {
       "get": {
         "tags": [
-          "Angebote (Beta)"
+          "Verkauf"
         ],
-        "summary": "Auswahlwerte: Zahlungsbedingungen aus Lexware Office (falls verfügbar), Artikel und Leistungen, Steuersätze",
-        "operationId": "GetQuotationOptions",
+        "summary": "Auswahlwerte des Belegeditors: Zahlungsbedingungen, Artikel und Leistungen, Steuersätze, erlaubte Steuerarten, Belegarten mit Rechten",
+        "operationId": "GetSalesOptions",
+        "parameters": [
+          {
+            "name": "type",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "OK",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/QuotationOptionsResponse"
+                  "$ref": "#/components/schemas/SalesOptionsResponse"
                 }
               }
             }
@@ -26319,13 +26382,13 @@
         ]
       }
     },
-    "/api/v1/lexware/quotations/suggestions": {
+    "/api/v1/sales/suggestions": {
       "get": {
         "tags": [
-          "Angebote (Beta)"
+          "Verkauf"
         ],
-        "summary": "Positionsvorschläge aus der Bauakte (Fläche aus Räume und Flächen bzw. Kennwerten); nur Vorschläge",
-        "operationId": "GetQuotationSuggestions",
+        "summary": "Positionsvorschläge aus der Bauakte (Fläche aus Räume und Flächen bzw. Kennwerten, Regiestunden aus Einsätzen) und Leistungszeitraum",
+        "operationId": "GetSalesSuggestions",
         "parameters": [
           {
             "name": "bauakteId",
@@ -26343,7 +26406,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/QuotationSuggestionsResponse"
+                  "$ref": "#/components/schemas/SalesSuggestionsResponse"
                 }
               }
             }
@@ -26369,12 +26432,13 @@
         ]
       }
     },
-    "/api/v1/lexware/quotations/{id}": {
+    "/api/v1/sales/vouchers/{id}": {
       "get": {
         "tags": [
-          "Angebote (Beta)"
+          "Verkauf"
         ],
-        "operationId": "GetQuotationDraft",
+        "summary": "Beleg mit Positionen, Summen und Belegkette; refresh=true liest Nummer, Status und Zahlstand aus Lexware Office",
+        "operationId": "GetSalesVoucher",
         "parameters": [
           {
             "name": "id",
@@ -26384,6 +26448,14 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          {
+            "name": "refresh",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
           }
         ],
         "responses": {
@@ -26392,7 +26464,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/QuotationResponse"
+                  "$ref": "#/components/schemas/SalesVoucherResponse"
                 }
               }
             }
@@ -26419,10 +26491,10 @@
       },
       "put": {
         "tags": [
-          "Angebote (Beta)"
+          "Verkauf"
         ],
-        "summary": "Entwurf speichern (nur vor dem Senden; Version aus dem letzten Abruf)",
-        "operationId": "SaveQuotationDraft",
+        "summary": "Beleg speichern (nur vor dem Senden; Version aus dem letzten Abruf)",
+        "operationId": "SaveSalesVoucher",
         "parameters": [
           {
             "name": "id",
@@ -26438,7 +26510,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/SaveQuotationRequest"
+                "$ref": "#/components/schemas/SaveSalesVoucherRequest"
               }
             }
           },
@@ -26450,7 +26522,17 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/QuotationResponse"
+                  "$ref": "#/components/schemas/SalesVoucherResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
                 }
               }
             }
@@ -26507,10 +26589,10 @@
       },
       "delete": {
         "tags": [
-          "Angebote (Beta)"
+          "Verkauf"
         ],
-        "summary": "Entwurf in EstrichONE verwerfen (nur vor dem Senden; in Lexware Office wird nichts gelöscht)",
-        "operationId": "DeleteQuotationDraft",
+        "summary": "Beleg in EstrichONE verwerfen (nur vor dem Senden; in Lexware Office wird nie gelöscht)",
+        "operationId": "DiscardSalesVoucher",
         "parameters": [
           {
             "name": "id",
@@ -26525,6 +26607,16 @@
         "responses": {
           "204": {
             "description": "No Content"
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
           },
           "404": {
             "description": "Not Found",
@@ -26557,13 +26649,13 @@
         ]
       }
     },
-    "/api/v1/lexware/quotations/{id}/send": {
+    "/api/v1/sales/vouchers/{id}/send": {
       "post": {
         "tags": [
-          "Angebote (Beta)"
+          "Verkauf"
         ],
-        "summary": "Als Entwurf an Lexware Office senden (POST /v1/quotations ohne finalize). Mehrfaches Senden legt kein zweites Angebot an",
-        "operationId": "SendQuotationDraftToLexware",
+        "summary": "An Lexware Office senden: als Entwurf, mit finalize und Bestätigung festgeschrieben (Modul und Recht). Mehrfaches Senden legt keinen zweiten Beleg an",
+        "operationId": "SendSalesVoucherToLexware",
         "parameters": [
           {
             "name": "id",
@@ -26575,13 +26667,39 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/SendSalesVoucherRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "OK",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/QuotationResponse"
+                  "$ref": "#/components/schemas/SalesVoucherResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
                 }
               }
             }
@@ -26628,6 +26746,326 @@
           },
           "503": {
             "description": "Service Unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/sales/vouchers/{id}/copy": {
+      "post": {
+        "tags": [
+          "Verkauf"
+        ],
+        "summary": "Duplizieren (ohne type) oder in die nächste Belegart umwandeln (Belegkette über precedingSalesVoucherId)",
+        "operationId": "CopySalesVoucher",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CopySalesVoucherRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SalesVoucherResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/sales/bauakten/{id}/plan": {
+      "get": {
+        "tags": [
+          "Verkauf"
+        ],
+        "summary": "Rechnungsplan der Bauakte: Auftragssumme, Abschläge, bezahlt, offen, noch nicht berechnet, Vorschlag für den nächsten Abschlag",
+        "operationId": "GetBauakteBillingPlan",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SalesPlanResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/sales/bauakten/{id}/down-payment": {
+      "post": {
+        "tags": [
+          "Verkauf"
+        ],
+        "summary": "Abschlagsrechnung als Beleg in EstrichONE anlegen (Prozent der Auftragssumme oder Betrag netto)",
+        "operationId": "CreateDownPaymentInvoice",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DownPaymentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SalesVoucherResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/sales/bauakten/{id}/final-invoice": {
+      "post": {
+        "tags": [
+          "Verkauf"
+        ],
+        "summary": "Schlussrechnung anlegen: Positionen des Auftrags, bisherige Abschläge als Abzugszeilen mit Nummer und Datum",
+        "operationId": "CreateFinalInvoice",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FinalInvoiceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SalesVoucherResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -36066,6 +36504,25 @@
           }
         }
       },
+      "CopySalesVoucherRequest": {
+        "required": [
+          "id"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "type": {
+            "maxLength": 30,
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "CreateBackupMirrorRequest": {
         "required": [
           "name"
@@ -36468,15 +36925,20 @@
           }
         }
       },
-      "CreateQuotationRequest": {
+      "CreateSalesVoucherRequest": {
         "required": [
-          "id"
+          "id",
+          "type"
         ],
         "type": "object",
         "properties": {
           "id": {
             "type": "string",
             "format": "uuid"
+          },
+          "type": {
+            "maxLength": 30,
+            "type": "string"
           },
           "contactId": {
             "type": [
@@ -38772,6 +39234,36 @@
           "unlocked"
         ]
       },
+      "DownPaymentRequest": {
+        "required": [
+          "id"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "percent": {
+            "maximum": 100,
+            "minimum": 0.01,
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "amount": {
+            "maximum": 100000000,
+            "minimum": 0.01,
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          }
+        }
+      },
       "EditChatMessageRequest": {
         "required": [
           "text"
@@ -40240,6 +40732,18 @@
           "awaitingUpload",
           "stored"
         ]
+      },
+      "FinalInvoiceRequest": {
+        "required": [
+          "id"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
       },
       "FormSchemaField": {
         "required": [
@@ -42304,6 +42808,57 @@
           }
         }
       },
+      "LexwareAutoAssignedResponse": {
+        "required": [
+          "linkId",
+          "bauakteId",
+          "bauakteNumber",
+          "bauakteTitle",
+          "type",
+          "number",
+          "reason",
+          "linkedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "linkId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "bauakteId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "bauakteNumber": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "bauakteTitle": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "type": {
+            "type": "string"
+          },
+          "number": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "reason": {
+            "type": "string"
+          },
+          "linkedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
       "LexwareBauakteContact": {
         "required": [
           "lexwareContactId",
@@ -43234,6 +43789,14 @@
                 "$ref": "#/components/schemas/LexwareTaxTypesResponse"
               }
             ]
+          },
+          "autoAssign": {
+            "type": "boolean",
+            "default": true
+          },
+          "autoAssignSingleOpen": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -43629,6 +44192,12 @@
             "format": "date-time"
           },
           "syncError": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "autoAssigned": {
             "type": [
               "null",
               "string"
@@ -44382,6 +44951,24 @@
             "type": "boolean"
           },
           "quotations": {
+            "type": "boolean"
+          },
+          "sales": {
+            "type": "boolean"
+          },
+          "salesOrderConfirmations": {
+            "type": "boolean"
+          },
+          "salesInvoices": {
+            "type": "boolean"
+          },
+          "salesCreditNotes": {
+            "type": "boolean"
+          },
+          "salesFinalize": {
+            "type": "boolean"
+          },
+          "salesPayments": {
             "type": "boolean"
           },
           "lexwareStatus": {
@@ -47356,589 +47943,6 @@
           }
         }
       },
-      "QuotationCatalogItem": {
-        "required": [
-          "id",
-          "title",
-          "description",
-          "kind",
-          "articleNumber",
-          "unit",
-          "netPrice",
-          "taxRate",
-          "inLexware"
-        ],
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "title": {
-            "type": "string"
-          },
-          "description": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "kind": {
-            "$ref": "#/components/schemas/CatalogItemKind"
-          },
-          "articleNumber": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "unit": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "netPrice": {
-            "type": "number",
-            "format": "double"
-          },
-          "taxRate": {
-            "type": "number",
-            "format": "double"
-          },
-          "inLexware": {
-            "type": "boolean"
-          }
-        }
-      },
-      "QuotationLineDto": {
-        "required": [
-          "kind",
-          "name"
-        ],
-        "type": "object",
-        "properties": {
-          "kind": {
-            "maxLength": 10,
-            "type": "string"
-          },
-          "name": {
-            "maxLength": 255,
-            "type": "string"
-          },
-          "description": {
-            "maxLength": 2000,
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "catalogItemId": {
-            "type": [
-              "null",
-              "string"
-            ],
-            "format": "uuid"
-          },
-          "quantity": {
-            "maximum": 10000000,
-            "minimum": 0,
-            "type": [
-              "null",
-              "number"
-            ],
-            "format": "double"
-          },
-          "unit": {
-            "maxLength": 50,
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "netPrice": {
-            "maximum": 10000000,
-            "minimum": -10000000,
-            "type": [
-              "null",
-              "number"
-            ],
-            "format": "double"
-          },
-          "taxRate": {
-            "maximum": 100,
-            "minimum": 0,
-            "type": [
-              "null",
-              "number"
-            ],
-            "format": "double"
-          },
-          "discountPercent": {
-            "maximum": 100,
-            "minimum": 0,
-            "type": [
-              "null",
-              "number"
-            ],
-            "format": "double"
-          },
-          "lineNet": {
-            "type": [
-              "null",
-              "number"
-            ],
-            "format": "double"
-          }
-        }
-      },
-      "QuotationLineSuggestion": {
-        "required": [
-          "source",
-          "hint",
-          "name",
-          "description",
-          "quantity",
-          "unit"
-        ],
-        "type": "object",
-        "properties": {
-          "source": {
-            "type": "string"
-          },
-          "hint": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string"
-          },
-          "description": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "quantity": {
-            "type": "number",
-            "format": "double"
-          },
-          "unit": {
-            "type": "string"
-          },
-          "catalogItemId": {
-            "type": [
-              "null",
-              "string"
-            ],
-            "format": "uuid"
-          },
-          "netPrice": {
-            "type": [
-              "null",
-              "number"
-            ],
-            "format": "double"
-          },
-          "taxRate": {
-            "type": [
-              "null",
-              "number"
-            ],
-            "format": "double"
-          }
-        }
-      },
-      "QuotationOptionsResponse": {
-        "required": [
-          "paymentConditions",
-          "paymentConditionsError",
-          "catalog",
-          "taxRates",
-          "defaultValidDays"
-        ],
-        "type": "object",
-        "properties": {
-          "paymentConditions": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/LexwarePaymentCondition"
-            }
-          },
-          "paymentConditionsError": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "catalog": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/QuotationCatalogItem"
-            }
-          },
-          "taxRates": {
-            "type": "array",
-            "items": {
-              "type": "number",
-              "format": "double"
-            }
-          },
-          "defaultValidDays": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "taxTypes": {
-            "type": [
-              "null",
-              "array"
-            ],
-            "items": {
-              "$ref": "#/components/schemas/LexwareTaxTypeOption"
-            }
-          },
-          "smallBusiness": {
-            "type": "boolean",
-            "default": false
-          }
-        }
-      },
-      "QuotationResponse": {
-        "required": [
-          "id",
-          "contactId",
-          "customerName",
-          "customerLinked",
-          "bauakteId",
-          "bauakteNumber",
-          "bauakteTitle",
-          "title",
-          "introduction",
-          "remark",
-          "validUntil",
-          "taxType",
-          "paymentConditionId",
-          "paymentLabel",
-          "paymentDuration",
-          "paymentDiscountPercent",
-          "paymentDiscountRange",
-          "state",
-          "editable",
-          "lexwareId",
-          "lexwareUrl",
-          "sentAt",
-          "sendError",
-          "lines",
-          "totals",
-          "problems",
-          "version",
-          "updatedAt"
-        ],
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "contactId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "customerName": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "customerLinked": {
-            "type": "boolean"
-          },
-          "bauakteId": {
-            "type": [
-              "null",
-              "string"
-            ],
-            "format": "uuid"
-          },
-          "bauakteNumber": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "bauakteTitle": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "title": {
-            "type": "string"
-          },
-          "introduction": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "remark": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "validUntil": {
-            "type": [
-              "null",
-              "string"
-            ],
-            "format": "date"
-          },
-          "taxType": {
-            "type": "string"
-          },
-          "paymentConditionId": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "paymentLabel": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "paymentDuration": {
-            "type": [
-              "null",
-              "integer"
-            ],
-            "format": "int32"
-          },
-          "paymentDiscountPercent": {
-            "type": [
-              "null",
-              "number"
-            ],
-            "format": "double"
-          },
-          "paymentDiscountRange": {
-            "type": [
-              "null",
-              "integer"
-            ],
-            "format": "int32"
-          },
-          "state": {
-            "type": "string"
-          },
-          "editable": {
-            "type": "boolean"
-          },
-          "lexwareId": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "lexwareUrl": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "sentAt": {
-            "type": [
-              "null",
-              "string"
-            ],
-            "format": "date-time"
-          },
-          "sendError": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "lines": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/QuotationLineDto"
-            }
-          },
-          "totals": {
-            "$ref": "#/components/schemas/QuotationTotals"
-          },
-          "problems": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "version": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "updatedAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "sendErrorTechnical": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "sendErrorFix": {
-            "type": [
-              "null",
-              "string"
-            ]
-          }
-        }
-      },
-      "QuotationSuggestionsResponse": {
-        "required": [
-          "lines",
-          "hints"
-        ],
-        "type": "object",
-        "properties": {
-          "lines": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/QuotationLineSuggestion"
-            }
-          },
-          "hints": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          }
-        }
-      },
-      "QuotationSummary": {
-        "required": [
-          "id",
-          "title",
-          "contactId",
-          "customerName",
-          "bauakteId",
-          "state",
-          "net",
-          "gross",
-          "validUntil",
-          "lexwareUrl",
-          "updatedAt"
-        ],
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "title": {
-            "type": "string"
-          },
-          "contactId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "customerName": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "bauakteId": {
-            "type": [
-              "null",
-              "string"
-            ],
-            "format": "uuid"
-          },
-          "state": {
-            "type": "string"
-          },
-          "net": {
-            "type": "number",
-            "format": "double"
-          },
-          "gross": {
-            "type": "number",
-            "format": "double"
-          },
-          "validUntil": {
-            "type": [
-              "null",
-              "string"
-            ],
-            "format": "date"
-          },
-          "lexwareUrl": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "updatedAt": {
-            "type": "string",
-            "format": "date-time"
-          }
-        }
-      },
-      "QuotationTaxLine": {
-        "required": [
-          "rate",
-          "net",
-          "tax"
-        ],
-        "type": "object",
-        "properties": {
-          "rate": {
-            "type": "number",
-            "format": "double"
-          },
-          "net": {
-            "type": "number",
-            "format": "double"
-          },
-          "tax": {
-            "type": "number",
-            "format": "double"
-          }
-        }
-      },
-      "QuotationTotals": {
-        "required": [
-          "net",
-          "tax",
-          "gross",
-          "taxLines"
-        ],
-        "type": "object",
-        "properties": {
-          "net": {
-            "type": "number",
-            "format": "double"
-          },
-          "tax": {
-            "type": "number",
-            "format": "double"
-          },
-          "gross": {
-            "type": "number",
-            "format": "double"
-          },
-          "taxLines": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/QuotationTaxLine"
-            }
-          }
-        }
-      },
       "RateTicketRequest": {
         "required": [
           "rating"
@@ -48782,6 +48786,1083 @@
           "laid",
           "ready"
         ]
+      },
+      "SalesCatalogItem": {
+        "required": [
+          "id",
+          "title",
+          "description",
+          "kind",
+          "articleNumber",
+          "unit",
+          "netPrice",
+          "taxRate",
+          "inLexware"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "kind": {
+            "$ref": "#/components/schemas/CatalogItemKind"
+          },
+          "articleNumber": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "unit": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "netPrice": {
+            "type": "number",
+            "format": "double"
+          },
+          "taxRate": {
+            "type": "number",
+            "format": "double"
+          },
+          "inLexware": {
+            "type": "boolean"
+          }
+        }
+      },
+      "SalesChainItem": {
+        "required": [
+          "id",
+          "lexwareId",
+          "type",
+          "typeName",
+          "number",
+          "date",
+          "status",
+          "gross",
+          "current",
+          "lexwareUrl"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "lexwareId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "type": {
+            "type": "string"
+          },
+          "typeName": {
+            "type": "string"
+          },
+          "number": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "date": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "status": {
+            "type": "string"
+          },
+          "gross": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "current": {
+            "type": "boolean"
+          },
+          "lexwareUrl": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "SalesLineDto": {
+        "required": [
+          "kind"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "maxLength": 10,
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 255,
+            "type": "string",
+            "default": ""
+          },
+          "description": {
+            "maxLength": 2000,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "catalogItemId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "quantity": {
+            "maximum": 10000000,
+            "minimum": 0,
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "unit": {
+            "maxLength": 50,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "netPrice": {
+            "maximum": 100000000,
+            "minimum": -100000000,
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "taxRate": {
+            "maximum": 100,
+            "minimum": 0,
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "discountPercent": {
+            "maximum": 100,
+            "minimum": 0,
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "lineNet": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "deductionVoucherId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
+      "SalesLineSuggestion": {
+        "required": [
+          "source",
+          "hint",
+          "name",
+          "description",
+          "quantity",
+          "unit"
+        ],
+        "type": "object",
+        "properties": {
+          "source": {
+            "type": "string"
+          },
+          "hint": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "quantity": {
+            "type": "number",
+            "format": "double"
+          },
+          "unit": {
+            "type": "string"
+          },
+          "catalogItemId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "netPrice": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "taxRate": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "selected": {
+            "type": "boolean",
+            "default": true
+          }
+        }
+      },
+      "SalesListItem": {
+        "required": [
+          "id",
+          "lexwareId",
+          "type",
+          "typeName",
+          "number",
+          "title",
+          "contactId",
+          "customerName",
+          "bauakteId",
+          "bauakteNumber",
+          "bauakteTitle",
+          "voucherDate",
+          "dueDate",
+          "net",
+          "gross",
+          "openAmount",
+          "status",
+          "lexwareUrl"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "lexwareId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "type": {
+            "type": "string"
+          },
+          "typeName": {
+            "type": "string"
+          },
+          "number": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "title": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "contactId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "customerName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "bauakteId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "bauakteNumber": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "bauakteTitle": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "voucherDate": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "dueDate": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "net": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "gross": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "openAmount": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "status": {
+            "type": "string"
+          },
+          "lexwareUrl": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "SalesListResponse": {
+        "required": [
+          "items",
+          "loadedAt",
+          "lexwareError"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SalesListItem"
+            }
+          },
+          "loadedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lexwareError": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "SalesOptionsResponse": {
+        "required": [
+          "paymentConditions",
+          "paymentConditionsError",
+          "catalog",
+          "taxRates",
+          "defaultValidDays",
+          "taxTypes",
+          "smallBusiness",
+          "types",
+          "finalizeModule",
+          "paymentsModule"
+        ],
+        "type": "object",
+        "properties": {
+          "paymentConditions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LexwarePaymentCondition"
+            }
+          },
+          "paymentConditionsError": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "catalog": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SalesCatalogItem"
+            }
+          },
+          "taxRates": {
+            "type": "array",
+            "items": {
+              "type": "number",
+              "format": "double"
+            }
+          },
+          "defaultValidDays": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "taxTypes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LexwareTaxTypeOption"
+            }
+          },
+          "smallBusiness": {
+            "type": "boolean"
+          },
+          "types": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SalesTypeAccess"
+            }
+          },
+          "finalizeModule": {
+            "type": "boolean"
+          },
+          "paymentsModule": {
+            "type": "boolean"
+          }
+        }
+      },
+      "SalesPlanResponse": {
+        "required": [
+          "bauakteId",
+          "customerLinked",
+          "customerId",
+          "customerName",
+          "orderNet",
+          "orderGross",
+          "orderSource",
+          "orderVoucherId",
+          "downPaymentsNet",
+          "downPaymentCount",
+          "invoicedNet",
+          "paidGross",
+          "openGross",
+          "notBilledNet",
+          "progressPercent",
+          "suggestedPercent",
+          "serviceDate",
+          "serviceEndDate",
+          "finalInvoiceExists",
+          "text",
+          "vouchers",
+          "hints"
+        ],
+        "type": "object",
+        "properties": {
+          "bauakteId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "customerLinked": {
+            "type": "boolean"
+          },
+          "customerId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "customerName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "orderNet": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "orderGross": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "orderSource": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "orderVoucherId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "downPaymentsNet": {
+            "type": "number",
+            "format": "double"
+          },
+          "downPaymentCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "invoicedNet": {
+            "type": "number",
+            "format": "double"
+          },
+          "paidGross": {
+            "type": "number",
+            "format": "double"
+          },
+          "openGross": {
+            "type": "number",
+            "format": "double"
+          },
+          "notBilledNet": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "progressPercent": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "suggestedPercent": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "serviceDate": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "serviceEndDate": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "finalInvoiceExists": {
+            "type": "boolean"
+          },
+          "text": {
+            "type": "string"
+          },
+          "vouchers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SalesListItem"
+            }
+          },
+          "hints": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "SalesSuggestionsResponse": {
+        "required": [
+          "lines",
+          "hints"
+        ],
+        "type": "object",
+        "properties": {
+          "lines": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SalesLineSuggestion"
+            }
+          },
+          "hints": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "serviceDate": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "serviceEndDate": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          }
+        }
+      },
+      "SalesTaxLine": {
+        "required": [
+          "rate",
+          "net",
+          "tax"
+        ],
+        "type": "object",
+        "properties": {
+          "rate": {
+            "type": "number",
+            "format": "double"
+          },
+          "net": {
+            "type": "number",
+            "format": "double"
+          },
+          "tax": {
+            "type": "number",
+            "format": "double"
+          }
+        }
+      },
+      "SalesTotals": {
+        "required": [
+          "net",
+          "tax",
+          "gross",
+          "taxLines"
+        ],
+        "type": "object",
+        "properties": {
+          "net": {
+            "type": "number",
+            "format": "double"
+          },
+          "tax": {
+            "type": "number",
+            "format": "double"
+          },
+          "gross": {
+            "type": "number",
+            "format": "double"
+          },
+          "taxLines": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SalesTaxLine"
+            }
+          }
+        }
+      },
+      "SalesTypeAccess": {
+        "required": [
+          "type",
+          "name",
+          "enabled",
+          "canRead",
+          "canEdit",
+          "canFinalize"
+        ],
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "canRead": {
+            "type": "boolean"
+          },
+          "canEdit": {
+            "type": "boolean"
+          },
+          "canFinalize": {
+            "type": "boolean"
+          }
+        }
+      },
+      "SalesVoucherResponse": {
+        "required": [
+          "id",
+          "type",
+          "typeName",
+          "purpose",
+          "contactId",
+          "customerName",
+          "customerNumber",
+          "customerAddress",
+          "customerLinked",
+          "bauakteId",
+          "bauakteNumber",
+          "bauakteTitle",
+          "title",
+          "introduction",
+          "remark",
+          "voucherDate",
+          "validUntil",
+          "serviceDate",
+          "serviceEndDate",
+          "taxType",
+          "paymentConditionId",
+          "paymentLabel",
+          "paymentDuration",
+          "paymentDiscountPercent",
+          "paymentDiscountRange",
+          "state",
+          "status",
+          "editable",
+          "canEdit",
+          "canFinalize",
+          "lexwareId",
+          "lexwareUrl",
+          "lexwareNumber",
+          "finalized",
+          "sentAt",
+          "sendError",
+          "sendErrorTechnical",
+          "sendErrorFix",
+          "precedingId",
+          "downPaymentPercent",
+          "openAmount",
+          "paymentStatus",
+          "lines",
+          "totals",
+          "problems",
+          "chain",
+          "followers",
+          "version",
+          "updatedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "type": {
+            "type": "string"
+          },
+          "typeName": {
+            "type": "string"
+          },
+          "purpose": {
+            "type": "string"
+          },
+          "contactId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "customerName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "customerNumber": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "customerAddress": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "customerLinked": {
+            "type": "boolean"
+          },
+          "bauakteId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "bauakteNumber": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "bauakteTitle": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "title": {
+            "type": "string"
+          },
+          "introduction": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "remark": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "voucherDate": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "validUntil": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "serviceDate": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "serviceEndDate": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "taxType": {
+            "type": "string"
+          },
+          "paymentConditionId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "paymentLabel": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "paymentDuration": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          },
+          "paymentDiscountPercent": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "paymentDiscountRange": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          },
+          "state": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "editable": {
+            "type": "boolean"
+          },
+          "canEdit": {
+            "type": "boolean"
+          },
+          "canFinalize": {
+            "type": "boolean"
+          },
+          "lexwareId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "lexwareUrl": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "lexwareNumber": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "finalized": {
+            "type": "boolean"
+          },
+          "sentAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "sendError": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "sendErrorTechnical": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "sendErrorFix": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "precedingId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "downPaymentPercent": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "openAmount": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "paymentStatus": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "lines": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SalesLineDto"
+            }
+          },
+          "totals": {
+            "$ref": "#/components/schemas/SalesTotals"
+          },
+          "problems": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "chain": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SalesChainItem"
+            }
+          },
+          "followers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
       },
       "SaveAbsenceRequest": {
         "required": [
@@ -50767,6 +51848,18 @@
               "null",
               "boolean"
             ]
+          },
+          "autoAssign": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "autoAssignSingleOpen": {
+            "type": [
+              "null",
+              "boolean"
+            ]
           }
         }
       },
@@ -51159,100 +52252,6 @@
           }
         }
       },
-      "SaveQuotationRequest": {
-        "required": [
-          "version",
-          "title"
-        ],
-        "type": "object",
-        "properties": {
-          "version": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "title": {
-            "maxLength": 200,
-            "type": "string"
-          },
-          "introduction": {
-            "maxLength": 4000,
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "remark": {
-            "maxLength": 4000,
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "validUntil": {
-            "type": [
-              "null",
-              "string"
-            ],
-            "format": "date"
-          },
-          "taxType": {
-            "maxLength": 30,
-            "type": "string",
-            "default": "net"
-          },
-          "paymentConditionId": {
-            "maxLength": 100,
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "paymentLabel": {
-            "maxLength": 300,
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "paymentDuration": {
-            "maximum": 365,
-            "minimum": 0,
-            "type": [
-              "null",
-              "integer"
-            ],
-            "format": "int32"
-          },
-          "paymentDiscountPercent": {
-            "maximum": 100,
-            "minimum": 0,
-            "type": [
-              "null",
-              "number"
-            ],
-            "format": "double"
-          },
-          "paymentDiscountRange": {
-            "maximum": 365,
-            "minimum": 0,
-            "type": [
-              "null",
-              "integer"
-            ],
-            "format": "int32"
-          },
-          "lines": {
-            "maxItems": 200,
-            "type": [
-              "null",
-              "array"
-            ],
-            "items": {
-              "$ref": "#/components/schemas/QuotationLineDto"
-            }
-          }
-        }
-      },
       "SaveResourceRequest": {
         "required": [
           "kind",
@@ -51509,6 +52508,121 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "SaveSalesVoucherRequest": {
+        "required": [
+          "version",
+          "title"
+        ],
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "title": {
+            "maxLength": 200,
+            "type": "string"
+          },
+          "introduction": {
+            "maxLength": 4000,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "remark": {
+            "maxLength": 4000,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "voucherDate": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "validUntil": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "serviceDate": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "serviceEndDate": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "taxType": {
+            "maxLength": 30,
+            "type": "string",
+            "default": "net"
+          },
+          "paymentConditionId": {
+            "maxLength": 100,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "paymentLabel": {
+            "maxLength": 300,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "paymentDuration": {
+            "maximum": 365,
+            "minimum": 0,
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          },
+          "paymentDiscountPercent": {
+            "maximum": 100,
+            "minimum": 0,
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "paymentDiscountRange": {
+            "maximum": 365,
+            "minimum": 0,
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          },
+          "lines": {
+            "maxItems": 300,
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/SalesLineDto"
+            }
           }
         }
       },
@@ -52126,6 +53240,19 @@
             }
           },
           "all": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      },
+      "SendSalesVoucherRequest": {
+        "type": "object",
+        "properties": {
+          "finalize": {
+            "type": "boolean",
+            "default": false
+          },
+          "confirmed": {
             "type": "boolean",
             "default": false
           }
@@ -57124,7 +58251,7 @@
       "name": "Chat"
     },
     {
-      "name": "Angebote (Beta)"
+      "name": "Verkauf"
     },
     {
       "name": "Backup-Spiegel"

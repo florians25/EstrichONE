@@ -44,6 +44,12 @@ public sealed class LexwareSettingsRow : IVersionedEntity
     /// <summary>Regel: alle Rechnungen bezahlt stellt die Bauakte zur Abschlussprüfung.</summary>
     public bool StatusOnInvoicesPaid { get; set; } = true;
 
+    /// <summary>Belege automatisch Bauakten zuordnen, wenn die Zuordnung sicher ist (Vorgabe an).</summary>
+    public bool AutoAssign { get; set; } = true;
+
+    /// <summary>Zusätzliche Regel: einzige offene Bauakte des Kunden mit Belegdatum im Zeitraum (weniger sicher, Vorgabe aus).</summary>
+    public bool AutoAssignSingleOpen { get; set; }
+
     /// <summary>Kleinunternehmer und Besteuerungsart laut <c>GET /v1/profile</c> und Zeitpunkt der Prüfung (ohne Versionswechsel geschrieben).</summary>
     public bool? ProfileSmallBusiness { get; set; }
     public string? ProfileTaxType { get; set; }
@@ -133,6 +139,18 @@ public sealed class LexwareVoucherLink
 {
     public const string InvoiceType = "invoice";
 
+    /// <summary>Von Hand zugeordnet (Vorgabe).</summary>
+    public const string OriginManual = "manual";
+
+    /// <summary>Automatisch zugeordnet (<see cref="AutoReason"/> nennt den Grund).</summary>
+    public const string OriginAuto = "auto";
+
+    /// <summary><see cref="OriginManual"/> oder <see cref="OriginAuto"/>.</summary>
+    public string Origin { get; set; } = OriginManual;
+
+    /// <summary>Grund der automatischen Zuordnung (<see cref="LexwareAutoAssignRules"/>).</summary>
+    public string? AutoReason { get; set; }
+
     public Guid Id { get; set; }
     public Guid BauakteId { get; set; }
     public string VoucherType { get; set; } = InvoiceType;
@@ -176,6 +194,7 @@ internal sealed class LexwareSettingsRowConfiguration : IEntityTypeConfiguration
         builder.Property(s => s.LastArticleSyncError).HasMaxLength(2000);
         builder.Property(s => s.StatusOnQuotationAccepted).HasDefaultValue(true);
         builder.Property(s => s.StatusOnInvoicesPaid).HasDefaultValue(true);
+        builder.Property(s => s.AutoAssign).HasDefaultValue(true);
         builder.Property(s => s.ProfileTaxType).HasMaxLength(30);
         builder.Property(s => s.RejectedTaxTypes).HasMaxLength(4000);
         builder.Ignore(s => s.Configured);
@@ -222,5 +241,7 @@ internal sealed class LexwareVoucherLinkConfiguration : IEntityTypeConfiguration
         builder.Property(l => l.Currency).HasMaxLength(3);
         builder.Property(l => l.Status).HasMaxLength(20);
         builder.Property(l => l.SyncError).HasMaxLength(1000);
+        builder.Property(l => l.Origin).HasMaxLength(10).HasDefaultValue(LexwareVoucherLink.OriginManual);
+        builder.Property(l => l.AutoReason).HasMaxLength(20);
     }
 }

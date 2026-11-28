@@ -32,7 +32,7 @@ public sealed record LexwareSettingsResponse(
     string? LastChangeSyncError = null, int CustomersWithDeviations = 0, bool AutoCreate = true,
     LexwareArticleSync ArticleSync = LexwareArticleSync.FromLexware, DateTimeOffset? LastArticleSyncAt = null, string? LastArticleSyncError = null,
     int CatalogItems = 0, int ArticlesWithDeviations = 0, bool StatusOnQuotationAccepted = true, bool StatusOnInvoicesPaid = true,
-    LexwareTaxTypesResponse? TaxTypes = null);
+    LexwareTaxTypesResponse? TaxTypes = null, bool AutoAssign = true, bool AutoAssignSingleOpen = false);
 
 /// <summary>Erlaubte Steuerarten laut Lexware Office (Einstellungen › Lexware Office).</summary>
 /// <param name="SmallBusiness">Kleinunternehmer nach § 19 UStG laut <c>GET /v1/profile</c> (<c>null</c>: nicht geliefert bzw. noch nicht geprüft).</param>
@@ -55,7 +55,7 @@ public sealed record LexwareTaxTypeRejectionResponse(string VoucherType, string 
 public sealed record SaveLexwareSettingsRequest(
     [property: MaxLength(500)] string? ApiKey = null, bool ClearApiKey = false, [property: MaxLength(LexwareSettingsRow.MaxUrl)] string? BaseUrl = null,
     long? Version = null, bool? NewCustomersSync = null, LexwareChangeSync? ChangeSync = null, bool? AutoCreate = null, LexwareArticleSync? ArticleSync = null,
-    bool? StatusOnQuotationAccepted = null, bool? StatusOnInvoicesPaid = null);
+    bool? StatusOnQuotationAccepted = null, bool? StatusOnInvoicesPaid = null, bool? AutoAssign = null, bool? AutoAssignSingleOpen = null);
 
 public sealed record LexwareTestResponse(bool Ok, string? OrganizationName, string? Error, DateTimeOffset At);
 
@@ -201,7 +201,12 @@ public sealed record LinkUniqueLexwareResponse(int Linked, int Skipped);
 /// </param>
 public sealed record LexwareVoucherResponse(
     Guid Id, string LexwareId, string Type, string? Number, string? Title, DateOnly? VoucherDate, DateOnly? DueDate, decimal? NetAmount,
-    decimal? GrossAmount, string Currency, string Status, string? ContactName, string Url, DateTimeOffset? SyncedAt, string? SyncError);
+    decimal? GrossAmount, string Currency, string Status, string? ContactName, string Url, DateTimeOffset? SyncedAt, string? SyncError,
+    string? AutoAssigned = null);
+
+/// <summary>Automatisch zugeordneter Beleg (Übersicht in den Einstellungen).</summary>
+public sealed record LexwareAutoAssignedResponse(Guid LinkId, Guid BauakteId, string? BauakteNumber, string? BauakteTitle, string Type, string? Number,
+    string Reason, DateTimeOffset LinkedAt);
 
 /// <param name="SyncEnabled">„Mit Lexware Office abgleichen“ ist für den Kunden eingeschaltet.</param>
 public sealed record LexwareBauakteCustomer(Guid Id, string Name, string? LexwareContactId, bool SyncEnabled = false);
@@ -316,6 +321,8 @@ internal static class LexwareEndpoints
         settings.MapPut("/", SaveSettingsAsync).WithName("SaveLexwareSettings")
             .WithSummary("Speichern (Schlüssel verschlüsselt; ohne Angabe bleibt der gespeicherte Schlüssel)")
             .ProducesProblem(StatusCodes.Status412PreconditionFailed).ProducesProblem(StatusCodes.Status422UnprocessableEntity);
+        settings.MapGet("/auto-assigned", AutoAssignedAsync).WithName("ListLexwareAutoAssignedVouchers")
+            .WithSummary("Zuletzt automatisch zugeordnete Belege mit Bauakte und Grund");
         settings.MapPost("/tax-types/check", CheckTaxTypesAsync).WithName("CheckLexwareTaxTypes")
             .WithSummary("Erlaubte Steuerarten erneut prüfen: Profil lesen (GET /v1/profile: Kleinunternehmer, Besteuerungsart) und gemerkte Ablehnungen verwerfen")
             .ProducesProblem(StatusCodes.Status409Conflict).ProducesProblem(StatusCodes.Status424FailedDependency)
@@ -464,12 +471,20 @@ internal static class LexwareEndpoints
             row.ChangeSync == LexwareChangeSync.Off ? 0 : await db.Set<LexwareContactLink>().CountAsync(l => l.DeviationCount > 0, cancellationToken),
             row.AutoCreate, row.ArticleSync, row.LastArticleSyncAt, row.LastArticleSyncError, await db.Set<CatalogItem>().CountAsync(cancellationToken),
             await db.Set<CatalogItem>().CountAsync(c => c.DeviationCount > 0, cancellationToken), row.StatusOnQuotationAccepted, row.StatusOnInvoicesPaid,
-            TaxTypes(LexwareTaxTypes.State(row)));
+            TaxTypes(LexwareTaxTypes.State(row)), row.AutoAssign, row.AutoAssignSingleOpen);
     }
 
     internal static LexwareTaxTypesResponse TaxTypes(LexwareTaxTypeState state) => new(state.SmallBusiness, state.ProfileTaxType, state.CheckedAt,
         state.Rejections.Select(r => new LexwareTaxTypeRejectionResponse(r.VoucherType, LexwareTaxTypes.VoucherName(r.VoucherType), r.TaxType,
             LexwareErrors.TaxTypeName(r.TaxType), r.At)).ToList());
+
+    private static async Task<Ok<List<LexwareAutoAssignedResponse>>> AutoAssignedAsync(LexwareService lexware, CancellationToken cancellationToken) =>
+        TypedResults.Ok(await lexware.Db.Set<LexwareVoucherLink>().AsNoTracking().Where(l => l.Origin == LexwareVoucherLink.OriginAuto)
+            .OrderByDescending(l => l.LinkedAt).Take(50)
+            .Join(lexware.Db.Set<Bauakte>().AsNoTracking(), l => l.BauakteId, b => b.Id, (l, b) => new { l, b.Number, b.Title })
+            .Select(x => new LexwareAutoAssignedResponse(x.l.Id, x.l.BauakteId, x.Number, x.Title, x.l.VoucherType, x.l.Number,
+                LexwareAutoAssignRules.ReasonText(x.l.AutoReason), x.l.LinkedAt))
+            .ToListAsync(cancellationToken));
 
     private static async Task<Results<Ok<LexwareTaxTypesResponse>, ProblemHttpResult>> CheckTaxTypesAsync(LexwareService lexware, IAuditLog audit,
         ICurrentUser currentUser, CancellationToken cancellationToken)
@@ -549,6 +564,8 @@ internal static class LexwareEndpoints
         row.ArticleSync = articleSync;
         row.StatusOnQuotationAccepted = request.StatusOnQuotationAccepted ?? row.StatusOnQuotationAccepted;
         row.StatusOnInvoicesPaid = request.StatusOnInvoicesPaid ?? row.StatusOnInvoicesPaid;
+        row.AutoAssign = request.AutoAssign ?? row.AutoAssign;
+        row.AutoAssignSingleOpen = request.AutoAssignSingleOpen ?? row.AutoAssignSingleOpen;
         if (connectionChanged)
         {
             row.LastTestAt = null;
@@ -1397,7 +1414,8 @@ internal static class LexwareEndpoints
     private static LexwareVoucherResponse ToResponse(LexwareService lexware, LexwareSettingsRow row, LexwareVoucherLink link) => new(
         link.Id, link.LexwareId, link.VoucherType, link.Number, link.Title, link.VoucherDate, link.DueDate, link.NetAmount, link.GrossAmount,
         link.Currency, lexware.DisplayStatus(link.VoucherType, link.Status, link.DueDate), link.ContactName,
-        lexware.VoucherUrl(row, link.VoucherType, link.LexwareId, link.Status), link.SyncedAt, link.SyncError);
+        lexware.VoucherUrl(row, link.VoucherType, link.LexwareId, link.Status), link.SyncedAt, link.SyncError,
+        link.Origin == LexwareVoucherLink.OriginAuto ? LexwareAutoAssignRules.ReasonText(link.AutoReason) : null);
 
     /// <summary>Belege der Belegliste mit der Bauakte, der sie schon zugeordnet sind.</summary>
     private static async Task<List<LexwareVoucherItem>> ItemsAsync(LexwareService lexware, LexwareSettingsRow row, IReadOnlyList<LexwareVoucher> vouchers,
@@ -1458,7 +1476,8 @@ internal static class LexwareEndpoints
     }
 
     private static async Task<Results<Ok<BauakteLexwareResponse>, ProblemHttpResult>> BauakteAsync(Guid id, LexwareService lexware, IBauakteAccess access,
-        IUserPermissions permissions, LexwareBauakteStatusService automation, CancellationToken cancellationToken, [FromQuery] bool refresh = false)
+        IUserPermissions permissions, LexwareBauakteStatusService automation, LexwareAutoAssignService autoAssign, CancellationToken cancellationToken,
+        [FromQuery] bool refresh = false)
     {
         if (await BauakteEntityAsync(lexware, access, id, cancellationToken) is not { } bauakte)
         {
@@ -1467,6 +1486,14 @@ internal static class LexwareEndpoints
 
         var db = lexware.Db;
         var row = await lexware.SettingsAsync(cancellationToken);
+        if (refresh && row.Configured && row.AutoAssign && bauakte.CustomerId is { } customerId
+            && await db.Set<LexwareContactLink>().AsNoTracking().Where(l => l.ContactId == customerId).Select(l => l.LexwareContactId)
+                .FirstOrDefaultAsync(cancellationToken) is { } lexwareContactId)
+        {
+            // „Aktualisieren“: sichere Belege des Kunden zuerst automatisch zuordnen.
+            await autoAssign.RunAsync(lexwareContactId, cancellationToken);
+        }
+
         var links = await db.Set<LexwareVoucherLink>().Where(l => l.BauakteId == id).ToListAsync(cancellationToken);
         var error = await lexware.SyncAsync(row, links, refresh, cancellationToken);
         if (error is null && links.Count > 0)
@@ -1608,9 +1635,15 @@ internal static class LexwareEndpoints
         }
 
         db.Remove(link);
+        if (link.Origin == LexwareVoucherLink.OriginAuto && !await db.Set<LexwareAutoAssignBlock>().AnyAsync(b => b.LexwareId == link.LexwareId, cancellationToken))
+        {
+            // Aufgehobene automatische Zuordnung merken: Derselbe Beleg wird nicht erneut automatisch zugeordnet.
+            db.Add(new LexwareAutoAssignBlock { LexwareId = link.LexwareId, BauakteId = id, UserId = currentUser.UserId, BlockedAt = lexware.Clock.GetUtcNow() });
+        }
+
         audit.Record("lexware.voucher_unassigned", currentUser.UserId, "bauakte", id.ToString(), new Dictionary<string, string?>
         {
-            ["kind"] = link.VoucherType, ["number"] = link.Number,
+            ["kind"] = link.VoucherType, ["number"] = link.Number, ["auto"] = link.Origin == LexwareVoucherLink.OriginAuto ? "true" : null,
         });
         await db.SaveChangesAsync(cancellationToken);
         return TypedResults.NoContent();
@@ -1723,9 +1756,9 @@ internal static class LexwareEndpoints
         {
             "NOT_CONFIGURED" or "KEY_UNREADABLE" => (StatusCodes.Status409Conflict, "Lexware Office ist nicht eingerichtet"),
             "ALREADY_LINKED" or "NOT_A_CUSTOMER" or "ANONYMIZED" or "SYNC_DISABLED" or "SYNC_PAUSED" or "CHANGE_SYNC_OFF" or "CUSTOMER_CHANGED"
-                or "ARTICLE_SYNC_OFF" or "ARTICLE_SYNC_DIRECTION" or "CUSTOMER_NOT_LINKED" or "QUOTATION_SENDING" or "QUOTATION_SENT" =>
+                or "ARTICLE_SYNC_OFF" or "ARTICLE_SYNC_DIRECTION" or "CUSTOMER_NOT_LINKED" or "SALES_SENDING" or "SALES_SENT" =>
                 (StatusCodes.Status409Conflict, Tag),
-            "QUOTATION_INCOMPLETE" => (StatusCodes.Status422UnprocessableEntity, Tag),
+            "SALES_INCOMPLETE" => (StatusCodes.Status422UnprocessableEntity, Tag),
             "NO_DOCUMENT" or "DOCUMENT_TOO_LARGE" => (StatusCodes.Status409Conflict, "Kein PDF verfügbar"),
             "INVALID_BASE_URL" or "UNKNOWN_VOUCHER_TYPE" => (StatusCodes.Status422UnprocessableEntity, Tag),
             "OFFLINE" or "TIMEOUT" or "UNAVAILABLE" or "RATE_LIMITED" => (StatusCodes.Status503ServiceUnavailable, "Lexware Office ist nicht erreichbar"),

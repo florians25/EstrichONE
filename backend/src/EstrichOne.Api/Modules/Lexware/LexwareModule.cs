@@ -6,7 +6,7 @@ namespace EstrichOne.Api.Modules.Lexware;
 /// <summary>
 /// Lexware Office (früher lexoffice): API-Schlüssel des Betriebs, Kundenverknüpfung mit beidseitiger Dublettenprüfung,
 /// Abgleich späterer Änderungen an verknüpften Kunden und Anzeige der Belege (Liste, Status, PDF), dazu Artikelabgleich
-/// („Lexware Office: Artikel“) und Angebote als Entwurf („Angebote (Beta)“). Rechnungen werden nur gelesen. Ohne Schlüssel
+/// („Lexware Office: Artikel“) und das Modul „Verkauf“ (Angebote, Auftragsbestätigungen, Rechnungen, Gutschriften). Ohne Schlüssel
 /// bzw. abgeschaltet wirkungslos (docs/lexware-office.md).
 /// </summary>
 public sealed class LexwareModule : IModule
@@ -23,7 +23,8 @@ public sealed class LexwareModule : IModule
         services.AddScoped<LexwareChangeSyncService>();
         services.AddScoped<LexwareAutoCreateService>();
         services.AddScoped<LexwareArticleSyncService>();
-        services.AddScoped<LexwareQuotationService>();
+        services.AddScoped<SalesVoucherService>();
+        services.AddScoped<LexwareAutoAssignService>();
         services.AddScoped<LexwareBauakteStatusService>();
         services.AddSingleton<LexwareChangeSyncJob>();
         services.AddHostedService(provider => provider.GetRequiredService<LexwareChangeSyncJob>());
@@ -36,6 +37,6 @@ public sealed class LexwareModule : IModule
     {
         LexwareEndpoints.Map(api);
         LexwareArticleEndpoints.Map(api);
-        LexwareQuotationEndpoints.Map(api);
+        SalesEndpoints.Map(api);
     }
 }

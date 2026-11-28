@@ -115,6 +115,13 @@ public sealed class FakeLexware : HttpMessageHandler
     }
 
     private int _customerNumber = 10000;
+    private int _voucherNumber;
+
+    /// <summary>Gesendete Angebote (Inhalt von <c>POST /v1/quotations</c>).</summary>
+    public ConcurrentBag<JsonObject> Quotations { get; } = [];
+
+    /// <summary>Offener Betrag je Beleg für <c>GET /v1/payments/{id}</c> und die Belegliste.</summary>
+    public ConcurrentDictionary<string, decimal> OpenAmounts { get; } = new();
 
     public IEnumerable<LexwareCall> CallsTo(string method, string pathStart) =>
         Calls.Where(c => c.Method == method && c.Path.StartsWith(pathStart, StringComparison.Ordinal));
@@ -301,12 +308,17 @@ public sealed class FakeLexware : HttpMessageHandler
                 return Json(HttpStatusCode.OK, PaymentConditions.DeepClone());
 
             case ("POST", "/v1/quotations"):
+            case ("POST", "/v1/order-confirmations"):
+            case ("POST", "/v1/invoices"):
+            case ("POST", "/v1/credit-notes"):
             {
-                if (query.Length > 0)
+                // Erlaubt sind nur finalize=true und precedingSalesVoucherId (wie die echte API, so weit bekannt).
+                if (parameters.Keys.Any(k => k is not ("finalize" or "precedingSalesVoucherId")) || (parameters.TryGetValue("finalize", out var fin) && fin != "true"))
                 {
                     return Json(HttpStatusCode.BadRequest, new JsonObject { ["status"] = 400, ["message"] = "Unexpected query" });
                 }
 
+                var voucherType = Segments[path["/v1/".Length..]];
                 var sent = JsonNode.Parse(body!)!.AsObject();
                 if (sent["taxConditions"]?["taxType"]?.GetValue<string>() is { } requested && RejectedTaxTypes.Contains(requested))
                 {
@@ -316,6 +328,20 @@ public sealed class FakeLexware : HttpMessageHandler
                         ["timestamp"] = DateTimeOffset.UtcNow.ToString("O", CultureInfo.InvariantCulture),
                         ["message"] = $"Tax type '{requested}' not allowed for this organization",
                     });
+                }
+
+                if (voucherType == "invoice" && sent["shippingConditions"] is null)
+                {
+                    return Json(HttpStatusCode.NotAcceptable, new JsonObject
+                    {
+                        ["status"] = 406, ["message"] = "Validation failed",
+                        ["details"] = new JsonArray(new JsonObject { ["field"] = "shippingConditions", ["violation"] = "NOTNULL", ["message"] = "must not be null" }),
+                    });
+                }
+
+                if (parameters.TryGetValue("precedingSalesVoucherId", out var precedingId) && !Vouchers.ContainsKey(precedingId))
+                {
+                    return Json(HttpStatusCode.NotAcceptable, new JsonObject { ["status"] = 406, ["message"] = "Preceding sales voucher not found" });
                 }
 
                 var id = Guid.NewGuid().ToString();
@@ -329,13 +355,20 @@ public sealed class FakeLexware : HttpMessageHandler
                     gross += Math.Round(amount * (1 + line["unitPrice"]!["taxRatePercentage"]!.GetValue<decimal>() / 100), 2);
                 }
 
+                var finalized = parameters.ContainsKey("finalize");
                 var voucher = (JsonObject)sent.DeepClone();
                 voucher["id"] = id;
-                voucher["voucherType"] = "quotation";
-                voucher["voucherStatus"] = "draft";
-                voucher["voucherNumber"] = null;
+                voucher["voucherType"] = voucherType;
+                voucher["voucherStatus"] = finalized ? "open" : "draft";
+                voucher["voucherNumber"] = finalized ? $"{voucherType[..2].ToUpperInvariant()}-{Interlocked.Increment(ref _voucherNumber).ToString(CultureInfo.InvariantCulture)}" : null;
                 voucher["totalPrice"] = new JsonObject { ["currency"] = "EUR", ["totalNetAmount"] = net, ["totalGrossAmount"] = gross };
+                voucher["precedingSalesVoucherId"] = precedingId;
                 Vouchers[id] = voucher;
+                if (voucherType == "quotation")
+                {
+                    Quotations.Add(sent);
+                }
+
                 if (QuotationLostAnswer is { } lost)
                 {
                     QuotationLostAnswer = null;
@@ -344,7 +377,7 @@ public sealed class FakeLexware : HttpMessageHandler
 
                 return Json(HttpStatusCode.OK, new JsonObject
                 {
-                    ["id"] = id, ["resourceUri"] = $"https://api.lexware.io/v1/quotations/{id}", ["createdDate"] = DateTimeOffset.UtcNow.ToString("O", CultureInfo.InvariantCulture),
+                    ["id"] = id, ["resourceUri"] = $"https://api.lexware.io{path}/{id}", ["createdDate"] = DateTimeOffset.UtcNow.ToString("O", CultureInfo.InvariantCulture),
                     ["updatedDate"] = DateTimeOffset.UtcNow.ToString("O", CultureInfo.InvariantCulture), ["version"] = 1,
                 });
             }
@@ -363,9 +396,26 @@ public sealed class FakeLexware : HttpMessageHandler
                         ["voucherDate"] = v["voucherDate"]?.DeepClone(), ["dueDate"] = (v["dueDate"] ?? v["expirationDate"])?.DeepClone(),
                         ["contactId"] = v["address"]?["contactId"]?.DeepClone(), ["contactName"] = v["address"]?["name"]?.DeepClone(),
                         ["totalAmount"] = v["totalPrice"]!["totalGrossAmount"]!.DeepClone(), ["currency"] = "EUR",
+                        ["openAmount"] = OpenAmounts.TryGetValue(v["id"]!.GetValue<string>(), out var openAmount) ? openAmount : v["totalPrice"]!["totalGrossAmount"]!.DeepClone(),
                     }).ToArray();
                 return Json(HttpStatusCode.OK, new JsonObject { ["content"] = new JsonArray(hits), ["last"] = true, ["totalPages"] = 1 });
             }
+        }
+
+        if (method == "GET" && path.StartsWith("/v1/payments/", StringComparison.Ordinal))
+        {
+            var voucherId = path["/v1/payments/".Length..];
+            if (!Vouchers.TryGetValue(voucherId, out var paid))
+            {
+                return NotFound();
+            }
+
+            var open = OpenAmounts.TryGetValue(voucherId, out var amount) ? amount : paid["totalPrice"]!["totalGrossAmount"]!.GetValue<decimal>();
+            return Json(HttpStatusCode.OK, new JsonObject
+            {
+                ["openAmount"] = open, ["currency"] = "EUR", ["paymentStatus"] = open == 0 ? "balanced" : "openRevenue", ["voucherType"] = paid["voucherType"]!.DeepClone(),
+                ["voucherStatus"] = paid["voucherStatus"]!.DeepClone(),
+            });
         }
 
         if (method == "GET" && path.StartsWith("/v1/articles/", StringComparison.Ordinal))

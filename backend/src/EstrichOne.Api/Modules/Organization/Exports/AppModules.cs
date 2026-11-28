@@ -43,6 +43,12 @@ public static class AppModules
     public const string Lexware = "lexware";
     public const string LexwareArticles = "lexwareArticles";
     public const string Quotations = "quotations";
+    public const string Sales = "sales";
+    public const string SalesOrderConfirmations = "salesOrderConfirmations";
+    public const string SalesInvoices = "salesInvoices";
+    public const string SalesCreditNotes = "salesCreditNotes";
+    public const string SalesFinalize = "salesFinalize";
+    public const string SalesPayments = "salesPayments";
     public const string LexwareStatus = "lexwareStatus";
 
     /// <summary>Fehlercode der Endpunkte abgeschalteter Module.</summary>
@@ -76,9 +82,20 @@ public static class AppModules
         new(LexwareStatus, "office", "Lexware Office: Status der Bauakte automatisch",
             "Angenommenes Angebot setzt eine Anfrage auf „Geplant“; sind alle Rechnungen bezahlt, wird die Bauakte zur Abschlussprüfung gestellt. Abschließen bleibt eine Handlung im Büro. Regeln einzeln unter Verwaltung › Integrationen › Lexware Office.",
             [Lexware], NotificationEvents: ["bauakte.lexware_status"]),
-        new(Quotations, "office", "Angebote (Beta)",
-            "Angebote in EstrichONE vorbereiten und als Entwurf an Lexware Office senden. Nummer, Festschreiben und Versand bleiben in Lexware Office.",
+        new(Sales, "office", "Verkauf",
+            "Angebote, Auftragsbestätigungen, Rechnungen und Gutschriften in EstrichONE erfassen, passend zur Bauakte, und an Lexware Office senden. Lexware Office bleibt Buchhaltung, Nummernkreis und Belegarchiv. Die Belegarten schalten Sie einzeln zu.",
             [Lexware]),
+        new(Quotations, "office", "Verkauf: Angebote",
+            "Angebote erfassen und als Entwurf an Lexware Office senden (früher „Angebote (Beta)“).", [Sales]),
+        new(SalesOrderConfirmations, "office", "Verkauf: Auftragsbestätigungen", "Auftragsbestätigungen erfassen, auch aus einem Angebot.", [Sales]),
+        new(SalesInvoices, "office", "Verkauf: Rechnungen",
+            "Rechnungen erfassen, auch als Abschlags- und Schlussrechnung aus dem Rechnungsplan der Bauakte.", [Sales]),
+        new(SalesCreditNotes, "office", "Verkauf: Gutschriften", "Gutschriften zu Rechnungen erfassen.", [Sales]),
+        new(SalesFinalize, "office", "Verkauf: Festschreiben aus EstrichONE",
+            "Belege beim Senden in Lexware Office festschreiben (Nummer wird vergeben, danach nicht mehr änderbar). Zusätzlich ist das Recht „festschreiben“ der Belegart nötig. Ohne dieses Modul entstehen nur Entwürfe.",
+            [Sales]),
+        new(SalesPayments, "office", "Verkauf: Zahlungen und Mahnstufe", "Offenen Betrag, Zahlstatus und Mahnstufe der Rechnungen aus Lexware Office anzeigen.",
+            [SalesInvoices]),
 
         new(Materials, "material", "Material und Lieferanten", "Materialstamm, Lieferanten und Materialhinweise in Bauakten.", []),
         new(Orders, "material", "Bestellungen", "Materialbestellungen mit Bestell-PDF und Lieferstatus.", [Materials]),

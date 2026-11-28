@@ -119,6 +119,8 @@ internal static class BauakteHistoryEndpoints
                 $"Automatisch durch {Detail("source")}: Status von „{Status(Detail("from"))}“ auf „{Status(Detail("to"))}“ gesetzt (Auslöser: {Trigger(Detail("trigger"))}).",
             "bauakte.review_requested" =>
                 $"Automatisch durch {(Detail("source") is { Length: > 0 } source ? source : "EstrichONE")}: zur Abschlussprüfung gestellt ({Detail("reason")}).",
+            "bauakte.lexware_auto_assigned" =>
+                $"Lexware Office: {VoucherKind(Detail("kind"))} {(Detail("number").Length > 0 ? Detail("number") : "ohne Nummer")} {Detail("reason")}.",
             "bauakte.review_dismissed" => $"{actor} hat die Abschlussprüfung zurückgestellt.",
             "bauakte.status_changed" when Detail("auto") == "true" =>
                 $"Automatisch: Status von „{Status(Detail("from"))}“ auf „{Status(Detail("to"))}“ gesetzt (Auslöser: {Trigger(Detail("trigger"))}).",
@@ -166,6 +168,16 @@ internal static class BauakteHistoryEndpoints
             _ => $"{actor}: {entry.Action}",
         };
     }
+
+    private static string VoucherKind(string kind) => kind switch
+    {
+        "invoice" => "Rechnung",
+        "quotation" => "Angebot",
+        "creditnote" => "Gutschrift",
+        "orderconfirmation" => "Auftragsbestätigung",
+        "deliverynote" => "Lieferschein",
+        _ => "Beleg",
+    };
 
     private static string AcceptanceResult(string value) => value switch
     {
