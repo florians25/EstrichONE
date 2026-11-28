@@ -31,6 +31,7 @@ export const routes: RouteDef[] = [
 	{ name: "orders", pattern: "/bestellungen", view: "materials.Orders", permission: "materials.read", nav: "orders", title: "nav.orders" },
 	{ name: "materials", pattern: "/material", view: "materials.Materials", permission: "materials.read", nav: "materials", title: "nav.materials" },
 	{ name: "articles", pattern: "/artikel", view: "materials.Articles", permission: "materials.read", nav: "articles", title: "nav.articles" },
+	{ name: "article", pattern: "/artikel/:id", view: "materials.Article", permission: "materials.read", nav: "articles", title: "nav.articles" },
 	{ name: "sales", pattern: "/verkauf", view: "sales.Sales", anyPermission: salesRead, nav: "sales", title: "nav.sales" },
 	{ name: "salesVoucher", pattern: "/verkauf/:id", view: "sales.Voucher", anyPermission: salesRead, nav: "sales", title: "nav.salesVoucher" },
 	// Frühere Adresse der Angebote (Beta): öffnet denselben Beleg im Belegeditor.

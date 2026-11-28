@@ -1,0 +1,76 @@
+<mvc:View controllerName="estrichone.controller.materials.Article" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:uxap="sap.uxap" xmlns:form="sap.ui.layout.form"
+	xmlns:layout="sap.ui.layout" xmlns:core="sap.ui.core" height="100%">
+	<uxap:ObjectPageLayout id="articlePage" upperCaseAnchorBar="false" busy="{view>/busy}" busyIndicatorDelay="200" headerContentPinnable="false" toggleHeaderOnTitleClick="false">
+		<uxap:headerTitle>
+			<uxap:ObjectPageDynamicHeaderTitle>
+				<uxap:breadcrumbs><Breadcrumbs currentLocationText="{view>/a/title}"><Link text="Artikel und Leistungen" press=".onBack"/></Breadcrumbs></uxap:breadcrumbs>
+				<uxap:heading><Title id="articleTitle" text="{view>/a/title}" level="H1" wrapping="true"/></uxap:heading>
+				<uxap:expandedContent><Text text="{view>/subtitle}"/></uxap:expandedContent>
+				<uxap:snappedContent><Text text="{view>/subtitle}"/></uxap:snappedContent>
+				<uxap:actions>
+					<Button id="articleEdit" text="Bearbeiten" type="Emphasized" icon="sap-icon://edit" press=".onEdit" visible="{view>/canManage}"/>
+					<Button id="articleDuplicate" text="Duplizieren" icon="sap-icon://copy" press=".onDuplicate" visible="{view>/canManage}"/>
+					<Button id="articleActiveToggle" text="{= ${view>/a/isActive} ? 'Inaktiv setzen' : 'Aktiv setzen' }" icon="sap-icon://switch-views" press=".onToggle"
+						visible="{view>/canManage}" tooltip="Inaktive Einträge bleiben erhalten, werden in Belegen aber nicht vorgeschlagen"/>
+					<Button text="In Lexware öffnen" icon="sap-icon://action" press=".onOpenLexware" visible="{= !!${view>/a/lexwareUrl} }"/>
+				</uxap:actions>
+			</uxap:ObjectPageDynamicHeaderTitle>
+		</uxap:headerTitle>
+		<uxap:headerContent>
+			<layout:HorizontalLayout allowWrapping="true">
+				<layout:VerticalLayout class="sapUiMediumMarginEnd">
+					<ObjectAttribute title="Art" text="{view>/kindText}"/>
+					<ObjectAttribute title="Artikelnummer" text="{= ${view>/a/articleNumber} || 'keine' }"/>
+				</layout:VerticalLayout>
+				<layout:VerticalLayout class="sapUiMediumMarginEnd">
+					<ObjectAttribute title="Preis netto" text="{view>/netText}"/>
+					<ObjectAttribute title="Preis brutto" text="{view>/grossText}"/>
+				</layout:VerticalLayout>
+				<layout:VerticalLayout class="sapUiMediumMarginEnd">
+					<ObjectStatus title="Abgleich" text="{view>/sync/text}" state="{view>/sync/state}" icon="{view>/sync/icon}"/>
+					<ObjectStatus title="Stand" text="{= ${view>/a/isActive} ? 'Aktiv' : 'Inaktiv' }" state="{= ${view>/a/isActive} ? 'Success' : 'Warning' }"/>
+				</layout:VerticalLayout>
+			</layout:HorizontalLayout>
+		</uxap:headerContent>
+		<uxap:sections>
+			<uxap:ObjectPageSection title="Allgemein" titleUppercase="false">
+				<uxap:subSections><uxap:ObjectPageSubSection>
+					<form:SimpleForm editable="false" layout="ColumnLayout" columnsM="2" columnsL="2">
+						<Label text="Bezeichnung"/><Text text="{view>/a/title}"/>
+						<Label text="Beschreibung"/><Text text="{= ${view>/a/description} || 'keine' }"/>
+						<Label text="Art"/><Text text="{view>/kindText}"/>
+						<Label text="Artikelnummer"/><Text text="{= ${view>/a/articleNumber} || 'keine' }"/>
+						<Label text="GTIN"/><Text text="{= ${view>/a/gtin} || 'keine' }"/>
+						<Label text="Einheit"/><Text text="{view>/a/unit}"/>
+						<Label text="Verknüpftes Material"/><Text text="{= ${view>/a/materialName} || 'keines' }"/>
+					</form:SimpleForm>
+				</uxap:ObjectPageSubSection></uxap:subSections>
+			</uxap:ObjectPageSection>
+			<uxap:ObjectPageSection title="Preis" titleUppercase="false">
+				<uxap:subSections><uxap:ObjectPageSubSection>
+					<form:SimpleForm editable="false" layout="ColumnLayout" columnsM="2" columnsL="2">
+						<Label text="Preis je Einheit netto"/><Text id="articleNet" text="{view>/netText}"/>
+						<Label text="Umsatzsteuer"/><Text text="{view>/taxText}"/>
+						<Label text="Preis je Einheit brutto"/><Text id="articleGross" text="{view>/grossText}"/>
+					</form:SimpleForm>
+				</uxap:ObjectPageSubSection></uxap:subSections>
+			</uxap:ObjectPageSection>
+			<uxap:ObjectPageSection title="Lexware Office" titleUppercase="false">
+				<uxap:subSections><uxap:ObjectPageSubSection>
+					<VBox renderType="Bare">
+						<ObjectStatus id="articleSync" text="{view>/sync/text}" state="{view>/sync/state}" icon="{view>/sync/icon}"/>
+						<Text text="{view>/syncDetail}" class="sapUiTinyMarginTop"/>
+						<List items="{view>/a/sync/deviations}" visible="{= ${view>/a/sync/deviations}.length > 0 }" headerText="Abweichungen" class="sapUiSmallMarginTop">
+							<StandardListItem title="{view>label}" description="{= 'EstrichONE: ' + (${view>estrichOne} || 'leer') + ', Lexware Office: ' + (${view>lexware} || 'leer') }"/>
+						</List>
+						<HBox renderType="Bare" class="sapUiSmallMarginTop">
+							<Button id="articleDeviations" text="Abweichungen entscheiden" icon="sap-icon://compare" press=".onDeviations"
+								visible="{= ${view>/a/sync/state} === 'deviations' &amp;&amp; ${view>/canManage} }" class="sapUiSmallMarginEnd"/>
+							<Button text="In Lexware Office anlegen" press=".onCreate" visible="{= ${view>/a/sync/state} === 'local' &amp;&amp; ${view>/canPush} === true }"/>
+						</HBox>
+					</VBox>
+				</uxap:ObjectPageSubSection></uxap:subSections>
+			</uxap:ObjectPageSection>
+		</uxap:sections>
+	</uxap:ObjectPageLayout>
+</mvc:View>

@@ -55,7 +55,7 @@ describe('Artikel und Leistungen', () => {
 describe('Module, Rechte und Seiten', () => {
   it('blendet Angebote und Artikel mit ihren Modulen aus', () => {
     expect(modulesOfPath('/angebote/abc')).toEqual(['sales']);
-    expect(pathEnabled({ quotations: false, lexwareArticles: false }, '/artikel')).toBe(false);
+    expect(pathEnabled({ quotations: false, lexwareArticles: false, sales: false }, '/artikel')).toBe(false);
     expect(pathEnabled({ quotations: true, lexwareArticles: false }, '/artikel')).toBe(true);
     expect(filterPermissions({ quotations: false }, ['quotations.prepare', 'invoices.read'])).toEqual(['invoices.read']);
     expect(routes.find((r) => r.name === 'quotation')?.anyPermission).toContain('quotations.prepare');

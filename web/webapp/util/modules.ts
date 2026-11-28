@@ -45,7 +45,7 @@ const PATH_RULES: PathRule[] = [
 	{ path: "/planung", modules: ["planning"] },
 	{ path: "/material", modules: ["materials"] },
 	{ path: "/lieferanten", modules: ["materials"] },
-	{ path: "/artikel", modules: ["lexwareArticles", "quotations"] },
+	{ path: "/artikel", modules: ["lexwareArticles", "quotations", "sales"] },
 	{ path: "/angebote", modules: ["sales"] },
 	{ path: "/verkauf", modules: ["sales"] },
 	{ path: "/bestellungen", modules: ["orders"] },

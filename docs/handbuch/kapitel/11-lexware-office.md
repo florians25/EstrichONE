@@ -306,6 +306,17 @@ Unter **Material** → **Artikel und Leistungen** pflegen Sie die Verkaufsartike
 Bezeichnung, Art (Leistung oder Material), Artikelnummer, Einheit, Preis netto und Steuersatz. Ein Eintrag lässt sich
 mit einem Artikel des Materialstamms verknüpfen; der Materialstamm selbst führt weiter Einkaufspreise und Lieferanten.
 
+Die Liste hat oben eine Filterleiste: Suche, Art, Einheit, Abgleich mit Lexware Office und Aktiv (Vorgabe: nur aktive
+Einträge). **Sortieren** sortiert nach jeder Spalte, auch nach dem Preis brutto. Ein Klick auf eine Zeile öffnet die
+Objektseite mit Preis netto, Umsatzsteuer und brutto und dem Abgleichstand; dort finden Sie **Bearbeiten**,
+**Duplizieren** und **Inaktiv setzen**. Gelöscht wird ein Eintrag nicht: Inaktive Einträge bleiben erhalten und werden in
+Belegen nicht mehr vorgeschlagen.
+
+- **Anlegen:** Einheit m² und 19 Prozent Umsatzsteuer sind vorbelegt. Den Preis geben Sie netto oder brutto ein; der
+  andere Wert wird sofort umgerechnet, gespeichert wird netto.
+- **Preise ändern:** Wählen Sie in der Liste mehrere Einträge aus und ändern Sie die Preise um einen Prozentsatz, auf
+  Cent, 10 Cent oder ganze Euro gerundet. Eine Vorschau zeigt alten und neuen Preis, bevor Sie übernehmen.
+
 Mit dem Modul **Lexware Office: Artikel** (Systemeinstellungen, Module; setzt Lexware Office voraus, nach der
 Installation aus) gleicht EstrichONE diese Einträge mit den Artikeln in Lexware Office ab. Die Richtung wählen Sie unter
 **Verwaltung** → **Integrationen** → **Lexware Office** bei **Artikel abgleichen**:

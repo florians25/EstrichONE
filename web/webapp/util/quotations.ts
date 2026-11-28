@@ -182,3 +182,50 @@ export const statusRuleTexts = {
 	quotation: "Angebot in Lexware Office angenommen: Eine Bauakte im Status „Anfrage“ wird auf „Geplant“ gesetzt. Andere Status bleiben unverändert.",
 	invoices: "Alle zugeordneten Rechnungen bezahlt (mindestens eine Rechnung, keine offen oder überfällig, keine offene Gutschrift): Die Bauakte wird zur Abschlussprüfung gestellt. Abschließen bleibt eine bewusste Handlung.",
 };
+
+// ---------- Artikel und Leistungen: Liste, Preise ----------
+
+/** Brutto aus netto und Steuersatz (auf Cent). */
+export const grossOf = (net: number, rate: number) => Math.round(Number((net * (1 + rate / 100)).toFixed(6)) * 100) / 100;
+
+/** Netto aus brutto und Steuersatz (vier Nachkommastellen, wie der Preis gespeichert wird). */
+export const netOf = (gross: number, rate: number) => Math.round(gross / (1 + rate / 100) * 10000) / 10000;
+
+export type PriceRounding = "cent" | "tenCent" | "euro";
+
+/** Preis netto nach einer Änderung um Prozent, gerundet auf Cent, 10 Cent oder ganze Euro. */
+export function changedPrice(net: number, percent: number, rounding: PriceRounding = "cent"): number {
+	const raw = net * (1 + percent / 100);
+	const step = rounding === "euro" ? 1 : rounding === "tenCent" ? 0.1 : 0.01;
+	return Math.max(0, Math.round(Math.round(Number((raw / step).toFixed(6))) * step * 100) / 100);
+}
+
+export interface ArticleFilter { query?: string; kind?: string; unit?: string; sync?: string; active?: "all" | "active" | "inactive" }
+
+export function filterArticles(items: CatalogItem[], f: ArticleFilter): CatalogItem[] {
+	const q = (f.query ?? "").trim().toLowerCase();
+	return items.filter((i) => (!f.kind || i.kind === f.kind) && (!f.unit || i.unit === f.unit) && (!f.sync || i.sync.state === f.sync)
+		&& (f.active === "all" || (f.active === "inactive" ? !i.isActive : i.isActive))
+		&& (!q || [i.title, i.articleNumber, i.description].some((v) => v?.toLowerCase().includes(q))));
+}
+
+export type ArticleSortKey = "articleNumber" | "title" | "kind" | "unit" | "netPrice" | "taxRate" | "grossPrice" | "sync";
+
+export function sortArticles(items: CatalogItem[], key: ArticleSortKey, descending = false): CatalogItem[] {
+	const value = (i: CatalogItem): string | number => {
+		switch (key) {
+			case "netPrice": return i.netPrice;
+			case "taxRate": return i.taxRate;
+			case "grossPrice": return grossOf(i.netPrice, i.taxRate);
+			case "sync": return catalogSyncText(i.sync).text;
+			case "kind": return kindText(i.kind);
+			default: return (i[key] ?? "") as string;
+		}
+	};
+	const sorted = [...items].sort((a, b) => {
+		const x = value(a);
+		const y = value(b);
+		return typeof x === "number" && typeof y === "number" ? x - y : String(x).localeCompare(String(y), "de", { numeric: true });
+	});
+	return descending ? sorted.reverse() : sorted;
+}
