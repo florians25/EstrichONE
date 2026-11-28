@@ -24,7 +24,7 @@ describe('Angebote (Beta): Summen', () => {
   it('weist bei § 13b keine Steuer aus', () => {
     const totals = quotationTotals([{ kind: 'item', name: 'Estrich', quantity: 30, netPrice: 25, taxRate: 19 }], 'constructionService13b');
     expect(totals).toMatchObject({ net: 750, tax: 0, gross: 750 });
-    expect(taxTypeOptions.map((o) => o.key)).toEqual(['net', 'constructionService13b']);
+    expect(taxTypeOptions.map((o) => o.key)).toEqual(['net', 'constructionService13b', 'vatfree']);
   });
 
   it('übernimmt Katalogeinträge und Vorschläge als Positionen', () => {

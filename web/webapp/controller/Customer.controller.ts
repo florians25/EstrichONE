@@ -347,7 +347,7 @@ export default class Customer extends BaseController {
 			const result = await get<CustomerVouchers>(`lexware/customers/${id}/vouchers`, refresh ? { refresh: true } : undefined);
 			if (id !== this.id) return;
 			m.setProperty("/lexware/vouchers", result.vouchers.map((v: LexwareVoucherItem) => {
-				const status = voucherStatus(v.status);
+				const status = voucherStatus(v.status, v.type);
 				return { ...v, typeText: voucherTypeText(v.type), numberText: voucherNumber(v), dateText: date(v.voucherDate), dueText: date(v.dueDate),
 					amountText: euro(v.grossAmount, v.currency), statusText: status.text, statusState: status.state, statusIcon: status.icon,
 					pdf: pdfAvailable(v), pdfHint: pdfAvailable(v) ? "Beleg als PDF anzeigen" : PDF_DRAFT_HINT };

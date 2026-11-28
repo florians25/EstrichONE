@@ -78,10 +78,11 @@ export interface QuotationTaxLine { rate: number; net: number; tax: number }
 export interface QuotationTotals { net: number; tax: number; gross: number; taxLines: QuotationTaxLine[] }
 export interface Quotation {
 	id: string; contactId: string; customerName: string | null; customerLinked: boolean; bauakteId: string | null; bauakteNumber: string | null; bauakteTitle: string | null;
-	title: string; introduction: string | null; remark: string | null; validUntil: string | null; taxType: "net" | "constructionService13b";
+	title: string; introduction: string | null; remark: string | null; validUntil: string | null; taxType: TaxType;
 	paymentConditionId: string | null; paymentLabel: string | null; paymentDuration: number | null; paymentDiscountPercent: number | null; paymentDiscountRange: number | null;
 	state: QuotationState; editable: boolean; lexwareId: string | null; lexwareUrl: string | null; sentAt: string | null; sendError: string | null;
 	lines: QuotationLine[]; totals: QuotationTotals; problems: string[]; version: number; updatedAt: string;
+	sendErrorTechnical?: string | null; sendErrorFix?: string | null;
 }
 export interface QuotationSummary {
 	id: string; title: string; contactId: string; customerName: string | null; bauakteId: string | null; state: QuotationState; net: number; gross: number;
@@ -89,16 +90,42 @@ export interface QuotationSummary {
 }
 export interface PaymentCondition { id: string | null; label: string; duration: number | null; discountPercent: number | null; discountRange: number | null; isDefault: boolean }
 export interface QuotationCatalogItem { id: string; title: string; description: string | null; kind: CatalogKind; articleNumber: string | null; unit: string | null; netPrice: number; taxRate: number; inLexware: boolean }
-export interface QuotationOptions { paymentConditions: PaymentCondition[]; paymentConditionsError: string | null; catalog: QuotationCatalogItem[]; taxRates: number[]; defaultValidDays: number }
+export interface TaxTypeOption { key: TaxType; text: string; allowed: boolean; hint: string | null }
+export interface QuotationOptions {
+	paymentConditions: PaymentCondition[]; paymentConditionsError: string | null; catalog: QuotationCatalogItem[]; taxRates: number[]; defaultValidDays: number;
+	taxTypes?: TaxTypeOption[] | null; smallBusiness?: boolean;
+}
 export interface QuotationSuggestion { source: string; hint: string; name: string; description: string | null; quantity: number; unit: string; catalogItemId: string | null; netPrice: number | null; taxRate: number | null }
 export interface QuotationSuggestions { lines: QuotationSuggestion[]; hints: string[] }
 
 export const BETA_TEXT = "Beta: Angebote werden in EstrichONE vorbereitet und als Entwurf an Lexware Office gesendet. Nummer, Festschreiben und Versand erfolgen in Lexware Office.";
 
-export const taxTypeOptions = [
-	{ key: "net", text: "Netto (Umsatzsteuer wird ausgewiesen)" },
-	{ key: "constructionService13b", text: "Bauleistung nach § 13b UStG (Steuerschuld beim Leistungsempfänger)" },
+export type TaxType = "net" | "constructionService13b" | "vatfree" | "gross";
+
+export const taxTypeOptions: TaxTypeOption[] = [
+	{ key: "net", text: "Netto (Umsatzsteuer wird ausgewiesen)", allowed: true, hint: null },
+	{ key: "constructionService13b", text: "Bauleistung nach § 13b UStG (Steuerschuld beim Leistungsempfänger)", allowed: true, hint: null },
+	{ key: "vatfree", text: "Steuerfrei (zum Beispiel Kleinunternehmer nach § 19 UStG)", allowed: true, hint: null },
 ];
+
+/** Steuerarten ohne ausgewiesene Umsatzsteuer: Jede Position trägt 0 Prozent. */
+export const withoutTax = (taxType: string | null | undefined) => taxType === "constructionService13b" || taxType === "vatfree";
+
+/** Bekannte Behebungen von Fehlern aus Lexware Office: Text der Schaltfläche und die Steuerart, die übernommen wird. */
+export function fixAction(fix: string | null | undefined): { text: string; taxType: TaxType } | null {
+	switch (fix) {
+		case "taxTypeNet": return { text: "Steuerart Netto übernehmen und erneut senden", taxType: "net" };
+		case "taxTypeVatfree": return { text: "Steuerart Steuerfrei übernehmen und erneut senden", taxType: "vatfree" };
+		default: return null;
+	}
+}
+
+/** Hinweis unter der Steuerart: warum die gewählte oder eine andere Steuerart nicht angeboten wird. */
+export function taxTypeHint(options: TaxTypeOption[], selected: string): string {
+	const current = options.find((o) => o.key === selected);
+	if (current && !current.allowed) return current.hint ?? "";
+	return options.filter((o) => !o.allowed && o.hint).map((o) => `${o.text.replace(/ \(.*\)$/, "")}: ${o.hint}`)[0] ?? "";
+}
 
 const round2 = (value: number) => Math.round((value + Number.EPSILON) * 100) / 100;
 
@@ -112,7 +139,7 @@ export function lineNet(line: Pick<QuotationLine, "quantity" | "netPrice" | "dis
 export function quotationTotals(lines: QuotationLine[], taxType: string): QuotationTotals {
 	const groups = new Map<number, number>();
 	for (const line of lines.filter((l) => l.kind === "item")) {
-		const rate = taxType === "constructionService13b" ? 0 : Number(line.taxRate ?? 19);
+		const rate = withoutTax(taxType) ? 0 : Number(line.taxRate ?? 19);
 		groups.set(rate, round2((groups.get(rate) ?? 0) + lineNet(line)));
 	}
 	const taxLines = [...groups.entries()].sort((a, b) => b[0] - a[0]).map(([rate, net]) => ({ rate, net, tax: round2(net * rate / 100) }));

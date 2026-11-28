@@ -353,7 +353,7 @@ export function openAssignVoucherDialog(bauakteId: string): Promise<boolean> {
 				// Ohne Nummer: Belege des Kunden, beim Öffnen frisch aus Lexware Office (ein Aufruf), damit neue Belege sofort erscheinen.
 				const result = await get<BauakteVoucherCandidates>(`bauakten/${bauakteId}/lexware/candidates`, number ? { number } : { refresh: true });
 				model.setProperty("/rows", result.vouchers.map((v): VoucherRow => {
-					const status = voucherStatus(v.status);
+					const status = voucherStatus(v.status, v.type);
 					return { ...v, typeText: voucherTypeText(v.type), numberText: voucherNumber(v), statusText: status.text, statusState: status.state,
 						dateText: date(v.voucherDate), amountText: euro(v.grossAmount, v.currency), taken: !!v.assignedBauakteId, takenText: assignedText(v, bauakteId) };
 				}));

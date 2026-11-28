@@ -63,7 +63,7 @@ export default class Invoices extends SectionBase {
 		m.setProperty("/syncError", data.syncError ?? "");
 		m.setProperty("/summary", voucherSummary(data.vouchers));
 		m.setProperty("/vouchers", data.vouchers.map((v: LexwareVoucher) => {
-			const status = voucherStatus(v.status);
+			const status = voucherStatus(v.status, v.type);
 			return {
 				...v, typeText: voucherTypeText(v.type), numberText: voucherNumber(v), dateText: date(v.voucherDate), dueText: date(v.dueDate),
 				netText: euro(v.netAmount, v.currency), grossText: euro(v.grossAmount, v.currency), statusText: status.text, statusState: status.state, statusIcon: status.icon,

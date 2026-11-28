@@ -91,6 +91,13 @@
 									<Text text="{view>/ruleTexts/invoices}"/>
 									<Text text="Beide Regeln laufen beim Statusabgleich der Belege, die einer Bauakte zugeordnet sind (beim Öffnen der Bauakte und regelmäßig im Hintergrund). Die zuständige Person erhält eine Benachrichtigung; der Verlauf der Bauakte vermerkt „automatisch durch Lexware Office“."/>
 								</VBox>
+								<core:Title text="Steuerarten" visible="{= ${view>/s/hasApiKey} === true }"/>
+								<Label text="Erlaubte Steuerarten" labelFor="lxTaxRecheck" visible="{= ${view>/s/hasApiKey} === true }"/>
+								<VBox visible="{= ${view>/s/hasApiKey} === true }">
+									<Text id="lxTaxTypes" text="{view>/taxTypesText}"/>
+									<Button id="lxTaxRecheck" text="Erlaubte Steuerarten erneut prüfen" icon="sap-icon://refresh" press=".onRecheckTaxTypes" class="sapUiTinyMarginTop"/>
+									<Text text="Lehnt Lexware Office beim Senden eine Steuerart ab (zum Beispiel Bauleistung nach § 13b UStG), merkt sich EstrichONE das je Belegart und bietet sie dort nicht mehr an. Nach einer Änderung der Steuereinstellungen in Lexware Office prüfen Sie hier erneut; dabei liest EstrichONE das Profil Ihres Unternehmens (Kleinunternehmer, Besteuerungsart)."/>
+								</VBox>
 								<core:Title text="Erweitert"/>
 								<Label text="Basis-URL der API" labelFor="lxUrl"/>
 								<VBox>

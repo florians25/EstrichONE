@@ -9,9 +9,9 @@ import { dateTime } from "../../util/format";
 import { session } from "../../util/session";
 import type { RouteMatch } from "../../util/router";
 import {
-	changeSyncHelp, changeSyncOptions, changeSyncStand, changeSyncState, creationStateText, deviationValue, enableSyncQuestion, lastTestText, matchLabel, placeText, reconciliationFigures, uniquePairs,
+	changeSyncHelp, changeSyncOptions, changeSyncStand, changeSyncState, creationStateText, deviationValue, enableSyncQuestion, lastTestText, matchLabel, placeText, reconciliationFigures, taxTypesText, uniquePairs,
 	type DeviationSource, type LexwareContactSummary, type LexwareCustomerSummary, type LexwareDeviationItem, type LexwareInternalDuplicate, type LexwareLinkedPair,
-	type LexwareReconciliation, type LexwareSettings, type LexwareSuggestion, type LexwareTestResponse,
+	type LexwareReconciliation, type LexwareSettings, type LexwareSuggestion, type LexwareTaxTypes, type LexwareTestResponse,
 } from "../../util/lexware";
 import { articleSyncHelp, articleSyncOptions, statusRuleTexts } from "../../util/quotations";
 import { importLexwareContact, openCustomerLinkDialog, openDeviationDialog, openExternal, resolveAllDeviations } from "../../util/lexwareDialogs";
@@ -71,6 +71,7 @@ export default class Lexware extends BaseController {
 		m.setProperty("/changeSyncHelp", changeSyncHelp(s.changeSync));
 		m.setProperty("/changeSyncStand", changeSyncStand(s, dateTime));
 		m.setProperty("/articleSyncHelp", articleSyncHelp(s.articleSync));
+		m.setProperty("/taxTypesText", taxTypesText(s.taxTypes ?? null, dateTime));
 		m.setProperty("/articleSyncStand", s.lastArticleSyncError
 			? { text: `Letzter Artikelabgleich fehlgeschlagen: ${s.lastArticleSyncError}`, state: "Error" }
 			: s.lastArticleSyncAt ? { text: `Letzter Artikelabgleich: ${dateTime(s.lastArticleSyncAt)}`, state: "None" } : { text: "", state: "None" });
@@ -114,6 +115,13 @@ export default class Lexware extends BaseController {
 		if (!result) return;
 		if (result.ok) this.toast(`Verbindung in Ordnung${result.organizationName ? `: ${result.organizationName}` : ""}`);
 		else MessageBox.error(result.error ?? "Die Verbindung ist fehlgeschlagen.", { title: "Verbindung testen" });
+		await this.load();
+	}
+
+	async onRecheckTaxTypes(): Promise<void> {
+		const result = await this.run(() => post<LexwareTaxTypes>("settings/integrations/lexware/tax-types/check"));
+		if (!result) return;
+		this.toast("Erlaubte Steuerarten geprüft");
 		await this.load();
 	}
 

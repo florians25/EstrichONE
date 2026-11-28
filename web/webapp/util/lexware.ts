@@ -14,6 +14,21 @@ export interface LexwareStatus {
 	syncDefault?: boolean;
 }
 
+export interface LexwareTaxTypeRejection { voucherType: string; voucherName: string; taxType: string; taxTypeName: string; at: string }
+export interface LexwareTaxTypes { smallBusiness: boolean | null; profileTaxType: string | null; checkedAt: string | null; rejections: LexwareTaxTypeRejection[] }
+
+/** Stand der erlaubten Steuerarten als Text (Verwaltung › Lexware Office). */
+export function taxTypesText(t: LexwareTaxTypes | null, format: (iso: string) => string): string {
+	if (!t) return "";
+	const parts: string[] = [];
+	if (t.smallBusiness === true || t.profileTaxType === "vatfree") parts.push("Ihr Unternehmen ist in Lexware Office als Kleinunternehmer nach § 19 UStG eingerichtet. Belege werden steuerfrei gesendet.");
+	else if (t.checkedAt) parts.push("Laut Profil in Lexware Office gilt die Regelbesteuerung. Angeboten werden Netto, Bauleistung nach § 13b UStG und Steuerfrei.");
+	else parts.push("Das Profil wurde noch nicht geprüft.");
+	for (const r of t.rejections) parts.push(`Abgelehnt am ${format(r.at)}: ${r.taxTypeName} für ${r.voucherName}.`);
+	if (t.checkedAt) parts.push(`Zuletzt geprüft: ${format(t.checkedAt)}.`);
+	return parts.join(" ");
+}
+
 export interface LexwareSettings {
 	moduleEnabled: boolean;
 	hasApiKey: boolean;
@@ -27,6 +42,7 @@ export interface LexwareSettings {
 	linkedInvoices: number;
 	keyHelpUrl: string;
 	version: number;
+	taxTypes?: LexwareTaxTypes | null;
 	newCustomersSync: boolean;
 	/** Richtung des Änderungsabgleichs verknüpfter Kunden. */
 	changeSync: ChangeSync;
@@ -127,7 +143,7 @@ export interface LexwareReconciliation {
 	changeSync?: ChangeSync; changeSyncError?: string | null;
 }
 
-export type VoucherType = "invoice" | "quotation" | "creditnote" | "orderconfirmation";
+export type VoucherType = "invoice" | "quotation" | "creditnote" | "orderconfirmation" | "deliverynote";
 export type VoucherStatus = "draft" | "open" | "overdue" | "paid" | "paidoff" | "voided" | "accepted" | "rejected";
 
 /** Beleg aus Lexware Office, der einer Bauakte zugeordnet ist. */
@@ -159,15 +175,27 @@ export interface BauakteVoucherCandidates { customerLinked: boolean; vouchers: L
 
 type State = "None" | "Success" | "Warning" | "Error" | "Information";
 
-const voucherTypes: Record<string, string> = { invoice: "Rechnung", quotation: "Angebot", creditnote: "Gutschrift", orderconfirmation: "Auftragsbestätigung" };
+const voucherTypes: Record<string, string> = {
+	invoice: "Rechnung", quotation: "Angebot", creditnote: "Gutschrift", orderconfirmation: "Auftragsbestätigung", deliverynote: "Lieferschein",
+};
+
+/** Belege mit Zahlungsbedeutung (offen, überfällig, bezahlt): nur Rechnung und Gutschrift. */
+export const payableVoucher = (type: string | null | undefined) => type === "invoice" || type === "creditnote";
 
 /** Belegart als Text. */
 export function voucherTypeText(type: string | null | undefined): string {
 	return voucherTypes[type ?? ""] ?? "Beleg";
 }
 
-/** Status eines Belegs als Text und Farbe: Entwurf, offen, überfällig, bezahlt, storniert; bei Angeboten auch angenommen und abgelehnt. */
-export function voucherStatus(status: string | null | undefined): { text: string; state: State; icon: string } {
+/**
+ * Status eines Belegs als Text und Farbe je Belegart. Rechnung und Gutschrift: Entwurf, Offen, Überfällig, Bezahlt,
+ * Storniert. Angebot: Entwurf, Offen (noch nicht angenommen), Angenommen, Abgelehnt. Auftragsbestätigung und Lieferschein
+ * haben keine Zahlungsbedeutung: festgeschrieben heißt „Erstellt“, nie „Offen“. Unbekannte Werte neutral.
+ */
+export function voucherStatus(status: string | null | undefined, type?: string | null): { text: string; state: State; icon: string } {
+	if ((type === "orderconfirmation" || type === "deliverynote") && (status === "open" || status === "overdue" || status === "paid" || status === "paidoff")) {
+		return { text: "Erstellt", state: "None", icon: "sap-icon://document" };
+	}
 	switch (status) {
 		case "draft": return { text: "Entwurf", state: "None", icon: "sap-icon://edit" };
 		case "open": return { text: "Offen", state: "Information", icon: "sap-icon://pending" };

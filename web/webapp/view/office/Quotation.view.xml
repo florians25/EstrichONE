@@ -28,8 +28,18 @@
 					text="{= 'Als Entwurf an Lexware Office gesendet am ' + ${view>/sentText} + '. Ab jetzt gilt der Beleg in Lexware Office; Änderungen, Nummer, Festschreiben und Versand dort. Der Beleg steht in der Bauakte unter „Rechnungen und Angebote“.' }">
 					<link><Link text="In Lexware öffnen" press=".onOpenLexware"/></link>
 				</MessageStrip>
-				<MessageStrip id="quotationFailed" type="Error" showIcon="true" visible="{= ${view>/q/state} === 'failed' }" class="sapUiSmallMarginBottom"
-					text="{= 'Das Senden an Lexware Office ist fehlgeschlagen. ' + (${view>/q/sendError} || '') + ' Sie können den Entwurf bearbeiten und erneut senden; ein bereits angelegtes Angebot wird dabei erkannt und nicht doppelt angelegt.' }"/>
+				<VBox id="quotationFailedBox" renderType="Bare" visible="{= ${view>/q/state} === 'failed' }" class="sapUiSmallMarginBottom">
+					<MessageStrip id="quotationFailed" type="Error" showIcon="true"
+						text="{= 'Das Senden an Lexware Office ist fehlgeschlagen. ' + (${view>/q/sendError} || '') + ' Sie können den Entwurf bearbeiten und erneut senden; ein bereits angelegtes Angebot wird dabei erkannt und nicht doppelt angelegt.' }"/>
+					<HBox renderType="Bare" wrap="Wrap" alignItems="Center" class="sapUiTinyMarginTop">
+						<Button id="quotationFix" text="{view>/fixText}" type="Emphasized" icon="sap-icon://paper-plane" press=".onFix" visible="{= !!${view>/fixText} }"
+							class="sapUiSmallMarginEnd"/>
+					</HBox>
+					<Panel id="quotationTechnical" headerText="Technische Einzelheiten" expandable="true" expanded="false" visible="{= !!${view>/q/sendErrorTechnical} }"
+						class="sapUiNoContentPadding">
+						<Text text="{view>/q/sendErrorTechnical}" class="sapUiTinyMargin"/>
+					</Panel>
+				</VBox>
 				<MessageStrip id="quotationNotLinked" type="Warning" showIcon="true" visible="{= ${view>/q/customerLinked} === false }" class="sapUiSmallMarginBottom"
 					text="Der Kunde ist noch nicht mit Lexware Office verknüpft. Verknüpfen Sie ihn am Kunden im Abschnitt „Lexware Office“, danach lässt sich das Angebot senden.">
 					<link><Link text="Zum Kunden" press=".onCustomer"/></link>
@@ -50,8 +60,9 @@
 					<DatePicker id="qValid" value="{view>/q/validUntil}" valueFormat="yyyy-MM-dd" displayFormat="dd.MM.yyyy" editable="{view>/q/editable}" change=".onDirty"/>
 					<Label text="Steuerart" labelFor="qTax"/>
 					<Select id="qTax" selectedKey="{view>/q/taxType}" items="{view>/taxTypes}" enabled="{view>/q/editable}" change=".onTotals" width="100%">
-						<core:Item key="{view>key}" text="{view>text}"/>
+						<core:Item key="{view>key}" text="{view>text}" enabled="{view>allowed}"/>
 					</Select>
+					<Text id="qTaxHint" text="{view>/taxHint}" visible="{= !!${view>/taxHint} &amp;&amp; ${view>/q/editable} === true }" class="eoHelpText"/>
 					<Label text="Zahlungsbedingung" labelFor="qPayment"/>
 					<Select id="qPayment" selectedKey="{view>/q/paymentConditionId}" items="{view>/payments}" enabled="{view>/q/editable}" change=".onPayment" width="100%"
 						forceSelection="false">
@@ -102,7 +113,7 @@
 							<Input value="{view>quantityText}" textAlign="End" visible="{= ${view>kind} === 'item' }" editable="{view>/q/editable}" liveChange=".onTotals"/>
 							<Input value="{view>unit}" maxLength="50" visible="{= ${view>kind} === 'item' }" editable="{view>/q/editable}" liveChange=".onDirty"/>
 							<Input value="{view>priceText}" textAlign="End" visible="{= ${view>kind} === 'item' }" editable="{view>/q/editable}" liveChange=".onTotals"/>
-							<Select selectedKey="{view>taxKey}" visible="{= ${view>kind} === 'item' }" enabled="{= ${view>/q/editable} === true &amp;&amp; ${view>/q/taxType} !== 'constructionService13b' }"
+							<Select selectedKey="{view>taxKey}" visible="{= ${view>kind} === 'item' }" enabled="{= ${view>/q/editable} === true &amp;&amp; ${view>/q/taxType} !== 'constructionService13b' &amp;&amp; ${view>/q/taxType} !== 'vatfree' }"
 								change=".onTotals" width="100%">
 								<core:Item key="19" text="19 %"/>
 								<core:Item key="7" text="7 %"/>

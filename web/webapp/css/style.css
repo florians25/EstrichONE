@@ -935,7 +935,7 @@ li[data-dot] { display: flex; align-items: center; }
 .eoAdminTiles .sapMLIB.eoAdminTile .sapMLIBContent { width: 100%; }
 .eoAdminTileBody { display: flex; gap: 0.875rem; align-items: flex-start; padding: 0.875rem 1rem; min-width: 0; }
 .eoAdminTileIcon.sapUiIcon { flex: none; width: 2.5rem; height: 2.5rem; line-height: 2.5rem; font-size: 1.25rem; border-radius: 0.625rem;
-	color: var(--sapButton_Lite_TextColor, var(--sapLinkColor)); background: var(--sapButton_Selected_Background, var(--sapList_SelectionBackgroundColor)); }
+	color: var(--sapButton_Selected_TextColor, var(--sapContent_IconColor)); background: var(--sapButton_Selected_Background, var(--sapList_SelectionBackgroundColor)); }
 .eoAdminTileText { display: flex; flex-direction: column; gap: 0.25rem; min-width: 0; flex: 1 1 auto; }
 .eoAdminTileHead { gap: 0.5rem; }
 /* Abschnitte: Überschrift + Kurzbeschreibung, Inhalt als ruhige Fläche */
