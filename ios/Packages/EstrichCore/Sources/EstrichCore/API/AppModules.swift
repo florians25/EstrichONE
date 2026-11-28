@@ -22,6 +22,7 @@ public struct AppModules: Codable, Sendable, Equatable {
     public static let feedback = "feedback"
     public static let fuel = "fuel"
     public static let lexware = "lexware"
+    public static let purchases = "purchases"
     /// Kein Modul: Vorgabe „Mit Lexware Office abgleichen“ für neue Kunden, zusammen mit den Schaltern gespeichert.
     static let lexwareSyncDefaultKey = "lexwareSyncDefault"
 
@@ -37,6 +38,9 @@ public struct AppModules: Codable, Sendable, Equatable {
 
     /// Lexware Office ist nur an, wenn der Server es ausdrücklich meldet (ältere Server kennen das Modul nicht).
     public var lexwareOn: Bool { states[Self.lexware] == true }
+
+    /// Eingangsbelege: nur mit Lexware Office und nur, wenn der Server das Modul ausdrücklich meldet.
+    public var purchasesOn: Bool { lexwareOn && states[Self.purchases] == true }
 
     /// Vorbelegung des Schalters „Mit Lexware Office abgleichen“ bei neuen Kunden.
     public var lexwareSyncDefault: Bool { lexwareOn && states[Self.lexwareSyncDefaultKey] == true }

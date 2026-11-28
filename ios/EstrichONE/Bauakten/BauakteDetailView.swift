@@ -213,6 +213,9 @@ struct BauakteDetailView: View {
                     LexwareBauakteSections(bauakteId: bauakteId, data: lexware)
                         .id("lexware")
                 }
+                if modules.purchasesOn {
+                    PurchaseUploadSection(bauakteId: bauakteId)
+                }
             }
             .listStyle(.insetGrouped)
             .listSectionSpacing(.compact)

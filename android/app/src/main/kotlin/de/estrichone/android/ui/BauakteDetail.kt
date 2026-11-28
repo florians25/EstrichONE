@@ -336,6 +336,8 @@ fun BauakteScreen(id: String, showBack: Boolean = true) {
             item(key = "history") { History(session, b) }
             // 9. Lexware Office ganz am Ende (nur lesend): Kontakt, Abgleichstand und zugeordnete Belege, wenn der Kunde verknüpft ist.
             item(key = "lexware") { LexwareSection(session, b, lexware, loadSelf = false) }
+            // 10. Eingangsbeleg hochladen (Modul „Eingangsbelege“, mit Recht)
+            item(key = "purchases") { PurchaseUploadSection(session, b) }
         }
         }
     }

@@ -310,7 +310,64 @@ public enum Lexware {
     }
 }
 
+/// Antwort auf das Hochladen eines Eingangsbelegs (Modul „Eingangsbelege“), gekürzt auf das, was die App zeigt.
+public struct PurchaseUploadResult: Decodable, Sendable, Equatable {
+    public struct Document: Decodable, Sendable, Equatable {
+        public let id: UUID
+        public let fileName: String
+        public let formatName: String
+        public let problemCount: Int
+
+        public init(id: UUID, fileName: String, formatName: String, problemCount: Int) {
+            self.id = id
+            self.fileName = fileName
+            self.formatName = formatName
+            self.problemCount = problemCount
+        }
+    }
+
+    public let document: Document
+    public let duplicate: Bool?
+
+    public init(document: Document, duplicate: Bool?) {
+        self.document = document
+        self.duplicate = duplicate
+    }
+}
+
+public extension Lexware {
+    /// Höchstgröße je Beleg (wie Lexware Office).
+    static let purchaseMaxBytes = 5 * 1024 * 1024
+
+    /// Meldung nach dem Hochladen eines Eingangsbelegs.
+    static func purchaseUploadText(_ result: PurchaseUploadResult) -> String {
+        if result.duplicate == true {
+            return "Diesen Beleg gibt es schon. Er wurde nicht ein zweites Mal hochgeladen."
+        }
+        var text = "Beleg hochgeladen (\(result.document.formatName)). Das Büro gibt ihn an Lexware Office weiter."
+        if result.document.problemCount > 0 {
+            text += " Bei der E-Rechnung fehlen Angaben; das Büro prüft sie."
+        }
+        return text
+    }
+
+    /// Prüfung vor dem Hochladen; liefert die Meldung oder `nil`.
+    static func purchaseUploadProblem(byteCount: Int) -> String? {
+        if byteCount == 0 { return "Die Datei ist leer." }
+        if byteCount > purchaseMaxBytes { return "Der Beleg ist größer als 5 MB. Bitte als kleineres Foto oder PDF hochladen." }
+        return nil
+    }
+}
+
 public extension AuthorizedClient {
+    /// Eingangsbeleg hochladen (Foto, PDF oder XRechnung) und der Bauakte zuordnen; der Server liest E-Rechnungen und erkennt
+    /// doppelte Dateien. Weitergegeben an Lexware Office wird im Büro.
+    func uploadPurchase(_ data: Data, fileName: String, bauakteId: UUID?) async throws(APIError) -> PurchaseUploadResult {
+        var query = [URLQueryItem(name: "fileName", value: fileName), URLQueryItem(name: "source", value: "app")]
+        if let bauakteId { query.append(URLQueryItem(name: "bauakteId", value: bauakteId.uuidString.lowercased())) }
+        return try await send(APIRequest(method: "POST", path: "purchases/documents", query: query, body: data, contentType: "application/octet-stream"))
+    }
+
     /// Rechnungsplan der Bauakte (Modul „Verkauf“); ohne Modul oder Recht liefert der Server einen Fehler.
     func salesPlan(_ bauakteId: UUID) async throws(APIError) -> SalesPlan {
         try await get("sales/bauakten/\(bauakteId.uuidString.lowercased())/plan")

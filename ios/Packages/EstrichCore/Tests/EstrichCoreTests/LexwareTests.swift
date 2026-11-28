@@ -93,4 +93,24 @@ struct LexwareTests {
         #expect(Lexware.canImport(result, result.candidates[0]))
         #expect(!Lexware.canImport(result, result.candidates[1]), "schon mit einem Kunden verknüpft")
     }
+
+    @Test("Eingangsbeleg hochladen: Modul nur mit Lexware, Größe geprüft, Meldung nach dem Hochladen")
+    func purchaseUpload() throws {
+        #expect(!AppModules(states: ["purchases": true]).purchasesOn, "ohne Lexware Office aus")
+        #expect(AppModules(states: ["lexware": true, "purchases": true]).purchasesOn)
+        #expect(!AppModules(states: ["lexware": true]).purchasesOn, "ältere Server kennen das Modul nicht")
+        #expect(Lexware.purchaseUploadProblem(byteCount: 0) == "Die Datei ist leer.")
+        #expect(Lexware.purchaseUploadProblem(byteCount: 6 * 1024 * 1024)?.contains("5 MB") == true)
+        #expect(Lexware.purchaseUploadProblem(byteCount: 1000) == nil)
+
+        let json = """
+        {"document":{"id":"0193a1b2-0000-7000-8000-000000000001","fileName":"foto.jpg","formatName":"Datei ohne E-Rechnung","problemCount":0,
+          "state":"uploaded"},"note":null,"data":{"format":"none","problems":[]},"canEdit":true,"duplicate":false}
+        """
+        let result = try JSONCoding.decoder.decode(PurchaseUploadResult.self, from: Data(json.utf8))
+        #expect(Lexware.purchaseUploadText(result) == "Beleg hochgeladen (Datei ohne E-Rechnung). Das Büro gibt ihn an Lexware Office weiter.")
+        let doc = PurchaseUploadResult.Document(id: UUID(), fileName: "r.xml", formatName: "XRechnung (UBL)", problemCount: 2)
+        #expect(Lexware.purchaseUploadText(PurchaseUploadResult(document: doc, duplicate: false)).hasSuffix("das Büro prüft sie."))
+        #expect(Lexware.purchaseUploadText(PurchaseUploadResult(document: doc, duplicate: true)).hasPrefix("Diesen Beleg gibt es schon."))
+    }
 }

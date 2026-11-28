@@ -17,6 +17,9 @@ data class AppModules(val states: Map<String, Boolean> = emptyMap()) {
     /** Lexware Office ist nur an, wenn der Server es ausdrücklich meldet (ältere Server kennen das Modul nicht). */
     val lexwareOn: Boolean get() = states[LEXWARE] == true
 
+    /** Eingangsbelege: nur mit Lexware Office und nur, wenn der Server das Modul ausdrücklich meldet. */
+    val purchasesOn: Boolean get() = lexwareOn && states[PURCHASES] == true
+
     /** Vorbelegung des Schalters „Mit Lexware Office abgleichen“ bei neuen Kunden. */
     val lexwareSyncDefault: Boolean get() = lexwareOn && states[LEXWARE_SYNC_DEFAULT] == true
 
@@ -43,6 +46,7 @@ data class AppModules(val states: Map<String, Boolean> = emptyMap()) {
         const val FEEDBACK = "feedback"
         const val FUEL = "fuel"
         const val LEXWARE = "lexware"
+        const val PURCHASES = "purchases"
 
         /** Kein Modul: Vorgabe „Mit Lexware Office abgleichen“ für neue Kunden, zusammen mit den Schaltern gespeichert. */
         const val LEXWARE_SYNC_DEFAULT = "lexwareSyncDefault"

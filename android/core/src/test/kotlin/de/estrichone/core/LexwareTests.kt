@@ -122,4 +122,18 @@ class LexwareTests {
         assertEquals(1, api.checkLexwareContact(Lexware.checkRequest("Huber Wohnbau", company = true)!!).candidates.size)
         assertTrue(api.checkLexwareContact(Lexware.checkRequest("Malerbetrieb Kern", company = true)!!).candidates.isEmpty())
     }
+
+    @Test
+    fun purchaseUpload_moduleSizeAndMessage() {
+        assertTrue(!AppModules(mapOf("purchases" to true)).purchasesOn)
+        assertTrue(AppModules(mapOf("lexware" to true, "purchases" to true)).purchasesOn)
+        assertEquals("Die Datei ist leer.", PurchaseUpload.problem(0))
+        assertTrue(PurchaseUpload.problem(6 * 1024 * 1024)!!.contains("5 MB"))
+        assertEquals(null, PurchaseUpload.problem(1000))
+        val result = EstrichOneApi.json.decodeFromString(PurchaseUploadResult.serializer(),
+            """{"document":{"id":"d1","fileName":"r.xml","formatName":"XRechnung (UBL)","problemCount":2,"state":"uploaded"},"data":{"problems":["x","y"]},"duplicate":false}""")
+        assertEquals("Beleg hochgeladen (XRechnung (UBL)). Das Büro gibt ihn an Lexware Office weiter. Bei der E-Rechnung fehlen Angaben; das Büro prüft sie.",
+            PurchaseUpload.text(result))
+        assertTrue(PurchaseUpload.text(result.copy(duplicate = true)).startsWith("Diesen Beleg gibt es schon."))
+    }
 }

@@ -175,6 +175,46 @@ object Lexware {
     fun canImport(check: LexwareContactCheck, candidate: LexwareContactCandidate): Boolean = check.canImport && candidate.contact.linkedContactId == null
 }
 
+/** Antwort auf das Hochladen eines Eingangsbelegs (Modul „Eingangsbelege“), gekürzt auf das, was die App zeigt. */
+@Serializable
+data class PurchaseUploadDocument(val id: String, val fileName: String = "", val formatName: String = "", val problemCount: Int = 0)
+
+@Serializable
+data class PurchaseUploadResult(val document: PurchaseUploadDocument, val duplicate: Boolean? = null)
+
+object PurchaseUpload {
+    /** Höchstgröße je Beleg (wie Lexware Office). */
+    const val MAX_BYTES = 5 * 1024 * 1024
+
+    /** Prüfung vor dem Hochladen; liefert die Meldung oder null. */
+    fun problem(byteCount: Int): String? = when {
+        byteCount == 0 -> "Die Datei ist leer."
+        byteCount > MAX_BYTES -> "Der Beleg ist größer als 5 MB. Bitte als kleineres Foto oder PDF hochladen."
+        else -> null
+    }
+
+    /** Meldung nach dem Hochladen. */
+    fun text(result: PurchaseUploadResult): String {
+        if (result.duplicate == true) return "Diesen Beleg gibt es schon. Er wurde nicht ein zweites Mal hochgeladen."
+        val base = "Beleg hochgeladen (${result.document.formatName}). Das Büro gibt ihn an Lexware Office weiter."
+        return if (result.document.problemCount > 0) "$base Bei der E-Rechnung fehlen Angaben; das Büro prüft sie." else base
+    }
+}
+
+/**
+ * Eingangsbeleg hochladen (Foto, PDF oder XRechnung) und der Bauakte zuordnen; der Server liest E-Rechnungen und erkennt
+ * doppelte Dateien. Weitergegeben an Lexware Office wird im Büro.
+ */
+suspend fun EstrichOneApi.uploadPurchase(bytes: ByteArray, fileName: String, bauakteId: String?): PurchaseUploadResult {
+    val query = buildMap {
+        put("fileName", fileName)
+        put("source", "app")
+        if (bauakteId != null) put("bauakteId", bauakteId)
+    }
+    val text = upload("POST", "purchases/documents", bytes, "application/octet-stream", query = query)
+    return EstrichOneApi.json.decodeFromString(PurchaseUploadResult.serializer(), text)
+}
+
 suspend fun EstrichOneApi.bauakteLexware(bauakteId: String): BauakteLexware = send("GET", "bauakten/$bauakteId/lexware", null)
 
 /** Rechnungsplan der Bauakte (Modul „Verkauf“); ohne Modul oder Recht ein Fehler. */

@@ -39,7 +39,9 @@ import de.estrichone.core.LexwareContactCheck
 import de.estrichone.core.LexwareTone
 import de.estrichone.core.LexwareVoucher
 import de.estrichone.core.bauakteLexware
+import de.estrichone.core.PurchaseUpload
 import de.estrichone.core.SalesPlan
+import de.estrichone.core.uploadPurchase
 import de.estrichone.core.salesPlan
 import androidx.compose.material3.LinearProgressIndicator
 import de.estrichone.core.checkLexwareContact
@@ -271,5 +273,58 @@ fun LexwareCustomerCheck(
             Secondary("Der Kunde wird ohne Verknüpfung mit Lexware Office angelegt.")
         }
         androidx.compose.material3.Switch(state.anyway, { state.anyway = it }, modifier = Modifier.testTag("lexwareAnyway"))
+    }
+}
+
+/**
+ * Eingangsbeleg zur Bauakte hochladen (Modul „Eingangsbelege“, nur online): Foto oder PDF bzw. XRechnung über das
+ * Speicherzugriffsframework. Der Server liest E-Rechnungen und erkennt doppelte Dateien; an Lexware Office gibt das Büro
+ * den Beleg weiter. Sichtbar mit dem Recht „Eingangsbelege hochladen“.
+ */
+@Composable
+fun PurchaseUploadSection(session: Session, b: Bauakte) {
+    val modules by session.modules.collectAsState()
+    val permissions by session.permissions.collectAsState()
+    if (!modules.purchasesOn || "purchases.edit" !in permissions) return
+    val model = LocalModel.current
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var busy by remember { mutableStateOf(false) }
+    val launcher = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        val resolver = context.contentResolver
+        val name = resolver.query(uri, null, null, null, null)?.use { c ->
+            val index = c.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+            if (c.moveToFirst() && index >= 0) c.getString(index) else null
+        } ?: "Beleg"
+        val type = resolver.getType(uri) ?: ""
+        val raw = resolver.openInputStream(uri)?.use { it.readBytes() } ?: return@rememberLauncherForActivityResult
+        // Große Fotos verkleinern (Lexware Office nimmt höchstens 5 MB an), andere Bilder als JPEG senden.
+        val bytes = if (type.startsWith("image/") && (raw.size > PurchaseUpload.MAX_BYTES || type != "image/jpeg" && type != "image/png")) {
+            android.graphics.BitmapFactory.decodeByteArray(raw, 0, raw.size)?.let { bitmap ->
+                java.io.ByteArrayOutputStream().also { bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 70, it) }.toByteArray()
+            } ?: raw
+        } else raw
+        val fileName = if (bytes !== raw) name.substringBeforeLast('.') + ".jpg" else name
+        PurchaseUpload.problem(bytes.size)?.let { model.message(it); return@rememberLauncherForActivityResult }
+        busy = true
+        scope.launch {
+            val text = runCatching { PurchaseUpload.text(session.api.uploadPurchase(bytes, fileName, b.id)) }
+                .getOrElse { it.message ?: "Der Beleg konnte nicht hochgeladen werden. Belege lassen sich nur mit Verbindung zum Server hochladen." }
+            busy = false
+            model.message(text)
+        }
+    }
+
+    SectionHeader("Eingangsbelege")
+    SectionCard(Modifier.testTag("purchaseUpload")) {
+        Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("Lieferschein, Rechnung oder Quittung zu dieser Bauakte. Das Büro prüft den Beleg und gibt ihn an Lexware Office weiter.",
+                style = MaterialTheme.typography.bodyMedium)
+            androidx.compose.material3.OutlinedButton(
+                onClick = { launcher.launch(arrayOf("image/*", "application/pdf", "application/xml", "text/xml")) },
+                enabled = !busy, modifier = Modifier.fillMaxWidth(),
+            ) { Text(if (busy) "Wird hochgeladen" else "Foto, PDF oder XRechnung hochladen") }
+        }
     }
 }
