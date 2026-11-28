@@ -428,6 +428,45 @@ EstrichONE liest dabei das Profil Ihres Unternehmens und bietet alle Steuerarten
 
 ![Fehler beheben](bilder/lexware-fehler-13b.png "Ablehnung der Steuerart § 13b mit direkter Behebung")
 
+## Eingangsbelege
+
+Unter **Büro › Eingangsbelege** sehen Sie die Rechnungen und Gutschriften Ihrer Lieferanten aus Lexware Office. Das Modul
+schalten Sie unter **Verwaltung › Module** ein; dafür muss Lexware Office eingerichtet sein. Wer Belege hochladen und
+zuordnen darf, legen Sie mit dem Recht **Eingangsbelege hochladen, an Lexware Office weitergeben und Bauakten zuordnen**
+fest.
+
+### Belege der Lieferanten zuordnen
+
+Die Liste zeigt Nummer, Lieferant, Bauakte, Datum, Fälligkeit, Betrag, offenen Betrag und Status. Suchen und filtern Sie
+nach Lieferant und Bauakte; mit **ohne Bauakte** finden Sie alle Belege, die noch keiner Baustelle zugeordnet sind. Unter der
+Tabelle steht die Summe der Auswahl. Tippen Sie auf einen Beleg, wählen Sie die Bauakte und speichern Sie. Heißt der
+Lieferant im Materialstamm genauso wie in Lexware Office, ist er automatisch verknüpft; sonst wählen Sie ihn im selben Dialog.
+
+In der Bauakte finden Sie im Abschnitt **Rechnungen** die Tabelle **Eingangsbelege und Kosten** mit einer Zeile wie
+„Erlöse 35.700,00 €, Kosten 11.900,00 €, Differenz 23.800,00 €“. Erlöse sind die zugeordneten Rechnungen abzüglich
+Gutschriften, Kosten die zugeordneten Eingangsbelege. Alle Beträge sind brutto, so wie Lexware Office sie liefert.
+
+![Eingangsbelege](bilder/eingangsbelege-liste.png "Eingangsbelege aus Lexware Office mit Filter und Summenzeile")
+
+### Belege hochladen
+
+Neue Belege laden Sie mit **Beleg hochladen** hoch oder ziehen die Dateien auf die Liste bzw. in der Bauakte auf die
+Tabelle **Eingangsbelege und Kosten**. Erlaubt sind PDF, Fotos (JPEG oder PNG) und XRechnungen (XML) bis 5 MB je Datei. In
+der App öffnen Sie die Bauakte und wählen unten unter **Eingangsbelege** ein Foto oder eine Datei; der Beleg gehört dann zu
+dieser Bauakte.
+
+Ist die Datei eine E-Rechnung (XRechnung oder ZUGFeRD), liest EstrichONE sie sofort und zeigt sie übersichtlich an:
+Rechnungssteller, Nummer, Datum, Positionen und Summen. Fehlen Pflichtangaben oder stimmen die Summen nicht, steht oben ein
+Hinweis mit den fehlenden Angaben. Bitten Sie dann den Lieferanten um eine berichtigte Rechnung. Übergeben können Sie den
+Beleg trotzdem.
+
+Mit **An Lexware Office übergeben** geht die Datei an Lexware Office. Dort finden Sie sie unter **Belege**, **zu prüfen**.
+Buchen und bezahlen erledigen Sie wie gewohnt in Lexware Office. Danach erscheint der Beleg in der Liste und lässt sich der
+Bauakte zuordnen. Jede Datei geht nur einmal an Lexware Office; dieselbe Datei ein zweites Mal hochzuladen ergibt keinen
+zweiten Beleg. Solange ein Beleg noch nicht übergeben ist, können Sie ihn verwerfen.
+
+![E-Rechnung](bilder/eingangsbeleg-xrechnung.png "Gelesene XRechnung mit Prüfung, Kopfdaten und Positionen")
+
 ## Status der Bauakte aus Lexware Office
 
 Mit dem Modul **Lexware Office: Status der Bauakte automatisch** (setzt Lexware Office voraus, nach der Installation aus)

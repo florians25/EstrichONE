@@ -206,6 +206,50 @@ EstrichONE schreibgeschützt; die Maske sagt das und führt mit „In Lexware ö
 
 **Apps:** in dieser Runde nur lesend (Belegliste und Rechnungsplan über die vorhandenen Endpunkte).
 
+## Eingangsbelege (Belege der Lieferanten, Belegeingang)
+
+Modul **Eingangsbelege** (setzt Lexware Office voraus, nach dem Update aus). Rechte `purchases.read` (ansehen) und
+`purchases.edit` (hochladen, an Lexware Office übergeben, Bauakten zuordnen, Lieferanten verknüpfen). Die Rolle „Büro und
+Bauleitung“ hat bei neuen Installationen beide Rechte; bestehende Rollen ergänzt der Administrator.
+
+- **Liste** (`/eingangsbelege`, SAP List Report): Belegliste aus Lexware Office mit `voucherType=purchaseinvoice,purchasecreditnote`
+  (nur lesend, kurz zwischengespeichert, „Aktualisieren“ liest neu). Spalten Nummer, Lieferant, Bauakte, Datum, fällig,
+  brutto, offen, Status; Filter Suche, Lieferant, Bauakte (auch „ohne Bauakte“), Status als Umschalter; Summen der Auswahl als
+  Textzeile (Gutschriften negativ, stornierte nicht, offen nur bei offenen und überfälligen Belegen).
+- **Zuordnung zur Bauakte**: je Beleg ein Eintrag in `purchase_voucher_links` (eigene Tabelle, getrennt von den
+  Verkaufsbelegen, damit die Statusregeln der Bauakte nur Ausgangsrechnungen sehen). Zuordnen und Lösen stehen im Verlauf der
+  Bauakte.
+- **Lieferanten**: Ein Lieferant aus Lexware Office gilt als verknüpft, wenn im Materialstamm genau ein aktiver Lieferant
+  denselben Namen trägt (ohne Groß- und Kleinschreibung, Satzzeichen und Leerzeichen). Von Hand verknüpft gilt vor dem Namen
+  (`purchase_supplier_links`).
+- **Kosten der Bauakte**: Abschnitt „Rechnungen“ der Bauakte, Tabelle „Eingangsbelege und Kosten“ mit der Textzeile
+  „Erlöse …, Kosten …, Differenz … (brutto laut Lexware Office)“. Erlöse sind die zugeordneten Rechnungen abzüglich
+  Gutschriften (ohne Entwürfe und stornierte), Kosten die zugeordneten Eingangsbelege abzüglich Gutschriften der Lieferanten
+  (ohne stornierte). Brutto, weil die Belegliste nur den Gesamtbetrag liefert.
+- **Belegeingang**: Hochladen im Web (Schaltfläche oder Dateien auf die Liste bzw. die Tabelle der Bauakte ziehen) und in den
+  Apps (Bauakte, Abschnitt „Eingangsbelege“: Foto oder PDF bzw. XRechnung). `POST /api/v1/purchases/documents` mit dem Inhalt
+  als Rohdaten, höchstens 5 MB. Die Art erkennt der Server am Inhalt (PDF, JPEG, PNG, XML), nicht an der Endung. Dieselbe
+  Datei (SHA-256) ein zweites Mal liefert den vorhandenen Beleg. Die Datei bleibt bis zur Übergabe in EstrichONE
+  (`purchase_documents`); verworfen werden kann nur vor der Übergabe.
+- **E-Rechnung lesen**: eigener Leser ohne Cloud-Dienst (`EInvoiceReader`): XRechnung als UBL 2.1 (Invoice, CreditNote) und
+  als UN/CEFACT CII, ZUGFeRD bzw. Factur-X (CII-Datei als eingebetteter, meist komprimierter Datenstrom im PDF). Externe
+  Entitäten sind abgeschaltet. Darstellung als Objektseite: Prüfung, Kopfdaten (Rechnungssteller, Anschrift, USt-IdNr.,
+  Empfänger, Leitweg-ID bzw. Käuferreferenz, Nummer, Datum, fällig), Positionen mit Einheiten nach UN/ECE Rec. 20, Summen.
+- **Pflichtangaben** (Hinweise, kein Verbot): Rechnungsnummer, Rechnungsdatum, Name des Rechnungsstellers, USt-IdNr. bzw.
+  Steuernummer, Gesamtbetrag und mindestens eine Position; Netto plus Umsatzsteuer muss den Gesamtbetrag ergeben, die Summe
+  der Positionen den Nettobetrag (auf 1 Cent genau). Anschrift und Empfänger werden angezeigt, aber nicht geprüft.
+- **Übergabe an Lexware Office**: `POST /v1/files` als `multipart/form-data` mit `file` und `type=voucher`, ohne Abfrage
+  (`WriteAllowed` lässt genau diesen Aufruf zu). Höchstens einmal je Beleg: Der Stand wechselt vorher in einer Abfrage auf
+  „wird übergeben“, gleichzeitige Aufrufe gehen leer aus, ein übergebener Beleg wird nicht erneut gesendet. Bei
+  Zeitüberschreitung bleibt offen, ob Lexware Office die Datei erhalten hat; der Hinweis nennt, wo das zu prüfen ist
+  („Belege“, „zu prüfen“). Lexware Office liest den Beleg danach selbst aus; nach dem Buchen erscheint er in der Belegliste
+  und lässt sich der Bauakte zuordnen. Gelöscht oder geändert wird in Lexware Office nichts.
+
+Endpunkte: `GET /purchases/vouchers`, `PUT /purchases/vouchers/{lexwareId}/bauakte`, `PUT /purchases/suppliers/{lexwareContactId}`,
+`POST /purchases/documents`, `GET /purchases/documents/{id}`, `GET /purchases/documents/{id}/file`,
+`PUT /purchases/documents/{id}`, `DELETE /purchases/documents/{id}` (nur vor der Übergabe),
+`POST /purchases/documents/{id}/send`, `GET /purchases/bauakten/{id}/costs`.
+
 ## Automatische Belegzuordnung
 
 Einstellungen `autoAssign` („Belege automatisch zuordnen“, Vorgabe an) und `autoAssignSingleOpen` (zusätzliche Regel
@@ -662,10 +706,18 @@ wird als „Erstellt“ angezeigt, neutral (Web `voucherStatus(status, type)`, i
     bei öffentlichen Auftraggebern dann automatisch erzeugt.
 40. Mahnstufe: `GET /v1/dunnings/{id}` braucht die ID der Mahnung; die Belegliste nennt keine Mahnstufe der Rechnung.
     EstrichONE zeigt deshalb bisher keine Mahnstufe an.
+41. `GET /v1/voucherlist` mit `voucherType=purchaseinvoice,purchasecreditnote`: Werte, Status (`open`, `paid`, `paidoff`,
+    `voided`, `unchecked`?), Feld `contactName` bei Lieferanten und ob `openAmount` geliefert wird.
+42. `POST /v1/files` mit `type=voucher`: Antwort (`id`, HTTP 202?), zulässige Dateiarten (PDF, JPEG, PNG, XRechnung als XML),
+    Höchstgröße (angenommen 5 MB) und ob Lexware Office eine XRechnung als E-Rechnung erkennt und ausliest. Ob dieselbe
+    Datei zweimal zwei Belege ergibt (EstrichONE sendet jede Datei nur einmal).
+43. Permalink für Eingangsbelege (angenommen `permalink/vouchers/view/{id}`).
+44. Eingangsbelege mit echten E-Rechnungen verschiedener Lieferanten lesen (XRechnung UBL und CII, ZUGFeRD 2.x, Factur-X),
+    insbesondere eingebettete Dateien mit anderen Filtern als `FlateDecode` und Objektströme.
 
 ## Nicht Teil dieser Runde
 
-Webhooks (Änderungen ohne Abruf), Erfassung von Belegen in den Apps (dort nur lesend), Mahnstufe der Rechnungen,
+Webhooks (Änderungen ohne Abruf), Erfassung von Verkaufsbelegen in den Apps (dort nur lesend; Eingangsbelege lassen sich hochladen), Buchen von Eingangsbelegen (bleibt in Lexware Office), Mahnstufe der Rechnungen,
 Lieferscheine anlegen (nur Anzeige), Leitweg-ID am Beleg, Abgleich von Land, Steuernummer, Lieferanschrift und
 Ansprechpartnern, Löschen von Artikeln in Lexware Office, Abgleich von `note` und Mengeneinheiten-Katalog, Raumumfänge für
 Randdämmstreifen. Belege werden in Lexware Office nie geändert, gelöscht oder archiviert.
