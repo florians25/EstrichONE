@@ -25,12 +25,15 @@ struct LexwareBauakteSections: View {
     @State private var pdfURL: URL?
     @State private var message: String?
     @State private var loading: String?
+    /// Rechnungsplan (Modul „Verkauf“, nur lesend); ohne Modul oder Recht bleibt er leer.
+    @State private var plan: SalesPlan?
 
     var body: some View {
         if let contact = data.contact {
             Section("Lexware Office") {
                 row("Kontakt in Lexware", contact.name ?? "Lexware-Kontakt", differs: Lexware.differs(contact, "name"))
                     .accessibilityIdentifier("lexwareContactRow")
+                    .task(id: bauakteId) { plan = try? await model.active?.client?.salesPlan(bauakteId) }
                     .quickLookPreview($pdfURL)
                     .alert("Beleg", isPresented: Binding(get: { message != nil }, set: { if !$0 { message = nil } })) {
                         Button("OK", role: .cancel) {}
@@ -54,6 +57,21 @@ struct LexwareBauakteSections: View {
                             }
                         }
                     }
+                }
+            }
+            if let plan {
+                Section("Rechnungsplan") {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(plan.text)
+                            .font(.subheadline)
+                            .fixedSize(horizontal: false, vertical: true)
+                        if let fraction = plan.billedFraction {
+                            ProgressView(value: fraction)
+                                .accessibilityLabel("Berechnet: \(Int((fraction * 100).rounded())) Prozent der Auftragssumme")
+                        }
+                    }
+                    .padding(.vertical, 4)
+                    .accessibilityIdentifier("salesPlanRow")
                 }
             }
             if !data.vouchers.isEmpty {

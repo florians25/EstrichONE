@@ -59,6 +59,10 @@ struct LexwareTests {
         #expect(Lexware.statusText("open", type: "invoice") == "Offen")
         #expect(Lexware.statusText("open", type: "quotation") == "Offen")
         #expect(Lexware.statusText("irgendwas", type: "invoice") == "Unbekannt")
+        // Rechnungsplan (Verkauf): Anteil berechnet für den schlichten Balken.
+        #expect(SalesPlan(orderNet: 10000, invoicedNet: 6500, text: "", progressPercent: 40).billedFraction == 0.65)
+        #expect(SalesPlan(orderNet: nil, invoicedNet: 0, text: "", progressPercent: nil).billedFraction == nil)
+        #expect(SalesPlan(orderNet: 1000, invoicedNet: 1500, text: "", progressPercent: nil).billedFraction == 1)
         #expect(Lexware.euro(15767.5) == "15.767,50 €")
         #expect(Lexware.euro(1234567.05) == "1.234.567,05 €")
         #expect(Lexware.euro(nil) == "")

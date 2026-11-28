@@ -55,6 +55,27 @@ public struct LexwareVoucher: Decodable, Equatable, Identifiable, Sendable {
     }
 }
 
+/// Rechnungsplan der Bauakte (Modul „Verkauf“, nur lesend): `GET sales/bauakten/{id}/plan`.
+public struct SalesPlan: Decodable, Equatable, Sendable {
+    public let orderNet: Double?
+    public let invoicedNet: Double
+    public let text: String
+    public let progressPercent: Double?
+
+    public init(orderNet: Double?, invoicedNet: Double, text: String, progressPercent: Double?) {
+        self.orderNet = orderNet
+        self.invoicedNet = invoicedNet
+        self.text = text
+        self.progressPercent = progressPercent
+    }
+
+    /// Anteil der Auftragssumme, der berechnet ist (0 bis 1), für einen schlichten Balken; ohne Auftragssumme nichts.
+    public var billedFraction: Double? {
+        guard let orderNet, orderNet > 0 else { return nil }
+        return min(1, max(0, invoicedNet / orderNet))
+    }
+}
+
 /// Antwort von `GET bauakten/{id}/lexware`.
 public struct BauakteLexware: Decodable, Equatable, Sendable {
     public let vouchers: [LexwareVoucher]
@@ -290,6 +311,11 @@ public enum Lexware {
 }
 
 public extension AuthorizedClient {
+    /// Rechnungsplan der Bauakte (Modul „Verkauf“); ohne Modul oder Recht liefert der Server einen Fehler.
+    func salesPlan(_ bauakteId: UUID) async throws(APIError) -> SalesPlan {
+        try await get("sales/bauakten/\(bauakteId.uuidString.lowercased())/plan")
+    }
+
     /// Lexware-Daten der Bauakte: Kontakt des verknüpften Kunden, Abgleichstand und zugeordnete Belege.
     func bauakteLexware(_ bauakteId: UUID) async throws(APIError) -> BauakteLexware {
         try await get("bauakten/\(bauakteId.uuidString.lowercased())/lexware")

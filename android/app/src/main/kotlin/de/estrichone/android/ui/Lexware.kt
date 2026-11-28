@@ -1,6 +1,7 @@
 package de.estrichone.android.ui
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -38,6 +39,9 @@ import de.estrichone.core.LexwareContactCheck
 import de.estrichone.core.LexwareTone
 import de.estrichone.core.LexwareVoucher
 import de.estrichone.core.bauakteLexware
+import de.estrichone.core.SalesPlan
+import de.estrichone.core.salesPlan
+import androidx.compose.material3.LinearProgressIndicator
 import de.estrichone.core.checkLexwareContact
 import de.estrichone.core.importLexwareContact
 import de.estrichone.core.lexwareVoucherPdf
@@ -77,6 +81,9 @@ fun LexwareSection(session: Session, b: Bauakte, provided: BauakteLexware? = nul
     var loaded by remember(b.id) { mutableStateOf<BauakteLexware?>(null) }
     if (loadSelf) LaunchedEffect(b.id) { loaded = runCatching { session.api.bauakteLexware(b.id) }.getOrNull() }
     val data = if (loadSelf) loaded else provided
+    // Rechnungsplan (Modul „Verkauf“, nur lesend); ohne Modul oder Recht bleibt er leer.
+    var plan by remember(b.id) { mutableStateOf<SalesPlan?>(null) }
+    LaunchedEffect(b.id) { plan = runCatching { session.api.salesPlan(b.id) }.getOrNull() }
     val contact = data?.contact ?: return
     val vouchers = data?.vouchers.orEmpty()
     val model = LocalModel.current
@@ -101,6 +108,17 @@ fun LexwareSection(session: Session, b: Bauakte, provided: BauakteLexware? = nul
         if (stateText.isNotEmpty()) {
             RowDivider(16.dp)
             LexwareRow("Abgleich", stateText, Lexware.syncedAt(contact.sync), tone.color())
+        }
+    }
+    plan?.let { p ->
+        SectionHeader("Rechnungsplan")
+        SectionCard(Modifier.testTag("salesPlan")) {
+            Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(p.text, style = MaterialTheme.typography.bodyMedium)
+                p.billedFraction?.let { fraction ->
+                    LinearProgressIndicator(progress = { fraction }, modifier = Modifier.fillMaxWidth())
+                }
+            }
         }
     }
     if (vouchers.isNotEmpty()) {

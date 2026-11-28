@@ -67,6 +67,10 @@ class LexwareTests {
         assertEquals("Offen" to LexwareTone.Info, Lexware.status("open", "invoice"))
         assertEquals("Offen" to LexwareTone.Info, Lexware.status("open", "quotation"))
         assertEquals("Unbekannt" to LexwareTone.Neutral, Lexware.status("irgendwas", "invoice"))
+        // Rechnungsplan (Verkauf): Anteil berechnet für den schlichten Balken.
+        assertEquals(0.65f, SalesPlan(orderNet = 10000.0, invoicedNet = 6500.0).billedFraction)
+        assertEquals(null, SalesPlan(orderNet = null).billedFraction)
+        assertEquals(1f, SalesPlan(orderNet = 1000.0, invoicedNet = 1500.0).billedFraction)
     }
 
     @Test

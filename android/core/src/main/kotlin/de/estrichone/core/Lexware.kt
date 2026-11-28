@@ -31,6 +31,15 @@ data class LexwareVoucher(
     val currency: String = "EUR", val status: String = "draft", val url: String = "",
 )
 
+/** Rechnungsplan der Bauakte (Modul „Verkauf“, nur lesend): `GET sales/bauakten/{id}/plan`. */
+@Serializable
+data class SalesPlan(
+    val orderNet: Double? = null, val invoicedNet: Double = 0.0, val text: String = "", val progressPercent: Double? = null,
+) {
+    /** Anteil der Auftragssumme, der berechnet ist (0 bis 1), für einen schlichten Balken; ohne Auftragssumme nichts. */
+    val billedFraction: Float? get() = orderNet?.takeIf { it > 0 }?.let { (invoicedNet / it).coerceIn(0.0, 1.0).toFloat() }
+}
+
 @Serializable
 data class BauakteLexware(
     val bauakteId: String = "", val configured: Boolean = false, val vouchers: List<LexwareVoucher> = emptyList(), val syncError: String? = null,
@@ -167,6 +176,9 @@ object Lexware {
 }
 
 suspend fun EstrichOneApi.bauakteLexware(bauakteId: String): BauakteLexware = send("GET", "bauakten/$bauakteId/lexware", null)
+
+/** Rechnungsplan der Bauakte (Modul „Verkauf“); ohne Modul oder Recht ein Fehler. */
+suspend fun EstrichOneApi.salesPlan(bauakteId: String): SalesPlan = send("GET", "sales/bauakten/$bauakteId/plan", null)
 
 /** Beleg-PDF, vom Server aus Lexware Office durchgereicht; für Entwürfe meldet der Server, dass es kein PDF gibt. */
 suspend fun EstrichOneApi.lexwareVoucherPdf(bauakteId: String, linkId: String): ByteArray? = bytes("bauakten/$bauakteId/lexware/vouchers/$linkId/document")
