@@ -33,7 +33,7 @@ struct LexwareBauakteSections: View {
             Section("Lexware Office") {
                 row("Kontakt in Lexware", contact.name ?? "Lexware-Kontakt", differs: Lexware.differs(contact, "name"))
                     .accessibilityIdentifier("lexwareContactRow")
-                    .task(id: bauakteId) { plan = try? await model.active?.client?.salesPlan(bauakteId) }
+                    .task(id: bauakteId) { plan = try? await model.active?.client.salesPlan(bauakteId) }
                     .quickLookPreview($pdfURL)
                     .alert("Beleg", isPresented: Binding(get: { message != nil }, set: { if !$0 { message = nil } })) {
                         Button("OK", role: .cancel) {}
