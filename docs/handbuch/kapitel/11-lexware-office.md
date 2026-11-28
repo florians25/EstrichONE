@@ -265,6 +265,11 @@ Die Tabelle zeigt je Beleg Art, Nummer, Datum, Fälligkeit bzw. Gültigkeit, Net
 | Bezahlt | Zahlung in Lexware Office verbucht |
 | Angenommen, Abgelehnt | Entscheidung zum Angebot in Lexware Office |
 | Storniert | in Lexware Office storniert |
+| Erstellt | Auftragsbestätigung bzw. Lieferschein ist in Lexware Office festgeschrieben (ohne Zahlungsbedeutung) |
+
+„Offen“, „Überfällig“ und „Bezahlt“ gibt es nur bei Rechnungen und Gutschriften, „Offen“ beim Angebot heißt: noch nicht
+angenommen. Auftragsbestätigungen und Lieferscheine zählen nie zu offenen Beträgen. Lieferscheine aus Lexware Office
+erscheinen als eigene Belegart **Lieferschein** (nur Anzeige).
 
 Unter der Tabelle fasst eine Zeile die Summen zusammen, zum Beispiel offene und bezahlte Rechnungen.
 
@@ -326,7 +331,8 @@ EstrichONE vor. Dafür braucht die Rolle das Recht **Angebote vorbereiten** (bei
 2. Ist der Kunde noch nicht mit Lexware Office verknüpft, nennt EstrichONE den Weg dorthin: Verknüpfen Sie ihn am Kunden
    (siehe „Kunden verknüpfen“).
 3. Füllen Sie den Kopf aus: Titel, Einleitung, **Gültig bis**, Zahlungsbedingung (aus Lexware Office oder eigener Text),
-   **Steuerart** (netto oder Bauleistung nach § 13b UStG) und Bemerkung. Die Nummer wird automatisch vergeben, und zwar in
+   **Steuerart** (Netto, Bauleistung nach § 13b UStG oder Steuerfrei) und Bemerkung. Kleinunternehmer nach § 19 UStG
+   senden immer steuerfrei; EstrichONE liest das aus dem Profil Ihres Unternehmens in Lexware Office. Die Nummer wird automatisch vergeben, und zwar in
    Lexware Office.
 4. Erfassen Sie die Positionen: **Aus Artikeln und Leistungen**, **Freie Position** oder **Textposition**. Je Position
    Menge, Einheit, Einzelpreis netto, Steuersatz und optional Rabatt. Die Summen netto, Steuer und brutto rechnet die
@@ -344,6 +350,26 @@ zuerst in Lexware Office nach dem Angebot. Rechnungen erstellt EstrichONE nicht.
 Angebote in der Belegliste; eine Maske gibt es dort nicht.
 
 ![Angebot vorbereiten](bilder/lexware-angebot.png "Angebot (Beta) mit Positionen und Summen")
+
+### Wenn Lexware Office das Angebot ablehnt
+
+Lehnt Lexware Office Angaben ab, zeigt EstrichONE eine verständliche Meldung auf Deutsch, wo möglich mit dem betroffenen
+Feld bzw. der Position (zum Beispiel „Position 3: Die Einheit fehlt.“). Den Originaltext von Lexware Office sehen Sie bei
+Bedarf unter **Technische Einzelheiten**. Danach können Sie den Entwurf bearbeiten und erneut senden; ein bereits
+angelegtes Angebot wird nicht doppelt angelegt.
+
+Für bekannte Fälle bietet EstrichONE die Behebung direkt an. Lässt Lexware Office die Steuerart Bauleistung nach § 13b
+UStG für Ihr Unternehmen nicht zu, lautet die Meldung: „Lexware Office lässt die Steuerart Bauleistung nach § 13b UStG
+für Ihr Unternehmen nicht zu. Prüfen Sie die Steuereinstellungen in Lexware Office oder senden Sie das Angebot mit der
+Steuerart Netto.“ Die Schaltfläche **Steuerart Netto übernehmen und erneut senden** ändert die Steuerart, speichert und
+sendet in einem Schritt.
+
+EstrichONE merkt sich die Ablehnung je Belegart. Die Steuerart erscheint danach in der Auswahl ausgegraut, mit einem
+Hinweis darunter. Haben Sie die Steuereinstellungen in Lexware Office geändert, wählen Sie unter **Verwaltung ›
+Integrationen › Lexware Office** im Abschnitt **Steuerarten** die Schaltfläche **Erlaubte Steuerarten erneut prüfen**.
+EstrichONE liest dabei das Profil Ihres Unternehmens und bietet alle Steuerarten wieder an.
+
+![Fehler beheben](bilder/lexware-fehler-13b.png "Ablehnung der Steuerart § 13b mit direkter Behebung")
 
 ## Status der Bauakte aus Lexware Office
 

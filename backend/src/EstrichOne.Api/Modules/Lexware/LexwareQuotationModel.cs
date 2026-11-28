@@ -29,8 +29,9 @@ public sealed class QuotationDraft : IVersionedEntity
     public const int MaxTitle = 200;
     public const int MaxText = 4000;
 
-    public const string TaxNet = "net";
-    public const string TaxConstruction13b = "constructionService13b";
+    public const string TaxNet = LexwareTaxTypes.Net;
+    public const string TaxConstruction13b = LexwareTaxTypes.Construction13b;
+    public const string TaxVatfree = LexwareTaxTypes.Vatfree;
 
     public Guid Id { get; set; }
     public Guid ContactId { get; set; }
@@ -40,7 +41,7 @@ public sealed class QuotationDraft : IVersionedEntity
     public string? Remark { get; set; }
     public DateOnly? ValidUntil { get; set; }
 
-    /// <summary><see cref="TaxNet"/> oder <see cref="TaxConstruction13b"/>.</summary>
+    /// <summary><see cref="TaxNet"/>, <see cref="TaxConstruction13b"/> oder <see cref="TaxVatfree"/>.</summary>
     public string TaxType { get; set; } = TaxNet;
 
     /// <summary>Gewählte Zahlungsbedingung aus Lexware Office (Kopie der Werte, damit der Entwurf ohne Abruf lesbar bleibt).</summary>
@@ -56,6 +57,12 @@ public sealed class QuotationDraft : IVersionedEntity
     public DateTimeOffset? SentAt { get; set; }
     public Guid? SentByUserId { get; set; }
     public string? SendError { get; set; }
+
+    /// <summary>Originaltext von Lexware Office zum letzten Fehler (englisch) für „Technische Einzelheiten“.</summary>
+    public string? SendErrorTechnical { get; set; }
+
+    /// <summary>Bekannte Behebung des letzten Fehlers (<see cref="LexwareErrors.FixTaxTypeNet"/> usw.).</summary>
+    public string? SendErrorFix { get; set; }
 
     /// <summary>
     /// Der letzte Versuch ist ohne eindeutige Antwort abgebrochen (Zeitüberschreitung, keine Verbindung): Lexware Office
@@ -118,6 +125,8 @@ internal sealed class QuotationDraftConfiguration : IEntityTypeConfiguration<Quo
         builder.Property(q => q.LexwareId).HasMaxLength(100);
         builder.HasIndex(q => q.LexwareId).IsUnique().HasFilter("lexware_id IS NOT NULL").HasDatabaseName(UniqueLexwareQuotation);
         builder.Property(q => q.SendError).HasMaxLength(2000);
+        builder.Property(q => q.SendErrorTechnical).HasMaxLength(1000);
+        builder.Property(q => q.SendErrorFix).HasMaxLength(40);
         builder.HasIndex(q => q.BauakteId);
         builder.HasIndex(q => q.ContactId);
         builder.Ignore(q => q.Editable);

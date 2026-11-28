@@ -10,13 +10,14 @@ import CheckBox from "sap/m/CheckBox";
 import VBox from "sap/m/VBox";
 import Text from "sap/m/Text";
 import MessageStrip from "sap/m/MessageStrip";
+import Panel from "sap/m/Panel";
 import { ApiError, del, get, post, put } from "../../util/api";
 import { dateTime, money, parseNumber } from "../../util/format";
 import { openExternal } from "../../util/lexwareDialogs";
 import type { RouteMatch } from "../../util/router";
 import {
-	BETA_TEXT, lineFromCatalog, lineFromSuggestion, lineNet, quotationStateText, quotationTotals, taxTypeOptions, type Quotation as QuotationData, type QuotationLine,
-	type QuotationOptions, type QuotationSuggestions,
+	BETA_TEXT, fixAction, lineFromCatalog, lineFromSuggestion, lineNet, quotationStateText, quotationTotals, taxTypeHint, taxTypeOptions,
+	type Quotation as QuotationData, type QuotationLine, type QuotationOptions, type QuotationSuggestions, type TaxTypeOption,
 } from "../../util/quotations";
 
 /** Zeile der Positionstabelle: Werte der API und Eingabetexte (deutsche Zahlen). */
@@ -39,7 +40,7 @@ export default class Quotation extends BaseController {
 	onInit(): void {
 		this.local({
 			q: null, lines: [], totals: {}, busy: false, dirty: false, sending: false, stateText: "", stateState: "None", subtitle: "", sentText: "",
-			betaText: BETA_TEXT, taxTypes: taxTypeOptions, payments: [], options: null, problemsText: "",
+			betaText: BETA_TEXT, taxTypes: taxTypeOptions, taxHint: "", fixText: "", payments: [], options: null, problemsText: "",
 		});
 	}
 
@@ -55,6 +56,7 @@ export default class Quotation extends BaseController {
 			const [q, options] = await Promise.all([get<QuotationData>(`lexware/quotations/${this.id}`), this.options ? Promise.resolve(this.options) : get<QuotationOptions>("lexware/quotations/options")]);
 			this.options = options;
 			m.setProperty("/options", options);
+			m.setProperty("/taxTypes", options.taxTypes?.length ? options.taxTypes : taxTypeOptions);
 			m.setProperty("/payments", [{ key: "", text: "Eigener Text oder keine" }, ...options.paymentConditions.map((p) => ({ key: p.id ?? p.label, text: p.label }))]);
 			this.apply(q);
 		} catch (error) {
@@ -73,6 +75,7 @@ export default class Quotation extends BaseController {
 		m.setProperty("/subtitle", [q.customerName, q.bauakteId ? `Bauakte ${q.bauakteNumber ?? ""} ${q.bauakteTitle ?? ""}`.trim() : ""].filter(Boolean).join(", "));
 		m.setProperty("/sentText", q.sentAt ? dateTime(q.sentAt) : "");
 		m.setProperty("/lines", q.lines.map((l) => this.row(l)));
+		m.setProperty("/fixText", q.state === "failed" ? fixAction(q.sendErrorFix)?.text ?? "" : "");
 		m.setProperty("/dirty", false);
 		this.refreshTotals(q.problems);
 	}
@@ -111,9 +114,10 @@ export default class Quotation extends BaseController {
 		m.setProperty("/lines", rows);
 		const totals = quotationTotals(rows.map((r) => ({ ...r, quantity: Number.isNaN(r.quantity) ? 0 : r.quantity, netPrice: Number.isNaN(r.netPrice) ? 0 : r.netPrice })), q.taxType);
 		const reverse = q.taxType === "constructionService13b";
+		m.setProperty("/taxHint", taxTypeHint(m.getProperty("/taxTypes") as never, q.taxType));
 		m.setProperty("/totals", {
 			netText: money(totals.net), grossText: money(totals.gross), taxText: money(totals.tax),
-			taxLabel: reverse ? "Umsatzsteuer (§ 13b UStG: Steuerschuld beim Leistungsempfänger)" : `Umsatzsteuer ${totals.taxLines.filter((t) => t.rate > 0).map((t) => `${num(t.rate, 0)} %`).join(" und ") || "0 %"}`,
+			taxLabel: reverse ? "Umsatzsteuer (§ 13b UStG: Steuerschuld beim Leistungsempfänger)" : q.taxType === "vatfree" ? "Umsatzsteuer (steuerfrei)" : `Umsatzsteuer ${totals.taxLines.filter((t) => t.rate > 0).map((t) => `${num(t.rate, 0)} %`).join(" und ") || "0 %"}`,
 		});
 		m.setProperty("/problemsText", [...problems, ...(serverProblems ?? [])].join(" "));
 	}
@@ -264,23 +268,78 @@ export default class Quotation extends BaseController {
 		if (await this.save()) this.toast("Entwurf gespeichert");
 	}
 
+	/** Bekannte Behebung aus der Fehlermeldung: Steuerart übernehmen, speichern und erneut senden (ohne weitere Rückfrage). */
+	async onFix(): Promise<void> {
+		await this.applyFix((this.model().getProperty("/q") as QuotationData).sendErrorFix);
+	}
+
+	private async applyFix(fix: string | null | undefined): Promise<void> {
+		const action = fixAction(fix);
+		if (!action) return;
+		this.model().setProperty("/q/taxType", action.taxType);
+		this.onTotals();
+		if (!await this.save()) return;
+		await this.send(false);
+	}
+
 	async onSend(): Promise<void> {
+		await this.send(true);
+	}
+
+	/** Fehler beim Senden: deutsche Meldung, wo bekannt mit direkter Behebung, englischer Originaltext nur aufklappbar. */
+	private showSendError(error: unknown): void {
+		const problem = error instanceof ApiError ? error.problem as { technical?: string; fix?: string } | undefined : undefined;
+		this.showProblem(`Das Senden an Lexware Office ist fehlgeschlagen. ${error instanceof ApiError ? error.message : String(error)}`, problem?.fix, problem?.technical);
+	}
+
+	private showProblem(message: string, fix: string | null | undefined, technical?: string | null): void {
+		const action = fixAction(fix);
+		const content = new VBox({ items: [
+			new Text({ text: message }),
+			...(action ? [new Text({ text: "Mit der Schaltfläche unten wird die Steuerart im Entwurf geändert, gespeichert und das Angebot erneut gesendet." }).addStyleClass("sapUiSmallMarginTop")] : []),
+			...(technical ? [new Panel({ headerText: "Technische Einzelheiten", expandable: true, expanded: false, content: [new Text({ text: technical })] })
+				.addStyleClass("sapUiSmallMarginTop")] : []),
+		] }).addStyleClass("sapUiSmallMargin");
+		const dialog: Dialog = new Dialog({
+			title: "Senden an Lexware Office", type: "Message", state: "Error", contentWidth: "32rem", content: [content],
+			beginButton: action ? new Button({ text: action.text, type: "Emphasized", press: () => { dialog.close(); void this.applyFix(fix); } }) : undefined,
+			endButton: new Button({ text: action ? "Abbrechen" : "Schließen", press: () => dialog.close() }),
+			afterClose: () => dialog.destroy(),
+		});
+		this.v().addDependent(dialog);
+		dialog.open();
+	}
+
+	/** Die gewählte Steuerart lässt Lexware Office nicht zu (gemerkt): Behebung wie nach der Ablehnung anbieten. */
+	private taxTypeFix(q: QuotationData): string | null {
+		const option = (this.model().getProperty("/taxTypes") as TaxTypeOption[]).find((o) => o.key === q.taxType);
+		if (!option || option.allowed) return null;
+		return this.options?.smallBusiness ? "taxTypeVatfree" : "taxTypeNet";
+	}
+
+	private async send(ask: boolean): Promise<void> {
 		const m = this.model();
 		if (m.getProperty("/dirty") && !await this.save()) return;
 		const q = m.getProperty("/q") as QuotationData;
+		const taxFix = this.taxTypeFix(q);
+		if (taxFix) {
+			this.showProblem(q.problems.join(" "), taxFix);
+			return;
+		}
 		if (q.problems.length) {
 			MessageBox.warning(q.problems.join("\n"), { title: "Noch nicht sendebereit" });
 			return;
 		}
-		if (!await this.confirm("Das Angebot wird als Entwurf in Lexware Office angelegt. Nummer, Festschreiben und Versand erfolgen dort. Danach ist der Entwurf in EstrichONE schreibgeschützt. Jetzt senden?",
+		if (ask && !await this.confirm("Das Angebot wird als Entwurf in Lexware Office angelegt. Nummer, Festschreiben und Versand erfolgen dort. Danach ist der Entwurf in EstrichONE schreibgeschützt. Jetzt senden?",
 			{ title: "Als Entwurf an Lexware Office senden", action: "Senden" })) return;
 		m.setProperty("/sending", true);
 		try {
 			this.apply(await post<QuotationData>(`lexware/quotations/${this.id}/send`));
 			this.toast("Als Entwurf an Lexware Office gesendet");
 		} catch (error) {
-			MessageBox.error(error instanceof ApiError ? error.message : String(error), { title: "Senden an Lexware Office" });
+			this.options = null; // erlaubte Steuerarten können sich durch die Ablehnung geändert haben
 			await this.load();
+			this.showSendError(error);
 		} finally {
 			m.setProperty("/sending", false);
 		}

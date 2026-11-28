@@ -31,7 +31,17 @@ public sealed record LexwareSettingsResponse(
     bool NewCustomersSync = true, LexwareChangeSync ChangeSync = LexwareChangeSync.Both, DateTimeOffset? LastChangeSyncAt = null,
     string? LastChangeSyncError = null, int CustomersWithDeviations = 0, bool AutoCreate = true,
     LexwareArticleSync ArticleSync = LexwareArticleSync.FromLexware, DateTimeOffset? LastArticleSyncAt = null, string? LastArticleSyncError = null,
-    int CatalogItems = 0, int ArticlesWithDeviations = 0, bool StatusOnQuotationAccepted = true, bool StatusOnInvoicesPaid = true);
+    int CatalogItems = 0, int ArticlesWithDeviations = 0, bool StatusOnQuotationAccepted = true, bool StatusOnInvoicesPaid = true,
+    LexwareTaxTypesResponse? TaxTypes = null);
+
+/// <summary>Erlaubte Steuerarten laut Lexware Office (Einstellungen › Lexware Office).</summary>
+/// <param name="SmallBusiness">Kleinunternehmer nach § 19 UStG laut <c>GET /v1/profile</c> (<c>null</c>: nicht geliefert bzw. noch nicht geprüft).</param>
+/// <param name="ProfileTaxType">Besteuerungsart laut Profil (<c>net</c>, <c>gross</c>, <c>vatfree</c>).</param>
+/// <param name="CheckedAt">Letzte Prüfung des Profils.</param>
+/// <param name="Rejections">Von Lexware Office beim Senden abgelehnte Steuerarten je Belegart; sie werden bis zur nächsten Prüfung nicht angeboten.</param>
+public sealed record LexwareTaxTypesResponse(bool? SmallBusiness, string? ProfileTaxType, DateTimeOffset? CheckedAt, IReadOnlyList<LexwareTaxTypeRejectionResponse> Rejections);
+
+public sealed record LexwareTaxTypeRejectionResponse(string VoucherType, string VoucherName, string TaxType, string TaxTypeName, DateTimeOffset At);
 
 /// <param name="ApiKey">Neuer Schlüssel; <c>null</c> oder leer lässt den gespeicherten unverändert.</param>
 /// <param name="ClearApiKey">Gespeicherten Schlüssel entfernen.</param>
@@ -306,6 +316,10 @@ internal static class LexwareEndpoints
         settings.MapPut("/", SaveSettingsAsync).WithName("SaveLexwareSettings")
             .WithSummary("Speichern (Schlüssel verschlüsselt; ohne Angabe bleibt der gespeicherte Schlüssel)")
             .ProducesProblem(StatusCodes.Status412PreconditionFailed).ProducesProblem(StatusCodes.Status422UnprocessableEntity);
+        settings.MapPost("/tax-types/check", CheckTaxTypesAsync).WithName("CheckLexwareTaxTypes")
+            .WithSummary("Erlaubte Steuerarten erneut prüfen: Profil lesen (GET /v1/profile: Kleinunternehmer, Besteuerungsart) und gemerkte Ablehnungen verwerfen")
+            .ProducesProblem(StatusCodes.Status409Conflict).ProducesProblem(StatusCodes.Status424FailedDependency)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
         settings.MapPost("/test", TestAsync).WithName("TestLexwareConnection")
             .WithSummary("Verbindung testen (GET /v1/profile): liefert den Firmennamen der Lexware-Organisation oder die Fehlerursache")
             .ProducesProblem(StatusCodes.Status409Conflict);
@@ -449,7 +463,22 @@ internal static class LexwareEndpoints
             row.LastChangeSyncAt, row.LastChangeSyncError,
             row.ChangeSync == LexwareChangeSync.Off ? 0 : await db.Set<LexwareContactLink>().CountAsync(l => l.DeviationCount > 0, cancellationToken),
             row.AutoCreate, row.ArticleSync, row.LastArticleSyncAt, row.LastArticleSyncError, await db.Set<CatalogItem>().CountAsync(cancellationToken),
-            await db.Set<CatalogItem>().CountAsync(c => c.DeviationCount > 0, cancellationToken), row.StatusOnQuotationAccepted, row.StatusOnInvoicesPaid);
+            await db.Set<CatalogItem>().CountAsync(c => c.DeviationCount > 0, cancellationToken), row.StatusOnQuotationAccepted, row.StatusOnInvoicesPaid,
+            TaxTypes(LexwareTaxTypes.State(row)));
+    }
+
+    internal static LexwareTaxTypesResponse TaxTypes(LexwareTaxTypeState state) => new(state.SmallBusiness, state.ProfileTaxType, state.CheckedAt,
+        state.Rejections.Select(r => new LexwareTaxTypeRejectionResponse(r.VoucherType, LexwareTaxTypes.VoucherName(r.VoucherType), r.TaxType,
+            LexwareErrors.TaxTypeName(r.TaxType), r.At)).ToList());
+
+    private static async Task<Results<Ok<LexwareTaxTypesResponse>, ProblemHttpResult>> CheckTaxTypesAsync(LexwareService lexware, IAuditLog audit,
+        ICurrentUser currentUser, CancellationToken cancellationToken)
+    {
+        var state = await LexwareTaxTypeStore.RecheckAsync(lexware, cancellationToken);
+        audit.Record("lexware.tax_types_checked", currentUser.UserId, "settings", "lexware",
+            new Dictionary<string, string?> { ["smallBusiness"] = state.SmallBusiness?.ToString(), ["taxType"] = state.ProfileTaxType });
+        await lexware.Db.SaveChangesAsync(cancellationToken);
+        return TypedResults.Ok(TaxTypes(state));
     }
 
     private static async Task<Ok<LexwareSettingsResponse>> GetSettingsAsync(LexwareService lexware, ISystemSettings system, CancellationToken cancellationToken) =>
@@ -572,6 +601,9 @@ internal static class LexwareEndpoints
             row.LastTestError = null;
             row.OrganizationId = LexwareService.Cut(profile.OrganizationId, 100);
             row.OrganizationName = LexwareService.Cut(profile.CompanyName, LexwareContactLink.MaxName);
+            row.ProfileSmallBusiness = profile.SmallBusiness;
+            row.ProfileTaxType = LexwareService.Cut(profile.TaxType, 30);
+            row.TaxTypesCheckedAt = at;
         }
         catch (LexwareException exception)
         {
@@ -1597,6 +1629,7 @@ internal static class LexwareEndpoints
             LexwareVoucherTypes.Quotation => "Angebot",
             LexwareVoucherTypes.CreditNote => "Gutschrift",
             LexwareVoucherTypes.OrderConfirmation => "Auftragsbestaetigung",
+            LexwareVoucherTypes.DeliveryNote => "Lieferschein",
             _ => "Beleg",
         };
         var safe = new string((number ?? string.Empty).Where(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '_').ToArray());
@@ -1698,7 +1731,28 @@ internal static class LexwareEndpoints
             "OFFLINE" or "TIMEOUT" or "UNAVAILABLE" or "RATE_LIMITED" => (StatusCodes.Status503ServiceUnavailable, "Lexware Office ist nicht erreichbar"),
             _ => (StatusCodes.Status424FailedDependency, "Lexware Office hat die Anfrage abgelehnt"),
         };
-        return TypedResults.Problem(statusCode: status, title: title, detail: exception.Message, extensions: Code("LEXWARE_" + exception.Code));
+        var extensions = Code("LEXWARE_" + exception.Code);
+        if (exception.Issues.Count > 0)
+        {
+            extensions["issues"] = exception.Issues;
+        }
+
+        if (exception.Technical is not null)
+        {
+            extensions["technical"] = exception.Technical;
+        }
+
+        if (exception.Fix is not null)
+        {
+            extensions["fix"] = exception.Fix;
+        }
+
+        if (exception.RejectedTaxType is not null)
+        {
+            extensions["taxType"] = exception.RejectedTaxType;
+        }
+
+        return TypedResults.Problem(statusCode: status, title: title, detail: exception.Message, extensions: extensions);
     }
 
     internal static async ValueTask<object?> GuardAsync(EndpointFilterInvocationContext context, EndpointFilterDelegate next)

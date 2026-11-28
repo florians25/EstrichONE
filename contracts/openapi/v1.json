@@ -23723,6 +23723,65 @@
         ]
       }
     },
+    "/api/v1/settings/integrations/lexware/tax-types/check": {
+      "post": {
+        "tags": [
+          "Lexware Office"
+        ],
+        "summary": "Erlaubte Steuerarten erneut prüfen: Profil lesen (GET /v1/profile: Kleinunternehmer, Besteuerungsart) und gemerkte Ablehnungen verwerfen",
+        "operationId": "CheckLexwareTaxTypes",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LexwareTaxTypesResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "424": {
+            "description": "Failed Dependency",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/settings/integrations/lexware/test": {
       "post": {
         "tags": [
@@ -43165,6 +43224,16 @@
           "statusOnInvoicesPaid": {
             "type": "boolean",
             "default": true
+          },
+          "taxTypes": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/LexwareTaxTypesResponse"
+              }
+            ]
           }
         }
       },
@@ -43260,6 +43329,96 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "LexwareTaxTypeOption": {
+        "required": [
+          "key",
+          "text",
+          "allowed",
+          "hint"
+        ],
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "allowed": {
+            "type": "boolean"
+          },
+          "hint": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "LexwareTaxTypeRejectionResponse": {
+        "required": [
+          "voucherType",
+          "voucherName",
+          "taxType",
+          "taxTypeName",
+          "at"
+        ],
+        "type": "object",
+        "properties": {
+          "voucherType": {
+            "type": "string"
+          },
+          "voucherName": {
+            "type": "string"
+          },
+          "taxType": {
+            "type": "string"
+          },
+          "taxTypeName": {
+            "type": "string"
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "LexwareTaxTypesResponse": {
+        "required": [
+          "smallBusiness",
+          "profileTaxType",
+          "checkedAt",
+          "rejections"
+        ],
+        "type": "object",
+        "properties": {
+          "smallBusiness": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "profileTaxType": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "checkedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "rejections": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LexwareTaxTypeRejectionResponse"
+            }
           }
         }
       },
@@ -47427,6 +47586,19 @@
           "defaultValidDays": {
             "type": "integer",
             "format": "int32"
+          },
+          "taxTypes": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/LexwareTaxTypeOption"
+            }
+          },
+          "smallBusiness": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -47610,6 +47782,18 @@
           "updatedAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "sendErrorTechnical": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "sendErrorFix": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },

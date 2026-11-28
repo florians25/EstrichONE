@@ -334,6 +334,101 @@ public sealed class LexwareArticleQuotationTests(PostgresFixture postgres) : IAs
     }
 
     [Fact]
+    public async Task Quotation_TaxType13bRejected_TranslatedWithFix_RememberedUntilRecheck()
+    {
+        await ConfigureAsync(null, "quotations");
+        _lexware.RejectedTaxTypes.Add("constructionService13b");
+        var (customer, _) = await LinkedCustomerAsync();
+        var id = Guid.CreateVersion7();
+        var draft = await SendAsync<QuotationResponse>(_admin, HttpMethod.Post, "/api/v1/lexware/quotations", new { id, contactId = customer }, HttpStatusCode.Created);
+        object Body(long version, string taxType) => new
+        {
+            version, title = "Angebot Halle", validUntil = draft.ValidUntil, taxType,
+            lines = new object[] { new { kind = "item", name = "Estrich", quantity = 100m, unit = "m²", netPrice = 22m, taxRate = 19m } },
+        };
+        draft = await SendAsync<QuotationResponse>(_admin, HttpMethod.Put, $"/api/v1/lexware/quotations/{id}", Body(draft.Version, "constructionService13b"));
+
+        // Senden: Lexware Office lehnt ab, wie beim Kunden mit echtem Konto. Meldung auf Deutsch, Behebung „Netto“, Original nur technisch.
+        using (var request = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/lexware/quotations/{id}/send"))
+        using (var response = await _admin.SendAsync(request, Ct))
+        {
+            var problem = JsonNode.Parse(await response.Content.ReadAsStringAsync(Ct))!;
+            response.StatusCode.ShouldBe(HttpStatusCode.FailedDependency);
+            problem["code"]!.GetValue<string>().ShouldBe("LEXWARE_TAX_TYPE_NOT_ALLOWED");
+            problem["detail"]!.GetValue<string>().ShouldBe(
+                "Lexware Office lässt die Steuerart Bauleistung nach § 13b UStG für Ihr Unternehmen nicht zu. Prüfen Sie die Steuereinstellungen in Lexware Office oder senden Sie das Angebot mit der Steuerart Netto.");
+            problem["fix"]!.GetValue<string>().ShouldBe("taxTypeNet");
+            problem["technical"]!.GetValue<string>().ShouldBe("Tax type 'constructionService13b' not allowed for this organization");
+            problem["issues"]![0]!["field"]!.GetValue<string>().ShouldBe("taxType");
+        }
+
+        var failed = await SendAsync<QuotationResponse>(_admin, HttpMethod.Get, $"/api/v1/lexware/quotations/{id}");
+        failed.State.ShouldBe("failed");
+        failed.SendError!.ShouldContain("§ 13b UStG");
+        failed.SendError!.ShouldNotContain("not allowed");
+        failed.SendErrorFix.ShouldBe("taxTypeNet");
+        failed.SendErrorTechnical.ShouldBe("Tax type 'constructionService13b' not allowed for this organization");
+        failed.Problems.ShouldContain(p => p.Contains("§ 13b UStG", StringComparison.Ordinal)); // gemerkt: so nicht erneut sendebereit
+
+        // Die Option ist für Angebote gesperrt, mit Hinweis; andere Belegarten bleiben unberührt.
+        var options = await SendAsync<QuotationOptionsResponse>(_admin, HttpMethod.Get, "/api/v1/lexware/quotations/options");
+        var option = options.TaxTypes!.Single(t => t.Key == "constructionService13b");
+        option.Allowed.ShouldBeFalse();
+        option.Hint!.ShouldContain("erneut prüfen");
+        options.TaxTypes!.Single(t => t.Key == "net").Allowed.ShouldBeTrue();
+        var settings = await SendAsync<LexwareSettingsResponse>(_admin, HttpMethod.Get, "/api/v1/settings/integrations/lexware");
+        settings.TaxTypes!.Rejections.ShouldHaveSingleItem().VoucherType.ShouldBe("quotation");
+
+        // „Steuerart Netto übernehmen und erneut senden“: speichern mit net, senden. Nur ein Angebot entsteht.
+        draft = await SendAsync<QuotationResponse>(_admin, HttpMethod.Put, $"/api/v1/lexware/quotations/{id}", Body(failed.Version, "net"));
+        draft.State.ShouldBe("draft");
+        draft.SendErrorFix.ShouldBeNull();
+        var sent = await SendAsync<QuotationResponse>(_admin, HttpMethod.Post, $"/api/v1/lexware/quotations/{id}/send");
+        sent.State.ShouldBe("sent");
+        _lexware.Vouchers.Values.Count(v => v["voucherType"]!.GetValue<string>() == "quotation").ShouldBe(1);
+        JsonNode.Parse(_lexware.CallsTo("POST", "/v1/quotations").Last().Body!)!["taxConditions"]!["taxType"]!.GetValue<string>().ShouldBe("net");
+
+        // Erneut prüfen: Ablehnungen werden verworfen, das Profil wird gelesen.
+        _lexware.RejectedTaxTypes.Clear();
+        var check = await SendAsync<LexwareTaxTypesResponse>(_admin, HttpMethod.Post, "/api/v1/settings/integrations/lexware/tax-types/check");
+        check.Rejections.ShouldBeEmpty();
+        check.CheckedAt.ShouldNotBeNull();
+        (await SendAsync<QuotationOptionsResponse>(_admin, HttpMethod.Get, "/api/v1/lexware/quotations/options")).TaxTypes!.ShouldAllBe(t => t.Allowed);
+    }
+
+    [Fact]
+    public async Task Quotation_SmallBusiness_OnlyVatfree_DefaultAndProblems()
+    {
+        _lexware.SmallBusiness = true;
+        _lexware.ProfileTaxType = "vatfree";
+        await ConfigureAsync(null, "quotations");
+        var (customer, _) = await LinkedCustomerAsync();
+        var options = await SendAsync<QuotationOptionsResponse>(_admin, HttpMethod.Get, "/api/v1/lexware/quotations/options");
+        options.SmallBusiness.ShouldBeTrue();
+        options.TaxTypes!.Where(t => t.Allowed).Select(t => t.Key).ShouldBe(["vatfree"]);
+        var id = Guid.CreateVersion7();
+        var draft = await SendAsync<QuotationResponse>(_admin, HttpMethod.Post, "/api/v1/lexware/quotations", new { id, contactId = customer }, HttpStatusCode.Created);
+        draft.TaxType.ShouldBe("vatfree");
+        draft = await SendAsync<QuotationResponse>(_admin, HttpMethod.Put, $"/api/v1/lexware/quotations/{id}", new
+        {
+            version = draft.Version, title = "Angebot", validUntil = draft.ValidUntil, taxType = "net",
+            lines = new object[] { new { kind = "item", name = "Estrich", quantity = 10m, unit = "m²", netPrice = 20m, taxRate = 19m } },
+        });
+        draft.Problems.ShouldContain(p => p.Contains("Kleinunternehmer", StringComparison.Ordinal));
+        (await ProblemAsync(_admin, HttpMethod.Post, $"/api/v1/lexware/quotations/{id}/send", HttpStatusCode.UnprocessableEntity)).ShouldContain("Kleinunternehmer");
+        draft = await SendAsync<QuotationResponse>(_admin, HttpMethod.Put, $"/api/v1/lexware/quotations/{id}", new
+        {
+            version = draft.Version, title = "Angebot", validUntil = draft.ValidUntil, taxType = "vatfree",
+            lines = new object[] { new { kind = "item", name = "Estrich", quantity = 10m, unit = "m²", netPrice = 20m, taxRate = 19m } },
+        });
+        draft.Totals.Tax.ShouldBe(0m);
+        await SendAsync<QuotationResponse>(_admin, HttpMethod.Post, $"/api/v1/lexware/quotations/{id}/send");
+        var body = JsonNode.Parse(_lexware.CallsTo("POST", "/v1/quotations").Single().Body!)!;
+        body["taxConditions"]!["taxType"]!.GetValue<string>().ShouldBe("vatfree");
+        body["lineItems"]![0]!["unitPrice"]!["taxRatePercentage"]!.GetValue<decimal>().ShouldBe(0m);
+    }
+
+    [Fact]
     public async Task Quotations_NeedModuleAndRight()
     {
         await ConfigureAsync();

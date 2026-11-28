@@ -70,12 +70,13 @@ private fun LexwareRow(label: String, value: String, note: String? = null, value
  * eingeschaltetem Modul, dem Recht, Rechnungen und Angebote zu sehen, und verknüpftem Kunden. Keine Zuordnung, keine Bearbeitung.
  */
 @Composable
-fun LexwareSection(session: Session, b: Bauakte) {
+fun LexwareSection(session: Session, b: Bauakte, provided: BauakteLexware? = null, loadSelf: Boolean = true) {
     val modules by session.modules.collectAsState()
     val permissions by session.permissions.collectAsState()
     if (!Lexware.visible(modules, permissions)) return
-    var data by remember(b.id) { mutableStateOf<BauakteLexware?>(null) }
-    LaunchedEffect(b.id) { data = runCatching { session.api.bauakteLexware(b.id) }.getOrNull() }
+    var loaded by remember(b.id) { mutableStateOf<BauakteLexware?>(null) }
+    if (loadSelf) LaunchedEffect(b.id) { loaded = runCatching { session.api.bauakteLexware(b.id) }.getOrNull() }
+    val data = if (loadSelf) loaded else provided
     val contact = data?.contact ?: return
     val vouchers = data?.vouchers.orEmpty()
     val model = LocalModel.current
@@ -100,10 +101,6 @@ fun LexwareSection(session: Session, b: Bauakte) {
         if (stateText.isNotEmpty()) {
             RowDivider(16.dp)
             LexwareRow("Abgleich", stateText, Lexware.syncedAt(contact.sync), tone.color())
-        }
-        data?.summary?.let {
-            RowDivider(16.dp)
-            LexwareRow("Belege", it)
         }
     }
     if (vouchers.isNotEmpty()) {
@@ -131,7 +128,7 @@ fun LexwareSection(session: Session, b: Bauakte) {
 
 @Composable
 private fun VoucherRow(voucher: LexwareVoucher, onClick: () -> Unit) {
-    val (statusText, tone) = Lexware.status(voucher.status)
+    val (statusText, tone) = Lexware.status(voucher.status, voucher.type)
     Row(Modifier.fillMaxWidth().heightIn(min = 56.dp).clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically) {
         Icon(Icons.Outlined.Description, null, tint = if (Lexware.pdfAvailable(voucher)) MaterialTheme.colorScheme.primary else tones.textTertiary,

@@ -59,6 +59,11 @@ export class LexwareStub {
   fileRoute = true;
   /** Lexware Office nicht erreichbar: jede Anfrage antwortet mit 503. */
   down = false;
+  /** Steuerarten, die diese Organisation ablehnt (Antwort wie bei einem echten Konto: 400 „Tax type '…' not allowed for this organization“). */
+  readonly rejectedTaxTypes = new Set<string>();
+  /** Angaben im Profil (`smallBusiness`, `taxType`); `undefined` = nicht geliefert. */
+  smallBusiness: boolean | undefined = undefined;
+  profileTaxType: string | undefined = undefined;
   /** Verzögerung jeder Antwort in Millisekunden (um Zwischenzustände der Oberfläche zu prüfen). */
   delayMs = 0;
   private server: Server | null = null;
@@ -100,7 +105,7 @@ export class LexwareStub {
   }
 
   addVoucher(v: {
-    type: 'invoice' | 'quotation' | 'creditnote' | 'orderconfirmation'; status: string; number: string | null; date: string; dueDate?: string; net: number;
+    type: 'invoice' | 'quotation' | 'creditnote' | 'orderconfirmation' | 'deliverynote'; status: string; number: string | null; date: string; dueDate?: string; net: number;
     gross: number; contactId?: string; contactName?: string; title?: string; introduction?: string;
   }): string {
     const id = randomUUID();
@@ -174,7 +179,9 @@ export class LexwareStub {
     if (this.delayMs > 0) await new Promise((resolve) => setTimeout(resolve, this.delayMs));
     if (this.down) return send(503, { status: 503, error: 'Service Unavailable' });
     if (request.headers.authorization !== `Bearer ${STUB_KEY}`) return send(401, { status: 401, error: 'Unauthorized' });
-    if (method === 'GET' && path === '/v1/profile') return send(200, { organizationId: 'aa93e8a8-2aa3-470b-b914-caad8a255dd8', companyName: this.companyName });
+    if (method === 'GET' && path === '/v1/profile') {
+      return send(200, { organizationId: 'aa93e8a8-2aa3-470b-b914-caad8a255dd8', companyName: this.companyName, smallBusiness: this.smallBusiness, taxType: this.profileTaxType });
+    }
 
     if (method === 'GET' && path === '/v1/contacts') {
       let all = [...this.contacts.values()].filter((c) => (c.roles as Json).customer).sort((a, b) => LexwareStub.name(a).localeCompare(LexwareStub.name(b)));
@@ -240,6 +247,10 @@ export class LexwareStub {
     if (method === 'GET' && path === '/v1/payment-conditions') return send(200, this.paymentConditions);
     if (method === 'POST' && path === '/v1/quotations') {
       if (url.search) return send(400, { status: 400, message: 'Unexpected query' });
+      const taxType = String((body.taxConditions as Json | undefined)?.taxType ?? '');
+      if (this.rejectedTaxTypes.has(taxType)) {
+        return send(400, { requestId: randomUUID(), status: 400, error: 'Bad Request', path, message: `Tax type '${taxType}' not allowed for this organization` });
+      }
       const id = randomUUID();
       let net = 0;
       let gross = 0;
@@ -259,7 +270,7 @@ export class LexwareStub {
       return send(200, { id, resourceUri: `${this.url}/v1/quotations/${id}`, version: 1 });
     }
 
-    const segments: Record<string, string> = { invoices: 'invoice', quotations: 'quotation', 'credit-notes': 'creditnote', 'order-confirmations': 'orderconfirmation' };
+    const segments: Record<string, string> = { invoices: 'invoice', quotations: 'quotation', 'credit-notes': 'creditnote', 'order-confirmations': 'orderconfirmation', 'delivery-notes': 'deliverynote' };
     const parts = path.split('/').filter(Boolean);
     const pdf = (id: string) => {
       const voucher = this.vouchers.get(id)!;

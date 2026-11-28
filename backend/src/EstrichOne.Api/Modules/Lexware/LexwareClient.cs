@@ -106,12 +106,27 @@ public sealed class LexwareException(string code, string message, int? status = 
 {
     public string Code { get; } = code;
     public int? Status { get; } = status;
+
+    /// <summary>Einzelne Beanstandungen, übersetzt (bei 400, 406, 422).</summary>
+    public IReadOnlyList<LexwareIssue> Issues { get; init; } = [];
+
+    /// <summary>Originaltext von Lexware Office (englisch) für „Technische Einzelheiten“.</summary>
+    public string? Technical { get; init; }
+
+    /// <summary>Von Lexware Office abgelehnte Steuerart (Code <see cref="LexwareErrors.TaxTypeNotAllowed"/>).</summary>
+    public string? RejectedTaxType { get; init; }
+
+    /// <summary>Bekannte Behebung der ersten Beanstandung, falls es eine gibt.</summary>
+    public string? Fix => Issues.Select(i => i.Fix).FirstOrDefault(f => f is not null);
 }
 
 /// <summary>Zugangsdaten eines Aufrufs. Der Schlüssel erscheint nie in Protokollen oder Meldungen.</summary>
 public sealed record LexwareConnection(Uri BaseUri, string ApiKey);
 
-public sealed record LexwareProfile(string? OrganizationId, string? CompanyName);
+/// <summary>Profil der Organisation (<c>GET /v1/profile</c>).</summary>
+/// <param name="TaxType">Besteuerungsart der Organisation laut Profil: <c>net</c>, <c>gross</c> oder <c>vatfree</c> (falls geliefert).</param>
+/// <param name="SmallBusiness">Kleinunternehmer nach § 19 UStG (falls geliefert).</param>
+public sealed record LexwareProfile(string? OrganizationId, string? CompanyName, string? TaxType = null, bool? SmallBusiness = null);
 
 /// <summary>Kontakt aus Lexware Office, auf die Felder reduziert, die EstrichONE verwendet.</summary>
 public sealed record LexwareContact(
@@ -162,7 +177,7 @@ public sealed record LexwareQuotationLine(
     decimal? DiscountPercent);
 
 /// <summary>Angebot, das EstrichONE als Entwurf in Lexware Office anlegt.</summary>
-/// <param name="TaxType"><c>net</c> oder <c>constructionService13b</c> (Bauleistung nach § 13b UStG).</param>
+/// <param name="TaxType"><c>net</c>, <c>vatfree</c> oder <c>constructionService13b</c> (Bauleistung nach § 13b UStG).</param>
 public sealed record LexwareQuotationDraft(
     string ContactId, DateOnly VoucherDate, DateOnly? ExpirationDate, string? Title, string? Introduction, string? Remark, string TaxType,
     LexwarePaymentCondition? Payment, IReadOnlyList<LexwareQuotationLine> Lines);
@@ -171,7 +186,7 @@ public sealed record LexwareQuotationDraft(
 public sealed record LexwareCreated(string Id, int? Version);
 
 /// <summary>Beleg aus Lexware Office (nur gelesen).</summary>
-/// <param name="Type"><c>invoice</c>, <c>quotation</c>, <c>creditnote</c> oder <c>orderconfirmation</c>.</param>
+/// <param name="Type"><c>invoice</c>, <c>quotation</c>, <c>creditnote</c>, <c>orderconfirmation</c> oder <c>deliverynote</c>.</param>
 /// <param name="DueDate">Fälligkeit der Rechnung bzw. „gültig bis“ des Angebots.</param>
 /// <param name="Text">Titel, Einleitung und Schlusstext (nur beim Einzelabruf), für den Zuordnungsvorschlag über die Bauaktennummer.</param>
 public sealed record LexwareVoucher(
@@ -186,7 +201,13 @@ public static class LexwareVoucherTypes
     public const string CreditNote = "creditnote";
     public const string OrderConfirmation = "orderconfirmation";
 
-    public static IReadOnlyList<string> All { get; } = [Invoice, Quotation, CreditNote, OrderConfirmation];
+    /// <summary>Lieferschein (nur lesend angezeigt).</summary>
+    public const string DeliveryNote = "deliverynote";
+
+    public static IReadOnlyList<string> All { get; } = [Invoice, Quotation, CreditNote, OrderConfirmation, DeliveryNote];
+
+    /// <summary>Belege mit Zahlungsbedeutung (offen, überfällig, bezahlt): Rechnung und Gutschrift.</summary>
+    public static bool Payable(string? type) => type is Invoice or CreditNote;
 
     /// <summary>Pfadteil der API und der Permalinks; <c>null</c> für unbekannte Arten.</summary>
     public static string? Segment(string? type) => type switch
@@ -195,6 +216,7 @@ public static class LexwareVoucherTypes
         Quotation => "quotations",
         CreditNote => "credit-notes",
         OrderConfirmation => "order-confirmations",
+        DeliveryNote => "delivery-notes",
         _ => null,
     };
 }
@@ -226,7 +248,8 @@ public sealed class LexwareClient(IHttpClientFactory http, IOptions<LexwareOptio
     public async Task<LexwareProfile> ProfileAsync(LexwareConnection connection, CancellationToken cancellationToken)
     {
         var json = await SendAsync(connection, HttpMethod.Get, "/v1/profile", null, cancellationToken);
-        return new LexwareProfile(Str(json?["organizationId"]), Str(json?["companyName"]));
+        return new LexwareProfile(Str(json?["organizationId"]), Str(json?["companyName"]), Str(json?["taxType"]),
+            json?["smallBusiness"] is JsonValue small && small.TryGetValue<bool>(out var isSmall) ? isSmall : null);
     }
 
     /// <summary>Kontakte mit Rolle Kunde, seitenweise. Filter laut API: <c>name</c> (mindestens drei Zeichen), <c>email</c>, <c>number</c>.</summary>
@@ -609,10 +632,10 @@ public sealed class LexwareClient(IHttpClientFactory http, IOptions<LexwareOptio
         return new DateTimeOffset(date.ToDateTime(TimeOnly.MinValue), offset).ToString("yyyy-MM-dd'T'HH:mm:ss.fffzzz", CultureInfo.InvariantCulture);
     }
 
-    /// <summary>Inhalt für <c>POST /v1/quotations</c>. Bei § 13b UStG tragen die Positionen den Steuersatz 0.</summary>
+    /// <summary>Inhalt für <c>POST /v1/quotations</c>. Bei § 13b UStG und steuerfrei tragen die Positionen den Steuersatz 0.</summary>
     internal static JsonObject QuotationBody(LexwareQuotationDraft draft)
     {
-        var reverse = draft.TaxType == "constructionService13b";
+        var reverse = LexwareTaxTypes.WithoutTax(draft.TaxType);
         var lines = new JsonArray();
         foreach (var line in draft.Lines)
         {
@@ -1067,6 +1090,16 @@ public sealed class LexwareClient(IHttpClientFactory http, IOptions<LexwareOptio
         }
     }
 
+    /// <summary>Abgelehnte Angaben: deutsche Meldung mit Bezug auf Feld bzw. Position, Originaltext als technische Einzelheit.</summary>
+    private static LexwareException Invalid(int status, string? body)
+    {
+        var translation = LexwareErrors.Translate(body);
+        return new LexwareException(translation.Code, translation.Message, status)
+        {
+            Issues = translation.Issues, Technical = translation.Technical, RejectedTaxType = translation.RejectedTaxType,
+        };
+    }
+
     /// <summary>HTTP-Status der API als verständliche Meldung.</summary>
     internal static LexwareException Failure(int status, string? body)
     {
@@ -1080,7 +1113,7 @@ public sealed class LexwareClient(IHttpClientFactory http, IOptions<LexwareOptio
                 "Lexware Office verweigert den Zugriff. Die Public API ist im gebuchten Tarif nicht enthalten oder der Schlüssel hat dafür keine Berechtigung.", status),
             404 => new LexwareException("NOT_FOUND", "Der Eintrag wurde in Lexware Office nicht gefunden. Möglicherweise wurde er dort gelöscht.", status),
             409 => new LexwareException("CONFLICT", "Lexware Office meldet einen Konflikt. Der Eintrag wurde dort inzwischen geändert." + suffix, status),
-            400 or 406 or 422 => new LexwareException("INVALID", "Lexware Office hat die Angaben nicht angenommen." + suffix, status),
+            400 or 406 or 422 => Invalid(status, body),
             429 => new LexwareException("RATE_LIMITED",
                 "Lexware Office nimmt im Moment keine weiteren Anfragen an (höchstens zwei je Sekunde). Bitte versuchen Sie es in einer Minute erneut.", status),
             >= 500 => new LexwareException("UNAVAILABLE", "Lexware Office ist im Moment nicht verfügbar. Bitte versuchen Sie es später erneut.", status),
