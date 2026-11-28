@@ -106,6 +106,40 @@
 				</ColumnListItem>
 			</items>
 		</Table>
+		<!-- Eingangsbelege (Modul Eingangsbelege): Erlöse, Kosten und Differenz als Textzeile, zugeordnete und hochgeladene Belege. -->
+		<Table id="purchaseCostsTable" items="{inv>/costRows}" visible="{= ${inv>/costs} !== null }" popinLayout="GridSmall" class="sapUiMediumMarginTop eoDropTarget"
+			noDataText="Noch keine Eingangsbelege. Ordnen Sie Belege unter „Eingangsbelege“ zu oder ziehen Sie PDF, Fotos oder XRechnungen hierher.">
+			<headerToolbar>
+				<OverflowToolbar>
+					<Title text="Eingangsbelege und Kosten" level="H3"/>
+					<ToolbarSpacer/>
+					<Button id="purchaseCostsOpen" text="Alle Eingangsbelege" icon="sap-icon://expense-report" press=".onPurchases"/>
+					<Button id="purchaseCostsUpload" text="Beleg hochladen" icon="sap-icon://upload" press=".onPurchaseUpload" visible="{= ${inv>/costs/canEdit} === true }"
+						tooltip="PDF, Foto oder XRechnung zu dieser Bauakte hochladen"/>
+				</OverflowToolbar>
+			</headerToolbar>
+			<infoToolbar>
+				<OverflowToolbar><Text id="purchaseCostsText" text="{inv>/costs/text}"/></OverflowToolbar>
+			</infoToolbar>
+			<columns>
+				<Column width="11.5rem"><Text text="Art"/></Column>
+				<Column><Text text="Lieferant"/></Column>
+				<Column width="9rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Nummer"/></Column>
+				<Column width="7rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Datum"/></Column>
+				<Column hAlign="End" width="8rem"><Text text="Brutto"/></Column>
+				<Column width="12rem"><Text text="Stand"/></Column>
+			</columns>
+			<items>
+				<ColumnListItem type="Navigation" press=".onPurchaseRow">
+					<Text text="{inv>kind}" class="eoStrong"/>
+					<Text text="{inv>supplier}"/>
+					<Text text="{inv>number}" class="eoTabular"/>
+					<Text text="{inv>dateText}" class="eoTabular"/>
+					<Text text="{inv>grossText}" class="eoTabular"/>
+					<ObjectStatus text="{inv>stateText}" state="{inv>stateState}"/>
+				</ColumnListItem>
+			</items>
+		</Table>
 		<Text text="{= ${inv>/plan} !== null ? 'Belege erfassen Sie in EstrichONE und senden sie an Lexware Office. Nummer, Buchhaltung und Belegarchiv bleiben in Lexware Office. Für Entwürfe stellt Lexware Office kein PDF bereit.' : 'Rechnungen werden in Lexware Office erstellt und bearbeitet. EstrichONE zeigt Nummer, Betrag und Status, zeigt den Beleg als PDF an und führt Sie zum Beleg. Für Entwürfe stellt Lexware Office kein PDF bereit.' }" class="eoHelpText sapUiTinyMarginTop"/>
 	</VBox>
 </mvc:View>

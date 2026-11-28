@@ -17,6 +17,9 @@ import RadioButton from "sap/m/RadioButton";
 import StepInput from "sap/m/StepInput";
 import Text from "sap/m/Text";
 import VBox from "sap/m/VBox";
+import { documentState, purchaseStatus, type BauakteCosts } from "../../../util/purchases";
+import { attachDrop, uploadPurchases, uploadText } from "../../../util/purchaseUpload";
+import { date as day, money } from "../../../util/format";
 import { downloadVoucherPdf, openAssignVoucherDialog, openExternal, openVoucherPdf, type VoucherPdf } from "../../../util/lexwareDialogs";
 
 /**
@@ -28,6 +31,7 @@ export default class Invoices extends SectionBase {
 	protected init(): void {
 		this.v().setModel(new JSONModel({
 			loaded: false, configured: false, canAssign: false, vouchers: [], summary: "", syncError: "", drafts: [], canQuote: false, canInvoice: false, plan: null,
+			costs: null, costRows: [],
 			planBar: { billed: 0, label: "" }, planDetail: "",
 		}), "inv");
 	}
@@ -38,7 +42,66 @@ export default class Invoices extends SectionBase {
 
 	protected async load(): Promise<void> {
 		this.apply(await get<BauakteLexware>(`bauakten/${this.bauakteId}/lexware`));
-		await this.loadPlan();
+		await Promise.all([this.loadPlan(), this.loadCosts()]);
+	}
+
+	private dropReady = false;
+
+	onAfterRendering(): void {
+		const dom = this.v().byId("purchaseCostsTable")?.getDomRef() as HTMLElement | null;
+		if (!dom || this.dropReady) return;
+		this.dropReady = true;
+		attachDrop(dom, () => this.inv().getProperty("/costs/canEdit") === true, (files) => void this.uploadPurchases(files));
+	}
+
+	/** Eingangsbelege und Kosten der Bauakte (Modul Eingangsbelege). */
+	private async loadCosts(): Promise<void> {
+		const m = this.inv();
+		const on = session.moduleOn("lexware") && session.moduleOn("purchases") && (this.has("purchases.read") || this.has("purchases.edit"));
+		const costs = on ? await get<BauakteCosts>(`purchases/bauakten/${this.bauakteId}/costs`).catch(() => null) : null;
+		m.setProperty("/costs", costs);
+		if (!costs) { m.setProperty("/costRows", []); return; }
+		m.setProperty("/costRows", [
+			...costs.vouchers.map((v) => {
+				const state = purchaseStatus(v.status);
+				return { key: v.lexwareId, url: v.lexwareUrl, kind: v.typeName, supplier: v.contactName ?? "", number: v.number ?? "ohne Nummer",
+					dateText: v.voucherDate ? day(v.voucherDate) : "", grossText: money(v.type === "purchasecreditnote" ? -(v.gross ?? 0) : v.gross), stateText: state.text,
+					stateState: state.state };
+			}),
+			...costs.documents.filter((d) => d.state !== "sent").map((d) => {
+				const state = documentState(d);
+				return { key: d.id, document: d.id, kind: "Hochgeladen", supplier: d.supplierName ?? d.fileName, number: d.invoiceNumber ?? "",
+					dateText: d.invoiceDate ? day(d.invoiceDate) : "", grossText: d.grossAmount === null ? "" : money(d.grossAmount), stateText: state.text, stateState: state.state };
+			}),
+		]);
+	}
+
+	onPurchases(): void {
+		this.nav(`/eingangsbelege?bauakte=${this.bauakteId}`);
+	}
+
+	onPurchaseRow(e: Event): void {
+		const row = (e.getSource() as Control).getBindingContext("inv")?.getObject() as { document?: string; url?: string | null };
+		if (row.document) this.nav(`/eingangsbelege/${row.document}`);
+		else if (row.url) openExternal(row.url);
+	}
+
+	onPurchaseUpload(): void {
+		const input = document.createElement("input");
+		input.type = "file";
+		input.multiple = true;
+		input.accept = ".pdf,.jpg,.jpeg,.png,.xml,application/pdf,image/jpeg,image/png,application/xml,text/xml";
+		input.addEventListener("change", () => void this.uploadPurchases([...(input.files ?? [])]));
+		input.click();
+	}
+
+	private async uploadPurchases(files: File[]): Promise<void> {
+		if (!files.length) return;
+		const result = await uploadPurchases(files, this.bauakteId);
+		const text = uploadText(result);
+		if (result.problems.length) this.showError(new Error([text, ...result.problems].filter(Boolean).join("\n")), "Beleg hochladen");
+		else if (text) this.toast(text);
+		await this.loadCosts();
 	}
 
 	private salesOn(): boolean {

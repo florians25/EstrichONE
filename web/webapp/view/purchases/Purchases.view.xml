@@ -1,0 +1,134 @@
+<mvc:View controllerName="estrichone.controller.purchases.Purchases" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:f="sap.f" xmlns:core="sap.ui.core"
+	xmlns:u="sap.ui.unified" height="100%">
+	<f:DynamicPage id="page" toggleHeaderOnTitleClick="false" busy="{view>/busy}">
+		<f:title>
+			<f:DynamicPageTitle>
+				<f:heading><Title text="{i18n>nav.purchases}" level="H1"/></f:heading>
+				<f:expandedContent>
+					<Text text="Rechnungen und Gutschriften Ihrer Lieferanten aus Lexware Office. Ordnen Sie sie Bauakten zu, dann erscheinen sie dort als Kosten. Neue Belege laden Sie hier hoch; EstrichONE liest E-Rechnungen und gibt die Datei an Lexware Office weiter."/>
+				</f:expandedContent>
+				<f:actions>
+					<u:FileUploader id="purchaseUpload" buttonOnly="true" buttonText="Beleg hochladen" icon="sap-icon://upload" iconFirst="true" multiple="true"
+						sameFilenameAllowed="true" fileType="pdf,jpg,jpeg,png,xml" style="Emphasized" change=".onPick" visible="{view>/canEdit}"
+						tooltip="PDF, Foto oder XRechnung hochladen (höchstens 5 MB je Datei)"/>
+					<Button id="purchaseRefresh" text="{i18n>common.refresh}" icon="sap-icon://refresh" press=".onRefresh" tooltip="Belegliste neu aus Lexware Office laden"/>
+				</f:actions>
+			</f:DynamicPageTitle>
+		</f:title>
+		<f:header>
+			<f:DynamicPageHeader pinnable="false">
+				<FlexBox wrap="Wrap" alignItems="End">
+					<VBox class="sapUiSmallMarginEnd sapUiTinyMarginBottom">
+						<Label text="Suche" labelFor="purchaseSearch"/>
+						<SearchField id="purchaseSearch" value="{view>/filter/query}" liveChange=".onFilter" width="18rem" placeholder="Nummer, Lieferant, Bauakte, Datei"/>
+					</VBox>
+					<VBox class="sapUiSmallMarginEnd sapUiTinyMarginBottom" visible="{= ${view>/filter/tab} === 'lexware' }">
+						<Label text="Lieferant" labelFor="purchaseSupplier"/>
+						<ComboBox id="purchaseSupplier" selectedKey="{view>/filter/supplier}" items="{view>/suppliers}" change=".onFilter" width="16rem" showClearIcon="true"
+							placeholder="Alle Lieferanten">
+							<core:Item key="{view>key}" text="{view>text}"/>
+						</ComboBox>
+					</VBox>
+					<VBox class="sapUiSmallMarginEnd sapUiTinyMarginBottom">
+						<Label text="Bauakte" labelFor="purchaseBauakte"/>
+						<ComboBox id="purchaseBauakte" selectedKey="{view>/filter/bauakte}" items="{view>/bauakten}" change=".onFilter" width="16rem" showClearIcon="true"
+							placeholder="Alle Bauakten">
+							<core:Item key="{view>key}" text="{view>text}"/>
+						</ComboBox>
+					</VBox>
+				</FlexBox>
+			</f:DynamicPageHeader>
+		</f:header>
+		<f:content>
+			<VBox id="purchaseContent" renderType="Bare">
+				<MessageStrip id="purchaseLexwareError" type="Warning" showIcon="true" visible="{= !!${view>/lexwareError} }" class="sapUiSmallMarginBottom"
+					text="{= 'Die Belegliste aus Lexware Office ist im Moment nicht verfügbar. ' + ${view>/lexwareError} }"/>
+				<IconTabHeader id="purchaseTabs" selectedKey="{view>/filter/tab}" select=".onFilter" mode="Inline">
+					<items>
+						<IconTabFilter key="lexware" text="Aus Lexware Office" count="{view>/lexwareCount}"/>
+						<IconTabFilter key="inbox" text="Belegeingang" count="{view>/inboxCount}"/>
+					</items>
+				</IconTabHeader>
+
+				<Table id="purchaseTable" items="{view>/items}" visible="{= ${view>/filter/tab} === 'lexware' }" growing="true" growingThreshold="50"
+					growingScrollToLoad="true" popinLayout="GridSmall" sticky="ColumnHeaders,HeaderToolbar"
+					noDataText="Keine Eingangsbelege in dieser Auswahl. Belege Ihrer Lieferanten erfassen Sie in Lexware Office oder laden sie hier hoch.">
+					<headerToolbar>
+						<OverflowToolbar>
+							<SegmentedButton id="purchaseStatus" selectedKey="{view>/filter/status}" selectionChange=".onFilter">
+								<items>
+									<SegmentedButtonItem key="all" text="Alle"/>
+									<SegmentedButtonItem key="open" text="Offen"/>
+									<SegmentedButtonItem key="overdue" text="Überfällig"/>
+									<SegmentedButtonItem key="paid" text="Bezahlt"/>
+								</items>
+							</SegmentedButton>
+							<ToolbarSpacer/>
+						</OverflowToolbar>
+					</headerToolbar>
+					<columns>
+						<Column width="11rem"><Text text="Nummer"/></Column>
+						<Column><Text text="Lieferant"/></Column>
+						<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Bauakte"/></Column>
+						<Column width="6.5rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Datum"/></Column>
+						<Column width="6.5rem" minScreenWidth="Desktop" demandPopin="true"><Text text="Fällig"/></Column>
+						<Column width="7.5rem" hAlign="End"><Text text="Brutto"/></Column>
+						<Column width="7.5rem" hAlign="End" minScreenWidth="Tablet" demandPopin="true"><Text text="Offen"/></Column>
+						<Column width="8rem"><Text text="Status"/></Column>
+					</columns>
+					<items>
+						<ColumnListItem type="Navigation" press=".onVoucher">
+							<VBox renderType="Bare">
+								<Text text="{= ${view>number} || 'ohne Nummer' }" class="eoTabular eoStrong"/>
+								<Text text="{view>typeName}" class="eoMuted"/>
+							</VBox>
+							<Text text="{view>supplierText}"/>
+							<Text text="{= ${view>bauakteText} || 'nicht zugeordnet' }" class="{= ${view>bauakteId} ? '' : 'eoMuted' }"/>
+							<Text text="{view>dateText}" class="eoTabular"/>
+							<Text text="{view>dueText}" class="eoTabular"/>
+							<Text text="{view>grossText}" class="eoTabular eoStrong"/>
+							<Text text="{view>openText}" class="eoTabular"/>
+							<ObjectStatus text="{view>statusText}" state="{view>statusState}" inverted="true"/>
+						</ColumnListItem>
+					</items>
+				</Table>
+				<Text id="purchaseSummary" text="{view>/summary}" class="sapUiSmallMarginTop" visible="{= ${view>/filter/tab} === 'lexware' }"/>
+
+				<VBox id="purchaseInbox" renderType="Bare" visible="{= ${view>/filter/tab} === 'inbox' }">
+					<Table id="purchaseDocuments" items="{view>/documents}" class="eoDropTarget" popinLayout="GridSmall"
+						noDataText="Noch keine Belege hochgeladen. Ziehen Sie PDF, Fotos oder XRechnungen hierher oder wählen Sie „Beleg hochladen“.">
+						<headerToolbar>
+							<OverflowToolbar>
+								<Text text="Dateien hierher ziehen oder „Beleg hochladen“ wählen. E-Rechnungen (XRechnung, ZUGFeRD) werden gelesen und geprüft." class="eoMuted"
+									visible="{view>/canEdit}"/>
+							</OverflowToolbar>
+						</headerToolbar>
+						<columns>
+							<Column><Text text="Datei"/></Column>
+							<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Lieferant"/></Column>
+							<Column width="9rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Rechnungsnummer"/></Column>
+							<Column width="6.5rem" minScreenWidth="Desktop" demandPopin="true"><Text text="Datum"/></Column>
+							<Column width="7.5rem" hAlign="End"><Text text="Brutto"/></Column>
+							<Column minScreenWidth="Desktop" demandPopin="true"><Text text="Bauakte"/></Column>
+							<Column width="13rem"><Text text="Stand"/></Column>
+						</columns>
+						<items>
+							<ColumnListItem type="Navigation" press=".onDocument">
+								<VBox renderType="Bare">
+									<Text text="{view>fileName}" class="eoStrong"/>
+									<Text text="{view>formatName}" class="eoMuted"/>
+								</VBox>
+								<Text text="{view>supplierName}"/>
+								<Text text="{view>invoiceNumber}" class="eoTabular"/>
+								<Text text="{view>dateText}" class="eoTabular"/>
+								<Text text="{view>grossText}" class="eoTabular"/>
+								<Text text="{= ${view>bauakteText} || 'nicht zugeordnet' }" class="{= ${view>bauakteId} ? '' : 'eoMuted' }"/>
+								<ObjectStatus text="{view>stateText}" state="{view>stateState}" inverted="true"/>
+							</ColumnListItem>
+						</items>
+					</Table>
+				</VBox>
+			</VBox>
+		</f:content>
+	</f:DynamicPage>
+</mvc:View>

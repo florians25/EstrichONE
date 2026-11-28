@@ -203,6 +203,8 @@ export const auditTexts: Record<string, string> = {
 	"lexware.tax_types_checked": "Lexware Office: erlaubte Steuerarten geprüft", "bauakte.lexware_auto_assigned": "Beleg aus Lexware Office automatisch zugeordnet",
 	"lexware.quotation_discarded": "Angebotsentwurf verworfen", "bauakte.review_requested": "Zur Abschlussprüfung gestellt",
 	"bauakte.review_dismissed": "Abschlussprüfung zurückgestellt",
+	"bauakte.purchase_assigned": "Eingangsbeleg der Bauakte zugeordnet", "bauakte.purchase_unassigned": "Zuordnung des Eingangsbelegs gelöst",
+	"bauakte.purchase_uploaded": "Eingangsbeleg hochgeladen", "lexware.purchase_sent": "Eingangsbeleg an Lexware Office übergeben",
 };
 export const auditGroups = [
 	{ key: "auth.", text: "Anmeldung und Sitzungen" }, { key: "bauakte.", text: "Bauakten" }, { key: "users.", text: "Benutzer" },

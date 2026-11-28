@@ -3,6 +3,7 @@ import type { RouteDef } from "./router";
 import { adminAreas } from "./adminCatalog";
 
 /** Rechte, mit denen der Verkauf sichtbar ist (ansehen bzw. erfassen einer Belegart). */
+export const purchasesRead = ["purchases.read", "purchases.edit"];
 export const salesRead = ["quotations.read", "quotations.prepare", "orderconfirmations.read", "salesinvoices.read", "creditnotes.read"];
 
 export const routes: RouteDef[] = [
@@ -35,6 +36,8 @@ export const routes: RouteDef[] = [
 	{ name: "sales", pattern: "/verkauf", view: "sales.Sales", anyPermission: salesRead, nav: "sales", title: "nav.sales" },
 	{ name: "salesVoucher", pattern: "/verkauf/:id", view: "sales.Voucher", anyPermission: salesRead, nav: "sales", title: "nav.salesVoucher" },
 	// Frühere Adresse der Angebote (Beta): öffnet denselben Beleg im Belegeditor.
+	{ name: "purchases", pattern: "/eingangsbelege", view: "purchases.Purchases", anyPermission: purchasesRead, nav: "purchases", title: "nav.purchases" },
+	{ name: "purchaseDocument", pattern: "/eingangsbelege/:id", view: "purchases.Document", anyPermission: purchasesRead, nav: "purchases", title: "nav.purchaseDocument" },
 	{ name: "quotation", pattern: "/angebote/:id", view: "sales.Voucher", anyPermission: salesRead, nav: "sales", title: "nav.salesVoucher" },
 	{ name: "suppliers", pattern: "/lieferanten", view: "materials.Suppliers", permission: "materials.read", nav: "suppliers", title: "nav.suppliers" },
 	{ name: "customers", pattern: "/kunden", view: "Customers", permission: "contacts.read", nav: "customers", title: "nav.customers" },
@@ -145,6 +148,7 @@ export const navigation: NavEntry[] = [
 		key: "groupOffice", children: [
 			{ key: "customers", path: "/kunden", icon: "sap-icon://customer", permission: "contacts.read" },
 			{ key: "sales", path: "/verkauf", icon: "sap-icon://sales-document", anyPermission: salesRead },
+			{ key: "purchases", path: "/eingangsbelege", icon: "sap-icon://expense-report", anyPermission: purchasesRead },
 			{ key: "calls", path: "/anrufe", icon: "sap-icon://call", permission: "contacts.read" },
 			{ key: "fuelReceipts", path: "/tankbelege", icon: "sap-icon://receipt", permission: "fuel.record" },
 			{ key: "messages", path: "/verwaltung/nachrichten", icon: "sap-icon://paper-plane", permission: "notifications.send" },

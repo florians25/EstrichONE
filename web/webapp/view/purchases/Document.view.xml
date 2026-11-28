@@ -1,0 +1,121 @@
+<mvc:View controllerName="estrichone.controller.purchases.Document" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:uxap="sap.uxap" xmlns:form="sap.ui.layout.form"
+	xmlns:layout="sap.ui.layout" xmlns:core="sap.ui.core" height="100%">
+	<uxap:ObjectPageLayout id="docPage" upperCaseAnchorBar="false" showFooter="true" busy="{view>/busy}" busyIndicatorDelay="200" headerContentPinnable="false"
+		toggleHeaderOnTitleClick="false">
+		<uxap:headerTitle>
+			<uxap:ObjectPageDynamicHeaderTitle>
+				<uxap:breadcrumbs>
+					<Breadcrumbs currentLocationText="Eingangsbeleg">
+						<Link text="Eingangsbelege" press=".onBack"/>
+					</Breadcrumbs>
+				</uxap:breadcrumbs>
+				<uxap:heading>
+					<Title id="docTitle" text="{view>/title}" level="H1" wrapping="true"/>
+				</uxap:heading>
+				<uxap:expandedContent><Text text="{= ${view>/d/document/fileName} + ', ' + ${view>/d/document/formatName} }"/></uxap:expandedContent>
+				<uxap:snappedContent><Text text="{view>/d/document/fileName}"/></uxap:snappedContent>
+				<uxap:actions>
+					<Button id="docFile" text="Datei öffnen" icon="sap-icon://pdf-attachment" press=".onFile"/>
+				</uxap:actions>
+			</uxap:ObjectPageDynamicHeaderTitle>
+		</uxap:headerTitle>
+		<uxap:headerContent>
+			<layout:HorizontalLayout allowWrapping="true">
+				<layout:VerticalLayout class="sapUiMediumMarginEnd">
+					<ObjectStatus title="Art" text="{view>/kindText}"/>
+					<ObjectStatus id="docState" title="Stand" text="{view>/stateView/text}" state="{view>/stateView/state}" inverted="true"/>
+				</layout:VerticalLayout>
+				<layout:VerticalLayout class="sapUiMediumMarginEnd">
+					<ObjectAttribute title="Lieferant" text="{= ${view>/d/data/sellerName} || 'aus der Datei nicht lesbar' }"/>
+					<ObjectAttribute title="Bauakte" text="{= ${view>/bauakteText} || 'nicht zugeordnet' }"/>
+				</layout:VerticalLayout>
+				<layout:VerticalLayout class="sapUiMediumMarginEnd">
+					<ObjectAttribute title="Brutto" text="{view>/grossText}"/>
+					<ObjectAttribute title="Hochgeladen" text="{view>/uploadedText}"/>
+				</layout:VerticalLayout>
+			</layout:HorizontalLayout>
+		</uxap:headerContent>
+		<uxap:sections>
+			<uxap:ObjectPageSection id="secCheck" title="Prüfung" titleUppercase="false">
+				<uxap:subSections>
+					<uxap:ObjectPageSubSection>
+						<VBox renderType="Bare">
+							<MessageStrip id="docSent" type="Success" showIcon="true" visible="{= ${view>/d/document/state} === 'sent' }" class="sapUiSmallMarginBottom"
+								text="{view>/sentText}"/>
+							<MessageStrip id="docFailed" type="Error" showIcon="true" visible="{= ${view>/d/document/state} === 'failed' }" class="sapUiSmallMarginBottom"
+								text="{= 'Die Übergabe an Lexware Office ist fehlgeschlagen. ' + (${view>/d/document/sendError} || '') }"/>
+							<MessageStrip id="docOk" type="Success" showIcon="true" visible="{= ${view>/isEInvoice} &amp;&amp; ${view>/d/data/problems}.length === 0 }"
+								text="E-Rechnung gelesen. Die Pflichtangaben sind vollständig und die Summen stimmen." class="sapUiSmallMarginBottom"/>
+							<MessageStrip id="docPlain" type="Information" showIcon="true" visible="{= !${view>/isEInvoice} &amp;&amp; ${view>/d/data/problems}.length === 0 }"
+								text="Die Datei enthält keine E-Rechnung (XRechnung oder ZUGFeRD). Lexware Office liest den Beleg nach der Übergabe selbst aus; prüfen Sie ihn dort unter „Belege“, „zu prüfen“."
+								class="sapUiSmallMarginBottom"/>
+							<VBox id="docProblems" renderType="Bare" visible="{= ${view>/d/data/problems}.length > 0 }" class="sapUiSmallMarginBottom">
+								<MessageStrip type="Warning" showIcon="true"
+									text="Bitte prüfen Sie diese Angaben. Fehlt etwas, bitten Sie den Lieferanten um eine berichtigte Rechnung. Übergeben können Sie den Beleg trotzdem."/>
+								<List items="{view>/d/data/problems}" showSeparators="None">
+									<StandardListItem title="{view>}" icon="sap-icon://message-warning"/>
+								</List>
+							</VBox>
+							<form:SimpleForm id="docForm" editable="{view>/d/canEdit}" layout="ColumnLayout" columnsM="2" columnsL="2" columnsXL="2" labelSpanL="4" labelSpanM="4">
+								<core:Title text="Zuordnung"/>
+								<Label text="Bauakte" labelFor="docBauakte"/>
+								<ComboBox id="docBauakte" selectedKey="{view>/bauakteId}" items="{view>/bauakten}" showClearIcon="true" placeholder="Bauakte suchen"
+									enabled="{view>/d/canEdit}">
+									<core:Item key="{view>key}" text="{view>text}"/>
+								</ComboBox>
+								<Label text="Notiz" labelFor="docNote"/>
+								<TextArea id="docNote" value="{view>/note}" rows="2" maxLength="1000" enabled="{view>/d/canEdit}" placeholder="z. B. Material für den 2. Bauabschnitt"/>
+							</form:SimpleForm>
+						</VBox>
+					</uxap:ObjectPageSubSection>
+				</uxap:subSections>
+			</uxap:ObjectPageSection>
+			<uxap:ObjectPageSection id="secParties" title="Kopfdaten" titleUppercase="false" visible="{view>/isEInvoice}">
+				<uxap:subSections>
+					<uxap:ObjectPageSubSection>
+						<List id="docFacts" items="{view>/facts}" showSeparators="Inner" width="100%" class="eoFactList">
+							<DisplayListItem label="{view>label}" value="{view>value}"/>
+						</List>
+					</uxap:ObjectPageSubSection>
+				</uxap:subSections>
+			</uxap:ObjectPageSection>
+			<uxap:ObjectPageSection id="secLines" title="Positionen" titleUppercase="false" visible="{view>/isEInvoice}">
+				<uxap:subSections>
+					<uxap:ObjectPageSubSection>
+						<VBox renderType="Bare">
+							<Table id="docLines" items="{view>/lines}" popinLayout="GridSmall" noDataText="Die E-Rechnung enthält keine Positionen.">
+								<columns>
+									<Column><Text text="Bezeichnung"/></Column>
+									<Column width="8rem" hAlign="End"><Text text="Menge"/></Column>
+									<Column width="8rem" hAlign="End" minScreenWidth="Tablet" demandPopin="true"><Text text="Preis netto"/></Column>
+									<Column width="5rem" hAlign="End" minScreenWidth="Tablet" demandPopin="true"><Text text="USt"/></Column>
+									<Column width="8rem" hAlign="End"><Text text="Betrag netto"/></Column>
+								</columns>
+								<items>
+									<ColumnListItem>
+										<Text text="{view>name}"/>
+										<Text text="{view>quantity}" class="eoTabular"/>
+										<Text text="{view>price}" class="eoTabular"/>
+										<Text text="{view>tax}" class="eoTabular"/>
+										<Text text="{view>net}" class="eoTabular eoStrong"/>
+									</ColumnListItem>
+								</items>
+							</Table>
+							<Text id="docTotals" text="{view>/totalsText}" class="sapUiSmallMarginTop eoStrong"/>
+						</VBox>
+					</uxap:ObjectPageSubSection>
+				</uxap:subSections>
+			</uxap:ObjectPageSection>
+		</uxap:sections>
+		<uxap:footer>
+			<OverflowToolbar>
+				<ToolbarSpacer/>
+				<Button id="docSave" text="Speichern" press=".onSave" visible="{view>/d/canEdit}"/>
+				<Button id="docSend" text="An Lexware Office übergeben" type="Emphasized" icon="sap-icon://paper-plane" press=".onSend"
+					visible="{= ${view>/d/canEdit} &amp;&amp; ${view>/d/document/state} !== 'sent' }"/>
+				<Button id="docDiscard" text="Verwerfen" type="Transparent" icon="sap-icon://delete" press=".onDiscard"
+					visible="{= ${view>/d/canEdit} &amp;&amp; ${view>/d/document/state} !== 'sent' &amp;&amp; ${view>/d/document/state} !== 'sending' }"/>
+			</OverflowToolbar>
+		</uxap:footer>
+	</uxap:ObjectPageLayout>
+</mvc:View>

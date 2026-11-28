@@ -52,6 +52,8 @@ export class LexwareStub {
   readonly created: { type: string; body: Json; query: string }[] = [];
   /** Offener Betrag je Beleg (Belegliste und GET /v1/payments/{id}). */
   readonly openAmounts = new Map<string, number>();
+  /** Übergebene Eingangsbelege (`POST /v1/files`). */
+  readonly files: { id: string; name: string; size: number }[] = [];
   private voucherNumber = 0;
   paymentConditions: Json[] = [
     { id: 'pc-14', organizationDefault: true, paymentTermLabelTemplate: 'Zahlbar innerhalb von 14 Tagen ohne Abzug.', paymentTermDuration: 14 },
@@ -110,7 +112,7 @@ export class LexwareStub {
   }
 
   addVoucher(v: {
-    type: 'invoice' | 'quotation' | 'creditnote' | 'orderconfirmation' | 'deliverynote'; status: string; number: string | null; date: string; dueDate?: string; net: number;
+    type: 'invoice' | 'quotation' | 'creditnote' | 'orderconfirmation' | 'deliverynote' | 'purchaseinvoice' | 'purchasecreditnote'; status: string; number: string | null; date: string; dueDate?: string; net: number;
     gross: number; contactId?: string; contactName?: string; title?: string; introduction?: string;
   }): string {
     const id = randomUUID();
@@ -175,7 +177,9 @@ export class LexwareStub {
     this.calls.push({ method, path });
     const chunks: Buffer[] = [];
     for await (const chunk of request) chunks.push(chunk as Buffer);
-    const body = chunks.length ? (JSON.parse(Buffer.concat(chunks).toString('utf8')) as Json) : {};
+    const raw = Buffer.concat(chunks);
+    const multipart = (request.headers['content-type'] ?? '').startsWith('multipart/form-data');
+    const body = chunks.length && !multipart ? (JSON.parse(raw.toString('utf8')) as Json) : {};
     const send = (status: number, json: unknown) => {
       response.writeHead(status, { 'Content-Type': 'application/json' });
       response.end(JSON.stringify(json));
@@ -200,6 +204,15 @@ export class LexwareStub {
       const size = Number(url.searchParams.get('size') ?? 25);
       const totalPages = Math.max(1, Math.ceil(all.length / size));
       return send(200, { content: all.slice(page * size, (page + 1) * size), first: page === 0, last: page + 1 >= totalPages, totalPages, totalElements: all.length, size, number: page });
+    }
+    if (method === 'POST' && path === '/v1/files') {
+      // Belegeingang: multipart/form-data mit „file“ und „type=voucher“.
+      const text = raw.toString('latin1');
+      const name = /filename="?([^";\r\n]+)"?/.exec(text)?.[1] ?? '';
+      if (!multipart || !/name="?type"?\r\n\r\nvoucher/.test(text)) return send(400, { status: 400, message: 'type must be voucher' });
+      const id = randomUUID();
+      this.files.push({ id, name, size: raw.length });
+      return send(202, { id });
     }
     if (method === 'POST' && path === '/v1/contacts') {
       const id = randomUUID();
