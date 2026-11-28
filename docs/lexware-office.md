@@ -220,7 +220,8 @@ gesetzt bzw. zurückgestellt wurde). API: `reviewRequestedAt`, `reviewReason` an
 | 401 | API-Schlüssel abgelehnt | `LEXWARE_UNAUTHORIZED`, 424 |
 | 402, 403 | Public API im Tarif nicht enthalten oder keine Berechtigung | `LEXWARE_NO_API_ACCESS`, 424 |
 | 404 | Eintrag in Lexware nicht gefunden | `LEXWARE_NOT_FOUND`, 424 |
-| 400, 406, 422 | Angaben nicht angenommen, mit Einzelheiten aus `details[]` bzw. `IssueList[]` | `LEXWARE_INVALID`, 424 |
+| 400, 406, 422 | Angaben nicht angenommen; je Beanstandung ein deutscher Satz mit Feld bzw. Position (`LexwareErrors.Translate`), Originaltext nur in `technical` | `LEXWARE_INVALID`, 424 |
+| 400 „Tax type '…' not allowed for this organization“ | Steuerart für die Organisation nicht zulässig, mit Behebung `fix` (`taxTypeNet` bzw. `taxTypeVatfree`); die Ablehnung wird je Belegart gemerkt | `LEXWARE_TAX_TYPE_NOT_ALLOWED`, 424 |
 | 409 | Konflikt | `LEXWARE_CONFLICT`, 424 |
 | 406 beim Beleg-PDF, kein PDF in der Antwort | Für Entwürfe stellt Lexware Office kein PDF bereit | `LEXWARE_NO_DOCUMENT`, 409 |
 | 429 nach allen Versuchen | im Moment keine weiteren Anfragen | `LEXWARE_RATE_LIMITED`, 503 |
@@ -486,6 +487,38 @@ und prüft das beim Ausführen erneut.
 Die Kontaktliste wird seitenweise geladen (`size=250`) und fünf Minuten im Speicher gehalten; „Aktualisieren“ lädt neu.
 Nur Kontakte mit der Rolle Kunde werden betrachtet, archivierte nicht.
 
+### Fehler verständlich übersetzen
+
+`LexwareErrors.Translate` liest das ältere Fehlerformat (`message`, `details[].field/message/violation`) und das neuere
+(`IssueList[].source/type/i18nKey`). Feldpfade werden zu Feldern der Maske (`lineItems[2].unitName` wird zu „Position 3:
+Die Einheit“, `voucherDate` zu „Das Belegdatum“, `address.contactId` zu „Der Kunde“ usw.), englische Beschreibungen zu
+kurzen deutschen Aussagen („fehlt“, „ist ungültig“, „ist zu klein oder negativ“, „wurde in Lexware Office nicht
+gefunden“). Die Problemantwort trägt zusätzlich `issues[]` (`text`, `field`, `position`, `fix`), `technical` (Originaltext,
+höchstens 400 Zeichen) und gegebenenfalls `fix` und `taxType`. Der Entwurf speichert Meldung, Originaltext und Behebung
+(`send_error`, `send_error_technical`, `send_error_fix`); die Maske zeigt den Originaltext nur aufklappbar unter
+„Technische Einzelheiten“.
+
+### Erlaubte Steuerarten
+
+- Profil: `GET /v1/profile` liefert nach bisherigem Wissen `smallBusiness` (Kleinunternehmer nach § 19 UStG) und `taxType`
+  (`net`, `gross`, `vatfree`). Gelesen beim Verbindungstest, beim Öffnen einer Belegmaske, wenn die letzte Prüfung älter
+  als ein Tag ist, und mit „Erlaubte Steuerarten erneut prüfen“ (`POST settings/integrations/lexware/tax-types/check`).
+  Kleinunternehmer (`smallBusiness=true` oder `taxType=vatfree`): nur `vatfree`, Vorgabe neuer Belege `vatfree`.
+- Ablehnung beim Senden (400 mit „Tax type 'x' not allowed for this organization“): gemerkt je Belegart und Steuerart in
+  `lexware_settings.rejected_tax_types` (JSON, ohne Versionswechsel geschrieben). Die Auswahl zeigt die Steuerart danach
+  ausgegraut mit Hinweis, `QuotationRules.Problems` verhindert das Senden mit ihr. „Erneut prüfen“ verwirft alle
+  gemerkten Ablehnungen.
+- Angeboten werden `net`, `constructionService13b` und `vatfree`. Bei § 13b und steuerfrei tragen alle Positionen den
+  Steuersatz 0.
+
+### Status je Belegart
+
+„Offen“, „Überfällig“ und „Bezahlt“ haben nur bei Rechnung und Gutschrift eine Zahlungsbedeutung; nur sie fließen in
+offene Beträge, Überfälligkeit und die Regel „alle Rechnungen bezahlt“. Angebot: Entwurf, Offen (noch nicht angenommen),
+Angenommen, Abgelehnt. Auftragsbestätigung und Lieferschein (`deliverynote`, Pfad `delivery-notes`, nur lesend): `open`
+wird als „Erstellt“ angezeigt, neutral (Web `voucherStatus(status, type)`, iOS `Lexware.statusText(_:type:)`, Android
+`Lexware.status(status, type)`). Unbekannte Werte erscheinen neutral als „Unbekannt“.
+
 ## Gegen ein echtes Konto zu prüfen
 
 1. Schlüssel aus `https://app.lexware.de/addons/public-api`: Verbindungstest und Firmenname.
@@ -543,6 +576,16 @@ Nur Kontakte mit der Rolle Kunde werden betrachtet, archivierte nicht.
 24. Permalink `permalink/quotations/edit/{id}` für Angebotsentwürfe und `permalink/articles/view/{id}` für Artikel.
 25. Statusregeln: Statuswert `accepted` bei angenommenen Angeboten, `paidoff` bei durch Gutschrift ausgeglichenen
     Rechnungen, Status `open` bei noch nicht erstatteten Gutschriften.
+26. Fehler „Tax type 'constructionService13b' not allowed for this organization“ (vom Kunden mit echtem Konto gemeldet,
+    HTTP 400): ob der Text immer in `message` steht oder auch in `details[]`/`IssueList[]`, und ob dieselbe Ablehnung für
+    Rechnungen, Gutschriften und Auftragsbestätigungen gilt (EstrichONE merkt sie bisher je Belegart einzeln).
+27. `GET /v1/profile`: Feldnamen `smallBusiness` und `taxType` und ihre Werte; ob sich daraus ableiten lässt, ob § 13b
+    zugelassen ist (bisher nicht bekannt, deshalb erst nach der Ablehnung gesperrt).
+28. Weitere Fehlertexte von Lexware Office beim Anlegen von Belegen sammeln (Feldpfade, englische Beschreibungen), damit
+    `LexwareErrors` sie gezielt übersetzt und, wo möglich, eine Behebung anbietet.
+29. Statuswerte von Auftragsbestätigung und Lieferschein mit echtem Konto bestätigen (`draft`, `open`, `voided`; gibt es
+    einen eigenen Wert, wenn aus der Auftragsbestätigung eine Rechnung erzeugt wurde?), `voucherType=deliverynote` in
+    `GET /v1/voucherlist` und der Pfad `GET /v1/delivery-notes/{id}`.
 ## Nicht Teil dieser Runde
 
 Webhooks (Änderungen ohne Abruf, siehe oben), Lexware-Daten und Belege in der Bauakte der Apps sowie die Warnung beim
