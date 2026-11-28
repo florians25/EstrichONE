@@ -2,9 +2,9 @@ import EstrichCore
 import QuickLook
 import SwiftUI
 
-/// Bauakte, das Herzstück: Kopf (Nummer, Titel, Status, Adresse) mit Aktionsleiste (Route, Anrufen, Chat, Foto, Teams),
-/// heute bzw. nächster Termin (für die Planung mit „Einplanen“ und „Verschieben“), Leistung und Kennwerte, Beschreibung
-/// und Hinweise, offene Aufgaben und Mängel, Fotos und Dokumentation, Kontakte, Verlauf. Erfasst wird über „+“ oben
+/// Bauakte, das Herzstück: Kopf (Nummer, Titel, Status, Adresse) mit Aktionsleiste (Route, Anrufen, Chat, Foto, Teams) und
+/// Schnellzugriff, heute bzw. nächster Termin (für die Planung mit „Einplanen“ und „Verschieben“), Basisdaten, Beschreibung
+/// und Hinweise, Fotos und Dokumente, Kontakte, offene Aufgaben und Mängel, Verlauf, Lexware Office am Ende. Erfasst wird über „+“ oben
 /// rechts (alle Erfassungen an einer Stelle); daneben zeigt ein Symbol den Stand auf dem Gerät. Nichts verdeckt Inhalt.
 /// Breite Darstellung (iPad quer): Übersicht links, gewählter Bereich rechts. Alles offline aus der lokalen Ablage.
 struct BauakteDetailView: View {
@@ -188,28 +188,31 @@ struct BauakteDetailView: View {
 
     // MARK: Übersicht
 
-    /// Reihenfolge: 1. Kopf mit Aktionsleiste, 2. heute bzw. nächster Termin, 3. Leistung und Kennwerte, 4. Beschreibung
-    /// und Hinweise, 5. offene Aufgaben und Mängel, 6. Fotos und Dokumentation, 7. Kontakte, 8. Verlauf. Erfasst wird
-    /// über „+“ oben rechts.
+    /// Reihenfolge nach Vorrang auf der Baustelle: 1. Kopf mit Aktionsleiste und Schnellzugriff, 2. heute bzw. nächster
+    /// Termin, 3. Basisdaten (Leistung und Kennwerte), 4. Beschreibung, Hinweise und Zugang, 5. Fotos und Dokumente,
+    /// 6. Kontakte, 7. offene Aufgaben und Mängel, 8. Verlauf, 9. Lexware Office ganz am Ende. Erfasst wird über „+“.
     private func overview(_ content: BauakteContent, wide: Bool) -> some View {
         ScrollViewReader { proxy in
             List {
                 Section {
                     header(content)
                     actionBar(content)
-                        .listRowInsets(EdgeInsets(top: Space.xs, leading: Space.l, bottom: Space.m, trailing: Space.l))
+                        .listRowInsets(EdgeInsets(top: Space.xs, leading: Space.l, bottom: Space.s, trailing: Space.l))
+                    quickAccess(content, wide: wide, proxy: proxy)
+                        .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: Space.s, trailing: 0))
                 }
                 highlights(content)
                 appointment(content)
                 keyData(content, wide: wide)
-                if let lexware, lexware.contact != nil {
-                    LexwareBauakteSections(bauakteId: bauakteId, data: lexware)
-                }
                 siteNotes(content)
-                openPoints(content, wide: wide)
                 documentation(content, wide: wide)
                 contacts(content, wide: wide)
+                openPoints(content, wide: wide)
                 history(content, wide: wide)
+                if let lexware, lexware.contact != nil {
+                    LexwareBauakteSections(bauakteId: bauakteId, data: lexware)
+                        .id("lexware")
+                }
             }
             .listStyle(.insetGrouped)
             .listSectionSpacing(.compact)
@@ -582,7 +585,7 @@ struct BauakteDetailView: View {
             Section {
                 ForEach(Array(notes.enumerated()), id: \.element.id) { index, note in
                     FreeTextBlock(title: note.title, text: note.text, symbol: note.symbol, tint: note.tint)
-                        .id(index == 0 ? "siteNotes" : note.id)
+                        .id(note.id)
                 }
             } header: {
                 HStack {
@@ -758,7 +761,7 @@ struct BauakteDetailView: View {
         }
     }
 
-    // MARK: Fotos und Dokumentation
+    // MARK: Fotos, Videos und Dokumente
 
     private func documentation(_ content: BauakteContent, wide: Bool) -> some View {
         Section {
@@ -789,8 +792,71 @@ struct BauakteDetailView: View {
             if BauakteArea.initialInspection.isAvailable(modules) { areaRow(.initialInspection, content: content, wide: wide) }
             if BauakteArea.protocols.isAvailable(modules) { areaRow(.protocols, content: content, wide: wide) }
         } header: {
-            Text("Fotos und Dokumentation")
+            Text("Fotos, Videos und Dokumente")
         }
+    }
+
+    // MARK: Schnellzugriff
+
+    private struct QuickTarget: Identifiable {
+        let id: String
+        let title: String
+        let symbol: String
+        let go: () -> Void
+    }
+
+    /// Ziele in fester Reihenfolge: Basisdaten, Beschreibung, Hinweise und Zugang, Fotos und Videos, Dokumente, Kontakte, Lexware
+    /// (nur mit Modul und verknüpftem Kunden), danach „Mehr“. Ein Tipp springt zum Abschnitt bzw. öffnet die Unteransicht.
+    private func quickTargets(_ content: BauakteContent, wide: Bool, proxy: ScrollViewProxy) -> [QuickTarget] {
+        func jump(_ id: String) -> () -> Void { { withAnimation(.snappy) { proxy.scrollTo(id, anchor: .top) } } }
+        let notes = siteNoteItems(content)
+        var list = [QuickTarget(id: "keyData", title: "Basisdaten", symbol: "list.bullet.rectangle", go: jump("keyData"))]
+        list.append(QuickTarget(id: "description", title: "Beschreibung", symbol: "doc.text",
+                                go: notes.contains(where: { $0.id == "description" }) ? jump("description") : { action = .project }))
+        list.append(QuickTarget(id: "siteNotesAndAccess", title: "Hinweise und Zugang", symbol: "exclamationmark.triangle",
+                                go: notes.contains(where: { $0.id == "siteNotesAndAccess" }) ? jump("siteNotesAndAccess") : { action = .project }))
+        list.append(QuickTarget(id: "photos", title: "Fotos und Videos", symbol: "photo.on.rectangle", go: { select(.media, wide: wide) }))
+        list.append(QuickTarget(id: "documents", title: "Dokumente", symbol: "doc.on.doc", go: { select(.media, wide: wide) }))
+        list.append(QuickTarget(id: "contacts", title: "Kontakte", symbol: "person.2", go: jump("contactsSection")))
+        if let lexware, lexware.contact != nil {
+            list.append(QuickTarget(id: "lexware", title: "Lexware", symbol: "eurosign.circle", go: jump("lexware")))
+        }
+        return list
+    }
+
+    private func quickAccess(_ content: BauakteContent, wide: Bool, proxy: ScrollViewProxy) -> some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: Space.s) {
+                ForEach(quickTargets(content, wide: wide, proxy: proxy)) { target in
+                    Button(action: target.go) {
+                        Label(target.title, systemImage: target.symbol)
+                            .font(Typo.subhead)
+                            .padding(.horizontal, Space.m)
+                            .frame(minHeight: Size.minTap)
+                            .background(Capsule().fill(Theme.accentSoft))
+                            .foregroundStyle(Theme.accent)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("quick-\(target.id)")
+                }
+                Menu {
+                    ForEach(BauakteArea.allCases.filter { $0 != .media && $0 != .project && $0.isAvailable(modules) }) { item in
+                        Button(item.title, systemImage: item.symbol) { select(item, wide: wide) }
+                    }
+                } label: {
+                    Label("Mehr", systemImage: "ellipsis.circle")
+                        .font(Typo.subhead)
+                        .padding(.horizontal, Space.m)
+                        .frame(minHeight: Size.minTap)
+                        .background(Capsule().strokeBorder(Theme.accent.opacity(0.4)))
+                        .foregroundStyle(Theme.accent)
+                }
+                .accessibilityIdentifier("quick-more")
+            }
+            .padding(.horizontal, Space.l)
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Schnellzugriff")
     }
 
     // MARK: Kontakte
@@ -882,7 +948,9 @@ struct BauakteDetailView: View {
 
     private func contacts(_ content: BauakteContent, wide: Bool) -> some View {
         Section {
-            ForEach(factList(content)) { fact in factRow(fact) }
+            ForEach(Array(factList(content).enumerated()), id: \.element.id) { index, fact in
+                factRow(fact).id(index == 0 ? "contactsSection" : "fact-\(fact.id)")
+            }
             areaRow(.contacts, content: content, wide: wide, title: content.parties.isEmpty ? "Kontakte verwalten" : "Alle Kontakte")
         } header: {
             Text("Kontakte")

@@ -55,9 +55,6 @@ struct LexwareBauakteSections: View {
                         }
                     }
                 }
-                if let summary = data.summary, !summary.isEmpty {
-                    LabeledContent("Belege", value: summary)
-                }
             }
             if !data.vouchers.isEmpty {
                 Section("Rechnungen und Angebote") {
@@ -98,9 +95,9 @@ struct LexwareBauakteSections: View {
             if loading == voucher.id {
                 ProgressView()
             } else {
-                Text(Lexware.statusText(voucher.status))
+                Text(Lexware.statusText(voucher.status, type: voucher.type))
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(Lexware.statusTone(voucher.status).color)
+                    .foregroundStyle(Lexware.statusTone(voucher.status, type: voucher.type).color)
             }
         }
     }

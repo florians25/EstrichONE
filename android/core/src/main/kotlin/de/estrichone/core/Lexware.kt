@@ -81,7 +81,18 @@ object Lexware {
         "quotation" -> "Angebot"
         "creditnote" -> "Gutschrift"
         "orderconfirmation" -> "Auftragsbestätigung"
+        "deliverynote" -> "Lieferschein"
         else -> "Beleg"
+    }
+
+    /** Belege mit Zahlungsbedeutung: nur Rechnung und Gutschrift. */
+    fun isPayable(type: String): Boolean = type == "invoice" || type == "creditnote"
+
+    /** Status je Belegart: Auftragsbestätigung und Lieferschein sind festgeschrieben „Erstellt“, nie „Offen“. */
+    fun status(status: String, type: String): Pair<String, LexwareTone> = when {
+        (type == "orderconfirmation" || type == "deliverynote") && status == "open" -> "Erstellt" to LexwareTone.Neutral
+        !isPayable(type) && type != "quotation" && status in setOf("overdue", "paid", "paidoff") -> "Erstellt" to LexwareTone.Neutral
+        else -> status(status)
     }
 
     fun status(status: String): Pair<String, LexwareTone> = when (status) {

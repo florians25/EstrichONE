@@ -59,6 +59,14 @@ class LexwareTests {
         assertEquals("Bezahlt" to LexwareTone.Success, Lexware.status("paidoff"))
         assertEquals("Angenommen" to LexwareTone.Success, Lexware.status("accepted"))
         assertEquals("Gutschrift", Lexware.typeText("creditnote"))
+        // Auftragsbestätigung und Lieferschein: festgeschrieben heißt „Erstellt“, nie „Offen“ mit Zahlungsbedeutung.
+        assertEquals("Erstellt" to LexwareTone.Neutral, Lexware.status("open", "orderconfirmation"))
+        assertEquals("Erstellt" to LexwareTone.Neutral, Lexware.status("open", "deliverynote"))
+        assertEquals("Lieferschein", Lexware.typeText("deliverynote"))
+        assertEquals("Storniert" to LexwareTone.Warning, Lexware.status("voided", "deliverynote"))
+        assertEquals("Offen" to LexwareTone.Info, Lexware.status("open", "invoice"))
+        assertEquals("Offen" to LexwareTone.Info, Lexware.status("open", "quotation"))
+        assertEquals("Unbekannt" to LexwareTone.Neutral, Lexware.status("irgendwas", "invoice"))
     }
 
     @Test

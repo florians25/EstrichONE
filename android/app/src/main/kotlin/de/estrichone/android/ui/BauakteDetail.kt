@@ -129,6 +129,12 @@ import de.estrichone.core.dueText
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import de.estrichone.core.bauakteTeams
+import de.estrichone.core.bauakteLexware
+import de.estrichone.core.BauakteLexware
+import de.estrichone.core.Lexware
+import androidx.compose.material3.AssistChip
+import androidx.compose.material.icons.outlined.Euro
+import androidx.compose.material.icons.outlined.Info
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -156,9 +162,9 @@ enum class AreaKind(val title: String, val icon: ImageVector) {
 }
 
 /**
- * Bauakte (gleiches Konzept wie iOS): 1. Kopf mit Aktionsleiste, 2. heute bzw. nächster Termin, 3. Leistung und Kennwerte,
- * 4. Beschreibung und Hinweise (Beschreibung, Hinweise und Zugang, angeheftete Notiz), 5. offene Aufgaben
- * und Mängel, 6. Fotos und Dokumentation, 7. Kontakte, 8. Verlauf. Oben rechts das Symbol zur Offline-Verfügbarkeit und
+ * Bauakte (gleiches Konzept wie iOS): 1. Kopf mit Aktionsleiste und Schnellzugriff, 2. heute bzw. nächster Termin,
+ * 3. Basisdaten, 4. Beschreibung, Hinweise und Zugang (angeheftete Notiz), 5. Fotos, Videos und Dokumente, 6. Kontakte,
+ * 7. offene Aufgaben und Mängel, 8. Verlauf, 9. Lexware Office ganz am Ende. Oben rechts das Symbol zur Offline-Verfügbarkeit und
  * das Menü. Planer planen die Baustelle über „Einplanen“ direkt ein. Erfassen als „Erfassen“ unten rechts (klappt beim
  * Scrollen ein und verdeckt keinen Inhalt).
  */
@@ -218,6 +224,20 @@ fun BauakteScreen(id: String, showBack: Boolean = true) {
     val plan: () -> Unit = { nav.planRequest = b.planRequest() }
     val move: (SiteAppointment) -> Unit = { nav.planRequest = QuickPlanRequest.Move(it) }
 
+    // Lexware Office einmal laden: für den Abschnitt am Ende und den Schnellzugriff (nur mit verknüpftem Kunden).
+    var lexware by remember(id) { mutableStateOf<BauakteLexware?>(null) }
+    LaunchedEffect(id, modules.lexwareOn, permissions) {
+        lexware = if (Lexware.visible(modules, permissions)) runCatching { withContext(Dispatchers.IO) { session.api.bauakteLexware(id) } }.getOrNull() else null
+    }
+    // Reihenfolge der Einträge wie unten, damit der Schnellzugriff zum richtigen Abschnitt springt.
+    val keys = buildList {
+        if (viewOnly) add("viewOnly")
+        addAll(listOf("head", "quick"))
+        if (modules.isOn(AppModules.PLANNING)) add("next")
+        addAll(listOf("keyData", "texts", "docs", "contacts"))
+        if (modules.anyOn(AppModules.TASKS, AppModules.DEFECTS)) add("tasks")
+        addAll(listOf("history", "lexware"))
+    }
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
     // Titel oben erst nach dem Kopf; „Erfassen“ klappt beim Scrollen nach unten auf das Symbol ein.
     val scrolled by remember { androidx.compose.runtime.derivedStateOf { listState.firstVisibleItemIndex > 0 } }
@@ -291,24 +311,31 @@ fun BauakteScreen(id: String, showBack: Boolean = true) {
                 Header(b, session, viewOnly)
                 ActionBar(b, session, teamsLink, onPlan = if (planner) plan else null)
             }
+            // Schnellzugriff: Basisdaten, Beschreibung, Hinweise und Zugang, Fotos und Videos, Dokumente, Kontakte, Lexware, Mehr
+            item(key = "quick") {
+                QuickAccess(b, modules, lexwareLinked = lexware?.contact != null) { key ->
+                    val index = keys.indexOf(key)
+                    if (index >= 0) scope.launch { listState.animateScrollToItem(index) }
+                }
+            }
             // 2. Heute bzw. nächster Termin
             if (modules.isOn(AppModules.PLANNING)) {
                 item(key = "next") { NextAppointment(b, session, appointment, planChanged, onPlan = if (planner) plan else null, onMove = move) }
             }
-            // 3. Leistung und Kennwerte
+            // 3. Basisdaten (Leistung und Kennwerte)
             item(key = "keyData") { KeyData(session, b) }
-            // Lexware Office (nur lesend): Kontakt, Abgleichstand und zugeordnete Belege, wenn der Kunde verknüpft ist.
-            item(key = "lexware") { LexwareSection(session, b) }
-            // 4. Beschreibung und Hinweise: Beschreibung, Hinweise und Zugang, angeheftete Notiz, fehlende Erstbegehung
+            // 4. Beschreibung, Hinweise und Zugang, angeheftete Notiz, fehlende Erstbegehung
             item(key = "texts") { DescriptionAndHints(session, b, viewOnly) }
-            // 5. Offene Aufgaben und Mängel
-            if (modules.anyOn(AppModules.TASKS, AppModules.DEFECTS)) item(key = "tasks") { OpenPoints(session, id) }
-            // 6. Fotos und Dokumentation
+            // 5. Fotos, Videos und Dokumente
             item(key = "docs") { Documentation(session, b) }
-            // 7. Kontakte
+            // 6. Kontakte
             item(key = "contacts") { ContactSection(b, session) }
+            // 7. Offene Aufgaben und Mängel
+            if (modules.anyOn(AppModules.TASKS, AppModules.DEFECTS)) item(key = "tasks") { OpenPoints(session, id) }
             // 8. Verlauf
             item(key = "history") { History(session, b) }
+            // 9. Lexware Office ganz am Ende (nur lesend): Kontakt, Abgleichstand und zugeordnete Belege, wenn der Kunde verknüpft ist.
+            item(key = "lexware") { LexwareSection(session, b, lexware, loadSelf = false) }
         }
         }
     }
@@ -700,7 +727,7 @@ internal fun keyDataRank(label: String): Int {
 }
 
 
-/** Fotos und Dokumentation: neueste Fotos als Streifen, darunter die Bereiche mit Zähler. */
+/** Fotos, Videos und Dokumente: neueste Fotos als Streifen, darunter die Bereiche mit Zähler. */
 @Composable
 private fun Documentation(session: Session, b: Bauakte) {
     val nav = LocalNav.current
@@ -716,7 +743,7 @@ private fun Documentation(session: Session, b: Bauakte) {
         )
     }
     val modules by session.modules.collectAsState()
-    SectionHeader("Fotos und Dokumentation", action = if (photos.isEmpty()) null else "Alle Fotos (${photos.size})",
+    SectionHeader("Fotos, Videos und Dokumente", action = if (photos.isEmpty()) null else "Alle Fotos (${photos.size})",
         onAction = { nav.push(Route.Area(b.id, AreaKind.Photos)) })
     SectionCard {
         if (photos.isNotEmpty()) {
@@ -731,6 +758,45 @@ private fun Documentation(session: Session, b: Bauakte) {
             if (index > 0) RowDivider()
             RowItem(area.title, icon = area.icon, iconTint = tones.textSecondary, value = counts[area]?.takeIf { it > 0 }?.toString(), showChevron = true,
                 onClick = { nav.push(Route.Area(b.id, area)) })
+        }
+    }
+}
+
+/**
+ * Schnellzugriff unter dem Kopf: waagerecht scrollbare Chips in fester Reihenfolge (Basisdaten, Beschreibung, Hinweise und
+ * Zugang, Fotos und Videos, Dokumente, Kontakte, Lexware nur mit Modul und verknüpftem Kunden), danach „Mehr“. Ein Tipp springt zum
+ * Abschnitt bzw. öffnet die Unteransicht. Große Tippflächen (mindestens 48 dp).
+ */
+@Composable
+private fun QuickAccess(b: Bauakte, modules: AppModules, lexwareLinked: Boolean, jump: (String) -> Unit) {
+    val nav = LocalNav.current
+    var more by remember { mutableStateOf(false) }
+    val chips = buildList<Triple<String, ImageVector, () -> Unit>> {
+        add(Triple("Basisdaten", Icons.Outlined.Tune) { jump("keyData") })
+        add(Triple("Beschreibung", Icons.Outlined.Description) { jump("texts") })
+        add(Triple("Hinweise und Zugang", Icons.Outlined.Info) { jump("texts") })
+        add(Triple("Fotos und Videos", Icons.Outlined.PhotoLibrary) { nav.push(Route.Area(b.id, AreaKind.Photos)) })
+        add(Triple("Dokumente", Icons.Outlined.Description) { nav.push(Route.Area(b.id, AreaKind.Documents)) })
+        add(Triple("Kontakte", Icons.Outlined.Contacts) { jump("contacts") })
+        if (lexwareLinked) add(Triple("Lexware", Icons.Outlined.Euro) { jump("lexware") })
+    }
+    LazyRow(Modifier.fillMaxWidth().testTag("bauakteQuickAccess"), contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = Space.s),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        items(chips, key = { it.first }) { (title, icon, go) ->
+            AssistChip(onClick = go, label = { Text(title) }, leadingIcon = { Icon(icon, null, Modifier.size(18.dp)) },
+                modifier = Modifier.heightIn(min = 48.dp).testTag("quick-$title"))
+        }
+        item(key = "more") {
+            Box {
+                AssistChip(onClick = { more = true }, label = { Text("Mehr") }, leadingIcon = { Icon(Icons.Outlined.MoreHoriz, null, Modifier.size(18.dp)) },
+                    modifier = Modifier.heightIn(min = 48.dp).testTag("quick-Mehr"))
+                DropdownMenu(more, { more = false }) {
+                    AreaKind.entries.filter { it != AreaKind.Photos && it != AreaKind.Documents && it != AreaKind.Project && it.isAvailable(modules) }.forEach { area ->
+                        DropdownMenuItem(text = { Text(area.title) }, leadingIcon = { Icon(area.icon, null) },
+                            onClick = { more = false; nav.push(Route.Area(b.id, area)) })
+                    }
+                }
+            }
         }
     }
 }

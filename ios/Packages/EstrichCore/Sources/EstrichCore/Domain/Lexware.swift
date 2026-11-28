@@ -132,8 +132,23 @@ public enum Lexware {
         case "quotation": "Angebot"
         case "creditnote": "Gutschrift"
         case "orderconfirmation": "Auftragsbestätigung"
+        case "deliverynote": "Lieferschein"
         default: "Beleg"
         }
+    }
+
+    /// Belege ohne Zahlungsbedeutung: Auftragsbestätigung und Lieferschein sind festgeschrieben „erstellt“, nie „offen“.
+    public static func isPayable(_ type: String) -> Bool { type == "invoice" || type == "creditnote" }
+
+    /// Status je Belegart: „Offen“ nur bei Rechnung, Gutschrift und Angebot (dort: noch nicht angenommen).
+    public static func statusText(_ status: String, type: String) -> String {
+        if (type == "orderconfirmation" || type == "deliverynote") && status == "open" { return "Erstellt" }
+        if !isPayable(type) && type != "quotation" && (status == "overdue" || status == "paid" || status == "paidoff") { return "Erstellt" }
+        return statusText(status)
+    }
+
+    public static func statusTone(_ status: String, type: String) -> LexwareTone {
+        statusText(status, type: type) == "Erstellt" ? .neutral : statusTone(status)
     }
 
     public static func statusText(_ status: String) -> String {
