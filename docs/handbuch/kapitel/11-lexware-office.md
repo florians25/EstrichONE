@@ -3,10 +3,9 @@
 Mit dem Modul **Lexware Office** arbeiten EstrichONE und Lexware Office (früher lexoffice) zusammen. Die Aufgaben sind
 klar getrennt:
 
-- **Rechnungen erstellen, bearbeiten und versenden Sie in Lexware Office.** EstrichONE legt keine Rechnungen an und
-  ändert keine Belege.
-- **Angebote (Beta)** bereiten Sie auf Wunsch in EstrichONE vor und senden sie als Entwurf an Lexware Office. Nummer,
-  Festschreiben und Versand bleiben in Lexware Office (siehe „Angebote (Beta)“).
+- **Verkauf:** Angebote, Auftragsbestätigungen, Rechnungen (auch Abschlags- und Schlussrechnungen) und Gutschriften
+  erfassen Sie mit dem Modul „Verkauf“ in EstrichONE, passend zur Bauakte, und senden sie an Lexware Office. Lexware
+  Office bleibt Buchhaltung, Nummernkreis und Belegarchiv; dort versenden und buchen Sie die Belege (siehe „Verkauf“).
 - **Artikel und Leistungen** gleicht EstrichONE mit den Artikeln in Lexware Office ab (Modul „Lexware Office: Artikel“).
 - **Status der Bauakte** folgt auf Wunsch dem Angebots- und Rechnungsstatus (Modul „Lexware Office: Status der Bauakte
   automatisch“).
@@ -253,6 +252,15 @@ Bauakte zugeordnet haben. Die Zuordnung liegt nur in EstrichONE; in Lexware Offi
 - Über das Suchfeld finden Sie einen Beleg mit seiner Belegnummer, auch wenn er zu einem anderen Kontakt gehört.
 - Ein Beleg gehört zu genau einer Bauakte. Das Symbol am Zeilenende löst die Zuordnung wieder.
 
+**Automatisch zuordnen:** Ist unter **Verwaltung › Integrationen › Lexware Office** der Schalter **Belege automatisch
+zuordnen** an (Vorgabe), ordnet EstrichONE sichere Belege selbst zu: Belege, die Sie in EstrichONE erstellt haben, Belege
+mit der Bauaktennummer im Text, wenn der Kunde dieser Bauakte verknüpft ist, und Belege, die an einem bereits zugeordneten
+Beleg hängen (zum Beispiel die Gutschrift zur Rechnung). Mit dem zweiten Schalter **Einzige offene Bauakte des Kunden**
+(Vorgabe aus) ordnet EstrichONE auch zu, wenn der Kunde genau eine offene Bauakte hat und das Belegdatum passt. Kommen
+mehrere Bauakten in Frage, ordnet EstrichONE nie selbst zu, sondern zeigt den Beleg weiter als Vorschlag. Automatisch
+zugeordnete Belege tragen in der Tabelle den Grund. Heben Sie eine solche Zuordnung auf, merkt sich EstrichONE das und
+ordnet den Beleg nicht erneut zu. Die zuletzt automatisch zugeordneten Belege sehen Sie in den Einstellungen.
+
 ![Rechnungen und Angebote der Bauakte](bilder/lexware-rechnungen.png "Abschnitt Rechnungen und Angebote in der Bauakte")
 
 Die Tabelle zeigt je Beleg Art, Nummer, Datum, Fälligkeit bzw. Gültigkeit, Netto- und Bruttobetrag und den Status:
@@ -320,38 +328,76 @@ noch in Lexware Office. Ein Artikel, den es in Lexware Office nicht mehr gibt, b
 
 ![Artikel und Leistungen](bilder/lexware-artikel.png "Material, Artikel und Leistungen mit Abgleichstand")
 
-## Angebote (Beta)
+## Verkauf
 
-Mit dem Modul **Angebote (Beta)** (setzt Lexware Office voraus, nach der Installation aus) bereiten Sie Angebote in
-EstrichONE vor. Dafür braucht die Rolle das Recht **Angebote vorbereiten** (bei neuen Installationen hat es die Rolle
-„Büro und Bauleitung“, Administratoren immer). Die Funktion ist als **Beta** gekennzeichnet.
+Mit dem Modul **Verkauf** (setzt Lexware Office voraus, nach dem Update aus) erfassen Sie Belege in EstrichONE und senden
+sie an Lexware Office. Die Belegarten schalten Sie unter **Verwaltung › Module** einzeln zu: **Verkauf: Angebote**,
+**Verkauf: Auftragsbestätigungen**, **Verkauf: Rechnungen** (auch Abschlags- und Schlussrechnungen), **Verkauf:
+Gutschriften**, **Verkauf: Zahlungen und Mahnstufe** und **Verkauf: Festschreiben aus EstrichONE**. Das frühere Modul
+„Angebote (Beta)“ ist darin aufgegangen; vorhandene Angebote bleiben erhalten.
 
-1. Öffnen Sie in der Bauakte **Rechnungen und Angebote** und wählen Sie **Angebot erstellen (Beta)**. Ein Angebot ohne
-   Bauakte erstellen Sie am Kunden im Abschnitt **Lexware Office**.
-2. Ist der Kunde noch nicht mit Lexware Office verknüpft, nennt EstrichONE den Weg dorthin: Verknüpfen Sie ihn am Kunden
-   (siehe „Kunden verknüpfen“).
-3. Füllen Sie den Kopf aus: Titel, Einleitung, **Gültig bis**, Zahlungsbedingung (aus Lexware Office oder eigener Text),
-   **Steuerart** (Netto, Bauleistung nach § 13b UStG oder Steuerfrei) und Bemerkung. Kleinunternehmer nach § 19 UStG
-   senden immer steuerfrei; EstrichONE liest das aus dem Profil Ihres Unternehmens in Lexware Office. Die Nummer wird automatisch vergeben, und zwar in
-   Lexware Office.
-4. Erfassen Sie die Positionen: **Aus Artikeln und Leistungen**, **Freie Position** oder **Textposition**. Je Position
-   Menge, Einheit, Einzelpreis netto, Steuersatz und optional Rabatt. Die Summen netto, Steuer und brutto rechnet die
-   Maske sofort mit.
-5. **Vorschläge aus der Bauakte** übernimmt die Gesamtfläche aus „Räume und Flächen“ bzw. dem Kennwert „Fläche gesamt“
-   als Estrichposition in m². Übernommen wird nur, was Sie bestätigen. Randdämmstreifen schlägt EstrichONE nicht vor,
-   weil Raumumfänge in der Bauakte nicht erfasst werden.
-6. **Speichern** sichert den Entwurf in EstrichONE; Sie können ihn beliebig oft bearbeiten.
-7. **Als Entwurf an Lexware Office senden** legt das Angebot dort als Entwurf an. Danach gilt der Beleg in Lexware Office:
-   Er steht in der Bauakte unter **Rechnungen und Angebote**, ist dort mit **In Lexware öffnen** erreichbar, und der
-   Entwurf in EstrichONE ist schreibgeschützt. Nummer vergeben, festschreiben und versenden Sie in Lexware Office.
+Rechte gibt es je Belegart: **ansehen**, **erfassen** und **festschreiben** (Gruppe Verkauf unter Benutzer und Rechte).
+Festschreiben ist zusätzlich an das Modul gebunden und standardmäßig aus.
 
-Mehrfaches Senden legt kein zweites Angebot an. Bricht das Senden ohne Antwort ab, sucht EstrichONE beim nächsten Versuch
-zuerst in Lexware Office nach dem Angebot. Rechnungen erstellt EstrichONE nicht. In den Apps erscheinen gesendete
-Angebote in der Belegliste; eine Maske gibt es dort nicht.
+### Übersicht
 
-![Angebot vorbereiten](bilder/lexware-angebot.png "Angebot (Beta) mit Positionen und Summen")
+Unter **Verkauf** in der Seitennavigation stehen alle Belege wie in Lexware Office: Reiter je Belegart, darüber Umschalter
+für den Status (Entwurf, Offen, Überfällig, Bezahlt, Angenommen, Abgelehnt), eine Suche und die Filter Kunde und Bauakte.
+Die Tabelle zeigt Nummer, Kunde, Bauakte, Datum, Fälligkeit, netto, brutto, offenen Betrag und Status; darunter steht die
+Summe der Auswahl als Textzeile. Ein Klick öffnet den Beleg im Belegeditor, Belege, die nur in Lexware Office erfasst
+wurden, öffnen sich dort. **Neuer Beleg** fragt nach Kunde und optional Bauakte.
 
-### Wenn Lexware Office das Angebot ablehnt
+![Übersicht Verkauf](bilder/verkauf-uebersicht.png "Übersicht mit Reitern, Status und Summenzeile")
+
+### Belegeditor
+
+Der Belegeditor ist eine Objektseite mit festem Kopf (Belegart, Status, Kunde, Bauakte, Beträge) und den Abschnitten:
+
+- **Kopfdaten:** Kunde mit Anschrift und Kundennummer, Bauakte, Nummer („wird automatisch vergeben“, die Nummer vergibt
+  Lexware Office), Belegdatum (leer heißt Tag des Sendens), beim Angebot **Gültig bis**, sonst **Leistungsdatum bzw.
+  Beginn** und **Ende des Leistungszeitraums**, Titel, Zahlungsbedingung und Steuerart. Pflichtfelder sind markiert.
+- **Positionen:** Bearbeitung direkt in der Zeile (Bezeichnung mit Beschreibung, Menge, Einheit, Einzelpreis netto,
+  Umsatzsteuer, Rabatt, Betrag). Unter der Tabelle steht die Eingabezeile **Artikel suchen oder neue Position eingeben**:
+  Tippen zeigt passende Artikel und Leistungen, Enter übernimmt die Eingabe als neue Position. Die Leiste darüber bietet
+  **Vorschläge aus der Bauakte** (Fläche aus „Räume und Flächen“ bzw. Kennwerten, Regiestunden aus den Einsätzen),
+  **Artikel suchen**, **Position hinzufügen**, **Textposition**, **Zwischensumme** sowie Nach oben, Nach unten und Löschen
+  für die ausgewählten Positionen.
+- **Texte:** Einleitungstext und Schlusstext.
+- **Summen:** netto je Steuersatz, Umsatzsteuer und brutto, live gerechnet.
+- **Belegkette und Zahlungen:** Angebot, Auftragsbestätigung, Abschläge, Schlussrechnung und Gutschrift mit Stand; bei
+  Rechnungen der offene Betrag aus Lexware Office.
+
+In der Fußleiste: **Speichern** (auch mit Strg und S), **Vorschau** (PDF aus Lexware Office, sobald der Beleg dort
+festgeschrieben ist), **An Lexware Office senden** (als Entwurf), **Festschreiben** (mit Modul und Recht, nach
+ausdrücklicher Bestätigung; Lexware Office vergibt dann die Nummer) und **Weitere**: Duplizieren, in Auftragsbestätigung
+oder Rechnung umwandeln, Gutschrift zur Rechnung, Verwerfen.
+
+Nach dem Senden gilt der Beleg in Lexware Office. Lexware Office erlaubt keine Änderung über die Schnittstelle; ändern
+Sie den Beleg dort (**In Lexware öffnen**). Mehrfaches Senden legt keinen zweiten Beleg an.
+
+![Belegeditor Angebot](bilder/verkauf-angebot.png "Angebot im Belegeditor")
+
+### Rechnungsplan in der Bauakte
+
+In der Bauakte zeigt der Abschnitt **Rechnungen und Angebote** oben den **Rechnungsplan**: Auftragssumme (aus der
+Auftragsbestätigung bzw. dem angenommenen Angebot), Abschläge, bezahlt, offen und noch nicht berechnet als Textzeile und
+als schlichter Balken. Daneben:
+
+- **Angebot erstellen** öffnet ein neues Angebot zur Bauakte.
+- **Abschlag erstellen** schlägt den Prozentsatz nach Leistungsstand vor (eingebrachte Fläche laut „Räume und Flächen“
+  abzüglich bisheriger Abschläge). Sie können einen anderen Prozentsatz oder einen festen Betrag wählen.
+- **Schlussrechnung erstellen** übernimmt alle Positionen des Auftrags und zieht bisherige Abschläge als eigene Zeilen mit
+  Nummer und Datum ab.
+
+Abschlags- und Schlussrechnungen sind in Lexware Office normale Rechnungen mit klarer Bezeichnung; Lexware Office legt
+über die Schnittstelle keine eigenen Abschlagsrechnungen an. Der Kunde der Bauakte muss mit Lexware Office verknüpft
+sein; sonst nennt EstrichONE den Weg zum Verknüpfen.
+
+![Rechnungsplan](bilder/verkauf-rechnungsplan.png "Rechnungsplan der Bauakte")
+
+![Schlussrechnung mit Abzügen](bilder/verkauf-schlussrechnung.png "Schlussrechnung mit Abzug des Abschlags")
+
+### Wenn Lexware Office einen Beleg ablehnt
 
 Lehnt Lexware Office Angaben ab, zeigt EstrichONE eine verständliche Meldung auf Deutsch, wo möglich mit dem betroffenen
 Feld bzw. der Position (zum Beispiel „Position 3: Die Einheit fehlt.“). Den Originaltext von Lexware Office sehen Sie bei
@@ -402,13 +448,13 @@ Bauakten. Die Apps zeigen das Kennzeichen in der Bauakte an.
 | Der Verbindungstest meldet einen abgelehnten Schlüssel. | Erzeugen Sie in Lexware Office einen neuen Schlüssel und hinterlegen Sie ihn. |
 | Der Verbindungstest meldet fehlenden Zugriff. | Die Public API ist im gebuchten Tarif nicht enthalten. |
 | Die Abschnitte fehlen in Kunde und Bauakte. | Das Modul ist ausgeschaltet oder Ihrer Rolle fehlen die Rechte der Gruppe Rechnungen. |
-| Kann ich in EstrichONE eine Rechnung oder ein Angebot schreiben? | Rechnungen nicht; sie entstehen in Lexware Office. Angebote können Sie mit dem Modul „Angebote (Beta)“ in EstrichONE vorbereiten und als Entwurf an Lexware Office senden. |
+| Kann ich in EstrichONE eine Rechnung oder ein Angebot schreiben? | Ja, mit dem Modul „Verkauf“. EstrichONE sendet die Belege an Lexware Office; Nummer, Buchhaltung und Archiv bleiben dort. |
 | Ein Beleg zeigt „In Lexware Office nicht mehr vorhanden“. | Er wurde dort gelöscht. Lösen Sie die Zuordnung in der Bauakte. |
 | Ein Kunde soll nie nach Lexware Office. | Schalten Sie beim Kunden **Mit Lexware Office abgleichen** aus. |
-| Was geht an Lexware Office? | Die Daten der Kunden mit eingeschaltetem Abgleich, bei Richtung „Beide Richtungen“ Artikel und Leistungen und mit „Angebote (Beta)“ die gesendeten Angebotsentwürfe. Rechnungen liest EstrichONE nur. |
+| Was geht an Lexware Office? | Die Daten der Kunden mit eingeschaltetem Abgleich, bei Richtung „Beide Richtungen“ Artikel und Leistungen und im Verkauf die gesendeten Belege. Geändert oder gelöscht wird dort kein Beleg. |
 | Ein Artikel aus Lexware Office wurde nicht übernommen. | Es gibt in EstrichONE einen Eintrag mit gleicher Artikelnummer oder Bezeichnung. Entscheiden Sie unter Artikel und Leistungen: verknüpfen oder trotzdem übernehmen. |
-| Das Angebot lässt sich nicht senden. | Der Kunde ist nicht mit Lexware Office verknüpft oder Angaben fehlen; die Maske nennt sie. |
-| Das gesendete Angebot soll geändert werden. | Ändern Sie es in Lexware Office. Der Entwurf in EstrichONE ist nach dem Senden schreibgeschützt. |
+| Der Beleg lässt sich nicht senden. | Der Kunde ist nicht mit Lexware Office verknüpft oder Angaben fehlen; die Maske nennt sie. |
+| Der gesendete Beleg soll geändert werden. | Ändern Sie ihn in Lexware Office. Der Beleg in EstrichONE ist nach dem Senden schreibgeschützt. |
 | Die Bauakte wurde nicht abgeschlossen, obwohl alles bezahlt ist. | Das ist so gewollt: EstrichONE stellt sie nur zur Abschlussprüfung. Abschließen Sie selbst im Kopf der Bauakte. |
 | Ein neuer Kunde wurde nicht in Lexware Office angelegt. | Es gibt dort einen ähnlichen Kontakt, der Schalter am Kunden ist aus oder die automatische Anlage ist ausgeschaltet. Der Abschnitt Lexware Office am Kunden nennt den Stand. |
 | Ein Kunde zeigt „Abweichungen offen“. | Kunde und Kontakt haben unterschiedliche Angaben. Entscheiden Sie am Kunden oder im Kundenabgleich, welcher Wert gilt. |

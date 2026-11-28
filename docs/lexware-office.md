@@ -2,19 +2,19 @@
 
 Stand: November 2026, Modul `Lexware` (Backend `backend/src/EstrichOne.Api/Modules/Lexware`, Web `web/webapp/util/lexware*.ts`).
 
-Rechnungen entstehen in Lexware Office (früher lexoffice), Bauunterlagen liegen in EstrichONE. EstrichONE verknüpft
+Lexware Office (früher lexoffice) ist Buchhaltung, Nummernkreis und Belegarchiv, Bauunterlagen liegen in EstrichONE. EstrichONE verknüpft
 Kunden mit Lexware-Kontakten, gleicht spätere Änderungen an verknüpften Kunden in beide Richtungen ab und zeigt Rechnungen
 und Angebote am Kunden und an der Bauakte an (Nummer, Art, Datum, Betrag, Status, PDF). Dazu kommen drei Zusatzmodule,
-alle untergeordnet zum Modul `lexware` und nach der Installation aus:
+alle untergeordnet zum Modul `lexware` und nach der Installation aus, dazu das Modul „Verkauf“ (siehe unten):
 
 - `lexwareArticles` („Lexware Office: Artikel“): Abgleich von „Artikel und Leistungen“ mit `/v1/articles`.
-- `quotations` („Angebote (Beta)“): Angebote in EstrichONE vorbereiten und als Entwurf in Lexware Office anlegen
-  (Ausbaustufe 1: `POST /v1/quotations` ohne `finalize`; Nummer, Festschreiben und Versand bleiben in Lexware Office).
+- `sales` („Verkauf“) mit den Untermodulen `quotations`, `salesOrderConfirmations`, `salesInvoices`, `salesCreditNotes`,
+  `salesFinalize`, `salesPayments`: Belege in EstrichONE erfassen und an Lexware Office senden.
 - `lexwareStatus` („Lexware Office: Status der Bauakte automatisch“): Statusregeln aus Angebots- und Rechnungsstatus.
 
-**Grundsatz: Rechnungen sind rein lesend.** EstrichONE legt keine Rechnung, Gutschrift oder Auftragsbestätigung an,
-ändert keinen Beleg, schreibt keinen fest und löscht nichts. Geschrieben wird in Lexware Office nur an genau benannten
-Stellen:
+**Grundsatz: Belege werden nur angelegt.** EstrichONE legt Verkaufsbelege an (Modul „Verkauf“), ändert keinen Beleg,
+schreibt nur mit Modul, Recht und ausdrücklicher Bestätigung fest und löscht nichts. Geschrieben wird in Lexware Office nur
+an genau benannten Stellen:
 
 | Aufruf | Wann |
 |---|---|
@@ -22,16 +22,17 @@ Stellen:
 | `PUT /v1/contacts/{id}` | Änderungsabgleich verknüpfter Kunden mit eingeschaltetem Abgleich |
 | `POST /v1/articles` | Artikelabgleich, nur Richtung „beide“, nur ohne möglichen Treffer bzw. nach ausdrücklicher Entscheidung |
 | `PUT /v1/articles/{id}` | Artikelabgleich, nur Richtung „beide“, mit `version` des frisch gelesenen Artikels |
-| `POST /v1/quotations` | „Als Entwurf an Lexware Office senden“, ohne Abfrage (kein `finalize`), höchstens einmal je Entwurf |
+| `POST /v1/quotations`, `/v1/order-confirmations`, `/v1/invoices`, `/v1/credit-notes` | „An Lexware Office senden“ im Verkauf, höchstens einmal je Beleg; Abfrage nur `precedingSalesVoucherId` und, mit Modul, Recht und Bestätigung, `finalize=true` |
 
 Kontakte und Artikel werden dort nie archiviert oder gelöscht. Abgesichert ist das an drei Stellen:
 
-- `LexwareClient` hat für Belege außer `CreateQuotationDraftAsync` nur lesende Methoden.
-- `LexwareClient.WriteAllowed` weist vor dem Senden jeden schreibenden Aufruf ab, der nicht in der Tabelle steht. Schreibende
-  Aufrufe dürfen keine Abfrage tragen; `POST /v1/quotations?finalize=true` wird deshalb abgewiesen.
+- `LexwareClient` hat für Belege außer `CreateSalesVoucherAsync` nur lesende Methoden.
+- `LexwareClient.WriteAllowed` weist vor dem Senden jeden schreibenden Aufruf ab, der nicht in der Tabelle steht. Andere
+  schreibende Aufrufe dürfen keine Abfrage tragen; `finalize=true` geht nur durch, wenn der Aufrufer es ausdrücklich
+  freigibt (Modul „Verkauf: Festschreiben aus EstrichONE“, Recht der Belegart, Bestätigung).
 - Tests prüfen die Liste der öffentlichen Methoden des Clients, die Sperre (auch für `/file`, `/document`, `/v1/files`,
-  `DELETE` auf Kontakte und Artikel, `PUT /v1/quotations`, `POST /v1/invoices`) und dass über alle Abläufe hinweg nur die
-  erlaubten Aufrufe schreiben; die nachgebildete API lehnt `POST /v1/quotations` mit Abfrage ab.
+  `DELETE` auf Kontakte und Artikel, `PUT` auf Belege, `finalize` ohne Freigabe, fremde Abfragen) und dass über alle
+  Abläufe hinweg nur die erlaubten Aufrufe schreiben.
 
 Die Zuordnung eines Belegs zu einer Bauakte liegt nur in EstrichONE (Tabelle `lexware_voucher_links`).
 
@@ -55,9 +56,10 @@ vor dem Einsatz zu bestätigen ist.
 | `LexwareArticleModel.cs` | Tabelle `catalog_items` („Artikel und Leistungen“ mit Lexware-Verknüpfung und Abgleichstand) |
 | `LexwareArticleSync.cs` | Artikelabgleich: Feldwerte, Dublettenprüfung, Dreiwege-Abgleich (reine Funktionen) und Lauf über alle Artikel |
 | `LexwareArticleEndpoints.cs` | Endpunkte `lexware/articles` |
-| `LexwareQuotationModel.cs` | Tabellen `quotation_drafts`, `quotation_draft_lines` |
-| `LexwareQuotations.cs` | Summen, Prüfungen, Vorschläge aus der Bauakte, Senden mit Sperre gegen Doppelsenden |
-| `LexwareQuotationEndpoints.cs` | Endpunkte `lexware/quotations` |
+| `SalesModel.cs` | Tabellen `sales_vouchers`, `sales_voucher_lines`; Belegarten, Module und Rechte (`SalesTypes`) |
+| `SalesService.cs` | Summen, Zwischensummen, Abzüge, Prüfungen je Belegart, Vorschläge aus der Bauakte, Senden mit Sperre gegen Doppelsenden |
+| `SalesEndpoints.cs` | Endpunkte `sales` und Rechnungsplan der Bauakte (`SalesPlans`) |
+| `LexwareErrors.cs`, `LexwareTaxTypes.cs` | Übersetzung der Fehler von Lexware Office, erlaubte Steuerarten |
 | `LexwareBauakteStatus.cs` | Statusregeln der Bauakte (reine Funktionen und Dienst) |
 
 Einstellungen in `appsettings` unter `EstrichOne:Lexware` (`LexwareOptions`): erlaubte Hosts der Basis-URL,
@@ -138,40 +140,97 @@ sofort mit „Jetzt abgleichen“; ein Lauf zur selben Zeit je Server):
 Protokoll: `lexware.articles_synced`, `lexware.article_created`, `lexware.article_synced`, `lexware.article_imported`,
 `lexware.article_linked`.
 
-## Angebote (Beta)
+## Verkauf (Angebote, Auftragsbestätigungen, Rechnungen, Gutschriften)
 
-Recht `quotations.prepare` („Angebote vorbereiten“, Gruppe Rechnungen): Administratoren immer, die Rolle „Büro und
-Bauleitung“ bei neuen Installationen. Module `lexware` und `quotations`.
+EstrichONE ist die Erfassungsoberfläche, Lexware Office bleibt Buchhaltung, Nummernkreis und Belegarchiv. Das frühere
+Modul „Angebote (Beta)“ ist darin aufgegangen: Tabellen `quotation_drafts` und `quotation_draft_lines` heißen jetzt
+`sales_vouchers` und `sales_voucher_lines` (Migration `SalesModule`, Daten bleiben, Belegart `quotation`). War „Angebote
+(Beta)“ eingeschaltet, schaltet die Migration „Verkauf“ ein, damit „Verkauf: Angebote“ an bleibt.
 
-- **Entwurf** (`quotation_drafts`, `quotation_draft_lines`): Kunde, optional Bauakte, Titel, Einleitung (vorbelegt mit
-  Nummer, Bezeichnung und Anschrift der Bauakte, damit der Zuordnungsvorschlag über die Bauaktennummer greift), Gültig bis
-  (Vorgabe heute plus 30 Tage), Zahlungsbedingung (Kopie der Werte aus Lexware Office oder eigener Text), Steuerart `net`
-  oder `constructionService13b`, Bemerkung. Positionen `item` (aus dem Katalog oder frei) und `text`.
-- **Summen** (`QuotationRules.Totals`, in der Weboberfläche gleich in `util/quotations.ts`): Positionsbetrag gleich Menge mal
-  Einzelpreis abzüglich Rabatt, auf Cent gerundet; Steuer je Steuersatz auf die Summe der Positionen; bei § 13b keine
-  Steuer. Nur Vorschau, maßgeblich rechnet Lexware Office.
-- **Vorschläge** (`GET lexware/quotations/suggestions`): Summe der Flächen aus „Räume und Flächen“ (über
-  `Bauakten.Exports.IBauakteRooms.AreasAsync`), sonst Kennwert `project.totalArea`, als Position in m² mit Estrichart,
-  Nenndicke und Fußbodenheizung in der Beschreibung. Gibt es genau einen aktiven Katalogeintrag „Leistung je m²“, wird
-  dessen Bezeichnung und Preis vorgeschlagen. Raumumfänge führt EstrichONE nicht; ein Vorschlag für Randdämmstreifen
-  entfällt deshalb mit Hinweis. Nichts wird ohne Bestätigung übernommen.
-- **Senden** (`LexwareQuotationService.SendAsync`):
-  1. Bereits gesendet: Antwort mit dem gesendeten Stand, kein Aufruf (idempotent).
-  2. Prüfungen (`QuotationRules.Problems`): Titel, mindestens eine Position, Menge größer 0, Einheit, Einzelpreis,
-     Steuersatz 19, 7 oder 0, Gültig bis; Kunde verknüpft.
-  3. Sperre in der Datenbank: Nur wer den Entwurf mit unveränderter Version von `Draft` bzw. `Failed` auf `Sending` setzt,
-     sendet. Ein hängendes `Sending` gilt nach zehn Minuten als abgebrochen.
-  4. `POST /v1/quotations` ohne Abfrage, ohne Wiederholung (außer bei 429). Katalogeinträge mit Lexware-Verknüpfung gehen
-     als `material` bzw. `service` mit `id`, alles andere als `custom`.
-  5. Fehler: `Failed` mit Meldung. Bei Zeitüberschreitung, fehlender Verbindung oder 5xx ist offen, ob Lexware das Angebot
-     angelegt hat (`send_uncertain`): Der nächste Versuch sucht zuerst in der Belegliste des Kontakts nach einem
-     Angebotsentwurf seit dem ersten Versuch mit gleichem Titel und gleichem Nettobetrag und übernimmt ihn bei genau einem
-     Treffer, statt erneut zu senden. Ein solcher Entwurf lässt sich nicht verwerfen, nur erneut senden.
-  6. Erfolg: `Sent`, `lexware_id` (eindeutig), danach schreibgeschützt. Mit Bauakte entsteht eine Zuordnung in
-     `lexware_voucher_links` (Art `quotation`, Status `draft`, Werte aus `GET /v1/quotations/{id}` bzw. aus dem Entwurf);
-     der Beleg erscheint in der vorhandenen Belegliste mit „In Lexware öffnen“ (`permalink/quotations/edit/{id}`). PDF wie
-     bei allen Belegen erst nach dem Festschreiben in Lexware Office. Protokoll `lexware.quotation_sent`.
-- **Apps:** nur lesend über die vorhandene Belegliste; keine Maske.
+**Module** (setzen Lexware Office voraus, nach dem Update aus): `sales` (Verkauf, Hauptmodul), `quotations` (Angebote),
+`salesOrderConfirmations`, `salesInvoices` (auch Abschlags- und Schlussrechnung), `salesCreditNotes`, `salesFinalize`
+(Festschreiben aus EstrichONE, Vorgabe aus), `salesPayments` (Zahlstand und offener Betrag; setzt Rechnungen voraus).
+
+**Rechte** je Belegart ansehen, erfassen, festschreiben: `quotations.read`, `quotations.prepare`, `quotations.finalize`,
+`orderconfirmations.read/edit/finalize`, `salesinvoices.read/edit/finalize`, `creditnotes.read/edit/finalize`. Die Rolle
+„Büro und Bauleitung“ bekommt bei neuen Installationen ansehen und erfassen, festschreiben nie. Die Gruppe `/sales` verlangt
+eines der Leserechte (`RequireAnyPermission`), die Belegart prüft der Endpunkt selbst (403 `PERMISSION_DENIED`).
+
+**Endpunkte von EstrichONE** (`/api/v1/sales`):
+
+| Endpunkt | Zweck |
+|---|---|
+| `GET vouchers?type=&bauakteId=&contactId=&refresh=` | Übersicht: Belegliste aus Lexware Office (`GET /v1/voucherlist`, bis 4 Seiten zu 250, kurz zwischengespeichert) plus Belege aus EstrichONE, die dort noch nicht angelegt sind; Bauakte aus der Zuordnung bzw. dem Beleg; offener Betrag nur bei Rechnung und Gutschrift |
+| `GET options?type=` | Zahlungsbedingungen, Artikel und Leistungen, Steuersätze, erlaubte Steuerarten der Belegart, Belegarten mit Rechten |
+| `GET suggestions?bauakteId=` | Positionsvorschläge: Fläche aus „Räume und Flächen“ bzw. Kennwert, Regiestunden aus Einsätzen (Personen mal Stunden, nicht vorausgewählt), Leistungszeitraum aus Einsätzen |
+| `POST vouchers` | Beleg anlegen (`type`, Bauakte oder Kunde); Vorbelegung: Titel, Einleitung mit Bauvorhaben, Steuerart, Zahlungsbedingung der Organisation, Angebot gültig 30 Tage, sonst Leistungszeitraum aus den Einsätzen |
+| `GET/PUT/DELETE vouchers/{id}` | lesen (mit `refresh=true` Nummer, Status und Zahlstand aus Lexware), speichern (nur vor dem Senden, Version), verwerfen (nur vor dem Senden) |
+| `POST vouchers/{id}/send` | senden; `{ finalize: true, confirmed: true }` schreibt fest (Modul und Recht) |
+| `POST vouchers/{id}/copy` | duplizieren oder umwandeln (`type`): Angebot in Auftragsbestätigung oder Rechnung, Auftragsbestätigung in Rechnung, Rechnung in Gutschrift; der Vorgänger muss gesendet sein |
+| `GET bauakten/{id}/plan` | Rechnungsplan der Bauakte |
+| `POST bauakten/{id}/down-payment` | Abschlagsrechnung (Prozent der Auftragssumme, Vorgabe Vorschlag aus dem Leistungsstand, oder Betrag) |
+| `POST bauakten/{id}/final-invoice` | Schlussrechnung: Positionen des Auftrags, bisherige Abschläge als Abzugszeilen |
+
+**Senden** (`SalesVoucherService.SendAsync`) wie zuvor bei Angeboten: Sperre über den Status in der Datenbank, kein
+zweiter Aufruf, nach Abbruch ohne Antwort erst Suche in der Belegliste (gleiche Belegart, gleicher Titel, gleicher
+Nettobetrag). `POST /v1/{quotations|order-confirmations|invoices|credit-notes}` mit höchstens
+`precedingSalesVoucherId=<id>` (Vorgänger der Belegkette) und, nur bei ausdrücklicher Freigabe, `finalize=true`. Die
+Schreibsperre `LexwareClient.WriteAllowed(method, path, query, finalize)` lässt genau das zu; jede andere Abfrage, jedes
+PUT, PATCH und DELETE auf Belege wird vor dem Senden abgewiesen. Danach liest EstrichONE Nummer und Status
+(`GET /v1/{belegart}/{id}`) und ordnet den Beleg der Bauakte zu (`lexware_voucher_links`).
+
+**Inhalt** (`SalesRules.ToLexware`, `LexwareClient.SalesBody`): Angebote mit `expirationDate`; Rechnungen,
+Auftragsbestätigungen und Gutschriften mit `shippingConditions` (`service` mit `shippingDate` oder `serviceperiod` mit
+`shippingDate` und `shippingEndDate`). Gutschriften ohne `paymentConditions`. Positionen: Artikel als `material` bzw.
+`service` mit `id`, sonst `custom`; Textposition `text`; Zwischensumme als `text` mit „Zwischensumme netto: …“ in der
+Beschreibung (die API kennt keine Zwischensummen); Abzug einer Abschlagsrechnung als `custom` mit Menge 1, Einheit
+„pauschal“ und negativem Nettopreis.
+
+**Prüfungen** (`SalesRules.Problems`): Titel, mindestens eine Position, Menge größer 0, Einheit, Preis, Steuersatz 19, 7
+oder 0; Angebot mit „gültig bis“; Rechnung mit Leistungsdatum; Ende des Zeitraums nicht vor dem Beginn; Abzüge nur in
+Rechnungen und nur negativ; Gesamtbetrag nicht negativ, Gutschrift über 0; erlaubte Steuerart.
+
+**Rechnungsplan** (`SalesPlans.BuildAsync`): Auftragssumme aus der neuesten festgeschriebenen, nicht stornierten
+Auftragsbestätigung der Bauakte, sonst aus dem neuesten angenommenen Angebot (zugeordnete Belege). Abschläge sind
+Rechnungen mit Zweck `downPayment` aus EstrichONE. Bezahlt (brutto): Rechnungen `paid`/`paidoff`; offen: Rechnungen
+`open`/`overdue` (offener Betrag aus `GET /v1/payments/{id}`, sonst brutto). Noch nicht berechnet: Auftragssumme minus
+Rechnungen netto plus Gutschriften. Leistungsstand: eingebrachte Fläche (Raumstatus „eingebracht“ oder „belegreif“) zur
+Gesamtfläche aus „Räume und Flächen“; Vorschlag für den nächsten Abschlag: Leistungsstand minus bisherige Abschläge in
+Prozent der Auftragssumme. Leistungszeitraum: erster bis letzter Einsatz „Estrich“ bzw. „Nacharbeit“ bis heute.
+
+**Bearbeiten nach dem Senden:** Die Public API kennt für Verkaufsbelege kein Ändern. Nach dem Senden ist der Beleg in
+EstrichONE schreibgeschützt; die Maske sagt das und führt mit „In Lexware öffnen“ zum Beleg.
+
+**E-Rechnung:** Die Leitweg-ID (`buyerReference`) gehört in Lexware Office nach bisherigem Wissen zum Kontakt
+(`xRechnung.buyerReference`) und nicht zum Beleg. EstrichONE sendet sie nicht mit dem Beleg (Prüfliste).
+
+**Apps:** in dieser Runde nur lesend (Belegliste und Rechnungsplan über die vorhandenen Endpunkte).
+
+## Automatische Belegzuordnung
+
+Einstellungen `autoAssign` („Belege automatisch zuordnen“, Vorgabe an) und `autoAssignSingleOpen` (zusätzliche Regel
+„einzige offene Bauakte des Kunden“, Vorgabe aus) in `PUT settings/integrations/lexware`. `LexwareAutoAssignService`
+läuft im Hintergrund vor den Statusregeln (alle 15 Minuten) und beim „Aktualisieren“ in der Bauakte (nur für den Kunden
+der Bauakte). Geprüft werden die neuesten 100 Belege der Belegliste, die noch keiner Bauakte zugeordnet und nicht
+gesperrt sind und deren Kontakt mit einem Kunden verknüpft ist; je Lauf werden höchstens 20 Belege einzeln gelesen.
+
+Regeln (`LexwareAutoAssignRules.Decide`, reine Funktion):
+
+1. **Eigener Beleg:** in EstrichONE erstellt (`sales_vouchers.lexware_id`) mit Bauakte.
+2. **Bauaktennummer im Beleg:** Titel, Einleitung, Schlusstext, Positionstexte oder Belegnummer enthalten die Nummer einer
+   Bauakte des verknüpften Kunden als eigenes Wort (nicht Teil einer längeren Nummer).
+3. **Belegkette:** ein Vorgänger (`precedingSalesVoucherId` bzw. `relatedVouchers[].id` im Einzelabruf) ist bereits
+   einer Bauakte zugeordnet.
+4. **Einzige offene Bauakte** (nur mit Schalter): Der Kunde hat genau eine Bauakte, die weder abgeschlossen noch storniert
+   ist, und das Belegdatum liegt zwischen ihrer Anlage und heute.
+
+Nennt der Beleg mehrere Bauakten, hängt er an Belegen verschiedener Bauakten oder widersprechen sich Nummer und
+Belegkette, ordnet EstrichONE nicht zu; der Beleg bleibt wie bisher ein Vorschlag in „Beleg zuordnen“. Vorhandene
+Zuordnungen ändert die Automatik nie. Die Zuordnung trägt `origin = auto` und `auto_reason`; die Bauakte zeigt den Grund
+am Beleg, der Verlauf vermerkt sie (Protokolleintrag `bauakte.lexware_auto_assigned` ohne Benutzer). Wird eine
+automatische Zuordnung von Hand aufgehoben, merkt EstrichONE den Beleg (`lexware_auto_assign_blocks`) und ordnet ihn nicht
+erneut automatisch zu. `GET settings/integrations/lexware/auto-assigned` liefert die letzten 50 automatisch zugeordneten
+Belege mit Grund (Verwaltung › Lexware Office).
 
 ## Status der Bauakte aus Lexware Office
 
@@ -269,12 +328,7 @@ gesetzt bzw. zurückgestellt wurde). API: `reviewRequestedAt`, `reviewReason` an
 | `POST lexware/articles/{id}/link` | `materials.manage` | mit vorhandenem Artikel verknüpfen; Erstabgleich überschreibt nichts |
 | `POST lexware/articles/{id}/create` | `materials.manage` | in Lexware Office anlegen, nur Richtung „beide“ (`LEXWARE_ARTICLE_SYNC_DIRECTION`) |
 | `POST lexware/articles/{id}/resolve` | `materials.manage` | Abweichungen je Feld entscheiden; „EstrichONE“ nur bei Richtung „beide“ |
-| `GET lexware/quotations` | `quotations.prepare` | Angebotsentwürfe einer Bauakte (`bauakteId`) oder eines Kunden (`contactId`) |
-| `GET lexware/quotations/options` | `quotations.prepare` | Zahlungsbedingungen (bei Fehler `paymentConditionsError`, die Maske bleibt nutzbar), Katalog, Steuersätze |
-| `GET lexware/quotations/suggestions?bauakteId=` | `quotations.prepare` | Positionsvorschläge aus der Bauakte |
-| `POST lexware/quotations` | `quotations.prepare` | Entwurf anlegen (idempotent über die ID); ohne Verknüpfung des Kunden 409 `LEXWARE_CUSTOMER_NOT_LINKED` mit `contactId` |
-| `GET`, `PUT`, `DELETE lexware/quotations/{id}` | `quotations.prepare` | Entwurf lesen, speichern (mit `version`), verwerfen; nach dem Senden 409 `LEXWARE_QUOTATION_SENT` |
-| `POST lexware/quotations/{id}/send` | `quotations.prepare` | als Entwurf an Lexware Office senden; erneut aufgerufen liefert er den gesendeten Stand ohne zweiten Aufruf |
+| `…/sales/…` | je Belegart | siehe Abschnitt „Verkauf“ |
 | `POST bauakten/{id}/review/dismiss` | `bauakten.edit` | „Prüfung zurückstellen“ |
 | `GET bauakten?review=true` | `bauakten.read` | nur Bauakten mit Kennzeichen „Zur Abschlussprüfung“ |
 
@@ -586,12 +640,32 @@ wird als „Erstellt“ angezeigt, neutral (Web `voucherStatus(status, type)`, i
 29. Statuswerte von Auftragsbestätigung und Lieferschein mit echtem Konto bestätigen (`draft`, `open`, `voided`; gibt es
     einen eigenen Wert, wenn aus der Auftragsbestätigung eine Rechnung erzeugt wurde?), `voucherType=deliverynote` in
     `GET /v1/voucherlist` und der Pfad `GET /v1/delivery-notes/{id}`.
+30a. Belegkette im Einzelabruf eines Belegs: Feldname des Vorgängers (`precedingSalesVoucherId` oder `relatedVouchers`)
+    für die automatische Zuordnung über die Belegkette.
+30. `POST /v1/invoices`, `/v1/order-confirmations`, `/v1/credit-notes`: Pflichtfelder; ob Auftragsbestätigungen und
+    Gutschriften `shippingConditions` brauchen bzw. annehmen; Werte `service` und `serviceperiod` für `shippingType`.
+31. `precedingSalesVoucherId` als Abfrageparameter beim Anlegen: zulässige Ketten (Angebot zu Auftragsbestätigung bzw.
+    Rechnung, Auftragsbestätigung zu Rechnung, Rechnung zu Gutschrift) und ob mehrere Rechnungen (Abschläge und
+    Schlussrechnung) auf dieselbe Auftragsbestätigung folgen dürfen.
+32. `finalize=true` für alle vier Belegarten: Nummer wird vergeben, Status danach `open`; Verhalten bei Pflichtangaben,
+    die nur beim Festschreiben geprüft werden.
+33. Abschlags- und Schlussrechnungen: Die API legt nach bisherigem Wissen nur normale Rechnungen an
+    (`/v1/down-payment-invoices` nur lesend, `closingInvoice` nur lesend). EstrichONE sendet Abschläge als normale
+    Rechnungen mit Titel „1. Abschlagsrechnung“ und die Schlussrechnung mit Abzugszeilen (negativer Nettopreis). Prüfen,
+    ob Lexware negative Positionen in Rechnungen annimmt und wie sie in Buchhaltung und Umsatzsteuer erscheinen.
+34. Kein Ändern über die API: bestätigen, dass es für Verkaufsbelege weder `PUT` noch `PATCH` gibt.
+35. `GET /v1/payments/{id}`: Felder `openAmount`, `paymentStatus` (`openRevenue`, `balanced`), `paidDate`.
+36. `GET /v1/voucherlist`: Feld `openAmount`, Status `overdue`, Paging mit `page` und `size=250`.
+37. Gutschriften: zulässige Positionsarten (nur `custom` und `text`?) und ob `paymentConditions` abgelehnt wird.
+38. Zwischensummen: Es gibt keine eigene Positionsart; EstrichONE sendet eine Textposition mit dem Betrag.
+39. E-Rechnung: Leitweg-ID (`buyerReference`) am Kontakt (`xRechnung`), nicht am Beleg; ob Lexware Office die E-Rechnung
+    bei öffentlichen Auftraggebern dann automatisch erzeugt.
+40. Mahnstufe: `GET /v1/dunnings/{id}` braucht die ID der Mahnung; die Belegliste nennt keine Mahnstufe der Rechnung.
+    EstrichONE zeigt deshalb bisher keine Mahnstufe an.
+
 ## Nicht Teil dieser Runde
 
-Webhooks (Änderungen ohne Abruf, siehe oben), Lexware-Daten und Belege in der Bauakte der Apps sowie die Warnung beim
-Anlegen eines Kunden in den Apps (dort gibt es weiter nur den Schalter „Mit Lexware Office abgleichen“ am Kunden;
-Änderungen und neue Kunden aus den Apps werden auf dem Server abgeglichen bzw. angelegt; die Endpunkte dafür stehen bereit), Abgleich von Land,
-Steuernummer, Lieferanschrift und Ansprechpartnern, Zahlungseingänge im Einzelnen. Rechnungen aus EstrichONE anzulegen
-ist ausdrücklich nicht vorgesehen. Bei Angeboten nicht Teil von Ausbaustufe 1: Nummer vergeben, festschreiben
-(`finalize`), versenden, ändern eines gesendeten Angebots aus EstrichONE und eine Angebotsmaske in den Apps. Löschen von
-Artikeln in Lexware Office, Abgleich von `note` und Mengeneinheiten-Katalog, Raumumfänge für Randdämmstreifen.
+Webhooks (Änderungen ohne Abruf), Erfassung von Belegen in den Apps (dort nur lesend), Mahnstufe der Rechnungen,
+Lieferscheine anlegen (nur Anzeige), Leitweg-ID am Beleg, Abgleich von Land, Steuernummer, Lieferanschrift und
+Ansprechpartnern, Löschen von Artikeln in Lexware Office, Abgleich von `note` und Mengeneinheiten-Katalog, Raumumfänge für
+Randdämmstreifen. Belege werden in Lexware Office nie geändert, gelöscht oder archiviert.
