@@ -36,6 +36,17 @@ public sealed class FakeLexware : HttpMessageHandler
 
     public string CompanyName { get; set; } = "Estrichbau Muster GmbH";
 
+    /// <summary>Angaben im Profil: Kleinunternehmer und Besteuerungsart (<c>null</c> = nicht geliefert).</summary>
+    public bool? SmallBusiness { get; set; }
+
+    public string? ProfileTaxType { get; set; }
+
+    /// <summary>
+    /// Steuerarten, die diese Organisation beim Anlegen eines Belegs ablehnt, mit genau der Antwort, die ein echtes Konto
+    /// geliefert hat (HTTP 400, „Tax type 'constructionService13b' not allowed for this organization“).
+    /// </summary>
+    public HashSet<string> RejectedTaxTypes { get; } = [];
+
     /// <summary>Artikel: ID → Artikel wie in <c>/v1/articles</c>.</summary>
     public ConcurrentDictionary<string, JsonObject> Articles { get; } = new();
 
@@ -173,6 +184,7 @@ public sealed class FakeLexware : HttpMessageHandler
     private static readonly Dictionary<string, string> Segments = new(StringComparer.Ordinal)
     {
         ["invoices"] = "invoice", ["quotations"] = "quotation", ["credit-notes"] = "creditnote", ["order-confirmations"] = "orderconfirmation",
+        ["delivery-notes"] = "deliverynote",
     };
 
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
@@ -205,7 +217,20 @@ public sealed class FakeLexware : HttpMessageHandler
         switch (method, path)
         {
             case ("GET", "/v1/profile"):
-                return Json(HttpStatusCode.OK, new JsonObject { ["organizationId"] = "aa93e8a8-2aa3-470b-b914-caad8a255dd8", ["companyName"] = CompanyName });
+            {
+                var profile = new JsonObject { ["organizationId"] = "aa93e8a8-2aa3-470b-b914-caad8a255dd8", ["companyName"] = CompanyName };
+                if (SmallBusiness is { } small)
+                {
+                    profile["smallBusiness"] = small;
+                }
+
+                if (ProfileTaxType is { } taxType)
+                {
+                    profile["taxType"] = taxType;
+                }
+
+                return Json(HttpStatusCode.OK, profile);
+            }
 
             case ("GET", "/v1/contacts"):
             {
@@ -283,6 +308,16 @@ public sealed class FakeLexware : HttpMessageHandler
                 }
 
                 var sent = JsonNode.Parse(body!)!.AsObject();
+                if (sent["taxConditions"]?["taxType"]?.GetValue<string>() is { } requested && RejectedTaxTypes.Contains(requested))
+                {
+                    return Json(HttpStatusCode.BadRequest, new JsonObject
+                    {
+                        ["requestId"] = Guid.NewGuid().ToString(), ["status"] = 400, ["error"] = "Bad Request", ["path"] = path,
+                        ["timestamp"] = DateTimeOffset.UtcNow.ToString("O", CultureInfo.InvariantCulture),
+                        ["message"] = $"Tax type '{requested}' not allowed for this organization",
+                    });
+                }
+
                 var id = Guid.NewGuid().ToString();
                 var net = 0m;
                 var gross = 0m;

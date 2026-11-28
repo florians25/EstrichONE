@@ -44,6 +44,14 @@ public sealed class LexwareSettingsRow : IVersionedEntity
     /// <summary>Regel: alle Rechnungen bezahlt stellt die Bauakte zur Abschlussprüfung.</summary>
     public bool StatusOnInvoicesPaid { get; set; } = true;
 
+    /// <summary>Kleinunternehmer und Besteuerungsart laut <c>GET /v1/profile</c> und Zeitpunkt der Prüfung (ohne Versionswechsel geschrieben).</summary>
+    public bool? ProfileSmallBusiness { get; set; }
+    public string? ProfileTaxType { get; set; }
+    public DateTimeOffset? TaxTypesCheckedAt { get; set; }
+
+    /// <summary>Von Lexware Office abgelehnte Steuerarten je Belegart als JSON (<see cref="LexwareTaxTypeRejection"/>; ohne Versionswechsel geschrieben).</summary>
+    public string? RejectedTaxTypes { get; set; }
+
     public string? OrganizationId { get; set; }
     public string? OrganizationName { get; set; }
     public DateTimeOffset? LastTestAt { get; set; }
@@ -168,6 +176,8 @@ internal sealed class LexwareSettingsRowConfiguration : IEntityTypeConfiguration
         builder.Property(s => s.LastArticleSyncError).HasMaxLength(2000);
         builder.Property(s => s.StatusOnQuotationAccepted).HasDefaultValue(true);
         builder.Property(s => s.StatusOnInvoicesPaid).HasDefaultValue(true);
+        builder.Property(s => s.ProfileTaxType).HasMaxLength(30);
+        builder.Property(s => s.RejectedTaxTypes).HasMaxLength(4000);
         builder.Ignore(s => s.Configured);
     }
 }

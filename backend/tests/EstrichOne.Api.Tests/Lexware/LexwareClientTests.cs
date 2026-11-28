@@ -77,18 +77,55 @@ public sealed class LexwareClientTests : IDisposable
 
     [Theory]
     [InlineData(406, """{"status":406,"message":"Validation failed","details":[{"violation":"NOTNULL","field":"lineItems[0].unitPrice.taxRatePercentage","message":"darf nicht leer sein"}]}""",
-        "lineItems[0].unitPrice.taxRatePercentage darf nicht leer sein")]
-    [InlineData(422, """{"IssueList":[{"i18nKey":"missing_entity","source":"company.name","type":"validation_failure"}]}""", "company.name missing_entity")]
-    [InlineData(400, """{"message":"Request is not valid"}""", "Request is not valid")]
-    public async Task ValidationErrors_CarryDetails(int status, string body, string detail)
+        "lineItems[0].unitPrice.taxRatePercentage darf nicht leer sein", "Position 1: Der Steuersatz fehlt.")]
+    [InlineData(422, """{"IssueList":[{"i18nKey":"missing_entity","source":"company.name","type":"validation_failure"}]}""", "company.name missing_entity",
+        "Der Firmenname fehlt.")]
+    [InlineData(400, """{"message":"Request is not valid"}""", "Request is not valid", "Eine Angabe ist ungültig.")]
+    public async Task ValidationErrors_CarryDetails(int status, string body, string detail, string german)
     {
         _fake.Raw["/v1/contacts"] = (status, body);
         using var client = Client();
         var exception = await Should.ThrowAsync<LexwareException>(() => client.CreateContactAsync(_connection,
             new LexwareContactDraft(true, "Test GmbH", null, null, null, null, null, null, null, null, null, null, null, null), Ct));
         exception.Code.ShouldBe("INVALID");
-        exception.Message.ShouldContain(detail);
+        exception.Message.ShouldStartWith("Lexware Office hat die Angaben nicht angenommen.");
+        exception.Message.ShouldContain(german);
+        exception.Message.ShouldNotContain(detail); // der englische Originaltext steht nur unter „Technische Einzelheiten“
+        exception.Technical.ShouldBe(detail);
         _fake.Calls.Count.ShouldBe(1); // schreibende Aufrufe werden bei Ablehnung nicht wiederholt
+    }
+
+    [Fact]
+    public void Translation_TaxTypeNotAllowed_OffersNet_AndKeepsOriginal()
+    {
+        var translation = LexwareErrors.Translate("""{"status":400,"error":"Bad Request","path":"/v1/quotations","message":"Tax type 'constructionService13b' not allowed for this organization"}""");
+        translation.Code.ShouldBe(LexwareErrors.TaxTypeNotAllowed);
+        translation.RejectedTaxType.ShouldBe("constructionService13b");
+        translation.Message.ShouldBe("Lexware Office lässt die Steuerart Bauleistung nach § 13b UStG für Ihr Unternehmen nicht zu. Prüfen Sie die Steuereinstellungen in Lexware Office oder senden Sie den Beleg mit der Steuerart Netto.");
+        translation.Issues.ShouldHaveSingleItem().Fix.ShouldBe(LexwareErrors.FixTaxTypeNet);
+        translation.Technical.ShouldBe("Tax type 'constructionService13b' not allowed for this organization");
+        LexwareErrors.TaxTypeText("constructionService13b", "das Angebot").ShouldContain("senden Sie das Angebot mit der Steuerart Netto.");
+    }
+
+    [Fact]
+    public void Translation_FieldsAndPositions()
+    {
+        var translation = LexwareErrors.Translate("""
+            {"message":"Validation failed","details":[
+              {"field":"lineItems[2].unitName","violation":"NOTNULL","message":"must not be null"},
+              {"field":"lineItems[0].quantity","message":"must be greater than 0"},
+              {"field":"voucherDate","message":"invalid date format"},
+              {"field":"address.contactId","message":"Contact not found"}]}
+            """);
+        translation.Code.ShouldBe("INVALID");
+        translation.Issues.Select(i => i.Text).ShouldBe([
+            "Position 3: Die Einheit fehlt.", "Position 1: Die Menge ist zu klein oder negativ.", "Das Belegdatum ist ungültig.",
+            "Der Kunde (Kontakt in Lexware Office) wurde in Lexware Office nicht gefunden.",
+        ]);
+        translation.Issues[0].Position.ShouldBe(3);
+        translation.Issues[0].Field.ShouldBe("lines.unit");
+        translation.Technical!.ShouldContain("lineItems[2].unitName must not be null");
+        LexwareErrors.Translate(null).Message.ShouldBe(LexwareErrors.Generic);
     }
 
     [Fact]
@@ -385,9 +422,18 @@ public sealed class LexwareClientTests : IDisposable
         var ofContact = await client.ListVouchersAsync(_connection, "c1", null, 100, Ct);
         ofContact.Select(v => (v.Type, v.Number)).ShouldBe([("invoice", "RE1"), ("quotation", "AG7")]);
         var query = _fake.Calls.Last().Query;
-        query.ShouldContain("voucherType=invoice,quotation,creditnote,orderconfirmation");
+        query.ShouldContain("voucherType=invoice,quotation,creditnote,orderconfirmation,deliverynote");
         query.ShouldContain("voucherStatus=any");
         query.ShouldContain("contactId=c1");
+
+        // Lieferscheine erscheinen als eigene Belegart (nur lesend); Auftragsbestätigung und Lieferschein sind nie zahlbar.
+        var delivery = _fake.AddVoucher("deliverynote", "open", "LS3", "2026-07-02", null, 0m, 0m, "c3", "Moser");
+        (await client.ListVouchersAsync(_connection, "c3", null, 100, Ct)).ShouldHaveSingleItem().Type.ShouldBe("deliverynote");
+        (await client.GetVoucherAsync(_connection, "deliverynote", delivery, Ct)).Status.ShouldBe("open");
+        _fake.Calls.Last().Path.ShouldBe($"/v1/delivery-notes/{delivery}");
+        LexwareVoucherTypes.Payable("orderconfirmation").ShouldBeFalse();
+        LexwareVoucherTypes.Payable("deliverynote").ShouldBeFalse();
+        LexwareVoucherTypes.Payable("invoice").ShouldBeTrue();
         (await client.ListVouchersAsync(_connection, null, "RE2", 25, Ct)).ShouldHaveSingleItem().ContactName.ShouldBe("Lang");
         _fake.Calls.ShouldAllBe(c => c.Method == "GET");
     }

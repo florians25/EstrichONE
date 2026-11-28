@@ -442,7 +442,7 @@ public sealed class LexwareChangeSyncTests(PostgresFixture postgres) : IAsyncLif
         (run.Checked, run.Failed, run.Error).ShouldBe((1, 1, null)); // liegt an diesem Kontakt, nicht an Lexware Office insgesamt
         var state = await StateAsync(customer);
         state.Sync!.State.ShouldBe("error");
-        state.Sync.Error!.ShouldContain("addresses.billing[0].zip ungültig");
+        state.Sync.Error!.ShouldContain("Die Postleitzahl der Anschrift ist ungültig.");
 
         // Nicht bei jedem Lauf erneut: erst nach der Wartezeit.
         _lexware.PutFailure = null;
@@ -592,7 +592,7 @@ public sealed class LexwareChangeSyncTests(PostgresFixture postgres) : IAsyncLif
         (await AutoCreateAsync()).ShouldBe(0);
         var failed = await StateAsync(customer);
         failed.Creation!.State.ShouldBe("failed");
-        failed.Creation.Error!.ShouldContain("company.name missing_entity");
+        failed.Creation.Error!.ShouldContain("Der Firmenname fehlt.");
         (await GetCustomerAsync(customer))["name"]!.GetValue<string>().ShouldBe("Fliesen Brandl GmbH"); // der Kunde selbst ist unberührt
 
         // Nicht bei jedem Lauf erneut. Inzwischen hat jemand den Kontakt in Lexware Office von Hand angelegt:

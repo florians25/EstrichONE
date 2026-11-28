@@ -25,7 +25,7 @@ public static class QuotationRules
     public static QuotationTotals Totals(IEnumerable<QuotationDraftLine> lines, string taxType)
     {
         var items = lines.Where(l => l.Kind == QuotationDraftLine.KindItem).ToList();
-        var reverse = taxType == QuotationDraft.TaxConstruction13b;
+        var reverse = LexwareTaxTypes.WithoutTax(taxType);
         var groups = items.GroupBy(l => reverse ? 0m : l.TaxRate ?? 19m).OrderByDescending(g => g.Key)
             .Select(g =>
             {
@@ -38,9 +38,14 @@ public static class QuotationRules
     }
 
     /// <summary>Fehler, die das Senden verhindern (leer = sendebereit).</summary>
-    public static List<string> Problems(QuotationDraft draft)
+    public static List<string> Problems(QuotationDraft draft, LexwareTaxTypeState? taxTypes = null)
     {
         var problems = new List<string>();
+        if (taxTypes is not null && LexwareTaxTypes.Problem(LexwareVoucherTypes.Quotation, draft.TaxType, taxTypes, "das Angebot") is { } taxProblem)
+        {
+            problems.Add(taxProblem);
+        }
+
         if (string.IsNullOrWhiteSpace(draft.Title))
         {
             problems.Add("Bitte geben Sie einen Titel an.");
@@ -77,7 +82,7 @@ public static class QuotationRules
                     problems.Add($"{label}: Bitte geben Sie einen Einzelpreis an.");
                 }
 
-                if (draft.TaxType != QuotationDraft.TaxConstruction13b && line.TaxRate is { } rate && !TaxRates.Contains(rate))
+                if (!LexwareTaxTypes.WithoutTax(draft.TaxType) && line.TaxRate is { } rate && !TaxRates.Contains(rate))
                 {
                     problems.Add($"{label}: Der Steuersatz muss 19, 7 oder 0 Prozent betragen.");
                 }
@@ -237,7 +242,7 @@ public sealed class LexwareQuotationService(LexwareService lexware, IAuditLog au
                 throw new LexwareException("QUOTATION_SENDING", "Dieses Angebot wird gerade an Lexware Office gesendet. Bitte warten Sie einen Moment.");
             }
 
-            if (QuotationRules.Problems(draft) is { Count: > 0 } problems)
+            if (QuotationRules.Problems(draft, LexwareTaxTypes.State(await lexware.SettingsAsync(cancellationToken))) is { Count: > 0 } problems)
             {
                 throw new LexwareException("QUOTATION_INCOMPLETE", string.Join(" ", problems));
             }
@@ -284,11 +289,31 @@ public sealed class LexwareQuotationService(LexwareService lexware, IAuditLog au
             }
             catch (LexwareException exception)
             {
+                var failure = exception;
+                if (exception.Code == LexwareErrors.TaxTypeNotAllowed)
+                {
+                    // Abgelehnte Steuerart merken (je Belegart): Die Maske bietet sie danach nicht mehr an, bis sie erneut geprüft wird.
+                    var taxType = exception.RejectedTaxType ?? draft.TaxType;
+                    await LexwareTaxTypeStore.RememberRejectionAsync(lexware, LexwareVoucherTypes.Quotation, taxType, CancellationToken.None);
+                    failure = new LexwareException(exception.Code, LexwareErrors.TaxTypeText(taxType, "das Angebot"), exception.Status)
+                    {
+                        Issues = exception.Issues.Select(i => i.Field == "taxType" ? i with { Text = LexwareErrors.TaxTypeText(taxType, "das Angebot") } : i).ToList(),
+                        Technical = exception.Technical, RejectedTaxType = taxType,
+                    };
+                }
+
                 // Ohne eindeutige Antwort kann Lexware Office das Angebot angelegt haben: Der nächste Versuch sucht zuerst danach.
                 draft.State = QuotationDraftState.Failed;
                 draft.SendUncertain = exception.Code is "TIMEOUT" or "OFFLINE" or "UNAVAILABLE" || (draft.SendUncertain && exception.Code is "RATE_LIMITED");
-                draft.SendError = LexwareService.Cut(exception.Message, 2000);
+                draft.SendError = LexwareService.Cut(failure.Message, 2000);
+                draft.SendErrorTechnical = LexwareService.Cut(failure.Technical, 1000);
+                draft.SendErrorFix = failure.Fix;
                 await db.SaveChangesAsync(CancellationToken.None);
+                if (failure != exception)
+                {
+                    throw failure;
+                }
+
                 throw;
             }
 
@@ -297,6 +322,8 @@ public sealed class LexwareQuotationService(LexwareService lexware, IAuditLog au
             draft.SentAt = now;
             draft.SentByUserId = userId;
             draft.SendError = null;
+            draft.SendErrorTechnical = null;
+            draft.SendErrorFix = null;
             draft.SendUncertain = false;
             await LinkToBauakteAsync(row, connection, draft, userId, cancellationToken);
             audit.Record("lexware.quotation_sent", userId, draft.BauakteId is null ? "contact" : "bauakte", (draft.BauakteId ?? draft.ContactId).ToString(),

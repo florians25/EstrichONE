@@ -31,11 +31,14 @@ public sealed record QuotationLineDto(
 /// <param name="Editable">Bearbeiten möglich (nur vor dem Senden).</param>
 /// <param name="LexwareUrl">Nach dem Senden: der Entwurf in der Lexware-Oberfläche.</param>
 /// <param name="CustomerLinked">Der Kunde ist mit Lexware Office verknüpft (Voraussetzung für das Senden).</param>
+/// <param name="SendErrorTechnical">Originaltext von Lexware Office zum letzten Fehler (englisch), für „Technische Einzelheiten“.</param>
+/// <param name="SendErrorFix">Bekannte Behebung des letzten Fehlers, z. B. <c>taxTypeNet</c> („Steuerart Netto übernehmen und erneut senden“).</param>
 public sealed record QuotationResponse(
     Guid Id, Guid ContactId, string? CustomerName, bool CustomerLinked, Guid? BauakteId, string? BauakteNumber, string? BauakteTitle, string Title,
     string? Introduction, string? Remark, DateOnly? ValidUntil, string TaxType, string? PaymentConditionId, string? PaymentLabel, int? PaymentDuration,
     decimal? PaymentDiscountPercent, int? PaymentDiscountRange, string State, bool Editable, string? LexwareId, string? LexwareUrl, DateTimeOffset? SentAt,
-    string? SendError, IReadOnlyList<QuotationLineDto> Lines, QuotationTotals Totals, IReadOnlyList<string> Problems, long Version, DateTimeOffset UpdatedAt);
+    string? SendError, IReadOnlyList<QuotationLineDto> Lines, QuotationTotals Totals, IReadOnlyList<string> Problems, long Version, DateTimeOffset UpdatedAt,
+    string? SendErrorTechnical = null, string? SendErrorFix = null);
 
 /// <summary>Angebotsentwurf in Listen (Bauakte, Kunde).</summary>
 public sealed record QuotationSummary(
@@ -64,9 +67,10 @@ public sealed record QuotationCatalogItem(
 
 /// <summary>Auswahlwerte der Angebotsmaske.</summary>
 /// <param name="PaymentConditionsError">Zahlungsbedingungen konnten nicht aus Lexware Office gelesen werden; die Maske bleibt nutzbar.</param>
+/// <param name="TaxTypes">Steuerarten mit Angabe, ob Lexware Office sie für Angebote zulässt (Profil und gemerkte Ablehnungen).</param>
 public sealed record QuotationOptionsResponse(
     IReadOnlyList<LexwarePaymentCondition> PaymentConditions, string? PaymentConditionsError, IReadOnlyList<QuotationCatalogItem> Catalog,
-    IReadOnlyList<decimal> TaxRates, int DefaultValidDays);
+    IReadOnlyList<decimal> TaxRates, int DefaultValidDays, IReadOnlyList<LexwareTaxTypeOption>? TaxTypes = null, bool SmallBusiness = false);
 
 /// <summary>
 /// Angebote (Beta): Entwürfe in EstrichONE vorbereiten und als Entwurf in Lexware Office anlegen. Recht <c>quotations.prepare</c>,
@@ -129,7 +133,7 @@ internal static class LexwareQuotationEndpoints
         var lines = draft.Lines.OrderBy(l => l.Position).Select(l => new QuotationLineDto(l.Kind, l.Name, l.Description, l.CatalogItemId, l.Quantity, l.Unit,
             l.NetPrice, l.TaxRate, l.DiscountPercent, l.Kind == QuotationDraftLine.KindItem ? QuotationRules.LineNet(l.Quantity, l.NetPrice, l.DiscountPercent) : null))
             .ToList();
-        var problems = draft.Editable ? QuotationRules.Problems(draft) : [];
+        var problems = draft.Editable ? QuotationRules.Problems(draft, LexwareTaxTypes.State(row)) : [];
         if (draft.Editable && !linked)
         {
             problems.Insert(0, QuotationService.NotLinkedText(customer ?? "unbekannt"));
@@ -139,7 +143,7 @@ internal static class LexwareQuotationEndpoints
             draft.Remark, draft.ValidUntil, draft.TaxType, draft.PaymentConditionId, draft.PaymentLabel, draft.PaymentDuration, draft.PaymentDiscountPercent,
             draft.PaymentDiscountRange, Key(draft.State), draft.Editable, draft.LexwareId,
             draft.LexwareId is null ? null : lexware.VoucherUrl(row, LexwareVoucherTypes.Quotation, draft.LexwareId, "draft"), draft.SentAt, draft.SendError, lines,
-            QuotationRules.Totals(draft.Lines, draft.TaxType), problems, draft.Version, draft.UpdatedAt);
+            QuotationRules.Totals(draft.Lines, draft.TaxType), problems, draft.Version, draft.UpdatedAt, draft.SendErrorTechnical, draft.SendErrorFix);
     }
 
     private static async Task<Ok<List<QuotationSummary>>> ListAsync(LexwareService lexware, IBauakteAccess access, CancellationToken cancellationToken,
@@ -206,7 +210,9 @@ internal static class LexwareQuotationEndpoints
             .Select(c => new QuotationCatalogItem(c.Id, c.Title, c.Description, c.Kind, c.ArticleNumber, c.Unit, c.NetPrice, c.TaxRate,
                 c.LexwareId != null && c.RemoteState == null))
             .ToListAsync(cancellationToken);
-        return TypedResults.Ok(new QuotationOptionsResponse(conditions, error, catalog, QuotationRules.TaxRates, DefaultValidDays));
+        var taxTypes = await LexwareTaxTypeStore.StateAsync(lexware, cancellationToken);
+        return TypedResults.Ok(new QuotationOptionsResponse(conditions, error, catalog, QuotationRules.TaxRates, DefaultValidDays,
+            LexwareTaxTypes.Options(LexwareVoucherTypes.Quotation, taxTypes), LexwareTaxTypes.IsSmallBusiness(taxTypes.SmallBusiness, taxTypes.ProfileTaxType)));
     }
 
     private static async Task<Results<Ok<QuotationSuggestionsResponse>, ProblemHttpResult>> SuggestionsAsync([FromQuery] Guid bauakteId, LexwareService lexware,
@@ -269,6 +275,7 @@ internal static class LexwareQuotationEndpoints
         {
             Id = request.Id, ContactId = customer.Id, BauakteId = bauakte?.Id, Title = "Angebot", Introduction = LexwareService.Cut(intro, QuotationDraft.MaxText),
             ValidUntil = lexware.Today().AddDays(DefaultValidDays), CreatedByUserId = currentUser.UserId,
+            TaxType = LexwareTaxTypes.Default(LexwareTaxTypes.State(await lexware.SettingsAsync(cancellationToken))),
         };
         db.Add(draft);
         await db.SaveChangesAsync(cancellationToken);
@@ -302,7 +309,7 @@ internal static class LexwareQuotationEndpoints
                 detail: "Der Entwurf wurde inzwischen geändert. Bitte laden Sie ihn neu.", extensions: Code("VERSION_CONFLICT"));
         }
 
-        if (request.TaxType is not (QuotationDraft.TaxNet or QuotationDraft.TaxConstruction13b))
+        if (!LexwareTaxTypes.Supported.Contains(request.TaxType))
         {
             return Invalid("Die Steuerart ist unbekannt.");
         }
@@ -327,6 +334,8 @@ internal static class LexwareQuotationEndpoints
         {
             draft.State = QuotationDraftState.Draft;
             draft.SendError = null;
+            draft.SendErrorTechnical = null;
+            draft.SendErrorFix = null;
         }
 
         var db = lexware.Db;

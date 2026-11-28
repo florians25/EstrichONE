@@ -4869,9 +4869,23 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(300)")
                         .HasColumnName("organization_name");
 
+                    b.Property<bool?>("ProfileSmallBusiness")
+                        .HasColumnType("boolean")
+                        .HasColumnName("profile_small_business");
+
+                    b.Property<string>("ProfileTaxType")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("profile_tax_type");
+
                     b.Property<string>("ProtectedApiKey")
                         .HasColumnType("text")
                         .HasColumnName("protected_api_key");
+
+                    b.Property<string>("RejectedTaxTypes")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)")
+                        .HasColumnName("rejected_tax_types");
 
                     b.Property<bool>("StatusOnInvoicesPaid")
                         .ValueGeneratedOnAdd()
@@ -4884,6 +4898,10 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasColumnType("boolean")
                         .HasDefaultValue(true)
                         .HasColumnName("status_on_quotation_accepted");
+
+                    b.Property<DateTimeOffset?>("TaxTypesCheckedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("tax_types_checked_at");
 
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
@@ -5062,6 +5080,16 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasMaxLength(2000)
                         .HasColumnType("character varying(2000)")
                         .HasColumnName("send_error");
+
+                    b.Property<string>("SendErrorFix")
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("send_error_fix");
+
+                    b.Property<string>("SendErrorTechnical")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("send_error_technical");
 
                     b.Property<DateTimeOffset?>("SendStartedAt")
                         .HasColumnType("timestamp with time zone")
